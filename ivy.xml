@@ -21,6 +21,6 @@
 			<exclude module="geronimo-jpa_3.0_spec"/> <!-- redefined javax.presistence.spi -->
 		</dependency>
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
-		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>		
+		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>
 	</dependencies>
 </ivy-module>

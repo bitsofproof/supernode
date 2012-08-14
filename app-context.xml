@@ -14,8 +14,8 @@
     	
 	<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource"
 		p:driverClass="org.apache.derby.jdbc.ClientDriver"
-		p:url="jdbc:derby://localhost:1527/bits;create=true"
-		p:username="tamas"
+		p:url="jdbc:derby://localhost:1527/data;ssl=peerAuthentication"
+		p:username="dbuser"
 	/>
 	<bean id="jpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
 		p:showSql="false"
@@ -25,7 +25,7 @@
 	
 	
 	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
-        <property name="persistenceXmlLocation" value="resources/persistence.xml"/>
+        <property name="persistenceXmlLocation" value="persistence.xml"/>
 		<property name="dataSource" ref="dataSource"/>
         <property name="jpaVendorAdapter" ref="jpaVendorAdapter"/>  
 	 	<property name="jpaProperties">
