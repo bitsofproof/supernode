@@ -10,11 +10,13 @@
 		<dependency org="com.google" name="bitcoinj" rev="0.5.2">
 			<exclude module="guava-base"/>
 			<exclude module="derby"/>
+			<exclude module="slf4j-jdk14"/>			
 		</dependency>
 		<dependency org="com.google.guava" name="guava" rev="13.0"/>		
 		<dependency org="org.springframework" name="spring-context" rev="3.1.2.RELEASE">
 			<exclude module="com.springsource.org.hibernate.validator"/>
 			<exclude module="persistence-api"/> <!-- redefined javax.presistence.spi -->
+			<exclude module="commons-logging"/>
 		</dependency>
 		<dependency org="org.springframework.data" name="spring-data-jpa" rev="1.1.0.RELEASE">
 			<exclude module="org.eclipse.persistence.jpa"/>  <!-- do not know what this is -->
@@ -22,5 +24,7 @@
 		</dependency>
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
 		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>
+		<dependency org="org.slf4j" name="slf4j-simple" rev="1.6.2"/>
+            
 	</dependencies>
 </ivy-module>
