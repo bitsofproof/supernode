@@ -1,0 +1,21 @@
+ <!-- APT based code generation -->
+<project default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+	
+	<target name="generate">
+		<ivy:cachepath pathid="ivy.path" />
+
+		<property name="src" value="src"/>
+		<property name="generated" value="generated"/>
+		
+	    <javac srcdir="${src}">
+    		<classpath>
+	          <path refid="ivy.path" />
+           </classpath>
+	      <compilerarg value="-proc:only"/>      
+	      <compilerarg value="-processor"/>
+	      <compilerarg value="com.mysema.query.apt.jpa.JPAAnnotationProcessor"/>
+	      <compilerarg value="-s"/>
+	      <compilerarg value="${generated}"/>
+	    </javac>
+    </target>
+</project>
