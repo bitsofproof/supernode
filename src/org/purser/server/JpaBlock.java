@@ -25,6 +25,7 @@ public class JpaBlock {
 	private JpaBlock previous;
 	
 	@Column(length=64)
+	@Basic(optional=false)
 	private String merkleRoot;
 	
 	private int createTime;
@@ -33,7 +34,7 @@ public class JpaBlock {
 	
 	private int nonce;
 	
-	@OneToMany(fetch=FetchType.LAZY,orphanRemoval=true,cascade=CascadeType.ALL)
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
 	private List<JpaTransaction> transactions;
 
 	@Lob @Basic(fetch=FetchType.EAGER)

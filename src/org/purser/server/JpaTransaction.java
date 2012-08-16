@@ -22,10 +22,10 @@ public class JpaTransaction {
 	
 	private int lockTime;
 	
-	@OneToMany(fetch=FetchType.LAZY,orphanRemoval=true,cascade=CascadeType.ALL)
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
 	private List<JpaTransactionInput> inputs;
 	
-	@OneToMany(fetch=FetchType.LAZY,orphanRemoval=true,cascade=CascadeType.ALL)
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
 	private List<JpaTransactionOutput> outputs;
 
 	public Long getId() {
