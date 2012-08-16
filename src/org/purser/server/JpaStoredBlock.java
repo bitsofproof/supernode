@@ -1,7 +1,5 @@
 package org.purser.server;
 
-import java.math.BigInteger;
-
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -14,7 +12,10 @@ public class JpaStoredBlock {
 	@Id
 	@Column(length=64)
 	private String hash;
-	private BigInteger chainWork;
+
+	// huge integer
+	@Lob @Basic(fetch=FetchType.EAGER)
+	private byte [] chainWork;
 	private int height;
 	
 	@Lob @Basic(fetch=FetchType.LAZY)
@@ -29,11 +30,12 @@ public class JpaStoredBlock {
 		this.hash = hash;
 	}
 
-	public BigInteger getChainWork() {
+	
+	public byte[] getChainWork() {
 		return chainWork;
 	}
 
-	public void setChainWork(BigInteger chainWork) {
+	public void setChainWork(byte[] chainWork) {
 		this.chainWork = chainWork;
 	}
 

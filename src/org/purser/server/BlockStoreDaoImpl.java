@@ -1,5 +1,7 @@
 package org.purser.server;
 
+import java.math.BigInteger;
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
@@ -60,7 +62,7 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 		JpaStoredBlock b = new JpaStoredBlock();
 		b.setHash(block.getHeader().getHashAsString());
 		b.setHeader(block.getHeader().unsafeBitcoinSerialize());
-		b.setChainWork(block.getChainWork());
+		b.setChainWork(block.getChainWork().toByteArray());
 		b.setHeight(block.getHeight());
 		entityManager.persist(b);
 	}
@@ -83,7 +85,7 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 				return null;
 			
 			return new StoredBlock(new Block(params, b.getHeader()),
-					b.getChainWork(), b.getHeight());
+					new BigInteger (b.getChainWork()), b.getHeight());
 		} catch (Exception e) {
 			throw new BlockStoreException(e);
 		}
