@@ -17,15 +17,19 @@ public class JpaTransaction {
 	@GeneratedValue
 	private Long id;
 	
-	@ManyToOne(optional=false)
+	private int version;
+	
+	@ManyToOne(optional=false,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private JpaBlock block;
 	
-	private int lockTime;
+	private long ix;
 	
-	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
+	private long lockTime;
+	
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransactionInput> inputs;
 	
-	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransactionOutput> outputs;
 
 	public Long getId() {
@@ -36,6 +40,14 @@ public class JpaTransaction {
 		this.id = id;
 	}
 
+	public int getVersion() {
+		return version;
+	}
+
+	public void setVersion(int version) {
+		this.version = version;
+	}
+
 	public JpaBlock getBlock() {
 		return block;
 	}
@@ -44,11 +56,20 @@ public class JpaTransaction {
 		this.block = block;
 	}
 
-	public int getLockTime() {
+
+	public long getIx() {
+		return ix;
+	}
+
+	public void setIx(long ix) {
+		this.ix = ix;
+	}
+
+	public long getLockTime() {
 		return lockTime;
 	}
 
-	public void setLockTime(int lockTime) {
+	public void setLockTime(long lockTime) {
 		this.lockTime = lockTime;
 	}
 

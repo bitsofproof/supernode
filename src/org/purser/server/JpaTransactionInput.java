@@ -1,6 +1,7 @@
 package org.purser.server;
 
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -14,15 +15,10 @@ public class JpaTransactionInput {
 	@GeneratedValue
 	private Long id;
 
-	@ManyToOne(optional=false)
-	private JpaTransaction transaction;
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
+	private JpaTransaction source;
 	
-	@ManyToOne(fetch=FetchType.LAZY,optional=false) 
-	private JpaBlock block;
-	
-	private int index;
-	
-	private int sequence;
+	private long sequence;
 	
 	@Lob  @Basic(fetch=FetchType.LAZY)
 	private byte [] script;
@@ -35,35 +31,19 @@ public class JpaTransactionInput {
 		this.id = id;
 	}
 
-	public JpaTransaction getTransaction() {
-		return transaction;
+	public JpaTransaction getSource() {
+		return source;
 	}
 
-	public void setTransaction(JpaTransaction transaction) {
-		this.transaction = transaction;
+	public void setSource(JpaTransaction source) {
+		this.source = source;
 	}
 
-	public JpaBlock getBlock() {
-		return block;
-	}
-
-	public void setBlock(JpaBlock block) {
-		this.block = block;
-	}
-
-	public int getIndex() {
-		return index;
-	}
-
-	public void setIndex(int index) {
-		this.index = index;
-	}
-
-	public int getSequence() {
+	public long getSequence() {
 		return sequence;
 	}
 
-	public void setSequence(int sequence) {
+	public void setSequence(long sequence) {
 		this.sequence = sequence;
 	}
 

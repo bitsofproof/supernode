@@ -7,6 +7,7 @@ import javax.persistence.PersistenceContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,9 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	@PersistenceContext
 	EntityManager entityManager;
 
+	@Autowired
+	JpaSerializer serializer;
+	
 	private NetworkParameters params;
 
 	public void setNetworkParams (NetworkParameters params) {
@@ -37,19 +41,34 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	public StoredBlock resetStore() throws BlockStoreException {
 		log.info("reset store");
 		try {
-			QJpaChainHead head = QJpaChainHead.jpaChainHead;
-			JPADeleteClause delete = new JPADeleteClause(entityManager, head);
+			/*
+			QJpaTransactionInput input = QJpaTransactionInput.jpaTransactionInput;
+			JPADeleteClause delete = new JPADeleteClause (entityManager, input);
+			delete.execute();
+			
+			QJpaTransactionOutput output = QJpaTransactionOutput.jpaTransactionOutput;
+			delete = new JPADeleteClause (entityManager, output);
 			delete.execute();
 
-			QJpaStoredBlock block = QJpaStoredBlock.jpaStoredBlock;
-			delete = new JPADeleteClause(entityManager, block);
+			QJpaTransaction t = QJpaTransaction.jpaTransaction;
+			JPADeleteClause delete = new JPADeleteClause (entityManager, t);
+			delete.execute();			
+
+			QJpaBlock block = QJpaBlock.jpaBlock;
+			JPADeleteClause delete = new JPADeleteClause (entityManager, block);
 			delete.execute();
+			
+			QJpaChainHead head = QJpaChainHead.jpaChainHead;
+			delete = new JPADeleteClause(entityManager, head);
+			delete.execute();
+						*/
 
 			Block genesis = params.genesisBlock.cloneAsHeader();
 			StoredBlock storedGenesis;
 			storedGenesis = new StoredBlock(genesis, genesis.getWork(), 0);
 			put(storedGenesis);
 			setChainHead(storedGenesis);
+
 			return storedGenesis;
 		} catch (VerificationException e) {
 			throw new BlockStoreException(e);
@@ -58,12 +77,12 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 
 	@Override
 	public void put(StoredBlock block) throws BlockStoreException {
-		log.info("put");
-		JpaStoredBlock b = new JpaStoredBlock();
-		b.setHash(block.getHeader().getHashAsString());
-		b.setHeader(block.getHeader().unsafeBitcoinSerialize());
+		log.info("put " + block.getHeader().getHashAsString());
+		
+		JpaBlock b = serializer.jpaBlockFromWire(block.getHeader().unsafeBitcoinSerialize());
 		b.setChainWork(block.getChainWork().toByteArray());
 		b.setHeight(block.getHeight());
+		
 		entityManager.persist(b);
 	}
 
@@ -73,18 +92,19 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	}
 
 	private StoredBlock get(String hash) throws BlockStoreException {
-		log.info("get");
+		log.info("get " + hash);
 		try {
-			QJpaStoredBlock block = QJpaStoredBlock.jpaStoredBlock;
+			QJpaBlock block = QJpaBlock.jpaBlock;
 
 			JPAQuery query = new JPAQuery(entityManager);
 
-			JpaStoredBlock b = query.from(block).where(block.hash.eq(hash))
+			JpaBlock b = query.from(block).where(block.hash.eq(hash))
 					.uniqueResult(block);
 			if ( b == null )
 				return null;
 			
-			return new StoredBlock(new Block(params, b.getHeader()),
+			byte [] message = serializer.jpaBlockToWire(b);
+			return new StoredBlock(new Block(params, message,false,true,message.length),
 					new BigInteger (b.getChainWork()), b.getHeight());
 		} catch (Exception e) {
 			throw new BlockStoreException(e);

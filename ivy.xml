@@ -12,6 +12,7 @@
 			<exclude module="derby"/>
 			<exclude module="slf4j-jdk14"/>			
 		</dependency>
+
 		<dependency org="com.google.guava" name="guava" rev="13.0"/>		
 		<dependency org="org.springframework" name="spring-context" rev="3.1.2.RELEASE">
 			<exclude module="com.springsource.org.hibernate.validator"/>

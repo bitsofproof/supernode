@@ -1,5 +1,7 @@
 package org.purser.server;
 
+import java.math.BigInteger;
+
 import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -14,10 +16,7 @@ public class JpaTransactionOutput {
 	@GeneratedValue
 	private Long id;
 
-	@ManyToOne(optional=false)
-	private JpaTransaction transaction;
-
-	private long value;
+	private BigInteger value;
 	
 	@Lob  @Basic(fetch=FetchType.LAZY)
 	private byte [] script;
@@ -30,19 +29,11 @@ public class JpaTransactionOutput {
 		this.id = id;
 	}
 
-	public JpaTransaction getTransaction() {
-		return transaction;
-	}
-
-	public void setTransaction(JpaTransaction transaction) {
-		this.transaction = transaction;
-	}
-
-	public long getValue() {
+	public BigInteger getValue() {
 		return value;
 	}
 
-	public void setValue(long value) {
+	public void setValue(BigInteger value) {
 		this.value = value;
 	}
 

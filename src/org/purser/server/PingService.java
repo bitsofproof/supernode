@@ -1,11 +1,13 @@
 package org.purser.server;
 
+
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.InetAddress;
-import java.util.Date;
+import java.math.BigInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -27,7 +29,8 @@ import com.google.bitcoin.store.BlockStoreException;
 
 public class PingService {
 
-	
+    private static final Logger log = LoggerFactory.getLogger(BlockChain.class);
+
 	
 	public static void main(String[] args) throws IOException {		
 		
@@ -81,7 +84,8 @@ public class PingService {
 	        // Set some version info.
 	        peerGroup.setUserAgent("PingService", "1.0");
 	        // Download headers only until a day ago.
-	        peerGroup.setFastCatchupTimeSecs((new Date().getTime() / 1000) - (60 * 60 * 24));
+	        // peerGroup.setFastCatchupTimeSecs((new Date().getTime() / 1000) - (60 * 60 * 24));
+	        peerGroup.setFastCatchupTimeSecs(0);
 	        if (peerHost != null) {
 	            peerGroup.addAddress(new PeerAddress(InetAddress.getByName(peerHost), peerPort));
 	        } else {
@@ -91,7 +95,6 @@ public class PingService {
 	        peerGroup.addWallet(wallet);
 	        peerGroup.start();
 
-			
 			
 			
 			
@@ -137,17 +140,16 @@ public class PingService {
 			});
 
 			peerGroup.downloadBlockChain();
-
 			System.out.println("Send coins to: "
 					+ key.toAddress(params).toString());
 			System.out
 					.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 			// The peer thread keeps us alive until something kills the process.
 		} catch (Exception e) {
-			System.err.println(e);
+			e.printStackTrace();
 		}
 	}
-
+	
 	/**
 	 * @param blockStore
 	 * @throws BlockStoreException
