@@ -10,8 +10,11 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.google.bitcoin.core.BlockChain;
 import com.google.bitcoin.core.Sha256Hash;
 import com.google.bitcoin.core.Utils;
 import com.google.bitcoin.core.VarInt;
@@ -19,6 +22,7 @@ import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component
 public class JpaSerializer {
+    private static final Logger log = LoggerFactory.getLogger(JpaSerializer.class);
 
 	@PersistenceContext
 	EntityManager entityManager;
@@ -104,9 +108,9 @@ public class JpaSerializer {
 			}
 		}
 
-		String digest(int offset) {
+		String digest(int offset, int length) {
 			return new Sha256Hash(Utils.reverseBytes(Utils.doubleDigest(bytes,
-					offset, cursor))).toString();
+					offset, length))).toString();
 		}
 	}
 
@@ -131,11 +135,11 @@ public class JpaSerializer {
 
 		block.setVersion(batch.readUint32());
 		block.setPrevious(findBlock(batch.readHash().toString()));
-		block.setMerkleRoot(batch.readHash().getBytes());
+		block.setMerkleRoot(batch.readBytes(32)); // this is the right direction.
 		block.setCreateTime(batch.readUint32());
 		block.setDifficultyTarget(batch.readUint32());
 		block.setNonce(batch.readUint32());
-		block.setHash(batch.digest(0));
+		block.setHash(batch.digest(0, 80));
 
 		if ( batch.eof() )
 			return block; // this is actually violaton of protocol, but bitcoinj does it.  
@@ -263,6 +267,16 @@ public class JpaSerializer {
 		} catch (IOException e) {
 			// can not happen
 		}
+		
+		// check hash
+		byte [] bytes = bs.toByteArray();
+		Batch batch = new Batch (bytes);
+		if ( !batch.digest(0, 80).equals(block.getHash()) )
+		{
+			log.error(" wire " + batch.digest(0, 80) + " vs JPA " + block.getHash());
+		}
+		
+		
 		return bs.toByteArray();
 	}
 }

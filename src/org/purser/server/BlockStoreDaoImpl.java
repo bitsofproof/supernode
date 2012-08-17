@@ -63,9 +63,8 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 			delete.execute();
 						*/
 
-			Block genesis = params.genesisBlock.cloneAsHeader();
 			StoredBlock storedGenesis;
-			storedGenesis = new StoredBlock(genesis, genesis.getWork(), 0);
+			storedGenesis = new StoredBlock(params.genesisBlock, params.genesisBlock.getWork(), 0);
 			put(storedGenesis);
 			setChainHead(storedGenesis);
 
@@ -79,11 +78,17 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	public void put(StoredBlock block) throws BlockStoreException {
 		log.info("put " + block.getHeader().getHashAsString());
 		
-		JpaBlock b = serializer.jpaBlockFromWire(block.getHeader().unsafeBitcoinSerialize());
-		b.setChainWork(block.getChainWork().toByteArray());
-		b.setHeight(block.getHeight());
-		
-		entityManager.persist(b);
+		QJpaBlock jb = QJpaBlock.jpaBlock;
+		JPAQuery q1 = new JPAQuery(entityManager);
+		JpaBlock b = q1.from(jb).where(jb.hash.eq(block.getHeader().getHashAsString())).uniqueResult(jb);
+		if ( b == null )
+		{
+			b = serializer.jpaBlockFromWire(block.getHeader().unsafeBitcoinSerialize());
+			b.setChainWork(block.getChainWork().toByteArray());
+			b.setHeight(block.getHeight());
+			
+			entityManager.persist(b);
+		}
 	}
 
 	@Override
@@ -92,7 +97,6 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	}
 
 	private StoredBlock get(String hash) throws BlockStoreException {
-		log.info("get " + hash);
 		try {
 			QJpaBlock block = QJpaBlock.jpaBlock;
 

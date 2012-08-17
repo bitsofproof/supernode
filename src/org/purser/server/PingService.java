@@ -4,6 +4,7 @@ package org.purser.server;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.math.BigInteger;
 
 import org.slf4j.Logger;
@@ -52,6 +53,7 @@ public class PingService {
 
 			// Try to read the wallet from storage, create a new one if not
 			// possible.
+			/*
 			Wallet wallet;
 			final File walletFile = new File(filePrefix + ".wallet");
 			try {
@@ -63,14 +65,14 @@ public class PingService {
 			}
 			// Fetch the first key in the wallet (should be the only key).
 			ECKey key = wallet.keychain.get(0);
-
+*/
 			// Load the block chain, if there is one stored locally.
 			System.out.println("Reading block store from disk");
 			long time = System.currentTimeMillis();
 			
 			BlockStoreDao blockStore = context.getBean (BlockStoreDao.class);
 			blockStore.setNetworkParams(params);
-			blockStore.resetStore();
+//			blockStore.resetStore();
 			
 			System.out.println("Opened block store in "
 					+ (System.currentTimeMillis() - time) + " ms");
@@ -78,7 +80,8 @@ public class PingService {
 			
 	        // Connect to the localhost node. One minute timeout since we won't try any other peers
 	        System.out.println("Connecting ...");
-	        BlockChain chain = new BlockChain(params, wallet, blockStore);
+//	        BlockChain chain = new BlockChain(params, wallet, blockStore);
+	        BlockChain chain = new BlockChain(params, new ArrayList<Wallet>(), blockStore);
 
 	        final PeerGroup peerGroup = new PeerGroup(params, chain);
 	        // Set some version info.
@@ -92,12 +95,12 @@ public class PingService {
 	            peerGroup.addPeerDiscovery(new DnsDiscovery(params));
 	        }
 
-	        peerGroup.addWallet(wallet);
+//	        peerGroup.addWallet(wallet);
 	        peerGroup.start();
 
 			
 			
-			
+/*			
 			// We want to know when the balance changes.
 			wallet.addEventListener(new AbstractWalletEventListener() {
 				@Override
@@ -138,13 +141,15 @@ public class PingService {
 					}
 				}
 			});
-
+*/
 			peerGroup.downloadBlockChain();
+/*
 			System.out.println("Send coins to: "
 					+ key.toAddress(params).toString());
 			System.out
 					.println("Waiting for coins to arrive. Press Ctrl-C to quit.");
 			// The peer thread keeps us alive until something kills the process.
+*/
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
