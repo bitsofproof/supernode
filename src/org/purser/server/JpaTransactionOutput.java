@@ -19,7 +19,7 @@ public class JpaTransactionOutput {
 
 	private long value;
 	
-	@Lob  @Basic(fetch=FetchType.EAGER)
+	@Lob  @Basic(fetch=FetchType.LAZY)
 	private byte [] script;
 
 	public Long getId() {

@@ -7,6 +7,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.OneToMany;
@@ -16,7 +17,10 @@ import javax.persistence.OneToOne;
 @Entity
 public class JpaBlock {
 	@Id
-	@Column(length=64)
+	@GeneratedValue
+	private Long id;
+	
+	@Column(length=64,nullable=false,unique=true)
 	private String hash;
 
 	int version;
@@ -37,10 +41,11 @@ public class JpaBlock {
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,orphanRemoval=true)
 	private List<JpaTransaction> transactions;
 
-	@Lob @Basic(fetch=FetchType.EAGER)
+	@Lob @Basic(fetch=FetchType.LAZY)
 	private byte [] chainWork;
 	private int height;
 
+	
 	public String getHash() {
 		return hash;
 	}
@@ -51,22 +56,6 @@ public class JpaBlock {
 
 	public void setTransactions(List<JpaTransaction> transactions) {
 		this.transactions = transactions;
-	}
-
-	public byte[] getChainWork() {
-		return chainWork;
-	}
-
-	public void setChainWork(byte[] chainWork) {
-		this.chainWork = chainWork;
-	}
-
-	public int getHeight() {
-		return height;
-	}
-
-	public void setHeight(int height) {
-		this.height = height;
 	}
 
 	public void setHash(String hash) {
@@ -120,4 +109,30 @@ public class JpaBlock {
 	public void setNonce(int nonce) {
 		this.nonce = nonce;
 	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public byte[] getChainWork() {
+		return chainWork;
+	}
+
+	public void setChainWork(byte[] chainWork) {
+		this.chainWork = chainWork;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
+	
+	
 }

@@ -24,7 +24,7 @@ public class JpaTransactionInput {
 	
 	private int sequence;
 	
-	@Lob  @Basic(fetch=FetchType.EAGER)
+	@Lob  @Basic(fetch=FetchType.LAZY)
 	private byte [] script;
 
 	public Long getId() {
