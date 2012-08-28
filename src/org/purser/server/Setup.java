@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 public class Setup {
     private static final Logger log = LoggerFactory.getLogger(Setup.class);
 
-	static void setup () throws IOException
+	static public void setup () throws IOException
 	{
 		  String password = null;
 		  File master = new File ("MASTERPASSWORD");

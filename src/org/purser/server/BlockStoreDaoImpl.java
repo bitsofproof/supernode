@@ -76,8 +76,6 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 
 	@Override
 	public void put(StoredBlock block) throws BlockStoreException {
-		log.info("put " + block.getHeader().getHashAsString());
-		
 		QJpaBlock jb = QJpaBlock.jpaBlock;
 		JPAQuery q1 = new JPAQuery(entityManager);
 		JpaBlock b = q1.from(jb).where(jb.hash.eq(block.getHeader().getHashAsString())).uniqueResult(jb);
@@ -117,7 +115,6 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 
 	@Override
 	public StoredBlock getChainHead() throws BlockStoreException {
-		log.info("getChainHead");
 		try {
 			QJpaChainHead head = QJpaChainHead.jpaChainHead;
 
@@ -135,7 +132,6 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 
 	@Override
 	public void setChainHead(StoredBlock chainHead) throws BlockStoreException {
-		log.info("setChainHead");
 		try {
 			QJpaChainHead head = QJpaChainHead.jpaChainHead;
 
@@ -153,5 +149,4 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	@Override
 	public void close() throws BlockStoreException {
 	}
-
 }

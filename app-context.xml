@@ -12,9 +12,16 @@
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"  name="propertiesBean"
     	p:location="classpath:purser.properties"/>
     	
+   <!-- with ssl
 	<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource"
 		p:driverClass="org.apache.derby.jdbc.ClientDriver"
 		p:url="jdbc:derby://localhost:1527/data;ssl=peerAuthentication"
+		p:username="dbuser"
+	/>
+	 -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource"
+		p:driverClass="org.apache.derby.jdbc.ClientDriver"
+		p:url="jdbc:derby://localhost:1527/data"
 		p:username="dbuser"
 	/>
 	<bean id="jpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
@@ -41,5 +48,4 @@
 		
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="org.purser" />
-	
 </beans>

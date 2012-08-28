@@ -1,9 +1,9 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.Hash;
+import hu.blummers.bitcoin.core.WireFormat;
+
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,112 +14,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.google.bitcoin.core.BlockChain;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.Utils;
-import com.google.bitcoin.core.VarInt;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component
 public class JpaSerializer {
-    private static final Logger log = LoggerFactory.getLogger(JpaSerializer.class);
+	private static final Logger log = LoggerFactory
+			.getLogger(JpaSerializer.class);
 
 	@PersistenceContext
 	EntityManager entityManager;
-
-	private class Batch {
-		private byte[] bytes;
-		private int cursor;
-
-		Batch(byte[] bytes) {
-			this.bytes = bytes;
-			this.cursor = 0;
-		}
-
-		long readUint32() {
-			long u = Utils.readUint32(bytes, cursor);
-			cursor += 4;
-			return u;
-		}
-		
-		boolean eof ()
-		{
-			return cursor >= bytes.length;
-		}
-
-		Sha256Hash readHash() {
-			byte[] hash = new byte[32];
-			System.arraycopy(bytes, cursor, hash, 0, 32);
-			// We have to flip it around, as it's been read off the wire in
-			// little endian.
-			// Not the most efficient way to do this but the clearest.
-			hash = Utils.reverseBytes(hash);
-			cursor += 32;
-			return new Sha256Hash(hash);
-		}
-
-		BigInteger readUint64() {
-			// Java does not have an unsigned 64 bit type. So scrape it off the
-			// wire then flip.
-			byte[] valbytes = new byte[8];
-			System.arraycopy(bytes, cursor, valbytes, 0, 8);
-			valbytes = Utils.reverseBytes(valbytes);
-			cursor += valbytes.length;
-			return new BigInteger(valbytes);
-		}
-
-		long readVarInt() {
-			return readVarInt(0);
-		}
-
-		long readVarInt(int offset) {
-			VarInt varint = new VarInt(bytes, cursor + offset);
-			cursor += offset + varint.getSizeInBytes();
-			return varint.value;
-		}
-
-		byte[] readBytes(int length) {
-			byte[] b = new byte[length];
-			System.arraycopy(bytes, cursor, b, 0, length);
-			cursor += length;
-			return b;
-		}
-
-		byte[] readByteArray() {
-			long len = readVarInt();
-			return readBytes((int) len);
-		}
-
-		String readStr() {
-			VarInt varInt = new VarInt(bytes, cursor);
-			if (varInt.value == 0) {
-				cursor += 1;
-				return "";
-			}
-			cursor += varInt.getSizeInBytes();
-			byte[] characters = new byte[(int) varInt.value];
-			System.arraycopy(bytes, cursor, characters, 0, characters.length);
-			cursor += characters.length;
-			try {
-				return new String(characters, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException(e); // Cannot happen, UTF-8 is always
-												// supported.
-			}
-		}
-
-		String digest(int offset, int length) {
-			return new Sha256Hash(Utils.reverseBytes(Utils.doubleDigest(bytes,
-					offset, length))).toString();
-		}
-	}
 
 	private JpaBlock findBlock(String hash) {
 		QJpaBlock block = QJpaBlock.jpaBlock;
 		JPAQuery query = new JPAQuery(entityManager);
 		return query.from(block).where(block.hash.eq(hash)).uniqueResult(block);
 	}
-
+/*
 	private JpaTransaction findSourceTransaction(String hash, long index) {
 		QJpaTransaction transaction = QJpaTransaction.jpaTransaction;
 		JPAQuery query = new JPAQuery(entityManager);
@@ -128,22 +38,28 @@ public class JpaSerializer {
 				.where(transaction.block.hash.eq(hash).and(
 						transaction.ix.eq(index))).uniqueResult(transaction);
 	}
-
+*/
 	public JpaBlock jpaBlockFromWire(byte[] bytes) {
-		Batch batch = new Batch(bytes);
+		
+		WireFormat.Reader batch = new WireFormat.Reader(bytes);
 		JpaBlock block = new JpaBlock();
 
+		block.fromWire(batch, entityManager);
+		/*
+		
 		block.setVersion(batch.readUint32());
 		block.setPrevious(findBlock(batch.readHash().toString()));
-		block.setMerkleRoot(batch.readBytes(32)); // this is the right direction.
+		block.setMerkleRoot(batch.readBytes(32)); // this is the right
+													// direction.
 		block.setCreateTime(batch.readUint32());
 		block.setDifficultyTarget(batch.readUint32());
 		block.setNonce(batch.readUint32());
-		block.setHash(batch.digest(0, 80));
+		block.setHash(batch.hash(0, 80).toString());
 
-		if ( batch.eof() )
-			return block; // this is actually violaton of protocol, but bitcoinj does it.  
-		
+		if (batch.eof())
+			return block; // this is actually violaton of protocol, but bitcoinj
+							// does it.
+
 		long nt = batch.readVarInt();
 		List<JpaTransaction> transactions = new ArrayList<JpaTransaction>();
 		block.setTransactions(transactions);
@@ -151,7 +67,7 @@ public class JpaSerializer {
 		for (long i = 0; i < nt; ++i) {
 			JpaTransaction tx = new JpaTransaction();
 			transactions.add(tx);
-			
+
 			tx.setIx(i);
 			tx.setBlock(block);
 			tx.setVersion((int) batch.readUint32());
@@ -161,10 +77,10 @@ public class JpaSerializer {
 			for (long j = 0; j < nin; ++j) {
 				JpaTransactionInput input = new JpaTransactionInput();
 				inputs.add(input);
-				
+
 				input.setSource(findSourceTransaction(batch.readHash()
 						.toString(), batch.readUint32()));
-				input.setScript(batch.readByteArray());
+				input.setSignature(batch.readVarBytes());
 				input.setSequence(batch.readUint32());
 			}
 
@@ -173,14 +89,14 @@ public class JpaSerializer {
 			tx.setOutputs(outs);
 			for (long j = 0; j < nout; ++j) {
 				JpaTransactionOutput output = new JpaTransactionOutput();
-				outs.add (output);
-				
+				outs.add(output);
+
 				output.setValue(batch.readUint64());
-				output.setScript(batch.readByteArray());
+				output.setScript(batch.readVarBytes());
 			}
 			tx.setLockTime(batch.readUint32());
 		}
-
+*/
 		return block;
 	}
 
@@ -188,95 +104,82 @@ public class JpaSerializer {
 		int len = s.length();
 		byte[] data = new byte[len / 2];
 		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16)  << 4) + Character.digit(s.charAt(i + 1), 16));
+			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character
+					.digit(s.charAt(i + 1), 16));
 		}
-		
+
 		// in place reversal
-		for( int i = 0, j = data.length - 1; i < data.length / 2; i++, j-- ) {
-			 
-			data[ i ] ^= data[ j ];
-			data[ j ] ^= data[ i ];
-			data[ i ] ^= data[ j ];
-	    }
+		for (int i = 0, j = data.length - 1; i < data.length / 2; i++, j--) {
+
+			data[i] ^= data[j];
+			data[j] ^= data[i];
+			data[i] ^= data[j];
+		}
 		return data;
-	}	
-	
+	}
+
 	public byte[] jpaBlockToWire(JpaBlock block) {
-		ByteArrayOutputStream bs = new ByteArrayOutputStream();
-		try {
-			Utils.uint32ToByteStreamLE(block.getVersion(), bs);
-			if ( block.getPrevious() == null )
-				bs.write(new byte [32]);
-			else
-				bs.write(hexStringHash(block.getPrevious().getHash()));
-			bs.write(block.getMerkleRoot());
-			Utils.uint32ToByteStreamLE(block.getCreateTime(), bs);
-			Utils.uint32ToByteStreamLE(block.getDifficultyTarget(), bs);
-			Utils.uint32ToByteStreamLE(block.getNonce(), bs);
-			if ( block.getTransactions() != null && !block.getTransactions().isEmpty() )
-			{
-				bs.write(new VarInt (block.getTransactions().size()).encode());
-				for ( JpaTransaction tx : block.getTransactions() )
-				{
-					Utils.uint32ToByteStreamLE(tx.getVersion(), bs);
-					if ( tx.getInputs () != null && !tx.getInputs ().isEmpty() )
-					{
-						bs.write(new VarInt (tx.getInputs().size()).encode());
-						for ( JpaTransactionInput in : tx.getInputs() )
-						{
-							if ( in.getSource() != null )
-							{
-								bs.write(hexStringHash(in.getSource().getBlock().getHash()));
-								Utils.uint32ToByteStreamLE(in.getSource().getIx(), bs);
-							}
-							else
-							{
-								bs.write(Sha256Hash.ZERO_HASH.getBytes());
-								Utils.uint32ToByteStreamLE(-1, bs); //TODO: not sure of this... check hash!
-							}
-							bs.write(new VarInt (in.getScript().length).encode());
-							bs.write(in.getScript());
-							Utils.uint32ToByteStreamLE(in.getSequence(), bs);
+		WireFormat.Writer writer = new WireFormat.Writer(
+				new ByteArrayOutputStream());
+		
+		block.toWire(writer);
+		
+		/*
+		writer.writeUint32(block.getVersion());
+		if (block.getPrevious() == null)
+			writer.writeBytes(new byte[32]);
+		else
+			writer.writeHash(new Hash(block.getPrevious().getHash()));
+		writer.writeBytes(block.getMerkleRoot());
+		writer.writeUint32(block.getCreateTime());
+		writer.writeUint32(block.getDifficultyTarget());
+		writer.writeUint32(block.getNonce());
+		if (block.getTransactions() != null
+				&& !block.getTransactions().isEmpty()) {
+			writer.writeUint32(1);
+			writer.writeVarInt(block.getTransactions().size());
+			for (JpaTransaction tx : block.getTransactions()) {
+				writer.writeUint32(tx.getVersion());
+				if (tx.getInputs() != null && !tx.getInputs().isEmpty()) {
+					writer.writeVarInt(tx.getInputs().size());
+					for (JpaTransactionInput in : tx.getInputs()) {
+						if (in.getSource() != null) {
+							writer.writeHash(new Hash(in.getSource().getBlock()
+									.getHash()));
+							writer.writeUint32(in.getSource().getIx());
+						} else {
+							writer.writeBytes(Hash.ZERO_HASH.toByteArray());
+							writer.writeUint32(-1); // TODO: not sure of this...
+													// check hash!
 						}
+						writer.writeVarBytes(in.getSignature());
+						writer.writeUint32(in.getSequence());
 					}
-					else
-					{
-						bs.write(new VarInt(0).encode());
+				} else {
+					writer.writeVarInt(0);
+				}
+				if (tx.getOutputs() != null && !tx.getOutputs().isEmpty()) {
+					writer.writeVarInt(tx.getOutputs().size());
+					for (JpaTransactionOutput out : tx.getOutputs()) {
+						writer.writeUint64(out.getValue());
+						writer.writeVarBytes(out.getScript());
 					}
-					if ( tx.getOutputs() != null && !tx.getOutputs ().isEmpty())
-					{
-						bs.write(new VarInt (tx.getOutputs().size()).encode());
-						for ( JpaTransactionOutput out : tx.getOutputs() )
-						{
-							Utils.uint64ToByteStreamLE(out.getValue(), bs);
-							bs.write(new VarInt (out.getScript().length).encode());
-							bs.write(out.getScript());
-						}
-					}
-					else
-					{
-						bs.write(new VarInt(0).encode()); // miner's dream...
-					}
-					Utils.uint32ToByteStreamLE(tx.getLockTime(), bs);
-				}				
+				} else {
+					writer.writeVarInt(0); // miner's dream...
+				}
+				writer.writeUint32(tx.getLockTime());
 			}
-			else
-			{
-				bs.write(new VarInt(0).encode());
-			}
-		} catch (IOException e) {
-			// can not happen
+		} else {
+			writer.writeVarInt(0);
 		}
+		*/
+		/*
+		 * // check hash byte [] bytes = bs.toByteArray(); Batch batch = new
+		 * Batch (bytes); if ( !batch.digest(0, 80).equals(block.getHash()) ) {
+		 * log.error(" wire " + batch.digest(0, 80) + " vs JPA " +
+		 * block.getHash()); }
+		 */
 		
-		// check hash
-		byte [] bytes = bs.toByteArray();
-		Batch batch = new Batch (bytes);
-		if ( !batch.digest(0, 80).equals(block.getHash()) )
-		{
-			log.error(" wire " + batch.digest(0, 80) + " vs JPA " + block.getHash());
-		}
-		
-		
-		return bs.toByteArray();
+		return writer.toByteArray();
 	}
 }

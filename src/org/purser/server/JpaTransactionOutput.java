@@ -1,9 +1,12 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.WireFormat;
+
 import java.math.BigInteger;
 
 import javax.persistence.Basic;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -45,5 +48,15 @@ public class JpaTransactionOutput {
 		this.script = script;
 	}
 	
+	public void toWire (WireFormat.Writer writer)
+	{
+		writer.writeUint64(getValue());
+		writer.writeVarBytes(getScript());
+	}
 	
+	public void fromWire (WireFormat.Reader reader)
+	{
+		setValue (reader.readUint64());
+		setScript (reader.readVarBytes());
+	}
 }

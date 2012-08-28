@@ -1,17 +1,24 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.Hash;
+import hu.blummers.bitcoin.core.WireFormat;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+
+import com.mysema.query.jpa.impl.JPAQuery;
 
 
 @Entity
@@ -109,5 +116,55 @@ public class JpaBlock {
 	public void setHeight(int height) {
 		this.height = height;
 	}
+	
+	public void toWire (WireFormat.Writer writer)
+	{
+		writer.writeUint32(version);
+		if ( previous != null )
+			writer.writeHash(new Hash (previous.getHash()));
+		else
+			writer.writeHash (Hash.ZERO_HASH);
+		writer.writeBytes(merkleRoot);
+		writer.writeUint32(createTime);
+		writer.writeUint32(difficultyTarget);
+		writer.writeUint32(nonce);
+		if ( transactions != null )
+		{
+			writer.writeVarInt(transactions.size());
+			for ( JpaTransaction t : transactions )
+				t.toWire(writer);
+		}
+		else
+			writer.writeVarInt(0);
+	}
+	
+	public void fromWire (WireFormat.Reader reader, EntityManager entityManager)
+	{
+		int cursor = reader.getCursor();
+		version = reader.readUint32();
 
+		QJpaBlock block = QJpaBlock.jpaBlock;
+		JPAQuery query = new JPAQuery(entityManager);
+		previous = query.from(block).where(block.hash.eq(reader.readHash().toString())).uniqueResult(block);
+		
+		merkleRoot = reader.readHash().toByteArray();
+		createTime = reader.readUint32();
+		difficultyTarget = reader.readUint32();
+		nonce = reader.readUint32();
+		long nt = reader.readVarInt();
+		if ( nt > 0 )
+		{
+			transactions = new ArrayList<JpaTransaction> ();
+			for ( long i = 0; i < nt; ++i )
+			{
+				JpaTransaction t = new JpaTransaction ();
+				t.fromWire(reader, entityManager);
+				transactions.add(t);
+			}
+		}
+		else
+			transactions = null;
+		
+		hash = reader.hash(cursor, 80).toString(); 
+	}
 }
