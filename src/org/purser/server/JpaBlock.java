@@ -17,11 +17,13 @@ import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.Table;
 
 import com.mysema.query.jpa.impl.JPAQuery;
 
 
 @Entity
+@Table(name="blk")
 public class JpaBlock {
 
 	@Id	@GeneratedValue
@@ -32,8 +34,7 @@ public class JpaBlock {
 
 	long version;
 	
-	@Column(length=64,nullable=false)
-	private String previousHash;
+	transient private String previousHash;
 
 	@OneToOne(fetch=FetchType.LAZY,targetEntity=JpaBlock.class,optional=true,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private JpaBlock previous;
@@ -47,7 +48,7 @@ public class JpaBlock {
 	
 	private long nonce;
 	
-	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
+	@OneToMany(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private List<JpaTransaction> transactions;
 
 	@Lob @Basic(fetch=FetchType.LAZY)
@@ -123,7 +124,9 @@ public class JpaBlock {
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32(version);
-		if ( previousHash != null )
+		if ( previous != null )
+			writer.writeHash (new Hash (previous.getHash()));
+		else if ( previousHash != null )
 			writer.writeHash(new Hash (previousHash));
 		else
 			writer.writeHash (Hash.ZERO_HASH);
@@ -147,6 +150,7 @@ public class JpaBlock {
 		version = reader.readUint32();
 
 		previousHash = reader.readHash().toString();
+		previous = null;
 		
 		merkleRoot = reader.readHash().toString ();
 		createTime = reader.readUint32();
@@ -159,7 +163,8 @@ public class JpaBlock {
 			for ( long i = 0; i < nt; ++i )
 			{
 				JpaTransaction t = new JpaTransaction ();
-				t.fromWire(reader);			
+				t.fromWire(reader);
+				t.setBlock(this);
 				transactions.add(t);
 			}
 		}
@@ -167,5 +172,28 @@ public class JpaBlock {
 			transactions = null;
 		
 		hash = reader.hash(cursor, 80).toString(); 
+	}
+	
+	public void validate (EntityManager entityManager) throws ValidationException
+	{
+		if ( previousHash == null )
+			return;
+		
+		if ( !previousHash.equals(Hash.ZERO_HASH.toString()) )
+		{
+			QJpaBlock block = QJpaBlock.jpaBlock;
+			JPAQuery query = new JPAQuery(entityManager);
+			previous = query.from(block).where(block.hash.eq(previousHash)).uniqueResult(block);
+			if ( previous == null )
+				throw new ValidationException ("Previous block '" + previousHash +"' not found");
+			
+			previousHash = null;
+		}
+		boolean coinbase = true;
+		for ( JpaTransaction t : transactions )
+		{
+			t.validate (entityManager, coinbase);
+			coinbase = false;
+		}
 	}
 }

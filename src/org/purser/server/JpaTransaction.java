@@ -1,5 +1,6 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.util.ArrayList;
@@ -14,8 +15,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
+@Table(name="tx")
 public class JpaTransaction {
 
 	@Id
@@ -25,17 +30,13 @@ public class JpaTransaction {
 	private long version;
 	
 	private long lockTime;
-	
-	@Column(length=64,nullable=false)
-	private String hash;
-	
-	public String getHash() {
-		return hash;
-	}
 
-	public void setHash(String hash) {
-		this.hash = hash;
-	}
+	// this should really be one-to-on and part of this class but unfortunately not unique on the chain see http://r6.ca/blog/20120206T005236Z.html
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
+	private JpaTransactionHash hash;
+	
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
+	private JpaBlock block;
 
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransactionInput> inputs;
@@ -83,6 +84,22 @@ public class JpaTransaction {
 		this.outputs = outputs;
 	}
 	
+	public JpaTransactionHash getHash() {
+		return hash;
+	}
+
+	public void setHash(JpaTransactionHash hash) {
+		this.hash = hash;
+	}
+
+	public JpaBlock getBlock() {
+		return block;
+	}
+
+	public void setBlock(JpaBlock block) {
+		this.block = block;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32(version);
@@ -120,6 +137,7 @@ public class JpaTransaction {
 			{
 				JpaTransactionInput input = new JpaTransactionInput ();
 				input.fromWire(reader);
+				input.setTransaction(this);
 				inputs.add(input);
 			}
 		}
@@ -134,6 +152,8 @@ public class JpaTransaction {
 			{
 				JpaTransactionOutput output = new JpaTransactionOutput ();
 				output.fromWire(reader);
+				output.setTransaction(this);
+				output.setIx(i);
 				outputs.add(output);
 			}
 		}
@@ -142,6 +162,27 @@ public class JpaTransaction {
 		
 		lockTime = reader.readUint32();
 		
-		hash = reader.hash(cursor, reader.getCursor() - cursor).toString();
+		hash = new JpaTransactionHash ();
+		hash.setHash(reader.hash(cursor, reader.getCursor() - cursor).toString());
+		hash.setTransactions(new ArrayList<JpaTransaction> ());
+		hash.getTransactions().add(this);
+	}
+	
+	public void validate (EntityManager entityManager, boolean coinbase) throws ValidationException
+	{
+		if ( coinbase )
+			return; // TODO separate logic
+		
+		QJpaTransactionHash ht = QJpaTransactionHash.jpaTransactionHash;
+		JPAQuery query = new JPAQuery(entityManager);
+		JpaTransactionHash storedHash = query.from(ht).where(ht.hash.eq(hash.getHash())).uniqueResult(ht);
+		if ( storedHash != null )
+			hash = storedHash;
+		
+		for ( JpaTransactionInput input : inputs )
+			input.validate (entityManager);
+
+		for ( JpaTransactionOutput output : outputs )
+			output.validate (entityManager);
 	}
 }

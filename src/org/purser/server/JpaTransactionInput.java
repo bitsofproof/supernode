@@ -5,26 +5,33 @@ import hu.blummers.bitcoin.core.WireFormat;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
+@Table(name="txin")
 public class JpaTransactionInput {
 	@Id
 	@GeneratedValue
 	private Long id;
 
-	@Column(length=64,nullable=false)
-	private String sourceHash;
+	transient private String sourceHash;
+	transient private long ix;
 	
-	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
-	private JpaTransaction source;
-	private long ix;
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
+	private JpaTransaction transaction;
+	
+	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
+	private JpaTransactionOutput source;
 	
 	private long sequence;	
 	
@@ -39,20 +46,28 @@ public class JpaTransactionInput {
 		this.id = id;
 	}
 
-	public JpaTransaction getSource() {
-		return source;
-	}
-
-	public void setSource(JpaTransaction source) {
-		this.source = source;
-	}
-
 	public long getIx() {
 		return ix;
 	}
 
 	public void setIx(long ix) {
 		this.ix = ix;
+	}
+
+	public String getSourceHash() {
+		return sourceHash;
+	}
+
+	public void setSourceHash(String sourceHash) {
+		this.sourceHash = sourceHash;
+	}
+
+	public JpaTransactionOutput getSource() {
+		return source;
+	}
+
+	public void setSource(JpaTransactionOutput source) {
+		this.source = source;
 	}
 
 	public long getSequence() {
@@ -71,9 +86,22 @@ public class JpaTransactionInput {
 		this.script = script;
 	}
 
+	public JpaTransaction getTransaction() {
+		return transaction;
+	}
+
+	public void setTransaction(JpaTransaction transaction) {
+		this.transaction = transaction;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
-		if ( sourceHash != null )
+		if ( source != null )
+		{
+			writer.writeHash(new Hash (source.getTransaction().getHash().getHash()));
+			writer.writeUint32(source.getIx());
+		}
+		else if ( sourceHash != null )
 		{
 			writer.writeHash(new Hash (sourceHash));
 			writer.writeUint32(ix);
@@ -91,7 +119,32 @@ public class JpaTransactionInput {
 	{
 		sourceHash = reader.readHash().toString();
 		ix = reader.readUint32();
+		source = null;
 		script = reader.readVarBytes();
 		sequence = reader.readUint32();
+	}
+	
+	public void validate (EntityManager entityManager) throws ValidationException
+	{
+		if ( sourceHash == null )
+			return;
+		
+		QJpaTransactionHash txh = QJpaTransactionHash.jpaTransactionHash;
+		JPAQuery query = new JPAQuery (entityManager);
+		JpaTransactionHash th = query.from(txh).where(txh.hash.eq(sourceHash)).uniqueResult(txh);
+		if ( th == null )
+			throw new ValidationException ("Transaction input refers to unknown transaction '" + sourceHash + "'");
+		
+		JpaTransaction latest = th.getTransactions().get(th.getTransactions().size()-1);
+		if ( latest.getOutputs().size() <= ix )
+		{
+			throw new ValidationException ("Transaction input refers to unknown output index "+ ix +" of transaction '" + sourceHash + "'");
+		}
+		JpaTransactionOutput prevout = latest.getOutputs().get((int)ix);
+		if ( prevout.getSink() != null )
+			throw new ValidationException ("Transaction input refers to spent output "+ ix +" of transaction '" + sourceHash + "'");
+		source = prevout;
+		source.setSink(this);
+		sourceHash = null;
 	}
 }

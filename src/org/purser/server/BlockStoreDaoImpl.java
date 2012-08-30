@@ -84,8 +84,12 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 			b = serializer.jpaBlockFromWire(block.getHeader().unsafeBitcoinSerialize());
 			b.setChainWork(block.getChainWork().toByteArray());
 			b.setHeight(block.getHeight());
-			
-			entityManager.persist(b);
+			try {
+				b.validate(entityManager);
+				entityManager.persist(b);
+			} catch (ValidationException e) {
+				log.error("can not store block " + block.toString(), e);
+			}
 		}
 	}
 
