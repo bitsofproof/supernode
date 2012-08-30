@@ -5,15 +5,13 @@ import hu.blummers.bitcoin.core.WireFormat;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-
-import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
 public class JpaTransactionInput {
@@ -21,6 +19,9 @@ public class JpaTransactionInput {
 	@GeneratedValue
 	private Long id;
 
+	@Column(length=64,nullable=false)
+	private String sourceHash;
+	
 	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
 	private JpaTransaction source;
 	private long ix;
@@ -28,7 +29,7 @@ public class JpaTransactionInput {
 	private long sequence;	
 	
 	@Lob  @Basic(fetch=FetchType.LAZY)
-	private byte [] signature;
+	private byte [] script;
 	
 	public Long getId() {
 		return id;
@@ -62,19 +63,19 @@ public class JpaTransactionInput {
 		this.sequence = sequence;
 	}
 
-	public byte[] getSignature() {
-		return signature;
+	public byte[] getScript() {
+		return script;
 	}
 
-	public void setSignature(byte[] signature) {
-		this.signature = signature;
+	public void setScript(byte[] script) {
+		this.script = script;
 	}
 
 	public void toWire (WireFormat.Writer writer)
 	{
-		if ( source != null )
+		if ( sourceHash != null )
 		{
-			writer.writeHash(new Hash (source.getHash()));
+			writer.writeHash(new Hash (sourceHash));
 			writer.writeUint32(ix);
 		}
 		else
@@ -82,19 +83,15 @@ public class JpaTransactionInput {
 			writer.writeBytes(Hash.ZERO_HASH.toByteArray());
 			writer.writeUint32(-1);
 		}
-		writer.writeVarBytes(signature);
+		writer.writeVarBytes(script);
 		writer.writeUint32(sequence);
 	}
 	
-	public void fromWire (WireFormat.Reader reader, EntityManager entityManager)
+	public void fromWire (WireFormat.Reader reader)
 	{
-		QJpaTransaction transaction = QJpaTransaction.jpaTransaction;
-		JPAQuery query = new JPAQuery(entityManager);
-		source = query
-				.from(transaction)
-				.where(transaction.hash.eq(reader.readHash().toString())).uniqueResult(transaction);
+		sourceHash = reader.readHash().toString();
 		ix = reader.readUint32();
-		signature = reader.readVarBytes();
+		script = reader.readVarBytes();
 		sequence = reader.readUint32();
 	}
 }

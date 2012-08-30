@@ -44,7 +44,7 @@ public class JpaSerializer {
 		WireFormat.Reader batch = new WireFormat.Reader(bytes);
 		JpaBlock block = new JpaBlock();
 
-		block.fromWire(batch, entityManager);
+		block.fromWire(batch);
 		/*
 		
 		block.setVersion(batch.readUint32());

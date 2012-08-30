@@ -23,8 +23,8 @@ import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
 public class JpaBlock {
-	@Id
-	@GeneratedValue
+
+	@Id	@GeneratedValue
 	private Long id;
 	
 	@Column(length=64,nullable=false,unique=true)
@@ -32,11 +32,14 @@ public class JpaBlock {
 
 	long version;
 	
+	@Column(length=64,nullable=false)
+	private String previousHash;
+
 	@OneToOne(fetch=FetchType.LAZY,targetEntity=JpaBlock.class,optional=true,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private JpaBlock previous;
 	
-	@Lob @Basic(fetch=FetchType.LAZY)
-	private byte [] merkleRoot;
+	@Column(length=64,nullable=false)
+	private String merkleRoot;
 	
 	private long createTime;
 	
@@ -74,10 +77,10 @@ public class JpaBlock {
 	public void setPrevious(JpaBlock previous) {
 		this.previous = previous;
 	}
-	public byte[] getMerkleRoot() {
+	public String getMerkleRoot() {
 		return merkleRoot;
 	}
-	public void setMerkleRoot(byte[] merkleRoot) {
+	public void setMerkleRoot(String merkleRoot) {
 		this.merkleRoot = merkleRoot;
 	}
 	public long getCreateTime() {
@@ -120,11 +123,11 @@ public class JpaBlock {
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32(version);
-		if ( previous != null )
-			writer.writeHash(new Hash (previous.getHash()));
+		if ( previousHash != null )
+			writer.writeHash(new Hash (previousHash));
 		else
 			writer.writeHash (Hash.ZERO_HASH);
-		writer.writeBytes(merkleRoot);
+		writer.writeHash(new Hash (merkleRoot));
 		writer.writeUint32(createTime);
 		writer.writeUint32(difficultyTarget);
 		writer.writeUint32(nonce);
@@ -138,16 +141,14 @@ public class JpaBlock {
 			writer.writeVarInt(0);
 	}
 	
-	public void fromWire (WireFormat.Reader reader, EntityManager entityManager)
+	public void fromWire (WireFormat.Reader reader)
 	{
 		int cursor = reader.getCursor();
 		version = reader.readUint32();
 
-		QJpaBlock block = QJpaBlock.jpaBlock;
-		JPAQuery query = new JPAQuery(entityManager);
-		previous = query.from(block).where(block.hash.eq(reader.readHash().toString())).uniqueResult(block);
+		previousHash = reader.readHash().toString();
 		
-		merkleRoot = reader.readHash().toByteArray();
+		merkleRoot = reader.readHash().toString ();
 		createTime = reader.readUint32();
 		difficultyTarget = reader.readUint32();
 		nonce = reader.readUint32();
@@ -158,7 +159,7 @@ public class JpaBlock {
 			for ( long i = 0; i < nt; ++i )
 			{
 				JpaTransaction t = new JpaTransaction ();
-				t.fromWire(reader, entityManager);
+				t.fromWire(reader);			
 				transactions.add(t);
 			}
 		}

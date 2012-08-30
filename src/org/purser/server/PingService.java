@@ -72,7 +72,7 @@ public class PingService {
 			
 			BlockStoreDao blockStore = context.getBean (BlockStoreDao.class);
 			blockStore.setNetworkParams(params);
-			blockStore.resetStore();
+			//blockStore.resetStore();
 			
 			System.out.println("Opened block store in "
 					+ (System.currentTimeMillis() - time) + " ms");

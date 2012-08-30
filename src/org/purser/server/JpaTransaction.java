@@ -26,7 +26,7 @@ public class JpaTransaction {
 	
 	private long lockTime;
 	
-	@Column(length=64,nullable=false,unique=true)
+	@Column(length=64,nullable=false)
 	private String hash;
 	
 	public String getHash() {
@@ -107,7 +107,7 @@ public class JpaTransaction {
 		writer.writeUint32(lockTime);	
 	}
 
-	public void fromWire (WireFormat.Reader reader, EntityManager entityManager)
+	public void fromWire (WireFormat.Reader reader)
 	{
 		int cursor = reader.getCursor();
 		
@@ -119,7 +119,7 @@ public class JpaTransaction {
 			for ( int i = 0; i < nin; ++i )
 			{
 				JpaTransactionInput input = new JpaTransactionInput ();
-				input.fromWire(reader, entityManager);
+				input.fromWire(reader);
 				inputs.add(input);
 			}
 		}
