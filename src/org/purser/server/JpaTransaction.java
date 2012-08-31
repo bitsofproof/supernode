@@ -1,13 +1,11 @@
 package org.purser.server;
 
-import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
@@ -170,17 +168,15 @@ public class JpaTransaction {
 	
 	public void validate (EntityManager entityManager, boolean coinbase) throws ValidationException
 	{
-		if ( coinbase )
-			return; // TODO separate logic
-		
 		QJpaTransactionHash ht = QJpaTransactionHash.jpaTransactionHash;
 		JPAQuery query = new JPAQuery(entityManager);
 		JpaTransactionHash storedHash = query.from(ht).where(ht.hash.eq(hash.getHash())).uniqueResult(ht);
 		if ( storedHash != null )
 			hash = storedHash;
-		
-		for ( JpaTransactionInput input : inputs )
-			input.validate (entityManager);
+
+		if ( !coinbase )
+			for ( JpaTransactionInput input : inputs )
+				input.validate (entityManager);
 
 		for ( JpaTransactionOutput output : outputs )
 			output.validate (entityManager);

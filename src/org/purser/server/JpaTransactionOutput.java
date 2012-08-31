@@ -1,8 +1,12 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.Base58;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -15,6 +19,11 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+
+import org.spongycastle.crypto.digests.RIPEMD160Digest;
+
+import com.google.bitcoin.core.Utils;
+import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
 @Table(name="txout")
@@ -35,6 +44,9 @@ public class JpaTransactionOutput {
 	
 	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
 	private JpaTransactionInput sink;
+	
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false)
+	private JpaAddress address;
 
 	public Long getId() {
 		return id;
@@ -84,6 +96,14 @@ public class JpaTransactionOutput {
 		this.sink = sink;
 	}
 
+	public JpaAddress getAddress() {
+		return address;
+	}
+
+	public void setAddress(JpaAddress address) {
+		this.address = address;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint64(getValue());
@@ -97,6 +117,53 @@ public class JpaTransactionOutput {
 	}
 	public void validate (EntityManager entityManager) throws ValidationException
 	{
-		
+		if ( address == null )
+		{
+			byte [] ph = new byte [20];
+			String ad = null;
+			
+			if ( script [0] == 0x76 )
+			{
+				// new style
+				System.arraycopy(script, 2, ph, 0, 20);
+				ad = Base58.encode(ph);
+			}
+			else
+			{
+				// old style
+				byte [] key = new byte [script [0]];
+				System.arraycopy(script, 1, key, 0, script [0]);				
+				byte[] sha256;
+				try {
+					sha256 = MessageDigest.getInstance("SHA-256").digest(key);
+		            RIPEMD160Digest digest = new RIPEMD160Digest();
+		            digest.update(sha256, 0, sha256.length);
+		            digest.doFinal(ph, 0);
+		            
+		            
+		            byte[] addressBytes = new byte[1 + ph.length + 4];
+		            addressBytes[0] = (byte) 0; // 0 for production
+		            System.arraycopy(ph, 0, addressBytes, 1, ph.length);
+		            byte[] check = Utils.doubleDigest(addressBytes, 0, ph.length + 1);
+		            System.arraycopy(check, 0, addressBytes, ph.length + 1, 4);
+		            ad = Base58.encode(addressBytes);
+		            
+		            
+				} catch (NoSuchAlgorithmException e) {
+				}
+			}
+			QJpaAddress addr = QJpaAddress.jpaAddress;
+			JPAQuery query = new JPAQuery (entityManager);
+			JpaAddress storedAddress = query.from(addr).where(addr.address.eq(ad)).uniqueResult(addr);
+			if ( storedAddress != null )
+				address = storedAddress;
+			else
+			{
+				address = new JpaAddress ();
+				address.setAddress(ad);
+				address.setTxouts(new ArrayList<JpaTransactionOutput> ());
+			}
+			address.getTxouts().add(this);
+		}
 	}
 }
