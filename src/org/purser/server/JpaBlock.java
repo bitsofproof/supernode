@@ -36,7 +36,7 @@ public class JpaBlock {
 	
 	transient private String previousHash;
 
-	@OneToOne(fetch=FetchType.LAZY,targetEntity=JpaBlock.class,optional=true,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
+	@OneToOne(fetch=FetchType.LAZY,targetEntity=JpaBlock.class,optional=true)
 	private JpaBlock previous;
 	
 	@Column(length=64,nullable=false)

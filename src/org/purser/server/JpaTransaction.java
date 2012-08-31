@@ -174,11 +174,12 @@ public class JpaTransaction {
 		if ( storedHash != null )
 			hash = storedHash;
 
+		for ( JpaTransactionOutput output : outputs )
+			output.validate (entityManager);
+
 		if ( !coinbase )
 			for ( JpaTransactionInput input : inputs )
 				input.validate (entityManager);
 
-		for ( JpaTransactionOutput output : outputs )
-			output.validate (entityManager);
 	}
 }
