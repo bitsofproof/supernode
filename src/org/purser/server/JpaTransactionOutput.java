@@ -24,6 +24,7 @@ import javax.persistence.Table;
 import org.spongycastle.crypto.digests.RIPEMD160Digest;
 
 import com.google.bitcoin.core.Utils;
+import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
 @Table(name="txout")
@@ -45,8 +46,8 @@ public class JpaTransactionOutput {
 	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
 	private JpaTransactionInput sink;
 	
-	@Column(length=40)
-	private String address;
+	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) // this should not be optional, but some wierd hibernate bug forces me to to do
+	private JpaAddress address;
 
 	public Long getId() {
 		return id;
@@ -96,11 +97,12 @@ public class JpaTransactionOutput {
 		this.sink = sink;
 	}
 
-	public String getAddress() {
+
+	public JpaAddress getAddress() {
 		return address;
 	}
 
-	public void setAddress(String address) {
+	public void setAddress(JpaAddress address) {
 		this.address = address;
 	}
 
@@ -119,13 +121,15 @@ public class JpaTransactionOutput {
 	{
 		if ( address == null )
 		{
+			String adr = null;
+			
 			byte [] ph = new byte [20];
 			
 			if ( script [0] == 0x76 )
 			{
 				// new style
 				System.arraycopy(script, 2, ph, 0, 20);
-				address = Base58.encode(ph);
+				adr = Base58.encode(ph);
 			}
 			else
 			{
@@ -145,12 +149,22 @@ public class JpaTransactionOutput {
 		            System.arraycopy(ph, 0, addressBytes, 1, ph.length);
 		            byte[] check = Utils.doubleDigest(addressBytes, 0, ph.length + 1);
 		            System.arraycopy(check, 0, addressBytes, ph.length + 1, 4);
-		            address = Base58.encode(addressBytes);
+		            adr = Base58.encode(addressBytes);
 		            
 		            
 				} catch (NoSuchAlgorithmException e) {
 				}
 			}
+			QJpaAddress ad = QJpaAddress.jpaAddress;
+			JPAQuery query = new JPAQuery (entityManager);
+			address = query.from(ad).where(ad.address.eq(adr)).uniqueResult(ad);
+			if ( address == null )
+			{
+				address = new JpaAddress ();
+				address.setAddress(adr);
+				address.setOuts(new ArrayList<JpaTransactionOutput> ());
+			}
+			address.getOuts().add(this);
 		}
 	}
 }
