@@ -122,7 +122,8 @@ public class JpaTransactionOutput {
 		if ( address == null )
 		{
 			String adr = null;
-			
+
+			// TODO: real script interpretation needed here
 			byte [] ph = new byte [20];
 			
 			if ( script [0] == 0x76 )

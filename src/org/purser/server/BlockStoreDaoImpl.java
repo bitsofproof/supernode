@@ -1,5 +1,7 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.Chain;
+
 import java.math.BigInteger;
 
 import javax.persistence.EntityManager;
@@ -33,45 +35,21 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 	JpaSerializer serializer;
 	
 	private NetworkParameters params;
+	private Chain chain;
 
 	public void setNetworkParams (NetworkParameters params) {
 		this.params = params;
 	}
+	
+	@Override
+	public void setChain(Chain chain) {
+		this.chain = chain;		
+	}
 
-	public StoredBlock resetStore() throws BlockStoreException {
+	public void resetStore() throws BlockStoreException {
 		log.info("reset store");
-		try {
-			/*
-			QJpaTransactionInput input = QJpaTransactionInput.jpaTransactionInput;
-			JPADeleteClause delete = new JPADeleteClause (entityManager, input);
-			delete.execute();
-			
-			QJpaTransactionOutput output = QJpaTransactionOutput.jpaTransactionOutput;
-			delete = new JPADeleteClause (entityManager, output);
-			delete.execute();
-
-			QJpaTransaction t = QJpaTransaction.jpaTransaction;
-			JPADeleteClause delete = new JPADeleteClause (entityManager, t);
-			delete.execute();			
-
-			QJpaBlock block = QJpaBlock.jpaBlock;
-			JPADeleteClause delete = new JPADeleteClause (entityManager, block);
-			delete.execute();
-			
-			QJpaChainHead head = QJpaChainHead.jpaChainHead;
-			delete = new JPADeleteClause(entityManager, head);
-			delete.execute();
-						*/
-
-			StoredBlock storedGenesis;
-			storedGenesis = new StoredBlock(params.genesisBlock, params.genesisBlock.getWork(), 0);
-			put(storedGenesis);
-			setChainHead(storedGenesis);
-
-			return storedGenesis;
-		} catch (VerificationException e) {
-			throw new BlockStoreException(e);
-		}
+		put(chain.getGenesis());
+		setChainHead(chain.getGenesis());
 	}
 
 	@Override
@@ -91,6 +69,10 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 				log.error("can not store block " + block.toString(), e);
 			}
 		}
+	}
+
+	public void put(JpaBlock block) throws BlockStoreException {
+		entityManager.merge(block);
 	}
 
 	@Override
@@ -126,7 +108,7 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 			JpaChainHead h = q1.from(head).uniqueResult(head);
 			if ( h == null )
 			{
-				return resetStore ();
+				resetStore ();
 			}
 			return get(h.getHash());
 		} catch (Exception e) {
@@ -144,6 +126,21 @@ public class BlockStoreDaoImpl implements BlockStoreDao {
 
 			JpaChainHead h = new JpaChainHead();
 			h.setHash(chainHead.getHeader().getHashAsString());
+			entityManager.persist(h);
+		} catch (Exception e) {
+			throw (new BlockStoreException(e));
+		}
+	}
+
+	public void setChainHead(JpaBlock chainHead) throws BlockStoreException {
+		try {
+			QJpaChainHead head = QJpaChainHead.jpaChainHead;
+
+			JPADeleteClause delete = new JPADeleteClause(entityManager, head);
+			delete.execute();
+
+			JpaChainHead h = new JpaChainHead();
+			h.setHash(chainHead.getHash());
 			entityManager.persist(h);
 		} catch (Exception e) {
 			throw (new BlockStoreException(e));

@@ -1,8 +1,13 @@
 package org.purser.server;
 
+import static com.google.bitcoin.core.Utils.doubleDigestTwoBuffers;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +24,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import com.google.bitcoin.core.Transaction;
+import com.google.bitcoin.core.Utils;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 
@@ -114,11 +121,81 @@ public class JpaBlock {
 	public void setChainWork(byte[] chainWork) {
 		this.chainWork = chainWork;
 	}
+	public BigInteger getWork ()
+	{
+		return new BigInteger (chainWork);
+	}
+	public void setWork (BigInteger work)
+	{
+		chainWork = work.toByteArray();
+	}
+	
 	public int getHeight() {
 		return height;
 	}
 	public void setHeight(int height) {
 		this.height = height;
+	}
+	
+	public void computeMerkleRoot ()
+	{
+		if ( merkleRoot != null )
+			return;
+		
+        ArrayList<byte[]> tree = new ArrayList<byte[]>();
+        // Start by adding all the hashes of the transactions as leaves of the tree.
+        for (JpaTransaction t : transactions) {
+        	t.calculateHash();
+            tree.add(new Hash (t.getHash().getHash()).toByteArray());
+        }
+        int levelOffset = 0; // Offset in the list where the currently processed level starts.
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        
+	        // Step through each level, stopping when we reach the root (levelSize == 1).
+	        for (int levelSize = transactions.size(); levelSize > 1; levelSize = (levelSize + 1) / 2) {
+	            // For each pair of nodes on that level:
+	            for (int left = 0; left < levelSize; left += 2) {
+	                // The right hand node can be the same as the left hand, in the case where we don't have enough
+	                // transactions.
+	                int right = Math.min(left + 1, levelSize - 1);
+	                byte[] leftBytes = tree.get(levelOffset + left);
+	                byte[] rightBytes = tree.get(levelOffset + right);
+	                digest.update(leftBytes);
+	                digest.update(rightBytes);
+	                tree.add(digest.digest(digest.digest ()));
+	            }
+	            // Move to the next level.
+	            levelOffset += levelSize;
+	        }
+		} catch (NoSuchAlgorithmException e) {}
+        merkleRoot = new Hash (tree.get(tree.size() - 1)).toString();
+	}
+	
+	
+	public void computeHash ()
+	{
+		if ( hash != null )
+			return;
+		
+		computeMerkleRoot ();
+		
+		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());
+		writer.writeUint32(version);
+		if ( previous != null )
+			writer.writeHash (new Hash (previous.getHash()));
+		else if ( previousHash != null )
+			writer.writeHash(new Hash (previousHash));
+		else
+			writer.writeHash (Hash.ZERO_HASH);
+		writer.writeHash(new Hash (merkleRoot));
+		writer.writeUint32(createTime);
+		writer.writeUint32(difficultyTarget);
+		writer.writeUint32(nonce);
+
+		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
+		String tx = reader.dump();
+		hash = reader.hash().toString();
 	}
 	
 	public void toWire (WireFormat.Writer writer)

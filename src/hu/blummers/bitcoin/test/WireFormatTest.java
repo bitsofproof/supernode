@@ -3,19 +3,12 @@ package hu.blummers.bitcoin.test;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.math.BigInteger;
 
-import hu.blummers.bitcoin.core.BlockFactory;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.purser.server.JpaSerializer;
-import org.purser.server.Setup;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class WireFormatTest {
 
@@ -94,9 +87,4 @@ public class WireFormatTest {
 		assertTrue (reader.eof());
 	}
 	
-	@Test
-	public void testGenesisBlock ()
-	{
-		new JpaSerializer ().jpaBlockToWire(BlockFactory.getGenesisBlock());
-	}
 }

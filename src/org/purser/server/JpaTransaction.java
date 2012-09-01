@@ -2,6 +2,7 @@ package org.purser.server;
 
 import hu.blummers.bitcoin.core.WireFormat;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,6 +99,20 @@ public class JpaTransaction {
 		this.block = block;
 	}
 
+	public void calculateHash ()
+	{
+		if ( hash != null )
+			return;
+		
+		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());
+		toWire (writer);
+		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
+		hash = new JpaTransactionHash ();
+		hash.setHash(reader.hash().toString());
+		hash.setTransactions(new ArrayList<JpaTransaction> ());
+		hash.getTransactions().add(this);
+	}
+	
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32(version);
