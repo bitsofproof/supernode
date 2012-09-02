@@ -1,6 +1,7 @@
 package org.purser.server;
 
 import hu.blummers.bitcoin.core.Base58;
+import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.math.BigInteger;
@@ -10,7 +11,6 @@ import java.util.ArrayList;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
@@ -23,7 +23,6 @@ import javax.persistence.Table;
 
 import org.spongycastle.crypto.digests.RIPEMD160Digest;
 
-import com.google.bitcoin.core.Utils;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Entity
@@ -148,7 +147,7 @@ public class JpaTransactionOutput {
 		            byte[] addressBytes = new byte[1 + ph.length + 4];
 		            addressBytes[0] = (byte) 0; // 0 for production
 		            System.arraycopy(ph, 0, addressBytes, 1, ph.length);
-		            byte[] check = Utils.doubleDigest(addressBytes, 0, ph.length + 1);
+		            byte[] check = new Hash ().hash(addressBytes, 0, ph.length + 1).toByteArray();
 		            System.arraycopy(check, 0, addressBytes, ph.length + 1, 4);
 		            adr = Base58.encode(addressBytes);
 		            

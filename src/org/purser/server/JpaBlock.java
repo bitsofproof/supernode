@@ -1,6 +1,5 @@
 package org.purser.server;
 
-import static com.google.bitcoin.core.Utils.doubleDigestTwoBuffers;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 
@@ -24,8 +23,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Utils;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 
@@ -194,7 +191,6 @@ public class JpaBlock {
 		writer.writeUint32(nonce);
 
 		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
-		String tx = reader.dump();
 		hash = reader.hash().toString();
 	}
 	

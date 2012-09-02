@@ -21,6 +21,7 @@ public class ChainDownloader {
 			BlockStoreDao blockStore = context.getBean (BlockStoreDao.class);
 			blockStore.setChain (Chain.production);
 			blockStore.resetStore();
+			
 		} catch (Exception e) {
 			log.error("ChainDownloader", e);
 		}

@@ -82,6 +82,25 @@ public class WireFormat {
 			}
 			return null;
 		}
+		
+		public String readZeroDelimitedString (int length)
+		{
+			byte [] buf = readBytes (length);
+			int i;
+			for ( i = 0; i < length; ++i )
+				if ( buf [i] == 0 )
+					break;
+			if ( i == 0 )
+				return new String ();
+			
+			byte [] sb = new byte [i];
+			System.arraycopy(buf, 0, sb, 0, i);
+			try {
+				return new String (sb,"UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				return new String ();
+			}
+		}
 
 		public Hash hash(int offset, int length) {
 			Hash hash = new Hash();
@@ -195,6 +214,16 @@ public class WireFormat {
 		public void writeString(String s) {
 			try {
 				writeVarBytes(s.getBytes("UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+			}
+		}
+		public void writeZeroDelimitedString (String s, int length)
+		{
+			try {
+				byte [] t = s.getBytes("UTF-8");			
+				bs.write(t, 0, Math.min(length-1,t.length));
+				for ( int i = 0; i < (length - t.length); ++i)
+					bs.write(0);
 			} catch (UnsupportedEncodingException e) {
 			}
 		}

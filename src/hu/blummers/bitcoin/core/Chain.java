@@ -1,6 +1,5 @@
 package hu.blummers.bitcoin.core;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,18 +19,25 @@ public class Chain {
 	private final int difficultyReviewBlocks;
 	private final int targetBlockTime;
 	private final byte[] alertKey;
+	private final String[] seedHosts; 
 	
     public static final byte[] SATOSHI_KEY = Hex.decode("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
 	public static final Chain production = new Chain(
 			satoshiBlock (),
-			0xf9beb4d9L,
+			0xD9B4BEF9,
 			8333,
 			0,
 			128,
 			2015,
 			1209600,
-			SATOSHI_KEY
+			SATOSHI_KEY,
+			new String[]{
+				   "dnsseed.bluematt.me",         // Matt Corallo
+				   "bitseed.xf2.org",             // Jeff Garzik
+				   "seed.bitcoin.sipa.be",        // Pieter Wuille
+				   "dnsseed.bitcoin.dashjr.org",  // Luke Dashjr
+				}
 			);
 	
 	private static JpaBlock satoshiBlock ()
@@ -59,7 +65,6 @@ public class Chain {
 		inputs.add(input);
 		input.setSource(null);
 		input.setSequence(0xFFFFFFFFL);
-		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());		
 		input.setScript(Hex.decode				 
                 	(	"04" + // mimic public key structure
                 		"ffff001d" + //  difficulty target 
@@ -98,7 +103,7 @@ public class Chain {
 
 	private Chain(JpaBlock genesis, long magic,
 			int port, int addressType, int privateKeyType,
-			int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey) {
+			int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey, String [] seedHosts) {
 		super();
 		this.genesis = genesis;
 		this.magic = magic;
@@ -108,6 +113,7 @@ public class Chain {
 		this.difficultyReviewBlocks = difficultyReviewBlocks;
 		this.targetBlockTime = targetBlockTime;
 		this.alertKey = alertKey;
+		this.seedHosts = seedHosts;
 	}
 
 	public JpaBlock getGenesis() {
@@ -141,4 +147,11 @@ public class Chain {
 	public byte[] getAlertKey() {
 		return alertKey;
 	}
+
+
+	public String[] getSeedHosts() {
+		return seedHosts;
+	}
+	
+	
 }
