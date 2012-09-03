@@ -128,14 +128,6 @@ public class Peers {
 				disconnect ();
 			}
 		}
-		public void expectMessage ()
-		{
-			try {
-				((SocketChannel)channel).register(selector, SelectionKey.OP_READ);
-			} catch (ClosedChannelException e) {
-				disconnect ();
-			}
-		}
 		
 		public List<Message> receive ()
 		{
@@ -173,29 +165,37 @@ public class Peers {
 		public void read() {
 			try {
 				ByteBuffer head = ByteBuffer.allocate(24);
-				((SocketChannel)channel).read(head);
-				WireFormat.Reader reader = new WireFormat.Reader(head.array());
-				if ( reader.readUint32() != chain.getMagic() )
-					throw new ValidationException ("Wrong magic for this chain");
 				
-				String command = reader.readZeroDelimitedString(12);
-				long length = reader.readUint32();
-				byte [] checksum = reader.readBytes(4);
-				ByteBuffer buf = ByteBuffer.allocate(Math.min(Math.abs((int)length), 1024));
-				ByteArrayOutputStream out = new ByteArrayOutputStream ();
-				MessageDigest sha = MessageDigest.getInstance("SHA-256");
-				int len = 0;
-				while ( (len = ((SocketChannel)channel).read(buf)) > 0 )
+				while ( ((SocketChannel)channel).read(head) > 0 )
 				{
-					out.write(buf.array(), 0, len);
-					sha.update(buf.array());
+					WireFormat.Reader reader = new WireFormat.Reader(head.array());
+					if ( reader.readUint32() != chain.getMagic() )
+						throw new ValidationException ("Wrong magic for this chain");
+					
+					String command = reader.readZeroDelimitedString(12);
+					long length = reader.readUint32();
+					byte [] checksum = reader.readBytes(4);
+					ByteBuffer buf = ByteBuffer.allocate(Math.min(Math.abs((int)length), 1024));
+					ByteArrayOutputStream out = new ByteArrayOutputStream ();
+					MessageDigest sha = MessageDigest.getInstance("SHA-256");
+					int len = 0;
+					long s = 0;
+					while ( (len = ((SocketChannel)channel).read(buf)) > 0 )
+					{
+						out.write(buf.array(), 0, len);
+						sha.update(buf.array());
+						s += len;
+					}
+					if ( s != length )
+						throw new ValidationException ("Message length mismatch");
+					byte [] cs = new byte [4];
+					System.arraycopy(sha.digest(sha.digest()), 0, cs, 0, 4);
+					if ( !Arrays.equals(cs, checksum) )
+						throw new ValidationException ("Checksum mismatch");
+					incoming.add(MessageFactory.getMessage(chain, command, new WireFormat.Reader(out.toByteArray())));
 				}
-				byte [] cs = new byte [4];
-				System.arraycopy(sha.digest(sha.digest()), 0, cs, 0, 4);
-				if ( !Arrays.equals(cs, checksum) )
-					throw new ValidationException ("Checksum mismatch");
-				incoming.add(MessageFactory.getMessage(chain, command, new WireFormat.Reader(out.toByteArray())));
-				
+				((SocketChannel)channel).register(selector, SelectionKey.OP_READ); // let them keep talking
+			
 			} catch (Exception e) {
 				log.error("Exception reading from " + channel, e);
 				disconnect();
