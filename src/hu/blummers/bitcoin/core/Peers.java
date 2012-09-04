@@ -1,7 +1,10 @@
 package hu.blummers.bitcoin.core;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -41,8 +44,22 @@ public class Peers {
 		private Channel channel;
 		private boolean unsolicited;
 		private int trust = 0;
-		private ConcurrentLinkedQueue<byte []> writes = new ConcurrentLinkedQueue<byte []>();		
-		private LinkedBlockingQueue<Message> incoming = new LinkedBlockingQueue<Message>();
+		private ConcurrentLinkedQueue<byte[]> writes = new ConcurrentLinkedQueue<byte[]>();
+		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
+		private ByteArrayInputStream currentRead = null;
+		private BufferedInputStream readIn = new BufferedInputStream(new InputStream() {
+			@Override
+			public int read() throws IOException {
+				int b;
+				try {
+					while (currentRead == null || (b = currentRead.read()) < 0)
+						currentRead = new ByteArrayInputStream(reads.take());
+				} catch (InterruptedException e) {
+					throw new IOException(e);
+				}
+				return b;
+			}
+		});
 
 		public Peer(Channel channel) {
 			this.channel = channel;
@@ -102,56 +119,48 @@ public class Peers {
 					trust = 0;
 			}
 		}
-		
-		public void readWholeMessage ()
-		{
-			try
-			{
-				ByteBuffer head = ByteBuffer.allocate(24);
-				if ( ((SocketChannel)channel).read(head) != 24 )
-					throw new ValidationException ("No package head");
-				
-				WireFormat.Reader reader = new WireFormat.Reader(head.array());
-				if ( reader.readUint32() != chain.getMagic() )
-					throw new ValidationException ("Wrong magic for this chain");
-				
-				String command = reader.readZeroDelimitedString(12);
-				long length = reader.readUint32();
-				byte [] checksum = reader.readBytes(4);
-				ByteBuffer buf = ByteBuffer.allocate(Math.min(Math.abs((int)length), 1024));
-				ByteArrayOutputStream out = new ByteArrayOutputStream ();
-				MessageDigest sha = MessageDigest.getInstance("SHA-256");
-				int len = 0;
-				long s = 0;
-				while ( (len = ((SocketChannel)channel).read(buf)) > 0 )
-				{
-					out.write(buf.array(), 0, len);
-					sha.update(buf.array());
-					s += len;
-				}
-				if ( s != length )
-					throw new ValidationException ("Message length mismatch");
-				byte [] cs = new byte [4];
-				System.arraycopy(sha.digest(sha.digest()), 0, cs, 0, 4);
-				if ( !Arrays.equals(cs, checksum) )
-					throw new ValidationException ("Checksum mismatch");
 
-				incoming.add(MessageFactory.getMessage(chain, command, new WireFormat.Reader(out.toByteArray())));
-			}
-			catch ( Exception e)
-			{
-				log.error("Malformed package from " + channel, e);
-				decreaseTrust ();
-				disconnect ();
+		public void process(ByteBuffer buffer, int len) {
+			if (len > 0) {
+				byte[] b = new byte[len];
+				System.arraycopy(buffer.array(), 0, b, 0, len);
+				reads.add(b);
 			}
 		}
-		
-		public ByteBuffer getBuffer ()
-		{
-			byte [] next;
-			if ( (next = writes.poll()) != null )
+
+		public Message readMessage() {
+			try {
+				byte[] head = new byte[24];
+				readIn.read(head);
+				WireFormat.Reader reader = new WireFormat.Reader(head);
+				if (reader.readUint32() != chain.getMagic())
+					throw new ValidationException("Wrong magic for this chain");
+
+				String command = reader.readZeroDelimitedString(12);
+				long length = reader.readUint32();
+				byte[] checksum = reader.readBytes(4);
+				byte[] buf = new byte[(int) length];
+				readIn.read(buf);
+				MessageDigest sha = MessageDigest.getInstance("SHA-256");
+				byte[] cs = new byte[4];
+				System.arraycopy(sha.digest(sha.digest(buf)), 0, cs, 0, 4);
+				if (!Arrays.equals(cs, checksum))
+					throw new ValidationException("Checksum mismatch");
+
+				return MessageFactory.getMessage(chain, command, new WireFormat.Reader(buf));
+			} catch (Exception e) {
+				log.error("Malformed package from " + channel, e);
+				decreaseTrust();
+				disconnect();
+				return null;
+			}
+		}
+
+		public ByteBuffer getBuffer() {
+			byte[] next;
+			if ((next = writes.poll()) != null)
 				return ByteBuffer.wrap(next);
-			
+
 			return null;
 		}
 
@@ -161,50 +170,41 @@ public class Peers {
 				channel.close();
 			} catch (IOException e) {
 			}
-			if ( unsolicited )
+			if (unsolicited)
 				unsolicitedCounter.incrementAndGet();
 			else
 				connectionsCounter.incrementAndGet();
-			
+
 			log.info("Disconnected from " + channel);
 		}
 
-		public void introduce ()
-		{
-			
+		public void introduce() {
+
 		}
-		
-		public List<Message> receive ()
-		{
-			List<Message> all = new ArrayList<Message> ();
-			incoming.drainTo(all);
-			return all;
-		}
-	
-		public void send (Message m)
-		{
-			ByteArrayOutputStream out = new ByteArrayOutputStream ();
+
+		public void send(Message m) {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			WireFormat.Writer writer = new WireFormat.Writer(out);
 			writer.writeUint32(chain.getMagic());
 			writer.writeZeroDelimitedString(m.getCommand(), 12);
-			WireFormat.Writer payload = new WireFormat.Writer(new ByteArrayOutputStream ());
+			WireFormat.Writer payload = new WireFormat.Writer(new ByteArrayOutputStream());
 			m.toWire(payload);
-			byte [] data = payload.toByteArray();
+			byte[] data = payload.toByteArray();
 			writer.writeUint32(data.length);
-			
-			byte [] checksum = new byte [4];
+
+			byte[] checksum = new byte[4];
 			MessageDigest sha;
 			try {
 				sha = MessageDigest.getInstance("SHA-256");
 				System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
 			} catch (NoSuchAlgorithmException e) {
 			}
-			writer.writeBytes(checksum);					
-			
+			writer.writeBytes(checksum);
+
 			writer.writeBytes(data);
 
 			writes.add(out.toByteArray());
-			selectorChanges.add(new ChangeRequest ((SocketChannel)channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_READ|SelectionKey.OP_WRITE));
+			selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_READ | SelectionKey.OP_WRITE));
 			selector.wakeup();
 		}
 
@@ -215,12 +215,14 @@ public class Peers {
 		synchronized (knownPeers) {
 			Peer storedPeer = knownPeers.get(peer);
 			if (storedPeer == null) {
-				knownPeers.put(peer, peer); // add peer only if not already known.
+				knownPeers.put(peer, peer); // add peer only if not already
+											// known.
 			}
 		}
 		synchronized (connectedPeers) {
 			if (!connectedPeers.containsKey(peer))
-				runqueue.add(peer); // if not already connected add to the run queue
+				runqueue.add(peer); // if not already connected add to the run
+									// queue
 		}
 	}
 
@@ -238,72 +240,76 @@ public class Peers {
 		}
 	}
 
-	// peers we have seen, the key is Peer, but that compares on internet address+port for SocketChannel (and also for AvailableChannel)
+	// peers we have seen, the key is Peer, but that compares on internet
+	// address+port for SocketChannel (and also for AvailableChannel)
 	private Map<Peer, Peer> knownPeers = Collections.synchronizedMap(new HashMap<Peer, Peer>());
-	
-	// currently connected peers by channel, since selector provides us channel to locate the subject
+
+	// currently connected peers by channel, since selector provides us channel
+	// to locate the subject
 	private Map<Channel, Peer> connectedPeers = new HashMap<Channel, Peer>();
-	
-	// list of peers waiting to be connected ordered by the "natural" order of Peers see Peer.compareTo
+
+	// list of peers waiting to be connected ordered by the "natural" order of
+	// Peers see Peer.compareTo
 	private PriorityBlockingQueue<Peer> runqueue = new PriorityBlockingQueue<Peer>();
 
 	// total number of threads deals with P2P
 	private static final int PEERTHREADS = 20;
-	
+
 	// minimum trust - if below disconnect
 	private static final int MIN_TRUST = -20;
-	
+
 	// maximum trust, can not get better than this
 	private static final int MAX_TRUST = 100;
-	
+
 	// number of connections we try to maintain
 	private static final int MINCONNECTIONS = 20;
-	
+
 	// number of unsolicited incoming connections we accept
 	private static final int UNSOLICITED = 10;
-	
+
 	// number of seconds to wait until giving up on connections
 	private static final int CONNECTIONTIMEOUT = 5; // seconds
-	
-	// try this many peers to connect in a batch (faster wins, slower will be cancelled) 
+
+	// try this many peers to connect in a batch (faster wins, slower will be
+	// cancelled)
 	private static final int CONNECTBATCH = 50;
 
 	// the blockchain
 	private final Chain chain;
-	
+
 	// keep track with number of connections we asked for here
-	private final AtomicInteger connectionsCounter = new AtomicInteger (0);
-	
+	private final AtomicInteger connectionsCounter = new AtomicInteger(0);
+
 	// keep track of unsolicited connections here
-	private final AtomicInteger unsolicitedCounter = new AtomicInteger (0);
+	private final AtomicInteger unsolicitedCounter = new AtomicInteger(0);
 
 	private class ChangeRequest {
-		  public static final int REGISTER = 1;
-		  public static final int CHANGEOPS = 2;
-		  
-		  public SocketChannel socket;
-		  public int type;
-		  public int ops;
-		  
-		  public ChangeRequest(SocketChannel socket, int type, int ops) {
-		    this.socket = socket;
-		    this.type = type;
-		    this.ops = ops;
-		  }
+		public static final int REGISTER = 1;
+		public static final int CHANGEOPS = 2;
+
+		public SocketChannel socket;
+		public int type;
+		public int ops;
+
+		public ChangeRequest(SocketChannel socket, int type, int ops) {
+			this.socket = socket;
+			this.type = type;
+			this.ops = ops;
 		}
-	
+	}
+
 	private final ConcurrentLinkedQueue<ChangeRequest> selectorChanges = new ConcurrentLinkedQueue<ChangeRequest>();
 
-	final Selector selector = Selector.open(); // selector we register events to listen for
-	
-	
+	final Selector selector = Selector.open(); // selector we register events to
+												// listen for
+
 	public Peers(Chain chain) throws IOException {
 		this.chain = chain;
 
 	}
 
-	public void start () throws IOException {
-		
+	public void start() throws IOException {
+
 		// create a pool of threads
 		final ExecutorService peerThreads = Executors.newFixedThreadPool(PEERTHREADS, new ThreadFactory() {
 			@Override
@@ -316,7 +322,10 @@ public class Peers {
 				};
 				peerThread.setDaemon(true); // let VM exit if only these remain
 				peerThread.setName("Peer"); // name it for log
-				peerThread.setPriority(Math.max(Thread.currentThread().getPriority() - 1, Thread.MIN_PRIORITY)); // lower than background priority
+				peerThread.setPriority(Math.max(Thread.currentThread().getPriority() - 1, Thread.MIN_PRIORITY)); // lower
+																													// than
+																													// background
+																													// priority
 				return peerThread;
 			}
 		});
@@ -331,70 +340,101 @@ public class Peers {
 				while (true) {
 					try {
 						ChangeRequest cr;
-						while ( (cr = selectorChanges.poll()) != null )
-						{
-							if ( !cr.socket.isOpen() )
+						while ((cr = selectorChanges.poll()) != null) {
+							if (!cr.socket.isOpen())
 								continue;
-							if ( cr.type == ChangeRequest.REGISTER )
+							if (cr.type == ChangeRequest.REGISTER)
 								cr.socket.register(selector, cr.ops);
-							else if ( cr.type == ChangeRequest.CHANGEOPS )
-							{
+							else if (cr.type == ChangeRequest.CHANGEOPS) {
 								SelectionKey key = cr.socket.keyFor(selector);
 								key.interestOps(cr.ops);
 							}
-						}						
+						}
 						selector.select(); // wait for events
-						
+
 						Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
 						while (keys.hasNext()) { // for all events
 							SelectionKey key = keys.next(); // take
-							keys.remove(); // mark as handled 
-							
+							keys.remove(); // mark as handled
+
 							if (key.isAcceptable()) {
 								// unsolicited request to connect
-								final SocketChannel client = ((ServerSocketChannel) key.channel()).accept(); // accept client
-								if ( unsolicitedCounter.incrementAndGet() <= UNSOLICITED ) {
+								final SocketChannel client = ((ServerSocketChannel) key.channel()).accept(); // accept
+																												// client
+								if (unsolicitedCounter.incrementAndGet() <= UNSOLICITED) {
 									// if we have interest ...
-									client.configureBlocking(false); // switch to non-blocking
-									final SelectionKey saywhat = client.register(selector, SelectionKey.OP_READ); // let them tell what they want									
+									client.configureBlocking(false); // switch
+																		// to
+																		// non-blocking
+									final SelectionKey saywhat = client.register(selector, SelectionKey.OP_READ); // let
+																													// them
+																													// tell
+																													// what
+																													// they
+																													// want
 									Peer peer;
-									if (!knownPeers.containsKey(client)) { // never seen before ?
+									if (!knownPeers.containsKey(client)) { // never
+																			// seen
+																			// before
+																			// ?
 										peer = knownPeers.get(client);
-										if (peer.getChannel() instanceof AvailableChannel) // but were to connect ?
-											peer = new Peer(client);  // create new client with real channel
-									}
-									else
-										peer = new Peer(client); // create new client with real channel
-									peer.setUnsolicited (true); // note that this was unsolicited
-									connectedPeers.put(client, peer); // keep track
+										if (peer.getChannel() instanceof AvailableChannel) // but
+																							// were
+																							// to
+																							// connect
+																							// ?
+											peer = new Peer(client); // create
+																		// new
+																		// client
+																		// with
+																		// real
+																		// channel
+									} else
+										peer = new Peer(client); // create new
+																	// client
+																	// with real
+																	// channel
+									peer.setUnsolicited(true); // note that this
+																// was
+																// unsolicited
+									connectedPeers.put(client, peer); // keep
+																		// track
 
 									log.info("Unsolicited connection to  " + client);
-									
+
 									final Peer rememberPeer = peer;
-									scheduler.schedule(new Runnable (){
+									scheduler.schedule(new Runnable() {
 										@Override
 										public void run() {
 											saywhat.cancel();
-											rememberPeer.disconnect(); // you had your chance but said nothing
-										}}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+											rememberPeer.disconnect(); // you
+																		// had
+																		// your
+																		// chance
+																		// but
+																		// said
+																		// nothing
+										}
+									}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
 								} else
-									client.close (); // no interest
+									client.close(); // no interest
 							}
 							if (key.isConnectable()) {
 								// we asked for connection here
-								if ( connectionsCounter.incrementAndGet() <= MINCONNECTIONS ) {
+								if (connectionsCounter.incrementAndGet() <= MINCONNECTIONS) {
 									// if we still have interest
 									SocketChannel client = (SocketChannel) key.channel();
 									client.finishConnect(); // finish protocol
 									Peer peer;
-									if (!knownPeers.containsKey(client)) { // see above
+									if (!knownPeers.containsKey(client)) { // see
+																			// above
 										peer = knownPeers.get(client);
 										if (peer.getChannel() instanceof AvailableChannel)
 											peer = new Peer(client);
 									} else
 										peer = new Peer(client);
 									connectedPeers.put(client, peer);
-									peer.introduce ();
+									peer.introduce();
 
 									log.info("Connected to " + client);
 								} else
@@ -402,21 +442,36 @@ public class Peers {
 							}
 							if (key.isReadable()) {
 								SocketChannel client = (SocketChannel) key.channel();
-								final Peer peer = connectedPeers.get(client); // it must be connected ...
+								final Peer peer = connectedPeers.get(client); // it
+																				// must
+																				// be
+																				// connected
+																				// ...
 								if (peer != null) {
-									peer.readWholeMessage();
+									ByteBuffer b = ByteBuffer.allocate(8912);
+									int len = client.read(b);
+									peer.process(b, len);
 								}
 							}
 							if (key.isWritable()) {
 								SocketChannel client = (SocketChannel) key.channel();
-								Peer peer = connectedPeers.get(client); // it must be connected ...
-								if ( peer != null )
-								{
+								Peer peer = connectedPeers.get(client); // it
+																		// must
+																		// be
+																		// connected
+																		// ...
+								if (peer != null) {
 									ByteBuffer b;
-									if ( ( b = peer.getBuffer() )!= null )
+									if ((b = peer.getBuffer()) != null)
 										client.write(b);
 									else
-										key.interestOps(SelectionKey.OP_READ); // done with writes, only interested in reads
+										key.interestOps(SelectionKey.OP_READ); // done
+																				// with
+																				// writes,
+																				// only
+																				// interested
+																				// in
+																				// reads
 								}
 							}
 						}
@@ -427,7 +482,8 @@ public class Peers {
 			}
 		});
 
-		// create a server channel for the chain's port, work non-blocking and wait for accept events
+		// create a server channel for the chain's port, work non-blocking and
+		// wait for accept events
 		final ServerSocketChannel serverChannel = ServerSocketChannel.open();
 		serverChannel.socket().bind(new InetSocketAddress(chain.getPort()));
 		serverChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -440,23 +496,34 @@ public class Peers {
 				while (true) { // forever
 					try {
 						List<Peer> batch = new ArrayList<Peer>();
-						if ( connectionsCounter.get() < MINCONNECTIONS ) { // do we need connections?
-							runqueue.drainTo(batch, CONNECTBATCH); // get some from the waiting queue
+						if (connectionsCounter.get() < MINCONNECTIONS) { // do
+																			// we
+																			// need
+																			// connections?
+							runqueue.drainTo(batch, CONNECTBATCH); // get some
+																	// from the
+																	// waiting
+																	// queue
 							// for all in this batch
 							for (Peer peer : batch) {
-								// connect non-bloking manner, registering for connect notifications
+								// connect non-bloking manner, registering for
+								// connect notifications
 								final SocketChannel channel = SocketChannel.open();
 								channel.configureBlocking(false);
 								final SelectionKey connectKey = channel.register(selector, SelectionKey.OP_CONNECT);
 								log.info("Trying to connect " + channel);
 								channel.connect(((AvailableChannel) peer.getChannel()).getSocketAddress());
-								
-								// schedule a cancel for all. Those not fast enough to open will be cancelled
+
+								// schedule a cancel for all. Those not fast
+								// enough to open will be cancelled
 								scheduler.schedule(new Runnable() {
 									@Override
 									public void run() {
 										if (!channel.isOpen()) {
-											connectKey.cancel(); // still not open, forget it.
+											connectKey.cancel(); // still not
+																	// open,
+																	// forget
+																	// it.
 											log.info("No answer from " + channel);
 											try {
 												channel.close();
@@ -472,7 +539,7 @@ public class Peers {
 					}
 				}
 			}
-		});		
+		});
 	}
 
 	// a helper class that stores socket address until it gets connected
