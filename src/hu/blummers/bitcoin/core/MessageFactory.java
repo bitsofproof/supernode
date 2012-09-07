@@ -11,10 +11,12 @@ public class MessageFactory {
 	{
 		if ( command.equals("version") )
 			return createVersionMessage (chain);
-		if ( command.equals("verack") )
+		else if ( command.equals("verack") )
 			return createVerackMessage (chain);
-		if ( command.equals("inv") )
+		else if ( command.equals("inv") )
 			return createInvMessage (chain);
+		else if ( command.equals("addr") )
+			return createAddrMessage (chain);
 		
 		log.info("unkwon message type received: "+ command);
 		return null;
@@ -33,6 +35,11 @@ public class MessageFactory {
 	public static Message createInvMessage (Chain chain)
 	{
 		return new InvMessage (chain, "inv");
+	}
+	
+	public static Message createAddrMessage (Chain chain)
+	{
+		return new AddrMessage (chain, "addr");
 	}
 	
 	/*

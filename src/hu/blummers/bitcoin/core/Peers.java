@@ -328,8 +328,13 @@ public class Peers {
 			{
 				log.info("connected to " + channel);
 			}
+			else if ( m.getCommand().equals("addr") )
+			{
+				log.info("received addr of " + ((AddrMessage)m).getAddresses().size());
+			}
 			else if ( m.getCommand().equals("inv") )
 			{
+				log.info("received inv of tx:" + ((InvMessage)m).getTransactionHashes().size() + " blk:" + ((InvMessage)m).getBlockHashes().size ());
 			}
 			else
 			{
