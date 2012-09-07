@@ -17,7 +17,7 @@ public class VersionMessage extends Message {
 	private InetAddress peer;
 	private long remotePort;
 	private InetAddress me;
-	private BigInteger nounce;
+	private BigInteger nonce = new BigInteger (64, new Random ());
 	private String agent = "Guess 0.1";
 	private long height = 0;
 
@@ -39,8 +39,8 @@ public class VersionMessage extends Message {
 			writer.writeAddress(a);
 		} catch (UnknownHostException e) {
 		}
-		nounce = new BigInteger (64, new Random ());
-		writer.writeZeroDelimitedString(agent, agent.length()+1);
+		writer.writeUint64(nonce);
+		writer.writeString(agent);
 		writer.writeUint32(height);
 	}
 	
@@ -53,9 +53,10 @@ public class VersionMessage extends Message {
 		WireFormat.Address address = reader.readAddress(); // should be me
 		reader.readUint64();
 		address = reader.readAddress();
-		reader.readUint64();
 		peer = address.address;
-		remotePort = address.port;
+		remotePort = address.port;		
+		reader.readUint64();
+		agent = reader.readString();
 		height = reader.readUint32();
 	}
 	
@@ -97,11 +98,11 @@ public class VersionMessage extends Message {
 	public void setTimestamp(BigInteger timestamp) {
 		this.timestamp = timestamp;
 	}
-	public BigInteger getNounce() {
-		return nounce;
+	public BigInteger getNonce() {
+		return nonce;
 	}
-	public void setNounce(BigInteger nounce) {
-		this.nounce = nounce;
+	public void setNonce(BigInteger nounce) {
+		this.nonce = nounce;
 	}
 	public String getAgent() {
 		return agent;
