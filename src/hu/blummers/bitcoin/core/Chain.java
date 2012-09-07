@@ -25,7 +25,7 @@ public class Chain {
 
 	public static final Chain production = new Chain(
 			satoshiBlock (),
-			0xD9B4BEF9,
+			0xD9B4BEF9L,
 			8333,
 			0,
 			128,

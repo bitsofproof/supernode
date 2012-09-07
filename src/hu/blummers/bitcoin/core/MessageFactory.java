@@ -1,17 +1,38 @@
 package hu.blummers.bitcoin.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 public class MessageFactory {
-	public static Message getMessage (Chain chain, String command, WireFormat.Reader reader)
+	private static final Logger log = LoggerFactory.getLogger(MessageFactory.class);
+	
+	public static Message createMessage (Chain chain, String command)
 	{
-		Message m = null;
 		if ( command.equals("version") )
-			m = new VersionMessage ();
+			return createVersionMessage (chain);
+		if ( command.equals("verack") )
+			return createVerackMessage (chain);
+		if ( command.equals("inv") )
+			return createInvMessage (chain);
 		
-		if ( m.getCommand().equals(command) )
-			throw new RuntimeException ("Envelope failed to create the right message");
-		
-		m.fromWire(reader);
-		return m;
+		log.info("unkwon message type received: "+ command);
+		return null;
+	}
+	
+	public static VersionMessage createVersionMessage (Chain chain)
+	{
+		return new VersionMessage (chain, "version");
+	}
+	
+	public static Message createVerackMessage (Chain chain)
+	{
+		return new Message (chain, "verack");
+	}
+	
+	public static Message createInvMessage (Chain chain)
+	{
+		return new InvMessage (chain, "inv");
 	}
 	
 	/*

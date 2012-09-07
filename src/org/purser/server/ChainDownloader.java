@@ -1,6 +1,7 @@
 package org.purser.server;
 
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.Peers;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,10 +19,10 @@ public class ChainDownloader {
 		            new ClassPathXmlApplicationContext("app-context.xml");
 			
 			log.info("Chaindownloader starts");
-			BlockStoreDao blockStore = context.getBean (BlockStoreDao.class);
-			blockStore.setChain (Chain.production);
-			blockStore.resetStore();
-			
+			Peers peers = new Peers (Chain.production);
+			peers.discover(Chain.production);
+			peers.start();
+			Thread.sleep(1000*1000);
 		} catch (Exception e) {
 			log.error("ChainDownloader", e);
 		}

@@ -4,8 +4,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class WireFormat {
+	
+	public static class Address
+	{
+		public InetAddress address;
+		public long port;
+	}
 
 	public static class Reader {
 		private byte[] bytes;
@@ -129,6 +137,19 @@ public class WireFormat {
 		{
 			return dump (0, bytes.length);
 		}
+		
+		public Address readAddress ()
+		{
+			Address address = new Address();
+			byte [] a = readBytes (16);
+			try {
+				address.address = InetAddress.getByAddress(a);
+			} catch (UnknownHostException e) {
+			}
+			byte p [] = readBytes(2);
+			address.port = p [0] << 8 | p [1];
+			return address;
+		}
 	}
 
 	public static class Writer {
@@ -226,6 +247,20 @@ public class WireFormat {
 					bs.write(0);
 			} catch (UnsupportedEncodingException e) {
 			}
+		}
+		public void writeAddress (Address address)
+		{
+			byte [] a = address.address.getAddress();
+			if ( a.length < 16 )
+			{
+				byte [] prefix = new byte [10];
+				writeBytes (prefix);
+				writeUint16(0xffffl);				
+			}
+			writeBytes (a);
+			byte [] p = new byte [2];
+			p [0] = (byte)((address.port >>> 8) & 0xff);
+			p [0] = (byte)((address.port) & 0xff);
 		}
 	}
 

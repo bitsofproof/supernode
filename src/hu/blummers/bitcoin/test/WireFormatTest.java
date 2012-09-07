@@ -27,10 +27,10 @@ public class WireFormatTest {
 	public void testUint32() {
 		ByteArrayOutputStream bs = new ByteArrayOutputStream ();
 		WireFormat.Writer writer = new WireFormat.Writer(bs);
-		writer.writeUint32(286331153);
+		writer.writeUint32(0xD9B4BEF9l);
 		
 		WireFormat.Reader reader = new WireFormat.Reader (bs.toByteArray());
-		assertEquals (reader.readUint32(), 286331153);
+		assertEquals (reader.readUint32(), 0xD9B4BEF9l);
 		assertTrue (reader.eof());
 	}
 
