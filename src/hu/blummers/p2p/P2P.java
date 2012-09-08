@@ -1,10 +1,43 @@
-package hu.blummers.bitcoin.core;
+/**
+* Copyright 2012 Tamas Blummer
+* 
+* High performance Peer to Peer client and server using NIO.
+* 
+* USAGE
+* 1. Derive your YourPeer from P2P.Peer, your YourMessage from P2P.Message
+* 2. implement their abstract methods (see below)
+* 3. Derive your P2PNetwork from P2P
+* 4. implement createPeer to create your peer object for an address
+* 5. Instantiate P2PNetwork
+* 7. add some peer addresses using addPeer ()
+* 8. call P2PNetwork.start ()
+* 9. enjoy:
+* 		P2PNetwork.createPeer will be called to instantiate your Peers
+* 		YourPeer.handshake () will be called first send (YourMessage) what is needed to introduce your peer 
+* 						no receive available until this returns.
+* 		YourMessage YourPeer.createMessage (InputStream in) should instantiate any message from wire
+* 						do not do any other processing here
+* 		YourPeer.processMassage(Message) should do the message processing. 
+* 						This might call send (YourMessage) or addPeer () but nothing else from this framework 
+* 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package hu.blummers.p2p;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -15,48 +48,34 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.purser.server.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.emory.mathcs.backport.java.util.Arrays;
-
-public class Peers {
-	private static final Logger log = LoggerFactory.getLogger(Peers.class);
-
-	public class Peer {
-
-		private void trace(String s) {
-			log.info("[" + address + "] " + s);
-		}
-
-		private void error(String s, Exception e) {
-			log.error("[" + address + "] " + s, e);
-		}
-
+public abstract class P2P {
+	private static final Logger logger = LoggerFactory.getLogger(P2P.class);
+	
+	public interface Message
+	{
+		public byte [] toByteArray ();
+	}
+	
+	public abstract class Peer {
+		boolean connected = false;
 		private InetSocketAddress address;
 		private SocketChannel channel;
 		private int trust = 0;
-		private BigInteger selfCheckNonce;
 		private ConcurrentLinkedQueue<byte[]> writes = new ConcurrentLinkedQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
 		private ByteArrayInputStream currentRead = null;
@@ -103,8 +122,7 @@ public class Peers {
 			this.address = address;
 		}
 
-		public void connect() {
-			trace("connecting ...");
+		private void connect() {
 			try {
 				channel = SocketChannel.open();
 				channel.configureBlocking(false);
@@ -130,20 +148,20 @@ public class Peers {
 		}
 
 		public void increaseTrust() {
-			if (trust < MAX_TRUST)
+			if (trust < MAXIMUMTRUST)
 				++trust;
 		}
 
 		public void decreaseTrust() {
-			if (trust > MIN_TRUST) {
+			if (trust > MINIMUMTRUST) {
 				--trust;
 			}
-			if (trust <= MIN_TRUST) {
+			if (trust <= MINIMUMTRUST) {
 				disconnect("distrust");
 			}
 		}
 
-		public void process(ByteBuffer buffer, int len) {
+		private void process(ByteBuffer buffer, int len) {
 			if (len > 0) {
 				byte[] b = new byte[len];
 				System.arraycopy(buffer.array(), 0, b, 0, len);
@@ -151,7 +169,7 @@ public class Peers {
 			}
 		}
 
-		public ByteBuffer getBuffer() {
+		private ByteBuffer getBuffer() {
 			byte[] next;
 			if ((next = writes.poll()) != null)
 				return ByteBuffer.wrap(next);
@@ -159,14 +177,22 @@ public class Peers {
 			return null;
 		}
 
+		public boolean isConnected() {
+			return connected;
+		}
+
+		public InetSocketAddress getAddress() {
+			return address;
+		}
+
 		public void disconnect(String why) {
 			try {
+				connected = false;
 				connectedPeers.remove(channel);
 				channel.close();
 			} catch (IOException e) {
 			}
 			connectSlot.release();
-			trace("disconnecting. reason: " + why);
 		}
 
 		private void listen() {
@@ -174,7 +200,7 @@ public class Peers {
 				public void run() {
 					Message m = null;
 					try {
-						m = receive();
+						m = receive(readIn);
 					} catch (IOException e) {
 						disconnect("lost");
 					}
@@ -184,159 +210,69 @@ public class Peers {
 							peerThreads.execute(this); // listen again
 						}
 					} catch (Exception e) {
-						error("unhandled exception while processing a message ", e);
+						logger.error("unhandled exception while processing a message ", e);
 					}
 				}
 			});
 		}
 
-		private Message receive() throws IOException {
-			try {
-				byte[] head = new byte[24];
-				if (readIn.read(head) != head.length)
-					throw new ValidationException("Invalid package header");
-				WireFormat.Reader reader = new WireFormat.Reader(head);
-				long mag = reader.readUint32();
-				if (mag != chain.getMagic())
-					throw new ValidationException("Wrong magic for this chain" + mag + " vs " + chain.getMagic());
-
-				String command = reader.readZeroDelimitedString(12);
-				Message m = MessageFactory.createMessage(chain, command);
-				long length = reader.readUint32();
-				byte[] checksum = reader.readBytes(4);
-				if (length > 0) {
-					byte[] buf = new byte[(int) length];
-					if (readIn.read(buf) != buf.length)
-						throw new ValidationException("Package length mismatch");
-					byte[] cs = new byte[4];
-					MessageDigest sha;
-					try {
-						sha = MessageDigest.getInstance("SHA-256");
-						System.arraycopy(sha.digest(sha.digest(buf)), 0, cs, 0, 4);
-					} catch (NoSuchAlgorithmException e) {
-					}
-					if (!Arrays.equals(cs, checksum))
-						throw new ValidationException("Checksum mismatch");
-
-					if (m != null) { // unknown message
-						m.fromWire(new WireFormat.Reader(buf));
-						m.validate(chain);
-					}
-				}
-				return m;
-			} catch (ValidationException e) {
-				error("exception in receive", e);
-				disconnect("malformed package " + e.getMessage());
-			}
-			return null;
-		}
-
-		public void handshake() {
-			VersionMessage m = MessageFactory.createVersionMessage(chain);
-			m.setPeer(((SocketChannel) channel).socket().getInetAddress());
-			m.setRemotePort(((SocketChannel) channel).socket().getPort());
-			trace("sending version");
-			send(m);
-			listen();
-		}
-
 		public void send(Message m) {
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			WireFormat.Writer writer = new WireFormat.Writer(out);
-			writer.writeUint32(chain.getMagic());
-			writer.writeZeroDelimitedString(m.getCommand(), 12);
-			WireFormat.Writer payload = new WireFormat.Writer(new ByteArrayOutputStream());
-			m.toWire(payload);
-			byte[] data = payload.toByteArray();
-			writer.writeUint32(data.length);
-
-			byte[] checksum = new byte[4];
-			MessageDigest sha;
-			try {
-				sha = MessageDigest.getInstance("SHA-256");
-				System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
-			} catch (NoSuchAlgorithmException e) {
-			}
-			writer.writeBytes(checksum);
-
-			writer.writeBytes(data);
-
-			writes.add(out.toByteArray());
+			writes.add(m.toByteArray());
 			selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
 			selector.wakeup();
 		}
 
-		private void processMessage(Message m) {
-			trace("received " + m.getCommand());
-			if (m.getCommand().equals("version")) {
-				trace("counterparty " + ((VersionMessage) m).getAgent());
-				send(MessageFactory.createVerackMessage(chain));
-			} else if (m.getCommand().equals("addr")) {
-				for (WireFormat.Address a : ((AddrMessage) m).getAddresses()) {
-					addPeer(a.address, (int) a.port);
-				}
-			}
+		public abstract Message receive(InputStream readIn) throws IOException;
 
-		}
+		public abstract void handshake();
 
+		public abstract void processMessage(Message m);
+		
 	}
-
+	
+	public abstract Peer createPeer (InetSocketAddress address);
+	
 	public void addPeer(InetAddress addr, int port) {
 		InetSocketAddress address = new InetSocketAddress(addr, port);
 		synchronized (knownPeers) {
 			if (!knownPeers.containsKey(address)) {
-				Peer peer = new Peer(address);
+				Peer peer = createPeer (address);
 				knownPeers.put(address, peer);
 				runqueue.add(peer);
 			}
 		}
 	}
 
-	public void discover(Chain chain) {
-		for (String hostName : chain.getSeedHosts()) {
-			try {
-				InetAddress[] hostAddresses = InetAddress.getAllByName(hostName);
-
-				for (InetAddress inetAddress : hostAddresses) {
-					addPeer(inetAddress, chain.getPort());
-				}
-			} catch (Exception e) {
-				log.info("DNS lookup for " + hostName + " failed.");
-			}
-		}
-	}
-
 	// peers we have seen, the key is Peer, but that compares on internet
 	// address+port for SocketChannel (and also for AvailableChannel)
-	private Map<InetSocketAddress, Peer> knownPeers = Collections.synchronizedMap(new HashMap<InetSocketAddress, Peer>());
+	private final Map<InetSocketAddress, Peer> knownPeers = Collections.synchronizedMap(new HashMap<InetSocketAddress, Peer>());
 
-	private Map<SocketChannel, Peer> connectedPeers = Collections.synchronizedMap(new HashMap<SocketChannel, Peer>());
+	private final Map<SocketChannel, Peer> connectedPeers = Collections.synchronizedMap(new HashMap<SocketChannel, Peer>());
 
 	// peers waiting to be connected
-	private LinkedBlockingQueue<Peer> runqueue = new LinkedBlockingQueue<Peer>();
+	private final LinkedBlockingQueue<Peer> runqueue = new LinkedBlockingQueue<Peer>();
 
 	// total number of threads deals with P2P
-	private static final int PEERTHREADS = 20;
+	private static final int NUMBEROFPEERTHREADS = 20;
 
 	// minimum trust - if below disconnect
-	private static final int MIN_TRUST = -20;
+	private static final  int MINIMUMTRUST = -20;
 
 	// maximum trust, can not get better than this
-	private static final int MAX_TRUST = 100;
+	private static final int MAXIMUMTRUST = 100;
 
 	// number of connections we try to maintain
-	private static final int MAXCONNECTIONS = 200;
+	private static final int MAXIMUMCONNECTIONS = 100;
 
 	// number of seconds to wait until giving up on connections
 	private static final int READTIMEOUT = 60; // seconds
 
-	// the blockchain
-	private final Chain chain;
-
 	// keep track with number of connections we asked for here
-	private final Semaphore connectSlot = new Semaphore(MAXCONNECTIONS);
+	private final Semaphore connectSlot = new Semaphore(MAXIMUMCONNECTIONS);
 
-	private class ChangeRequest {
+	private final int port;
+
+	private static class ChangeRequest {
 		public static final int REGISTER = 1;
 		public static final int CHANGEOPS = 2;
 
@@ -354,16 +290,13 @@ public class Peers {
 	private final ConcurrentLinkedQueue<ChangeRequest> selectorChanges = new ConcurrentLinkedQueue<ChangeRequest>();
 
 	final Selector selector = Selector.open();
-
-	final ThreadPoolExecutor peerThreads;
-	// need this to cancel what takes too long
-	final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-	public Peers(Chain chain) throws IOException {
-		this.chain = chain;
-
-		// create a pool of threads
-		peerThreads = (ThreadPoolExecutor) Executors.newFixedThreadPool(PEERTHREADS, new ThreadFactory() {
+	
+	private final Executor peerThreads;
+	
+	public P2P (int port) throws IOException
+	{
+		this.port = port;
+		peerThreads = Executors.newFixedThreadPool(NUMBEROFPEERTHREADS, new ThreadFactory() {
 			@Override
 			public Thread newThread(final Runnable r) {
 				Thread peerThread = new Thread() {
@@ -381,15 +314,16 @@ public class Peers {
 	}
 
 	public void start() throws IOException {
+		// create a pool of threads
 		// create a server channel for the chain's port, work non-blocking and
 		// wait for accept events
 		final ServerSocketChannel serverChannel = ServerSocketChannel.open();
-		serverChannel.socket().bind(new InetSocketAddress(chain.getPort()));
+		serverChannel.socket().bind(new InetSocketAddress(port));
 		serverChannel.configureBlocking(false);
 
 		selectorChanges.add(new ChangeRequest(serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT));
 		selector.wakeup();
-
+		
 		// this thread keeps looking for new connections
 		Thread connector = new Thread(new Runnable() {
 			@Override
@@ -399,7 +333,7 @@ public class Peers {
 					try {
 						runqueue.take().connect();
 					} catch (Exception e) {
-						log.error("Unhandled exception in peer queue", e);
+						logger.error("Unhandled exception in peer queue", e);
 					}
 				}
 			}
@@ -408,7 +342,7 @@ public class Peers {
 		connector.setDaemon(true);
 		connector.setName("Peer connector");
 		connector.start();
-
+		
 		// this thread waits on the selector above and acts on events
 		Thread selectorThread = new Thread(new Runnable() {
 			@Override
@@ -441,17 +375,19 @@ public class Peers {
 									if (knownPeers.containsKey(address)) {
 										peer = knownPeers.get(address);
 									} else {
-										peer = new Peer(address);
+										peer = createPeer (address);
 										knownPeers.put(address, peer);
 									}
 									peer.channel = client;
 									if (connectSlot.tryAcquire()) {
-										// if we have interest ...
+										// if we have interest ...										
 										connectedPeers.put(client, peer);
 										key.interestOps(SelectionKey.OP_WRITE);
 										peerThreads.execute(new Runnable() {
 											public void run() {
+												peer.connected = true;
 												peer.handshake();
+												peer.listen();
 											}
 										});
 									} else {
@@ -473,7 +409,9 @@ public class Peers {
 												key.interestOps(SelectionKey.OP_WRITE);
 												peerThreads.execute(new Runnable() {
 													public void run() {
+														peer.connected = true;
 														peer.handshake();
+														peer.listen();
 													}
 												});
 											} else {
@@ -521,11 +459,11 @@ public class Peers {
 								}
 							} catch (CancelledKeyException e) {
 							} catch (Exception e) {
-								log.error("Error processing a selector key", e);
+								logger.error("Error processing a selector key", e);
 							}
 						}
 					} catch (Exception e) {
-						log.error("Unhandled Exception in selector thread", e);
+						logger.error("Unhandled Exception in selector thread", e);
 					}
 				}
 			}

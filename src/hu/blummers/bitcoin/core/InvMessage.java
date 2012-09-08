@@ -6,7 +6,7 @@ import java.util.List;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
-public class InvMessage extends Message {
+public class InvMessage extends BitcoinMessage {
 
 	List <byte []> transactionHashes = new ArrayList<byte []> ();
 	List <byte []> blockHashes= new ArrayList<byte []> ();

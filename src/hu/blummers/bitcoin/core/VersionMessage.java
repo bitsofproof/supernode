@@ -10,7 +10,7 @@ import java.util.Random;
 
 import org.purser.server.ValidationException;
 
-public class VersionMessage extends Message {
+public class VersionMessage extends BitcoinMessage {
 	private long version = 31800;
 	private BigInteger services = new BigInteger ("1");
 	private BigInteger timestamp = new BigInteger (new Long (System.currentTimeMillis()/1000).toString());
@@ -59,11 +59,6 @@ public class VersionMessage extends Message {
 		agent = reader.readString();
 		height = reader.readUint32();
 	}
-	
-	@Override
-	public void validate(Chain chain) throws ValidationException {
-	}
-	
 	
 	public VersionMessage(Chain chain, String command) {
 		super(chain, command);

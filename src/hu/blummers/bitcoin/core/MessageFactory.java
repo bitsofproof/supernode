@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 public class MessageFactory {
 	private static final Logger log = LoggerFactory.getLogger(MessageFactory.class);
 	
-	public static Message createMessage (Chain chain, String command)
+	public static BitcoinMessage createMessage (Chain chain, String command)
 	{
 		if ( command.equals("version") )
 			return createVersionMessage (chain);
@@ -27,17 +27,17 @@ public class MessageFactory {
 		return new VersionMessage (chain, "version");
 	}
 	
-	public static Message createVerackMessage (Chain chain)
+	public static BitcoinMessage createVerackMessage (Chain chain)
 	{
-		return new Message (chain, "verack");
+		return new BitcoinMessage (chain, "verack");
 	}
 	
-	public static Message createInvMessage (Chain chain)
+	public static BitcoinMessage createInvMessage (Chain chain)
 	{
 		return new InvMessage (chain, "inv");
 	}
 	
-	public static Message createAddrMessage (Chain chain)
+	public static BitcoinMessage createAddrMessage (Chain chain)
 	{
 		return new AddrMessage (chain, "addr");
 	}

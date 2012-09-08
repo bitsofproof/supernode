@@ -7,7 +7,7 @@ import java.util.List;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
-public class AddrMessage extends Message {
+public class AddrMessage extends BitcoinMessage {
 
 	private List<WireFormat.Address> addresses = new ArrayList<WireFormat.Address> ();
 	
