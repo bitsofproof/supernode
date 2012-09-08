@@ -247,13 +247,17 @@ public abstract class P2P {
 	
 	public void addPeer(InetAddress addr, int port) {
 		InetSocketAddress address = new InetSocketAddress(addr, port);
+		Peer peer = null;
 		synchronized (knownPeers) {
 			if (!knownPeers.containsKey(address)) {
-				Peer peer = createPeer (address);
+				peer = createPeer (address);
 				knownPeers.put(address, peer);
-				runqueue.add(peer);
 			}
+			else
+				peer = knownPeers.get(address);
 		}
+		if ( peer.channel == null || !connectedPeers.containsKey(peer.channel) )
+			runqueue.add(peer);
 	}
 
 	public interface PeerTask
