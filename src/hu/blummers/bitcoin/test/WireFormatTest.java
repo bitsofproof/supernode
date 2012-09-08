@@ -87,4 +87,20 @@ public class WireFormatTest {
 		assertTrue (reader.eof());
 	}
 	
+	public String dump(byte [] bytes) {
+		StringBuffer buf = new StringBuffer(bytes.length * 2);
+		int n = 0;
+		for (int i = 0; i < bytes.length; ++i) {
+			byte b = bytes [i];
+			String s = Integer.toString(0xFF & b, 16);
+			if (s.length() < 2)
+				buf.append('0');			
+			buf.append(s);
+			if ( (++n)%16 == 0 )
+				buf.append('\n');
+		}
+		return buf.toString();
+	}
+	
+	
 }

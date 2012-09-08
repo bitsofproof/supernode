@@ -11,6 +11,8 @@ public class WireFormat {
 	
 	public static class Address
 	{
+		public long time;
+		public BigInteger services;
 		public InetAddress address;
 		public long port;
 	}
@@ -138,11 +140,14 @@ public class WireFormat {
 			return dump (0, bytes.length);
 		}
 		
-		public Address readAddress ()
+		public Address readAddress (long version, boolean versionMessage)
 		{
 			Address address = new Address();
+			if ( !versionMessage && version >= 31402 )
+				address.time = readUint32();
+			address.services = readUint64();
 			byte [] a = readBytes (16);
-			try {
+			try {				
 				address.address = InetAddress.getByAddress(a);
 			} catch (UnknownHostException e) {
 			}
@@ -240,18 +245,18 @@ public class WireFormat {
 		}
 		public void writeZeroDelimitedString (String s, int length)
 		{
-			try {
-				byte [] t = s.getBytes("UTF-8");			
-				bs.write(t, 0, Math.min(length-1,t.length));
-				for ( int i = 0; i < (length - t.length); ++i)
-					bs.write(0);
-			} catch (UnsupportedEncodingException e) {
-			}
+			byte [] str = new byte [length];
+			for ( int i = 0; i < s.length() && i < (length-1); ++i )
+				str [i] = (byte)(s.codePointAt(i) & 0xFF);
+			writeBytes (str);
 		}
-		public void writeAddress (Address address)
-		{
+		public void writeAddress (Address address, long version, boolean versionMessage)
+		{			
+			if ( !versionMessage && version > 31402 )
+				writeUint32(address.time);
+			writeUint64(address.services);
 			byte [] a = address.address.getAddress();
-			if ( a.length < 16 )
+			if ( a.length == 4 )
 			{
 				byte [] prefix = new byte [10];
 				writeBytes (prefix);
@@ -260,7 +265,8 @@ public class WireFormat {
 			writeBytes (a);
 			byte [] p = new byte [2];
 			p [0] = (byte)((address.port >>> 8) & 0xff);
-			p [0] = (byte)((address.port) & 0xff);
+			p [1] = (byte)((address.port) & 0xff);
+			writeBytes (p);
 		}
 	}
 

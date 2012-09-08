@@ -12,6 +12,7 @@ import org.spongycastle.util.encoders.Hex;
 
 public class Chain {
 	private final JpaBlock genesis;
+	private final long version;
 	private final long magic;
 	private final int port;
 	private final int addressType;
@@ -25,6 +26,7 @@ public class Chain {
 
 	public static final Chain production = new Chain(
 			satoshiBlock (),
+			31900,
 			0xD9B4BEF9L,
 			8333,
 			0,
@@ -101,11 +103,12 @@ public class Chain {
 		return new BigInteger(buf);
 	}
 
-	private Chain(JpaBlock genesis, long magic,
+	private Chain(JpaBlock genesis, long version, long magic,
 			int port, int addressType, int privateKeyType,
 			int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey, String [] seedHosts) {
 		super();
 		this.genesis = genesis;
+		this.version = version;
 		this.magic = magic;
 		this.port = port;
 		this.addressType = addressType;
@@ -151,6 +154,11 @@ public class Chain {
 
 	public String[] getSeedHosts() {
 		return seedHosts;
+	}
+
+
+	public long getVersion() {
+		return version;
 	}
 	
 	

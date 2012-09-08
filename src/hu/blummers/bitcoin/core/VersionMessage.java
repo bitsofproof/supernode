@@ -8,17 +8,15 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
 
-import org.purser.server.ValidationException;
-
 public class VersionMessage extends BitcoinMessage {
-	private long version = 31800;
+	private long version = getChain ().getVersion();
 	private BigInteger services = new BigInteger ("1");
 	private BigInteger timestamp = new BigInteger (new Long (System.currentTimeMillis()/1000).toString());
 	private InetAddress peer;
 	private long remotePort;
 	private InetAddress me;
 	private BigInteger nonce = new BigInteger (64, new Random ());
-	private String agent = "Guess 0.1";
+	private String agent = " /chainloader:0.1/faststack:0.1/";
 	private long height = 0;
 
 	
@@ -27,41 +25,41 @@ public class VersionMessage extends BitcoinMessage {
 		writer.writeUint32(version);
 		writer.writeUint64(services);
 		writer.writeUint64(timestamp);
-		writer.writeUint64(services);
 		WireFormat.Address a = new WireFormat.Address();
-		a.address = peer;
-		a.port = remotePort;
-		writer.writeAddress(a);
+		a.services = services;
+		a.time = System.currentTimeMillis()/1000;
 		try {
-			writer.writeUint64(services);
 			a.address = InetAddress.getLocalHost();
 			a.port = getChain ().getPort();
-			writer.writeAddress(a);
+			writer.writeAddress(a, version, true);
 		} catch (UnknownHostException e) {
 		}
+		a.address = peer;
+		a.port = remotePort;
+		writer.writeAddress(a, version, true);
+		
 		writer.writeUint64(nonce);
 		writer.writeString(agent);
 		writer.writeUint32(height);
 	}
 	
 	@Override
-	public void fromWire(Reader reader) {		
+	public void fromWire(Reader reader, long version) {
 		version = reader.readUint32();
 		services = reader.readUint64();
 		timestamp = reader.readUint64();
-		reader.readUint64();
-		WireFormat.Address address = reader.readAddress(); // should be me
-		reader.readUint64();
-		address = reader.readAddress();
+		WireFormat.Address address = reader.readAddress(version, true);
+		me = address.address;		
+		address = reader.readAddress(version, true);
 		peer = address.address;
 		remotePort = address.port;		
-		reader.readUint64();
+		nonce = reader.readUint64();
 		agent = reader.readString();
 		height = reader.readUint32();
 	}
 	
-	public VersionMessage(Chain chain, String command) {
-		super(chain, command);
+	public VersionMessage(Chain chain) {
+		super(chain, "version");
 	}
 	public long getVersion() {
 		return version;

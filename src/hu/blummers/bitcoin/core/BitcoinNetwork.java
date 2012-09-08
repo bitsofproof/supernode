@@ -36,6 +36,13 @@ public class BitcoinNetwork extends P2P {
 				}
 			}}, new String [] {"addr"});
 		
+		peer.addListener(new BitcoinMessageListener () {
+			public void process(BitcoinMessage m, BitcoinPeer peer) {
+				VersionMessage v = (VersionMessage)m;
+				peer.setVersion (v);
+				log.info("connected to " +v.getAgent());
+			}}, new String []{"version"});
+		
 		peer.addListener(unconfirmedTransactions, new String [] {"inv"});
 		
 		return peer;
@@ -61,5 +68,19 @@ public class BitcoinNetwork extends P2P {
 			}
 		}
 		log.info("Found " + n  + " addresses of seed hosts");
+	}
+	
+	public void downloadBlockChain (String lastKnown, final BitcoinMessageListener blockListener)
+	{
+		final GetBlocksMessage gb = new GetBlocksMessage (chain);
+		gb.getHashes().add(lastKnown);
+		forAllConnected (new P2P.PeerTask() {
+			@Override
+			public void run(Peer peer) {
+				BitcoinPeer p = (BitcoinPeer)peer;
+				p.addListener (blockListener, new String []{"block"});
+				peer.send(gb);
+			}
+		});
 	}
 }

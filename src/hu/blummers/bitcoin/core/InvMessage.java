@@ -12,8 +12,8 @@ public class InvMessage extends BitcoinMessage {
 	List <byte []> blockHashes= new ArrayList<byte []> ();
 	boolean error;
 	
-	public InvMessage(Chain chain, String command) {
-		super(chain, command);
+	public InvMessage(Chain chain) {
+		super(chain, "inv");
 	}
 
 	@Override
@@ -40,7 +40,7 @@ public class InvMessage extends BitcoinMessage {
 	}
 
 	@Override
-	public void fromWire(Reader reader) {
+	public void fromWire(Reader reader, long version) {
 		long numberOfEntries = reader.readVarInt();
 		for ( long i = 0; i < numberOfEntries; ++i )
 		{

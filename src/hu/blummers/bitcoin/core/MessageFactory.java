@@ -10,36 +10,22 @@ public class MessageFactory {
 	public static BitcoinMessage createMessage (Chain chain, String command)
 	{
 		if ( command.equals("version") )
-			return createVersionMessage (chain);
+			return new VersionMessage (chain);
 		else if ( command.equals("verack") )
-			return createVerackMessage (chain);
+			return new BitcoinMessage (chain, "verack");
 		else if ( command.equals("inv") )
-			return createInvMessage (chain);
+			return new InvMessage (chain);
 		else if ( command.equals("addr") )
-			return createAddrMessage (chain);
-		
-		log.info("unkwon message type received: "+ command);
+			return new AddrMessage (chain);
+		else if ( command.equals("getdata") )
+			return new GetDataMessage(chain);
+		else if ( command.equals("getblocks") )
+			return new GetBlocksMessage (chain);
+		else if ( command.equals("block") )
+			return new BlockMessage (chain);
+
+		log.info("unknown message " + command);
 		return null;
-	}
-	
-	public static VersionMessage createVersionMessage (Chain chain)
-	{
-		return new VersionMessage (chain, "version");
-	}
-	
-	public static BitcoinMessage createVerackMessage (Chain chain)
-	{
-		return new BitcoinMessage (chain, "verack");
-	}
-	
-	public static BitcoinMessage createInvMessage (Chain chain)
-	{
-		return new InvMessage (chain, "inv");
-	}
-	
-	public static BitcoinMessage createAddrMessage (Chain chain)
-	{
-		return new AddrMessage (chain, "addr");
 	}
 	
 	/*

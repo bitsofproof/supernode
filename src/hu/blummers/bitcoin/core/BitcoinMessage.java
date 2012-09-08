@@ -13,22 +13,20 @@ import edu.emory.mathcs.backport.java.util.Arrays;
 import hu.blummers.p2p.P2P;
 
 public class BitcoinMessage implements P2P.Message {
-	private String command;
-	private Chain chain;
+	private final String command;
+	private final Chain chain;
+	
+    public static final int MAX_SIZE = 0x02000000;
 	
 	public BitcoinMessage (Chain chain, String command)
 	{
-		this.chain = chain;
 		this.command = command;
+		this.chain = chain;
 	}
 	
 	public String getCommand () {
 		return command;
 	}
-	public Chain getChain() {
-		return chain;
-	}
-
 	@Override
 	public byte [] toByteArray ()
 	{
@@ -54,7 +52,7 @@ public class BitcoinMessage implements P2P.Message {
 		return writer.toByteArray();
 	}
 	
-	public static BitcoinMessage fromStream (InputStream readIn, Chain chain) throws ValidationException, IOException
+	public static BitcoinMessage fromStream (InputStream readIn, Chain chain, long version) throws ValidationException, IOException
 	{
 		byte[] head = new byte[24];
 		if (readIn.read(head) != head.length)
@@ -68,7 +66,7 @@ public class BitcoinMessage implements P2P.Message {
 		BitcoinMessage m = MessageFactory.createMessage(chain, command);
 		long length = reader.readUint32();
 		byte[] checksum = reader.readBytes(4);
-		if (length > 0) {
+		if (length > 0 && length < MAX_SIZE) {
 			byte[] buf = new byte[(int) length];
 			if (readIn.read(buf) != buf.length)
 				throw new ValidationException("Package length mismatch");
@@ -82,14 +80,20 @@ public class BitcoinMessage implements P2P.Message {
 			if (!Arrays.equals(cs, checksum))
 				throw new ValidationException("Checksum mismatch");
 
-			if (m != null) { // unknown message
-				m.fromWire(new WireFormat.Reader(buf));
+			if (m != null) {
+				m.fromWire(new WireFormat.Reader(buf), version);
 			}
 		}
 		return m;
 	}
+
 	
+
+	public Chain getChain() {
+		return chain;
+	}
+
 	public void validate () throws ValidationException {}
 	public void toWire (WireFormat.Writer writer) {}
-	public void fromWire (WireFormat.Reader reader) {}
+	public void fromWire (WireFormat.Reader reader, long version) {}
 }

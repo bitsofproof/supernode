@@ -1,6 +1,10 @@
 package org.purser.server;
 
+import hu.blummers.bitcoin.core.BitcoinMessage;
+import hu.blummers.bitcoin.core.BitcoinMessageListener;
 import hu.blummers.bitcoin.core.BitcoinNetwork;
+import hu.blummers.bitcoin.core.BitcoinPeer;
+import hu.blummers.bitcoin.core.BlockMessage;
 import hu.blummers.bitcoin.core.Chain;
 
 import org.slf4j.Logger;
@@ -22,7 +26,18 @@ public class ChainDownloader {
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production);
 			network.start();
 			network.discover();
-			Thread.sleep(1000*1000);
+			/*
+			network.downloadBlockChain(Chain.production.getGenesis().getHash(), new BitcoinMessageListener (){
+				@Override
+				public void process(BitcoinMessage m, BitcoinPeer peer) {
+					BlockMessage bm = (BlockMessage)m;
+					log.info("got block " + bm.getBlock().getHash());
+				}});
+				*/
+			synchronized ( log )
+			{
+				log.wait ();
+			}
 		} catch (Exception e) {
 			log.error("ChainDownloader", e);
 		}
