@@ -28,18 +28,15 @@ public class BitcoinNetwork extends P2P {
 		peer.addListener(new BitcoinMessageListener (){
 			@Override
 			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				if ( m instanceof AddrMessage )
+				AddrMessage am = (AddrMessage)m;
+				for ( Address a : am.getAddresses() )
 				{
-					AddrMessage am = (AddrMessage)m;
-					for ( Address a : am.getAddresses() )
-					{
-						log.trace("received new address " + a.address);
-						addPeer (a.address, (int)a.port);
-					}
+					log.trace("received new address " + a.address);
+					addPeer (a.address, (int)a.port);
 				}
-			}});
+			}}, new String [] {"addr"});
 		
-		peer.addListener(unconfirmedTransactions);
+		peer.addListener(unconfirmedTransactions, new String [] {"inv"});
 		
 		return peer;
 	}

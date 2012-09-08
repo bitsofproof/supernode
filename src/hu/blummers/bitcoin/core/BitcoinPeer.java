@@ -7,8 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.purser.server.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +24,7 @@ BitcoinPeer extends P2P.Peer {
 	private BitcoinNetwork network;
 	
 	@SuppressWarnings("unchecked")
-	private List<BitcoinMessageListener> listener = Collections.synchronizedList(new ArrayList<BitcoinMessageListener> ());
+	public Map<String, List<BitcoinMessageListener>>listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
 	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
 		p2p.super(address);
@@ -41,7 +44,6 @@ BitcoinPeer extends P2P.Peer {
 		try {
 			return BitcoinMessage.fromStream(readIn, network.getChain());
 		} catch (Exception e) {
-			log.error("exception in receive", e);
 			disconnect("malformed package " + e.getMessage());
 		}
 		return null;
@@ -58,13 +60,30 @@ BitcoinPeer extends P2P.Peer {
 	@Override
 	public void processMessage(P2P.Message m) {
 		BitcoinMessage bm = (BitcoinMessage) m;
-		for ( BitcoinMessageListener l : listener )
-			l.process(bm, this);
-		log.info("received " + bm.getCommand());
+		try {
+			bm.validate ();
+			
+			List<BitcoinMessageListener> classListener = listener.get(bm.getCommand());
+			if ( classListener != null )
+				for ( BitcoinMessageListener l : classListener )
+					l.process(bm, this);
+			
+		} catch (ValidationException e) {
+			disconnect ("invalid message" + e.getMessage());
+		}
 	}
 	
-	public void addListener (BitcoinMessageListener l)
+	public void addListener (BitcoinMessageListener l, String [] types)
 	{
-		listener.add(l);
+		for ( String t : types )
+		{
+			List<BitcoinMessageListener> ll = listener.get(t);
+			if ( ll == null )
+			{
+				ll = new ArrayList<BitcoinMessageListener> ();
+				listener.put(t, ll);
+			}
+			ll.add(l);
+		}
 	}
 }

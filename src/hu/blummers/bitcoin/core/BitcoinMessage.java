@@ -89,6 +89,7 @@ public class BitcoinMessage implements P2P.Message {
 		return m;
 	}
 	
+	public void validate () throws ValidationException {}
 	public void toWire (WireFormat.Writer writer) {}
 	public void fromWire (WireFormat.Reader reader) {}
 }

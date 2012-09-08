@@ -1,16 +1,15 @@
 package hu.blummers.bitcoin.core;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
-import org.purser.server.JpaTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class UnconfirmedTransactions implements BitcoinMessageListener {
 	private static final Logger log = LoggerFactory.getLogger(UnconfirmedTransactions.class);
 	
-	private Map<String, JpaTransaction> transactions = new HashMap<String, JpaTransaction> ();
+	private Set<String> seenHashes = new HashSet<String>();
 	
 	@Override
 	public synchronized void process(BitcoinMessage m, BitcoinPeer peer) {
@@ -20,10 +19,12 @@ public class UnconfirmedTransactions implements BitcoinMessageListener {
 			for ( byte [] h : im.getTransactionHashes() )
 			{
 				String hash = new Hash (h).toString();
-				if ( transactions.containsKey(hash) )
+				if ( seenHashes.contains(hash) )
 				{
 					return;
 				}
+				seenHashes.add(hash);				
+				log.info("new transaction " + hash);
 			}
 		}
 	}
