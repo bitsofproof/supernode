@@ -36,9 +36,6 @@ public class JpaTransaction {
 	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
 	private JpaTransactionHash hash;
 	
-	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
-	private JpaBlock block;
-
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransactionInput> inputs;
 	
@@ -91,14 +88,6 @@ public class JpaTransaction {
 
 	public void setHash(JpaTransactionHash hash) {
 		this.hash = hash;
-	}
-
-	public JpaBlock getBlock() {
-		return block;
-	}
-
-	public void setBlock(JpaBlock block) {
-		this.block = block;
 	}
 
 	public void calculateHash ()

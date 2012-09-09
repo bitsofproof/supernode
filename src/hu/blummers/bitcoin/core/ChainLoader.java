@@ -29,13 +29,13 @@ public class ChainLoader {
 			b.received(block);
 	}
 	
-	public void startDownloading (final ChainStore chainstore)
+	public void startDownloading (final BitcoinNetwork network, final ChainStore chainstore)
 	{
-		chainstore.getNetwork().forAllConnected(new P2P.PeerTask () {
+		network.forAllConnected(new P2P.PeerTask () {
 			@Override
 			public void run(Peer peer) {
 				BitcoinPeer bp = (BitcoinPeer)peer;
-				GetBlocksMessage gbm = (GetBlocksMessage)MessageFactory.createMessage(chainstore.getNetwork().getChain(), "getblocks");
+				GetBlocksMessage gbm = (GetBlocksMessage)MessageFactory.createMessage(network.getChain(), "getblocks");
 				peer.send(gbm);
 			}});
 	}

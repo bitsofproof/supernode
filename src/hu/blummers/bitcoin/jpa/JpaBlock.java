@@ -20,6 +20,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -42,7 +43,7 @@ public class JpaBlock {
 	
 	transient private String previousHash;
 
-	@OneToOne(fetch=FetchType.LAZY,targetEntity=JpaBlock.class,optional=true)
+	@ManyToOne(targetEntity=JpaBlock.class,optional=true)
 	private JpaBlock previous;
 	
 	@Column(length=64,nullable=false)
@@ -239,7 +240,6 @@ public class JpaBlock {
 			{
 				JpaTransaction t = new JpaTransaction ();
 				t.fromWire(reader);
-				t.setBlock(this);
 				transactions.add(t);
 			}
 		}
