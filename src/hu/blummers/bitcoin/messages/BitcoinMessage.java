@@ -1,4 +1,4 @@
-package hu.blummers.bitcoin.core;
+package hu.blummers.bitcoin.messages;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -6,10 +6,14 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.purser.server.ValidationException;
 
 import edu.emory.mathcs.backport.java.util.Arrays;
 
+import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.ValidationException;
+import hu.blummers.bitcoin.core.WireFormat;
+import hu.blummers.bitcoin.core.WireFormat.Reader;
+import hu.blummers.bitcoin.core.WireFormat.Writer;
 import hu.blummers.p2p.P2P;
 
 public class BitcoinMessage implements P2P.Message {

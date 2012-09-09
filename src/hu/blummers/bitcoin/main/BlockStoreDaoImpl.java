@@ -1,6 +1,12 @@
-package org.purser.server;
+package hu.blummers.bitcoin.main;
 
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.ValidationException;
+import hu.blummers.bitcoin.jpa.JpaBlock;
+import hu.blummers.bitcoin.jpa.JpaChainHead;
+import hu.blummers.bitcoin.jpa.JpaSerializer;
+import hu.blummers.bitcoin.jpa.QJpaBlock;
+import hu.blummers.bitcoin.jpa.QJpaChainHead;
 
 import java.math.BigInteger;
 

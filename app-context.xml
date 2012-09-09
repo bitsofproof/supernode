@@ -47,5 +47,5 @@
 		p:entityManagerFactory-ref="entityManagerFactory"/>
 		
 	<tx:annotation-driven transaction-manager="transactionManager" />
-	<context:component-scan base-package="org.purser" />
+	<context:component-scan base-package="hu.blummers.bitcoin" />
 </beans>

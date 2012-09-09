@@ -1,5 +1,10 @@
 package hu.blummers.bitcoin.core;
 
+import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.BitcoinMessageListener;
+import hu.blummers.bitcoin.messages.InvMessage;
+import hu.blummers.bitcoin.messages.MessageFactory;
+import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
 import hu.blummers.p2p.P2P.Message;
 import hu.blummers.p2p.P2P.Peer;
@@ -14,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.purser.server.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

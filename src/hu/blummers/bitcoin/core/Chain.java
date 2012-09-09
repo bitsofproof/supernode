@@ -1,13 +1,14 @@
 package hu.blummers.bitcoin.core;
 
+import hu.blummers.bitcoin.jpa.JpaBlock;
+import hu.blummers.bitcoin.jpa.JpaTransaction;
+import hu.blummers.bitcoin.jpa.JpaTransactionInput;
+import hu.blummers.bitcoin.jpa.JpaTransactionOutput;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.purser.server.JpaBlock;
-import org.purser.server.JpaTransaction;
-import org.purser.server.JpaTransactionInput;
-import org.purser.server.JpaTransactionOutput;
 import org.spongycastle.util.encoders.Hex;
 
 public class Chain {

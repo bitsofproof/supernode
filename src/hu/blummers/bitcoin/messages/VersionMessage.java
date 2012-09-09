@@ -1,5 +1,8 @@
-package hu.blummers.bitcoin.core;
+package hu.blummers.bitcoin.messages;
 
+import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.WireFormat;
+import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 

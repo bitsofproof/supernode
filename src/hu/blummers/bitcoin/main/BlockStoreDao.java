@@ -1,4 +1,4 @@
-package org.purser.server;
+package hu.blummers.bitcoin.main;
 import hu.blummers.bitcoin.core.Chain;
 
 import com.google.bitcoin.core.NetworkParameters;

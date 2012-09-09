@@ -1,5 +1,9 @@
 package hu.blummers.bitcoin.core;
 
+import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.BitcoinMessageListener;
+import hu.blummers.bitcoin.messages.InvMessage;
+
 import java.util.HashSet;
 import java.util.Set;
 

@@ -1,6 +1,7 @@
-package org.purser.server;
+package hu.blummers.bitcoin.jpa;
 
 import hu.blummers.bitcoin.core.Hash;
+import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import javax.persistence.Basic;
@@ -14,6 +15,7 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+
 
 import com.mysema.query.jpa.impl.JPAQuery;
 

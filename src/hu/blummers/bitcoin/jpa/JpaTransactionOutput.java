@@ -1,7 +1,8 @@
-package org.purser.server;
+package hu.blummers.bitcoin.jpa;
 
 import hu.blummers.bitcoin.core.Base58;
 import hu.blummers.bitcoin.core.Hash;
+import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.math.BigInteger;

@@ -1,4 +1,6 @@
-package hu.blummers.bitcoin.core;
+package hu.blummers.bitcoin.messages;
+
+import hu.blummers.bitcoin.core.Chain;
 
 public class GetDataMessage extends BitcoinMessage {
 

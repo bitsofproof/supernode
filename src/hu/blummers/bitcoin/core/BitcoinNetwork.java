@@ -8,6 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import hu.blummers.bitcoin.core.WireFormat.Address;
+import hu.blummers.bitcoin.messages.AdrMessage;
+import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.BitcoinMessageListener;
+import hu.blummers.bitcoin.messages.GetBlocksMessage;
+import hu.blummers.bitcoin.messages.MessageFactory;
+import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
 
 public class BitcoinNetwork extends P2P {
@@ -28,7 +34,7 @@ public class BitcoinNetwork extends P2P {
 		peer.addListener(new BitcoinMessageListener (){
 			@Override
 			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				AddrMessage am = (AddrMessage)m;
+				AdrMessage am = (AdrMessage)m;
 				for ( Address a : am.getAddresses() )
 				{
 					log.trace("received new address " + a.address);

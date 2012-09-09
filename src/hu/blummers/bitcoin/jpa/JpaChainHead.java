@@ -1,4 +1,4 @@
-package org.purser.server;
+package hu.blummers.bitcoin.jpa;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

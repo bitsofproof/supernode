@@ -1,4 +1,4 @@
-package org.purser.server;
+package hu.blummers.bitcoin.jpa;
 
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;

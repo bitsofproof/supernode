@@ -1,4 +1,5 @@
-package org.purser.server;
+package hu.blummers.bitcoin.main;
+
 
 
 import java.io.File;

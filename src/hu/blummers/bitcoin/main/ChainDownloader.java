@@ -1,11 +1,11 @@
-package org.purser.server;
+package hu.blummers.bitcoin.main;
 
-import hu.blummers.bitcoin.core.BitcoinMessage;
-import hu.blummers.bitcoin.core.BitcoinMessageListener;
 import hu.blummers.bitcoin.core.BitcoinNetwork;
 import hu.blummers.bitcoin.core.BitcoinPeer;
-import hu.blummers.bitcoin.core.BlockMessage;
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.BitcoinMessageListener;
+import hu.blummers.bitcoin.messages.BlockMessage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

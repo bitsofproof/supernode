@@ -1,16 +1,19 @@
-package hu.blummers.bitcoin.core;
+package hu.blummers.bitcoin.messages;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.WireFormat;
+import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
-public class AddrMessage extends BitcoinMessage {
+public class AdrMessage extends BitcoinMessage {
 
 	private List<WireFormat.Address> addresses = new ArrayList<WireFormat.Address> ();
 	
-	public AddrMessage(Chain chain) {
+	public AdrMessage(Chain chain) {
 		super(chain, "addr");
 	}
 

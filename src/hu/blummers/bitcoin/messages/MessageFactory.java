@@ -1,4 +1,6 @@
-package hu.blummers.bitcoin.core;
+package hu.blummers.bitcoin.messages;
+
+import hu.blummers.bitcoin.core.Chain;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,7 @@ public class MessageFactory {
 		else if ( command.equals("inv") )
 			return new InvMessage (chain);
 		else if ( command.equals("addr") )
-			return new AddrMessage (chain);
+			return new AdrMessage (chain);
 		else if ( command.equals("getdata") )
 			return new GetDataMessage(chain);
 		else if ( command.equals("getblocks") )
@@ -25,6 +27,8 @@ public class MessageFactory {
 			return new BlockMessage (chain);
 		else if ( command.equals("alert") )
 			return new AlertMessage (chain);
+		else if ( command.equals("ping") )
+			return new BitcoinMessage (chain, "ping");
 
 		log.info("unknown message " + command);
 		return null;
