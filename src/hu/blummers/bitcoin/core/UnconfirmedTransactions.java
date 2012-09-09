@@ -15,6 +15,19 @@ public class UnconfirmedTransactions implements BitcoinMessageListener {
 	
 	private Set<String> seenHashes = new HashSet<String>();
 	
+	private BitcoinNetwork network;
+	
+	public UnconfirmedTransactions (BitcoinNetwork network)
+	{
+		this.network = network;
+	}
+	
+	public void start ()
+	{
+		network.addListener("inv", this);
+	}
+	
+	
 	@Override
 	public synchronized void process(BitcoinMessage m, BitcoinPeer peer) {
 		if ( m instanceof InvMessage )
