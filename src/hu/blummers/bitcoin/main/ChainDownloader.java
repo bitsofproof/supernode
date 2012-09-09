@@ -6,7 +6,6 @@ import hu.blummers.bitcoin.core.Chain;
 import hu.blummers.bitcoin.core.ChainLoader;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.UnconfirmedTransactions;
-import hu.blummers.bitcoin.messages.BitcoinMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.bitcoin.messages.BlockMessage;
 
@@ -31,8 +30,8 @@ public class ChainDownloader {
 
 			ChainStore chainStore = context.getBean (ChainStore.class);
 			
-			log.info("Reset store");						
-			chainStore.resetStore(Chain.production);
+			//log.info("Reset store");						
+			//chainStore.resetStore(Chain.production);
 			
 			
 			log.info("Connect to bitcoin network");			

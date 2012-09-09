@@ -1,11 +1,11 @@
 package hu.blummers.bitcoin.messages;
 
-import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.BitcoinPeer;
 
-public class GetDataMessage extends BitcoinMessage {
+public class GetDataMessage extends BitcoinPeer.Message {
 
-	public GetDataMessage(Chain chain) {
-		super(chain, "getdata");
+	public GetDataMessage(BitcoinPeer bitcoinPeer) {
+		bitcoinPeer.super("getdata");
 	}
 
 }

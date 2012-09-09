@@ -1,15 +1,20 @@
 package hu.blummers.bitcoin.core;
 
-import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.AddrMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
-import hu.blummers.bitcoin.messages.MessageFactory;
+import hu.blummers.bitcoin.messages.BlockMessage;
+import hu.blummers.bitcoin.messages.GetBlocksMessage;
+import hu.blummers.bitcoin.messages.GetDataMessage;
+import hu.blummers.bitcoin.messages.InvMessage;
 import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
-import hu.blummers.p2p.P2P.Message;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,10 +23,10 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.emory.mathcs.backport.java.util.Collections;
 
-public class 
-BitcoinPeer extends P2P.Peer {
+public class BitcoinPeer extends P2P.Peer {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinPeer.class);
 
 	private BitcoinNetwork network;
@@ -29,12 +34,90 @@ BitcoinPeer extends P2P.Peer {
 	private long height;
 	private long version;
 	
+	public class Message implements P2P.Message {
+		private final String command;
+		
+		public Message (String command)
+		{
+			this.command = command;
+		}
+		
+		public String getCommand () {
+			return command;
+		}
+		@Override
+		public byte [] toByteArray ()
+		{
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			WireFormat.Writer writer = new WireFormat.Writer(out);
+			writer.writeUint32(network.getChain().getMagic());
+			writer.writeZeroDelimitedString(getCommand(), 12);
+			WireFormat.Writer payload = new WireFormat.Writer(new ByteArrayOutputStream());
+			toWire(payload);
+			byte[] data = payload.toByteArray();
+			writer.writeUint32(data.length);
+
+			byte[] checksum = new byte[4];
+			MessageDigest sha;
+			try {
+				sha = MessageDigest.getInstance("SHA-256");
+				System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
+			} catch (NoSuchAlgorithmException e) {
+			}
+			writer.writeBytes(checksum);
+
+			writer.writeBytes(data);
+			return writer.toByteArray();
+		}
+		
+		public void validate () throws ValidationException {}
+		public void toWire (WireFormat.Writer writer) {};
+		public void fromWire (WireFormat.Reader reader) {};
+	}
+
+	
+	public Message createMessage (String command)
+	{
+		if ( command.equals("version") )
+			return new VersionMessage (this);
+		else if ( command.equals("inv") )
+			return new InvMessage (this);
+		else if ( command.equals("addr") )
+			return new AddrMessage (this);
+		else if ( command.equals("getdata") )
+			return new GetDataMessage(this);
+		else if ( command.equals("getblocks") )
+			return new GetBlocksMessage (this);
+		else if ( command.equals("block") )
+			return new BlockMessage (this);
+
+		return new Message (command);
+	}
+	
 	@SuppressWarnings("unchecked")
 	public Map<String, List<BitcoinMessageListener>>listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
 	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
 		p2p.super(address);
 		network = (BitcoinNetwork)p2p;
+		
+		// this will be overwritten by the first version message we get
+		version = network.getChain().getVersion(); 
+		
+		addListener("version", new BitcoinMessageListener () {
+			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
+				VersionMessage v = (VersionMessage)m;
+				agent = v.getAgent();
+				height = v.getHeight();
+				version = v.getVersion();
+				log.info("connected to " +v.getAgent());
+				peer.send (peer.createMessage("verack"));
+			}});
+		
+		addListener("verack", new BitcoinMessageListener () {
+			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
+				log.info("Connection acknowledged");
+			}});
 	}
 
 	public BitcoinNetwork getNetwork() {
@@ -45,21 +128,51 @@ BitcoinPeer extends P2P.Peer {
 		this.network = network;
 	}
 
-	public void setVersion (VersionMessage m)
+	public long getVersion ()
 	{
-		agent = m.getAgent();
-		height = m.getHeight();
-		version = m.getVersion();
+		return version;
 	}
 	
 	@Override
 	public void onDisconnect() {
 	}
 
-	@Override
+    public static final int MAX_SIZE = 0x02000000;
+
+    @Override
 	public Message parse(InputStream readIn) throws IOException {
 		try {
-			return BitcoinMessage.fromStream(readIn, network.getChain(), version);
+			byte[] head = new byte[24];
+			if (readIn.read(head) != head.length)
+				throw new ValidationException("Invalid package header");
+			WireFormat.Reader reader = new WireFormat.Reader(head);
+			long mag = reader.readUint32();
+			if (mag != network.getChain().getMagic())
+				throw new ValidationException("Wrong magic for this chain");
+
+			String command = reader.readZeroDelimitedString(12);
+			Message m = createMessage(command);
+			long length = reader.readUint32();
+			byte[] checksum = reader.readBytes(4);
+			if (length > 0 && length < MAX_SIZE) {
+				byte[] buf = new byte[(int) length];
+				if (readIn.read(buf) != buf.length)
+					throw new ValidationException("Package length mismatch");
+				byte[] cs = new byte[4];
+				MessageDigest sha;
+				try {
+					sha = MessageDigest.getInstance("SHA-256");
+					System.arraycopy(sha.digest(sha.digest(buf)), 0, cs, 0, 4);
+				} catch (NoSuchAlgorithmException e) {
+				}
+				if (!Arrays.equals(cs, checksum))
+					throw new ValidationException("Checksum mismatch");
+
+				if (m != null) {
+					m.fromWire(new WireFormat.Reader(buf));
+				}
+			}
+			return m;
 		} catch (Exception e) {
 			log.error("Exception reading message", e);
 			disconnect();
@@ -69,7 +182,7 @@ BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void onConnect() {
-		VersionMessage m = (VersionMessage)MessageFactory.createMessage(network.getChain(), "version");
+		VersionMessage m = (VersionMessage) createMessage("version");
 		try {
 			m.setHeight(network.getStore().get(network.getStore().getHeadHash()).getHeight());
 			m.setPeer(getAddress().getAddress());
@@ -82,7 +195,7 @@ BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void receive(P2P.Message m) {
-		BitcoinMessage bm = (BitcoinMessage) m;
+		Message bm = (Message) m;
 		try {
 			bm.validate ();
 			

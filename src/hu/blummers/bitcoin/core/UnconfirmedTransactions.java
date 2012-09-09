@@ -1,6 +1,5 @@
 package hu.blummers.bitcoin.core;
 
-import hu.blummers.bitcoin.messages.BitcoinMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.bitcoin.messages.InvMessage;
 
@@ -29,7 +28,7 @@ public class UnconfirmedTransactions implements BitcoinMessageListener {
 	
 	
 	@Override
-	public synchronized void process(BitcoinMessage m, BitcoinPeer peer) {
+	public synchronized void process(BitcoinPeer.Message m, BitcoinPeer peer) {
 		if ( m instanceof InvMessage )
 		{
 			InvMessage im = (InvMessage)m;

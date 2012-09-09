@@ -3,20 +3,22 @@ package hu.blummers.bitcoin.messages;
 import java.util.ArrayList;
 import java.util.List;
 
+import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.Chain;
 import hu.blummers.bitcoin.core.WireFormat;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
-public class InvMessage extends BitcoinMessage {
+public class InvMessage extends BitcoinPeer.Message {
+
+	public InvMessage(BitcoinPeer bitcoinPeer) {
+		bitcoinPeer.super("inv");
+	}
 
 	List <byte []> transactionHashes = new ArrayList<byte []> ();
 	List <byte []> blockHashes= new ArrayList<byte []> ();
 	boolean error;
 	
-	public InvMessage(Chain chain) {
-		super(chain, "inv");
-	}
 
 	@Override
 	public void toWire(Writer writer) {
@@ -42,7 +44,7 @@ public class InvMessage extends BitcoinMessage {
 	}
 
 	@Override
-	public void fromWire(Reader reader, long version) {
+	public void fromWire(Reader reader) {
 		long numberOfEntries = reader.readVarInt();
 		for ( long i = 0; i < numberOfEntries; ++i )
 		{

@@ -14,11 +14,8 @@ import org.slf4j.LoggerFactory;
 import edu.emory.mathcs.backport.java.util.Collections;
 
 import hu.blummers.bitcoin.core.WireFormat.Address;
-import hu.blummers.bitcoin.messages.AdrMessage;
-import hu.blummers.bitcoin.messages.BitcoinMessage;
+import hu.blummers.bitcoin.messages.AddrMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
-import hu.blummers.bitcoin.messages.MessageFactory;
-import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
 
 public class BitcoinNetwork extends P2P {
@@ -40,8 +37,8 @@ public class BitcoinNetwork extends P2P {
 	public void start() throws IOException {
 		addListener("addr", new BitcoinMessageListener (){
 			@Override
-			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				AdrMessage am = (AdrMessage)m;
+			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
+				AddrMessage am = (AddrMessage)m;
 				for ( Address a : am.getAddresses() )
 				{
 					log.trace("received new address " + a.address);
@@ -49,18 +46,6 @@ public class BitcoinNetwork extends P2P {
 				}
 			}});
 		
-		addListener("version", new BitcoinMessageListener () {
-			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				VersionMessage v = (VersionMessage)m;
-				peer.setVersion (v);
-				log.info("connected to " +v.getAgent());
-				peer.send (MessageFactory.createMessage(m.getChain(), "verack"));
-			}});
-		
-		addListener("verack", new BitcoinMessageListener () {
-			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				log.info("Connection to " + peer + " acknowledged");
-			}});
 		super.start();
 	}
 
@@ -88,7 +73,6 @@ public class BitcoinNetwork extends P2P {
 	@Override
 	public Peer createPeer(InetSocketAddress address) {
 		BitcoinPeer peer = new BitcoinPeer (this, address);
-
 		// add stored listener to new nodes
 		for ( BitcoinMessageListener l : listener.keySet() )
 		{

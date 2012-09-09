@@ -1,8 +1,7 @@
 package hu.blummers.bitcoin.messages;
 
-import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.WireFormat;
-import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
@@ -11,18 +10,23 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
 
-public class VersionMessage extends BitcoinMessage {
-	private long version = getChain ().getVersion();
-	private BigInteger services = new BigInteger ("1");
-	private BigInteger timestamp = new BigInteger (new Long (System.currentTimeMillis()/1000).toString());
+public class VersionMessage extends BitcoinPeer.Message {
+	public VersionMessage(BitcoinPeer bitcoinPeer) {
+		bitcoinPeer.super("version");
+		myport = bitcoinPeer.getNetwork().getChain().getPort();
+		version = bitcoinPeer.getVersion();
+	}
+	private long version;
+	private BigInteger services = new BigInteger ("1");;
+	private BigInteger timestamp  = new BigInteger (new Long (System.currentTimeMillis()/1000).toString());
 	private InetAddress peer;
 	private long remotePort;
 	private InetAddress me;
-	private BigInteger nonce = new BigInteger (64, new Random ());
-	private String agent = " /chainloader:0.1/faststack:0.1/";
-	private long height = 0;
+	private long myport;
+	private BigInteger nonce  = new BigInteger (64, new Random ());
+	private String agent  = " /chainloader:0.1/faststack:0.1/";
+	private long height;
 
-	
 	@Override
 	public void toWire(Writer writer) {
 		writer.writeUint32(version);
@@ -33,7 +37,7 @@ public class VersionMessage extends BitcoinMessage {
 		a.time = System.currentTimeMillis()/1000;
 		try {
 			a.address = InetAddress.getLocalHost();
-			a.port = getChain ().getPort();
+			a.port = myport;
 			writer.writeAddress(a, version, true);
 		} catch (UnknownHostException e) {
 		}
@@ -47,12 +51,13 @@ public class VersionMessage extends BitcoinMessage {
 	}
 	
 	@Override
-	public void fromWire(Reader reader, long version) {
+	public void fromWire(Reader reader) {
 		version = reader.readUint32();
 		services = reader.readUint64();
 		timestamp = reader.readUint64();
 		WireFormat.Address address = reader.readAddress(version, true);
-		me = address.address;		
+		me = address.address;
+		myport = address.port;
 		address = reader.readAddress(version, true);
 		peer = address.address;
 		remotePort = address.port;		
@@ -61,15 +66,14 @@ public class VersionMessage extends BitcoinMessage {
 		height = reader.readUint32();
 	}
 	
-	public VersionMessage(Chain chain) {
-		super(chain, "version");
-	}
 	public long getVersion() {
 		return version;
 	}
+
 	public void setVersion(long version) {
 		this.version = version;
 	}
+
 	public BigInteger getServices() {
 		return services;
 	}

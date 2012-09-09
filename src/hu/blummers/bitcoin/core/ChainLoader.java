@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import hu.blummers.bitcoin.messages.GetBlocksMessage;
-import hu.blummers.bitcoin.messages.MessageFactory;
 import hu.blummers.p2p.P2P;
 import hu.blummers.p2p.P2P.Peer;
 
@@ -35,7 +34,5 @@ public class ChainLoader {
 	
 	public void startDownloading (final BitcoinNetwork network, final ChainStore chainstore)
 	{
-		GetBlocksMessage gbm = (GetBlocksMessage)MessageFactory.createMessage(network.getChain(), "getblocks");
-		network.broadcast(MessageFactory.createMessage(network.getChain(), "getblocks"));
 	}
 }

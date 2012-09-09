@@ -3,20 +3,23 @@ package hu.blummers.bitcoin.messages;
 import java.util.ArrayList;
 import java.util.List;
 
+import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.Chain;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.WireFormat;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
 
-public class GetBlocksMessage extends BitcoinMessage {
-	private long version = 31800;
-	private List<String> hashes = new ArrayList<String>();
+public class GetBlocksMessage extends BitcoinPeer.Message {
+	long version;
 	
-	public GetBlocksMessage(Chain chain) {
-		super(chain, "getblocks");
+	public GetBlocksMessage(BitcoinPeer bitcoinPeer) {
+		bitcoinPeer.super("getblocks");
+		version = bitcoinPeer.getVersion();
 	}
 
+	private List<String> hashes = new ArrayList<String>();
+	
 	@Override
 	public void toWire(Writer writer) {
 		writer.writeUint32(version);
@@ -27,21 +30,13 @@ public class GetBlocksMessage extends BitcoinMessage {
 	}
 
 	@Override
-	public void fromWire(Reader reader, long version) {
+	public void fromWire(Reader reader) {
 		version = reader.readUint32();
 		long n = reader.readVarInt();
 		for ( long i = 0; i < n; ++i )
 		{
 			hashes.add(reader.readHash().toString());
 		}
-	}
-
-	public long getVersion() {
-		return version;
-	}
-
-	public void setVersion(long version) {
-		this.version = version;
 	}
 
 	public List<String> getHashes() {
@@ -51,6 +46,4 @@ public class GetBlocksMessage extends BitcoinMessage {
 	public void setHashes(List<String> hashes) {
 		this.hashes = hashes;
 	}
-	
-	
 }
