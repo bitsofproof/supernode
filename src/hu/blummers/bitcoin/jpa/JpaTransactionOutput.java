@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
@@ -46,8 +47,8 @@ public class JpaTransactionOutput {
 	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
 	private JpaTransactionInput sink;
 	
-	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) // this should not be optional, but some wierd hibernate bug forces me to to do
-	private JpaAddress address;
+	@Column(length=40,nullable=true)
+	private String address;
 
 	public Long getId() {
 		return id;
@@ -97,12 +98,11 @@ public class JpaTransactionOutput {
 		this.sink = sink;
 	}
 
-
-	public JpaAddress getAddress() {
+	public String getAddress() {
 		return address;
 	}
 
-	public void setAddress(JpaAddress address) {
+	public void setAddress(String address) {
 		this.address = address;
 	}
 
@@ -121,8 +121,6 @@ public class JpaTransactionOutput {
 	{
 		if ( address == null )
 		{
-			String adr = null;
-
 			// TODO: real script interpretation needed here
 			byte [] ph = new byte [20];
 			
@@ -130,7 +128,7 @@ public class JpaTransactionOutput {
 			{
 				// new style
 				System.arraycopy(script, 2, ph, 0, 20);
-				adr = Base58.encode(ph);
+				address = Base58.encode(ph);
 			}
 			else
 			{
@@ -150,22 +148,12 @@ public class JpaTransactionOutput {
 		            System.arraycopy(ph, 0, addressBytes, 1, ph.length);
 		            byte[] check = new Hash ().hash(addressBytes, 0, ph.length + 1).toByteArray();
 		            System.arraycopy(check, 0, addressBytes, ph.length + 1, 4);
-		            adr = Base58.encode(addressBytes);
+		            address = Base58.encode(addressBytes);
 		            
 		            
 				} catch (NoSuchAlgorithmException e) {
 				}
 			}
-			QJpaAddress ad = QJpaAddress.jpaAddress;
-			JPAQuery query = new JPAQuery (entityManager);
-			address = query.from(ad).where(ad.address.eq(adr)).uniqueResult(ad);
-			if ( address == null )
-			{
-				address = new JpaAddress ();
-				address.setAddress(adr);
-				address.setOuts(new ArrayList<JpaTransactionOutput> ());
-			}
-			address.getOuts().add(this);
 		}
 	}
 }

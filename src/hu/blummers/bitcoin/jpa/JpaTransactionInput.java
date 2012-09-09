@@ -1,5 +1,7 @@
 package hu.blummers.bitcoin.jpa;
 
+import java.util.List;
+
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
@@ -100,7 +102,7 @@ public class JpaTransactionInput {
 	{
 		if ( source != null )
 		{
-			writer.writeHash(new Hash (source.getTransaction().getHash().getHash()));
+			writer.writeHash(new Hash (source.getTransaction().getHash()));
 			writer.writeUint32(source.getIx());
 		}
 		else if ( sourceHash != null )
@@ -130,14 +132,13 @@ public class JpaTransactionInput {
 	{
 		if ( sourceHash == null )
 			return;
-		
-		QJpaTransactionHash txh = QJpaTransactionHash.jpaTransactionHash;
+		QJpaTransaction tx = QJpaTransaction.jpaTransaction;
 		JPAQuery query = new JPAQuery (entityManager);
-		JpaTransactionHash th = query.from(txh).where(txh.hash.eq(sourceHash)).uniqueResult(txh);
-		if ( th == null )
+		List<JpaTransaction> tl = query.from(tx).where(tx.hash.eq(sourceHash)).list(tx);
+		if ( tl == null || tl.isEmpty() )
 			throw new ValidationException ("Transaction input refers to unknown transaction '" + sourceHash + "'");
-		
-		JpaTransaction latest = th.getTransactions().get(th.getTransactions().size()-1);
+			
+		JpaTransaction latest = tl.get(tl.size()-1);
 		if ( latest.getOutputs().size() <= ix )
 		{
 			throw new ValidationException ("Transaction input refers to unknown output index "+ ix +" of transaction '" + sourceHash + "'");
@@ -148,5 +149,6 @@ public class JpaTransactionInput {
 		source = prevout;
 		source.setSink(this);
 		sourceHash = null;
+		
 	}
 }

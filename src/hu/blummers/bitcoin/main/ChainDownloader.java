@@ -30,24 +30,24 @@ public class ChainDownloader {
 			log.info("Chaindownloader starts");
 
 			ChainStore chainStore = context.getBean (ChainStore.class);
-			/*
+			
 			log.info("Reset store");						
 			chainStore.resetStore(Chain.production);
-			*/
+			
 			
 			log.info("Connect to bitcoin network");			
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production, chainStore);
 			network.start();
 			network.discover();
 
-			/*
 			UnconfirmedTransactions unconfirmed = new UnconfirmedTransactions (network);
 			unconfirmed.start();
-			*/
 			
+			/*
 			log.info("Start chainloader");
 			ChainLoader loader = new ChainLoader (network, chainStore);
 			loader.start();
+			*/
 			
 			
 			

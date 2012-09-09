@@ -146,7 +146,7 @@ public class JpaBlock {
         // Start by adding all the hashes of the transactions as leaves of the tree.
         for (JpaTransaction t : transactions) {
         	t.calculateHash();
-            tree.add(new Hash (t.getHash().getHash()).toByteArray());
+            tree.add(new Hash (t.getHash()).toByteArray());
         }
         int levelOffset = 0; // Offset in the list where the currently processed level starts.
 		try {

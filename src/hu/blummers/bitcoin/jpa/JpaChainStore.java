@@ -38,9 +38,6 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public void resetStore(Chain chain) throws ChainStoreException {
 		try {
-			JPADeleteClause delete = new JPADeleteClause(entityManager, QJpaChainHead.jpaChainHead);
-			delete.execute();
-
 			JpaChainHead h = new JpaChainHead();
 			h.setHash(chain.getGenesis().getHash());			
 			

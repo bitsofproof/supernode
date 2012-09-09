@@ -65,6 +65,7 @@ public class Chain {
 		List<JpaTransactionInput> inputs = new ArrayList<JpaTransactionInput>();
 		t.setInputs(inputs);
 		JpaTransactionInput input = new JpaTransactionInput();
+		input.setTransaction(t);
 		inputs.add(input);
 		input.setSource(null);
 		input.setSequence(0xFFFFFFFFL);
@@ -78,6 +79,7 @@ public class Chain {
 		List<JpaTransactionOutput>outputs = new ArrayList<JpaTransactionOutput>();
 		t.setOutputs(outputs);
 		JpaTransactionOutput output = new JpaTransactionOutput();
+		output.setTransaction(t);
 		outputs.add(output);
 		output.setValue(new BigInteger("5000000000", 10));
 		output.setScript(Hex.decode
