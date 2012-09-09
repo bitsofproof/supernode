@@ -24,7 +24,6 @@ public class ChainLoader {
 	public void start ()
 	{
 		try {
-			String head = store.getHead();
 
 			// ask peers for list of blocks after our head
 			
@@ -36,12 +35,7 @@ public class ChainLoader {
 	
 	public void startDownloading (final BitcoinNetwork network, final ChainStore chainstore)
 	{
-		network.forAllConnected(new P2P.PeerTask () {
-			@Override
-			public void run(Peer peer) {
-				BitcoinPeer bp = (BitcoinPeer)peer;
-				GetBlocksMessage gbm = (GetBlocksMessage)MessageFactory.createMessage(network.getChain(), "getblocks");
-				peer.send(gbm);
-			}});
+		GetBlocksMessage gbm = (GetBlocksMessage)MessageFactory.createMessage(network.getChain(), "getblocks");
+		network.broadcast(MessageFactory.createMessage(network.getChain(), "getblocks"));
 	}
 }

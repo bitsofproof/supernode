@@ -21,7 +21,8 @@ public class JpaTransactionHash {
 	@Column(length=64,nullable=false,unique=true)
 	private String hash;
 	
-	@OneToMany(fetch=FetchType.EAGER)
+	//was @OneToMany(fetch=FetchType.EAGER)
+	@OneToMany(fetch=FetchType.EAGER,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private List<JpaTransaction> transactions;
 
 	public Long getId() {

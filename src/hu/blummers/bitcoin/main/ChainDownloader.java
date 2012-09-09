@@ -36,18 +36,21 @@ public class ChainDownloader {
 			*/
 			
 			log.info("Connect to bitcoin network");			
-			BitcoinNetwork network = new BitcoinNetwork (Chain.production);
+			BitcoinNetwork network = new BitcoinNetwork (Chain.production, chainStore);
 			network.start();
 			network.discover();
-			
+
+			/*
 			UnconfirmedTransactions unconfirmed = new UnconfirmedTransactions (network);
 			unconfirmed.start();
+			*/
 			
-			/*
 			log.info("Start chainloader");
 			ChainLoader loader = new ChainLoader (network, chainStore);
 			loader.start();
-			*/
+			
+			
+			
 			synchronized ( log )
 			{
 				log.wait ();

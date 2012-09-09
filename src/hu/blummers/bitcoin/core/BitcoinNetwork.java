@@ -24,14 +24,16 @@ import hu.blummers.p2p.P2P;
 public class BitcoinNetwork extends P2P {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinNetwork.class);
 	private Chain chain;
+	private ChainStore store;
 	
 	@SuppressWarnings("unchecked")
 	public Map<BitcoinMessageListener, List<String>>listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
 	
-	public BitcoinNetwork (Chain chain) throws IOException
+	public BitcoinNetwork (Chain chain, ChainStore store) throws IOException
 	{
 		super (chain.getPort());
 		this.chain = chain;
+		this.store = store;
 	}
 	
 	@Override
@@ -59,8 +61,7 @@ public class BitcoinNetwork extends P2P {
 			public void process(BitcoinMessage m, BitcoinPeer peer) {
 				log.info("Connection to " + peer + " acknowledged");
 			}});
-
-		super.start();		
+		super.start();
 	}
 
 	public void addListener (final String type, final BitcoinMessageListener l)
@@ -100,6 +101,11 @@ public class BitcoinNetwork extends P2P {
 
 	public Chain getChain() {
 		return chain;
+	}
+	
+	public ChainStore getStore ()
+	{
+		return store;
 	}
 	
 	public void discover() {

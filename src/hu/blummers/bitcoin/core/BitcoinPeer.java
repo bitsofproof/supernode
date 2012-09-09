@@ -70,9 +70,14 @@ BitcoinPeer extends P2P.Peer {
 	@Override
 	public void onConnect() {
 		VersionMessage m = (VersionMessage)MessageFactory.createMessage(network.getChain(), "version");
-		m.setPeer(getAddress().getAddress());
-		m.setRemotePort(getAddress().getPort());
-		send(m);
+		try {
+			m.setHeight(network.getStore().get(network.getStore().getHeadHash()).getHeight());
+			m.setPeer(getAddress().getAddress());
+			m.setRemotePort(getAddress().getPort());
+			send(m);
+		} catch (ChainStoreException e) {
+			log.error("Error accessing chain store", e);
+		}
 	}
 
 	@Override

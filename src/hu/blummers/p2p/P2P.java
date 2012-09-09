@@ -239,6 +239,15 @@ public abstract class P2P {
 				task.run(peer);
 		}
 	}
+	
+	public void broadcast (final Message m)
+	{
+		forAllConnected (new PeerTask (){
+			@Override
+			public void run(Peer peer) {
+				peer.send(m);
+			}});
+	}
 
 	// peers connected
 	private final Map<SocketChannel, Peer> connectedPeers = new HashMap<SocketChannel, Peer>();

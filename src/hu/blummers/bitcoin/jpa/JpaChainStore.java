@@ -20,7 +20,7 @@ public class JpaChainStore implements ChainStore {
 	EntityManager entityManager;
 	
 	@Override
-	public String getHead() throws ChainStoreException {
+	public String getHeadHash() throws ChainStoreException {
 		try
 		{
 			QJpaChainHead head = QJpaChainHead.jpaChainHead;
@@ -38,14 +38,14 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public void resetStore(Chain chain) throws ChainStoreException {
 		try {
-			QJpaChainHead head = QJpaChainHead.jpaChainHead;
-
-			JPADeleteClause delete = new JPADeleteClause(entityManager, head);
+			JPADeleteClause delete = new JPADeleteClause(entityManager, QJpaChainHead.jpaChainHead);
 			delete.execute();
 
 			JpaChainHead h = new JpaChainHead();
-			h.setHash(chain.getGenesis().getHash());
+			h.setHash(chain.getGenesis().getHash());			
+			
 			entityManager.persist(h);
+			entityManager.persist(chain.getGenesis());
 		}
 		catch ( Exception e )
 		{
