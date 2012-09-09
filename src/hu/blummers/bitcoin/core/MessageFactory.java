@@ -12,7 +12,7 @@ public class MessageFactory {
 		if ( command.equals("version") )
 			return new VersionMessage (chain);
 		else if ( command.equals("verack") )
-			return new BitcoinMessage (chain, "verack");
+			return new VerackMessage (chain);
 		else if ( command.equals("inv") )
 			return new InvMessage (chain);
 		else if ( command.equals("addr") )
@@ -23,6 +23,8 @@ public class MessageFactory {
 			return new GetBlocksMessage (chain);
 		else if ( command.equals("block") )
 			return new BlockMessage (chain);
+		else if ( command.equals("alert") )
+			return new AlertMessage (chain);
 
 		log.info("unknown message " + command);
 		return null;

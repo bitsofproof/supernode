@@ -151,8 +151,9 @@ public class WireFormat {
 				address.address = InetAddress.getByAddress(a);
 			} catch (UnknownHostException e) {
 			}
-			byte p [] = readBytes(2);
-			address.port = p [0] << 8 | p [1];
+			address.port = ((bytes[cursor + 1] & 0xFFL) << 0)
+					| ((bytes[cursor ] & 0xFFL) << 8);
+			cursor += 2;
 			return address;
 		}
 	}
@@ -263,10 +264,8 @@ public class WireFormat {
 				writeUint16(0xffffl);				
 			}
 			writeBytes (a);
-			byte [] p = new byte [2];
-			p [0] = (byte)((address.port >>> 8) & 0xff);
-			p [1] = (byte)((address.port) & 0xff);
-			writeBytes (p);
+			bs.write((int) (0xFF & (address.port >> 8)));
+			bs.write((int) (0xFF & address.port));
 		}
 	}
 

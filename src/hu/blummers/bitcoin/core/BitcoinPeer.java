@@ -69,7 +69,6 @@ BitcoinPeer extends P2P.Peer {
 		agent = m.getAgent();
 		height = m.getHeight();
 		version = m.getVersion();
-		send (MessageFactory.createMessage(m.getChain(), "verack"));
 	}
 	
 	@Override

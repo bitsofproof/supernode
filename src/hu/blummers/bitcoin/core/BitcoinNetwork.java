@@ -41,7 +41,13 @@ public class BitcoinNetwork extends P2P {
 				VersionMessage v = (VersionMessage)m;
 				peer.setVersion (v);
 				log.info("connected to " +v.getAgent());
+				peer.send (MessageFactory.createMessage(m.getChain(), "verack"));
 			}}, new String []{"version"});
+		
+		peer.addListener(new BitcoinMessageListener () {
+			public void process(BitcoinMessage m, BitcoinPeer peer) {
+				log.info("Connection to " + peer + " acknowledged");
+			}}, new String []{"verack"});
 		
 		peer.addListener(unconfirmedTransactions, new String [] {"inv"});
 		
