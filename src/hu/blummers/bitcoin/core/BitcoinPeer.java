@@ -2,22 +2,18 @@ package hu.blummers.bitcoin.core;
 
 import hu.blummers.bitcoin.messages.BitcoinMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
-import hu.blummers.bitcoin.messages.InvMessage;
 import hu.blummers.bitcoin.messages.MessageFactory;
 import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
 import hu.blummers.p2p.P2P.Message;
-import hu.blummers.p2p.P2P.Peer;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +25,6 @@ BitcoinPeer extends P2P.Peer {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinPeer.class);
 
 	private BitcoinNetwork network;
-	private Set<String> availableTransactions = Collections.synchronizedSet(new HashSet<String> ());
-	private Set<String> availableBlocks = Collections.synchronizedSet(new HashSet<String> ());
 	private String agent;
 	private long height;
 	private long version;
@@ -41,18 +35,6 @@ BitcoinPeer extends P2P.Peer {
 	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
 		p2p.super(address);
 		network = (BitcoinNetwork)p2p;
-		
-		// keep inventory up to date
-		addListener (new BitcoinMessageListener (){
-			@Override
-			public void process(BitcoinMessage m, BitcoinPeer peer) {
-				InvMessage im = (InvMessage)m;
-				for ( byte [] h : im.getTransactionHashes() )
-					availableTransactions.add(new Hash (h).toString());
-				for ( byte [] h : im.getBlockHashes() )
-					availableBlocks.add(new Hash (h).toString());
-			}}, new String [] {"inv"});
-		
 	}
 
 	public BitcoinNetwork getNetwork() {
@@ -63,11 +45,6 @@ BitcoinPeer extends P2P.Peer {
 		this.network = network;
 	}
 
-	public void clearTransactionsCache ()
-	{
-		availableTransactions.clear();
-	}
-	
 	public void setVersion (VersionMessage m)
 	{
 		agent = m.getAgent();
@@ -76,24 +53,22 @@ BitcoinPeer extends P2P.Peer {
 	}
 	
 	@Override
-	public void cleanup() {
-		availableTransactions.clear();
-		availableBlocks.clear();
+	public void onDisconnect() {
 	}
 
 	@Override
-	public Message receive(InputStream readIn) throws IOException {
+	public Message parse(InputStream readIn) throws IOException {
 		try {
 			return BitcoinMessage.fromStream(readIn, network.getChain(), version);
 		} catch (Exception e) {
 			log.error("Exception reading message", e);
-			disconnect("malformed package " + e.getMessage());
+			disconnect();
 		}
 		return null;
 	}
 
 	@Override
-	public void handshake() {
+	public void onConnect() {
 		VersionMessage m = (VersionMessage)MessageFactory.createMessage(network.getChain(), "version");
 		m.setPeer(getAddress().getAddress());
 		m.setRemotePort(getAddress().getPort());
@@ -101,7 +76,7 @@ BitcoinPeer extends P2P.Peer {
 	}
 
 	@Override
-	public void processMessage(P2P.Message m) {
+	public void receive(P2P.Message m) {
 		BitcoinMessage bm = (BitcoinMessage) m;
 		try {
 			bm.validate ();
@@ -112,22 +87,21 @@ BitcoinPeer extends P2P.Peer {
 					l.process(bm, this);
 			
 		} catch (ValidationException e) {
-			disconnect ("invalid message" + e.getMessage());
+			log.error("Invalid message ", e);
+			disconnect ();
 		}
 	}
 	
-	public void addListener (BitcoinMessageListener l, String [] types)
+	public void addListener (String type, BitcoinMessageListener l)
 	{
-		for ( String t : types )
+		List<BitcoinMessageListener> ll = listener.get(type);
+		if ( ll == null )
 		{
-			List<BitcoinMessageListener> ll = listener.get(t);
-			if ( ll == null )
-			{
-				ll = new ArrayList<BitcoinMessageListener> ();
-				listener.put(t, ll);
-			}
-			ll.add(l);
+			ll = new ArrayList<BitcoinMessageListener> ();
+			listener.put(type, ll);
 		}
+		if ( !ll.contains(l) )
+			ll.add(l);
 	}
 
 }

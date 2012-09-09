@@ -13,12 +13,12 @@
 * 8. call P2PNetwork.start ()
 * 9. enjoy:
 * 		P2PNetwork.createPeer will be called to instantiate your Peers
-* 		YourPeer.handshake () will be called first send (YourMessage) what is needed to introduce your peer 
-* 						no receive available until this returns.
-* 		YourMessage YourPeer.createMessage (InputStream in) should instantiate any message from wire
+* 		YourPeer.onConnect () will be called first. send (YourMessage) what is needed to introduce your peer 
+* 						no receive will be called until this returns.
+* 		YourMessage YourPeer.parse (InputStream in) should instantiate any message from wire
 * 						do not do any other processing here
-* 		YourPeer.processMassage(Message) should do the message processing. 
-* 						This might call send (YourMessage) or addPeer () but nothing else from this framework 
+* 		YourPeer.receive(Message) should do the message processing. 
+* 						This might call send (), addPeer () or disconnect () but nothing else from this framework 
 * 
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,11 +48,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -61,8 +59,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.openjpa.lib.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,10 +73,10 @@ public abstract class P2P {
 	}
 	
 	public abstract class Peer {
-		boolean connected = false;
 		private InetSocketAddress address;
 		private SocketChannel channel;
-		private int trust = 0;
+		private AtomicInteger callable = new AtomicInteger (0);
+		
 		private LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
 		private ByteArrayInputStream currentRead = null;
@@ -128,6 +126,7 @@ public abstract class P2P {
 		private void connect() {
 			try {
 				channel = SocketChannel.open();
+				connectedPeers.put(channel, this);				
 				channel.configureBlocking(false);
 				channel.connect(address);
 				selectorChanges.add(new ChangeRequest(channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
@@ -144,24 +143,6 @@ public abstract class P2P {
 		@Override
 		public int hashCode() {
 			return address.hashCode();
-		}
-
-		public int getTrust() {
-			return trust;
-		}
-
-		public void increaseTrust() {
-			if (trust < MAXIMUMTRUST)
-				++trust;
-		}
-
-		public void decreaseTrust() {
-			if (trust > MINIMUMTRUST) {
-				--trust;
-			}
-			if (trust <= MINIMUMTRUST) {
-				disconnect("distrust");
-			}
 		}
 
 		private void process(ByteBuffer buffer, int len) {
@@ -181,24 +162,21 @@ public abstract class P2P {
 			return null;
 		}
 
-		public boolean isConnected() {
-			return connected;
-		}
-
 		public InetSocketAddress getAddress() {
 			return address;
 		}
 
-		public void disconnect(String why) {
+		public void disconnect() {
 			try {
-				connected = false;
+				callable.decrementAndGet();
+				// note that no other reference to peer is stored here
+				// it might be garbage collected (that is probably the right thing to do)
 				connectedPeers.remove(channel);
-				logger.info("disconnected " + channel + " " + why);
 				channel.close();
 			} catch (IOException e) {
 			}
 			connectSlot.release();
-			cleanup ();
+			onDisconnect ();
 		}
 
 		private void listen() {
@@ -206,13 +184,13 @@ public abstract class P2P {
 				public void run() {
 					Message m = null;
 					try {
-						m = receive(readIn);
+						m = parse(readIn);
 					} catch (IOException e) {
-						disconnect("lost");
+						disconnect();
 					}
 					try {
 						if (m != null) {
-							processMessage(m);
+							receive(m);
 							peerThreads.execute(this); // listen again
 						}
 					} catch (Exception e) {
@@ -228,36 +206,24 @@ public abstract class P2P {
 			selector.wakeup();
 		}
 
-		private void doTasks ()
-		{
-			for ( PeerTask task : forAllTasks )
-				task.run(this);
-		}
-		
-		public abstract Message receive(InputStream readIn) throws IOException;
+		public abstract Message parse(InputStream readIn) throws IOException;
 
-		public abstract void handshake();
+		public abstract void receive(Message m);		
 
-		public abstract void processMessage(Message m);
-		
-		public abstract void cleanup ();
+		public abstract void onConnect();
+
+		public abstract void onDisconnect ();
+
 	}
 	
 	public abstract Peer createPeer (InetSocketAddress address);
 	
 	public void addPeer(InetAddress addr, int port) {
 		InetSocketAddress address = new InetSocketAddress(addr, port);
-		Peer peer = null;
-		synchronized (knownPeers) {
-			if (!knownPeers.containsKey(address)) {
-				peer = createPeer (address);
-				knownPeers.put(address, peer);
-			}
-			else
-				peer = knownPeers.get(address);
+		if ( !connectedPeers.containsKey(address) && !runqueue.contains(address) )
+		{
+			runqueue.add(address);
 		}
-		if ( peer.channel == null || !connectedPeers.containsKey(peer.channel) )
-			runqueue.add(peer);
 	}
 
 	public interface PeerTask
@@ -267,34 +233,28 @@ public abstract class P2P {
 	
 	public void forAllConnected (PeerTask task)
 	{
-		forAllTasks.add(task);
 		for ( Peer peer : connectedPeers.values() )
 		{
-			task.run(peer);
+			if ( peer.callable.get() > 0 )
+				task.run(peer);
 		}
 	}
 
-	// peers we have seen, the key is Peer, but that compares on internet
-	// address+port for SocketChannel (and also for AvailableChannel)
-	private final Map<InetSocketAddress, Peer> knownPeers = Collections.synchronizedMap(new HashMap<InetSocketAddress, Peer>());
-
-	private final Map<SocketChannel, Peer> connectedPeers = Collections.synchronizedMap(new HashMap<SocketChannel, Peer>());
-	private final List<PeerTask> forAllTasks = Collections.synchronizedList(new ArrayList<PeerTask> ());
+	// peers connected
+	private final Map<SocketChannel, Peer> connectedPeers = new HashMap<SocketChannel, Peer>();
+			//Collections.synchronizedMap();
 
 	// peers waiting to be connected
-	private final LinkedBlockingQueue<Peer> runqueue = new LinkedBlockingQueue<Peer>();
+	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
 
 	// total number of threads deals with P2P
 	private static final int NUMBEROFPEERTHREADS = 10;
 
-	// minimum trust - if below disconnect
-	private static final  int MINIMUMTRUST = -20;
-
-	// maximum trust, can not get better than this
-	private static final int MAXIMUMTRUST = 100;
-
 	// number of connections we try to maintain
-	private static final int MAXIMUMCONNECTIONS = 100;
+	private static final int MAXIMUMCONNECTIONS = 20;
+
+	// sleep for a while while processing runqueue
+	private static final int CONNECTDELAY = 10;
 
 	// number of seconds to wait until giving up on connections
 	private static final int READTIMEOUT = 60; // seconds
@@ -384,60 +344,50 @@ public abstract class P2P {
 									final SocketChannel client = ((ServerSocketChannel) key.channel()).accept();
 									client.configureBlocking(false);
 									InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
-									final Peer peer;
-
-									if (knownPeers.containsKey(address)) {
-										peer = knownPeers.get(address);
-									} else {
-										peer = createPeer (address);
-										knownPeers.put(address, peer);
-									}
+									final Peer peer;									
+									peer = createPeer (address);
 									peer.channel = client;
 									if (connectSlot.tryAcquire()) {
-										// if we have interest ...										
+										// if we have interest ...
 										connectedPeers.put(client, peer);
-										key.interestOps(SelectionKey.OP_READ);
+										client.register(selector, SelectionKey.OP_READ);
+
+										peer.callable.incrementAndGet();
 										peerThreads.execute(new Runnable() {
 											public void run() {
-												peer.connected = true;
-												peer.handshake();
+												peer.onConnect();
 												peer.listen();
-												peer.doTasks();
 											}
 										});
 									} else {
-										client.close(); 
-										runqueue.add(peer); // try later
+										client.close();
+										runqueue.add(address); // try later
 									}
 								}
 								if (key.isConnectable()) {
 									try {
 										// we asked for connection here
+										key.interestOps(SelectionKey.OP_READ);
 										SocketChannel client = (SocketChannel) key.channel();
 										client.finishConnect(); // finish
 										InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
 										final Peer peer;
-										if (knownPeers.containsKey(address)) {
-											peer = knownPeers.get(address);
+										if ( (peer = connectedPeers.get (client)) != null ) {
 											if (connectSlot.tryAcquire()) {
-												connectedPeers.put(client, peer);
-												key.interestOps(SelectionKey.OP_READ);
+												peer.callable.incrementAndGet();
 												peerThreads.execute(new Runnable() {
 													public void run() {
-														peer.connected = true;
-														peer.handshake();
+														peer.onConnect();
 														peer.listen();
-														peer.doTasks();
 													}
 												});
 											} else {
-												key.channel().close();
-												runqueue.add(peer); // try again
-																	// later
+												client.close();
+												runqueue.add(address); // try again later
 											}
 										} else {
-											key.channel().close(); // do not
-																	// know you
+											client.close(); // do not know you
+											key.cancel();
 										}
 
 									} catch (ConnectException e) {
@@ -454,9 +404,11 @@ public abstract class P2P {
 												peer.process(b, len);
 											}
 										} catch (IOException e) {
-											peer.disconnect("lost");
+											peer.disconnect();
 										}
 									}
+									else
+										key.cancel();
 								}
 								if (key.isWritable()) {
 									SocketChannel client = (SocketChannel) key.channel();
@@ -468,9 +420,11 @@ public abstract class P2P {
 												client.write(b);
 											key.interestOps(SelectionKey.OP_READ);
 										} catch (IOException e) {
-											peer.disconnect("lost");
+											peer.disconnect();
 										}
 									}
+									else
+										key.cancel();
 								}
 							} catch (CancelledKeyException e) {
 							} catch (Exception e) {
@@ -493,9 +447,16 @@ public abstract class P2P {
 			@Override
 			public void run() {
 				while (true) { // forever
-					connectSlot.acquireUninterruptibly();
 					try {
-						runqueue.take().connect();
+						if ( connectSlot.availablePermits() > 0 )
+						{
+							Peer peer = createPeer (runqueue.take());
+							peer.connect();
+						}
+						else
+						{
+							Thread.sleep(CONNECTDELAY * 1000);
+						}
 					} catch (Exception e) {
 						logger.error("Unhandled exception in peer queue", e);
 					}

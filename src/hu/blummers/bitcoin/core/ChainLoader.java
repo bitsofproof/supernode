@@ -1,32 +1,37 @@
 package hu.blummers.bitcoin.core;
 
-import hu.blummers.bitcoin.jpa.JpaBlock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import hu.blummers.bitcoin.messages.GetBlocksMessage;
 import hu.blummers.bitcoin.messages.MessageFactory;
 import hu.blummers.p2p.P2P;
 import hu.blummers.p2p.P2P.Peer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class ChainLoader {
-	@SuppressWarnings("unchecked")
-	List<BlockListener> listener = Collections.synchronizedList(new ArrayList<BlockListener> ());
-	
-	public void addListener (BlockListener l)
+	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
+
+	ChainStore store;
+	BitcoinNetwork network;
+
+	public ChainLoader (BitcoinNetwork network, ChainStore store)
 	{
-		listener.add(l);
+		this.network = network;
+		this.store = store;
 	}
 	
-	private void notify (JpaBlock block)
+	public void start ()
 	{
-		for ( BlockListener b : listener )
-			b.received(block);
+		try {
+			String head = store.getHead();
+
+			// ask peers for list of blocks after our head
+			
+			
+		} catch (Exception e) {
+			log.error("Could not start chain loader", e);
+		}
 	}
 	
 	public void startDownloading (final BitcoinNetwork network, final ChainStore chainstore)

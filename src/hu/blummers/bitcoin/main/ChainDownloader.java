@@ -3,6 +3,7 @@ package hu.blummers.bitcoin.main;
 import hu.blummers.bitcoin.core.BitcoinNetwork;
 import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.ChainLoader;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.messages.BitcoinMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
@@ -26,22 +27,22 @@ public class ChainDownloader {
 		            new ClassPathXmlApplicationContext("app-context.xml");
 			
 			log.info("Chaindownloader starts");
-			
-			log.info("Reset store");
+
 			ChainStore chainStore = context.getBean (ChainStore.class);
-			chainStore.resetStore(Chain.production);
-			
 			/*
+			log.info("Reset store");						
+			chainStore.resetStore(Chain.production);
+			*/
+			
+			log.info("Connect to bitcoin network");			
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production);
 			network.start();
 			network.discover();
-			network.downloadBlockChain(Chain.production.getGenesis().getHash(), new BitcoinMessageListener (){
-				@Override
-				public void process(BitcoinMessage m, BitcoinPeer peer) {
-					BlockMessage bm = (BlockMessage)m;
-					log.info("got block " + bm.getBlock().getHash());
-				}});
-				*/
+			/*
+			log.info("Start chainloader");
+			ChainLoader loader = new ChainLoader (network, chainStore);
+			loader.start();
+			*/
 			synchronized ( log )
 			{
 				log.wait ();
