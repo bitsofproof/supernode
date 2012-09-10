@@ -4,14 +4,15 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.messages.AddrMessage;
@@ -24,7 +25,9 @@ public class BitcoinNetwork extends P2P {
 	private ChainStore store;
 	
 	@SuppressWarnings("unchecked")
-	public Map<BitcoinMessageListener, List<String>>listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
+	public Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
+	
+	private ScheduledExecutorService retryLater = Executors.newScheduledThreadPool(1);
 	
 	public BitcoinNetwork (Chain chain, ChainStore store) throws IOException
 	{
@@ -60,7 +63,7 @@ public class BitcoinNetwork extends P2P {
 			}});
 		
 		// store listener that should be added to new node
-		List<String> listenedTypes;
+		ArrayList<String> listenedTypes;
 		if ( (listenedTypes = listener.get(l)) == null )
 		{
 			listenedTypes = new ArrayList<String> ();
@@ -83,6 +86,11 @@ public class BitcoinNetwork extends P2P {
 		return peer;
 	}
 
+	public void tryLater (Runnable what, int seconds)
+	{
+		retryLater.schedule(what, seconds, TimeUnit.SECONDS);
+	}
+	
 	public Chain getChain() {
 		return chain;
 	}

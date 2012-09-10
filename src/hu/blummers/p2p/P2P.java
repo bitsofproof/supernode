@@ -240,15 +240,6 @@ public abstract class P2P {
 		}
 	}
 	
-	public void broadcast (final Message m)
-	{
-		forAllConnected (new PeerTask (){
-			@Override
-			public void run(Peer peer) {
-				peer.send(m);
-			}});
-	}
-
 	// peers connected
 	private final Map<SocketChannel, Peer> connectedPeers = new HashMap<SocketChannel, Peer>();
 			//Collections.synchronizedMap();
@@ -414,6 +405,7 @@ public abstract class P2P {
 											}
 										} catch (IOException e) {
 											peer.disconnect();
+											key.cancel();
 										}
 									}
 									else
@@ -430,6 +422,7 @@ public abstract class P2P {
 											key.interestOps(SelectionKey.OP_READ);
 										} catch (IOException e) {
 											peer.disconnect();
+											key.cancel();
 										}
 									}
 									else

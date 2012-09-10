@@ -8,6 +8,7 @@ import hu.blummers.bitcoin.messages.GetDataMessage;
 import hu.blummers.bitcoin.messages.InvMessage;
 import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
+import hu.blummers.p2p.P2P.Message;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ public class BitcoinPeer extends P2P.Peer {
 	private String agent;
 	private long height;
 	private long version;
+	private boolean ready = false;
 	
 	public class Message implements P2P.Message {
 		private final String command;
@@ -116,7 +119,8 @@ public class BitcoinPeer extends P2P.Peer {
 		
 		addListener("verack", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
-				log.info("Connection acknowledged");
+				ready = true;
+				log.info("Connection to " + getAgent () + " acknowledged");
 			}});
 	}
 
@@ -133,6 +137,15 @@ public class BitcoinPeer extends P2P.Peer {
 		return version;
 	}
 	
+	public String getAgent() {
+		return agent;
+	}
+
+	@Override
+	public void send(final P2P.Message m) {
+		super.send(m);
+	}
+
 	@Override
 	public void onDisconnect() {
 	}
