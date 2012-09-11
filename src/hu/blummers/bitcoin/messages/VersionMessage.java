@@ -24,7 +24,7 @@ public class VersionMessage extends BitcoinPeer.Message {
 	private InetAddress me;
 	private long myport;
 	private BigInteger nonce  = new BigInteger (64, new Random ());
-	private String agent  = " /chainloader:0.1/faststack:0.1/";
+	private String agent  = "/chainloader:0.1/";
 	private long height;
 
 	@Override

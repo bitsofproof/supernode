@@ -1,13 +1,10 @@
 package hu.blummers.bitcoin.main;
 
 import hu.blummers.bitcoin.core.BitcoinNetwork;
-import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.Chain;
-import hu.blummers.bitcoin.core.ChainLoader;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.UnconfirmedTransactions;
-import hu.blummers.bitcoin.messages.BitcoinMessageListener;
-import hu.blummers.bitcoin.messages.BlockMessage;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +34,7 @@ public class ChainDownloader {
 			log.info("Connect to bitcoin network");			
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production, chainStore);
 			network.start();
-			network.discover();
+		//	network.discover();
 
 			UnconfirmedTransactions unconfirmed = new UnconfirmedTransactions (network);
 			unconfirmed.start();

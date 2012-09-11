@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -213,14 +214,16 @@ public abstract class P2P {
 		public abstract void onConnect();
 
 		public abstract void onDisconnect ();
-
+		
 	}
 	
 	public abstract Peer createPeer (InetSocketAddress address);
 	
+	public abstract void discover ();
+	
 	public void addPeer(InetAddress addr, int port) {
 		InetSocketAddress address = new InetSocketAddress(addr, port);
-		if ( !connectedPeers.containsKey(address) && !runqueue.contains(address) )
+		if ( !runqueue.contains(address) )
 		{
 			runqueue.add(address);
 		}
@@ -240,9 +243,13 @@ public abstract class P2P {
 		}
 	}
 	
+	public int getNumberOfConnections ()
+	{
+		return connectedPeers.size();
+	}
+	
 	// peers connected
-	private final Map<SocketChannel, Peer> connectedPeers = new HashMap<SocketChannel, Peer>();
-			//Collections.synchronizedMap();
+	private final Map<SocketChannel, Peer> connectedPeers = Collections.synchronizedMap(new HashMap<SocketChannel, Peer>());
 
 	// peers waiting to be connected
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
@@ -251,16 +258,20 @@ public abstract class P2P {
 	private static final int NUMBEROFPEERTHREADS = 10;
 
 	// number of connections we try to maintain
-	private static final int MAXIMUMCONNECTIONS = 20;
+	private static final int DESIREDCONNECTIONS = 50;
 
-	// sleep for a while while processing runqueue
-	private static final int CONNECTDELAY = 10;
-
+	// we want fast answering nodes
+	private static final int CONNECTIONTIMEOUT = 5;
+	
 	// number of seconds to wait until giving up on connections
 	private static final int READTIMEOUT = 60; // seconds
 
 	// keep track with number of connections we asked for here
-	private final Semaphore connectSlot = new Semaphore(MAXIMUMCONNECTIONS);
+	private final Semaphore connectSlot = new Semaphore(DESIREDCONNECTIONS);
+	
+	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+	
+
 
 	private final int port;
 
@@ -338,7 +349,9 @@ public abstract class P2P {
 							try {
 								SelectionKey key = keys.next();
 								keys.remove();
-
+								if ( !key.isValid() )
+									continue;
+								
 								if (key.isAcceptable()) {
 									// unsolicited request to connect
 									final SocketChannel client = ((ServerSocketChannel) key.channel()).accept();
@@ -450,14 +463,48 @@ public abstract class P2P {
 			public void run() {
 				while (true) { // forever
 					try {
-						if ( connectSlot.availablePermits() > 0 )
+						if ( connectedPeers.size() >= DESIREDCONNECTIONS )
 						{
-							Peer peer = createPeer (runqueue.take());
-							peer.connect();
+							Thread.sleep(1000);
 						}
-						else
+						else if ( connectSlot.availablePermits() > 0 )
 						{
-							Thread.sleep(CONNECTDELAY * 1000);
+							InetSocketAddress address = runqueue.poll();
+							if ( address != null )
+							{
+								for ( Peer p : connectedPeers.values() )
+								{
+									if ( p.address.equals(address) )
+										continue;
+								}
+								final Peer peer = createPeer (address);
+								peer.connect();
+								scheduler.schedule(new Runnable (){
+									@Override
+									public void run() {
+										if ( peer.channel.isConnectionPending() )
+											try {
+												// give up if not connected within CONNECTIONTIMEOUT
+												logger.info("Give up connect on " + peer.channel);
+												peer.channel.close();
+												connectedPeers.remove(peer);
+											} catch (IOException e) {
+											}
+									}}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+							}
+							else
+							{
+								if ( connectedPeers.size() < DESIREDCONNECTIONS )
+								{
+									logger.info("Need to discover new adresses.");
+									discover ();
+									if ( runqueue.size() == 0 )
+									{
+										logger.error("Can not find new adresses");
+										Thread.sleep(60*1000);
+									}
+								}
+							}
 						}
 					} catch (Exception e) {
 						logger.error("Unhandled exception in peer queue", e);

@@ -17,16 +17,17 @@ import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class BitcoinPeer extends P2P.Peer {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinPeer.class);
@@ -36,6 +37,9 @@ public class BitcoinPeer extends P2P.Peer {
 	private long height;
 	private long version;
 	private boolean ready = false;
+	
+	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+	private static final long CONNECTIONTIMEOUT = 30;
 	
 	public class Message implements P2P.Message {
 		private final String command;
@@ -98,7 +102,7 @@ public class BitcoinPeer extends P2P.Peer {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public Map<String, List<BitcoinMessageListener>>listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
+	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
 	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
 		p2p.super(address);
@@ -113,14 +117,13 @@ public class BitcoinPeer extends P2P.Peer {
 				agent = v.getAgent();
 				height = v.getHeight();
 				version = v.getVersion();
-				log.info("connected to " +v.getAgent());
 				peer.send (peer.createMessage("verack"));
 			}});
 		
 		addListener("verack", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
 				ready = true;
-				log.info("Connection to " + getAgent () + " acknowledged");
+				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " acknowledged. Open connections: " + getNetwork().getNumberOfConnections());
 			}});
 	}
 
@@ -148,6 +151,7 @@ public class BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void onDisconnect() {
+		log.info("Disconnected '" + getAgent () + "' at " + getAddress() + ". Open connections: " + getNetwork().getNumberOfConnections());
 	}
 
     public static final int MAX_SIZE = 0x02000000;
@@ -201,6 +205,14 @@ public class BitcoinPeer extends P2P.Peer {
 			m.setPeer(getAddress().getAddress());
 			m.setRemotePort(getAddress().getPort());
 			send(m);
+			final BitcoinPeer peer = this;
+			scheduler.schedule(new Runnable (){
+				@Override
+				public void run() {
+					if ( !peer.ready )
+						peer.disconnect();
+					}
+				}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
 		} catch (ChainStoreException e) {
 			log.error("Error accessing chain store", e);
 		}
@@ -225,7 +237,7 @@ public class BitcoinPeer extends P2P.Peer {
 	
 	public void addListener (String type, BitcoinMessageListener l)
 	{
-		List<BitcoinMessageListener> ll = listener.get(type);
+		ArrayList<BitcoinMessageListener> ll = listener.get(type);
 		if ( ll == null )
 		{
 			ll = new ArrayList<BitcoinMessageListener> ();

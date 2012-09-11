@@ -100,6 +100,7 @@ public class BitcoinNetwork extends P2P {
 		return store;
 	}
 	
+	@Override
 	public void discover() {
 		log.info("Discovering network");
 		int n = 0;
