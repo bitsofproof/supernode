@@ -76,7 +76,6 @@ public abstract class P2P {
 	public abstract class Peer {
 		private InetSocketAddress address;
 		private SocketChannel channel;
-		private AtomicInteger callable = new AtomicInteger (0);
 		
 		private LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
@@ -169,7 +168,6 @@ public abstract class P2P {
 
 		public void disconnect() {
 			try {
-				callable.decrementAndGet();
 				// note that no other reference to peer is stored here
 				// it might be garbage collected (that is probably the right thing to do)
 				connectedPeers.remove(channel);
@@ -229,20 +227,6 @@ public abstract class P2P {
 		}
 	}
 
-	public interface PeerTask
-	{
-		public void run (Peer peer);
-	}
-	
-	public void forAllConnected (PeerTask task)
-	{
-		for ( Peer peer : connectedPeers.values() )
-		{
-			if ( peer.callable.get() > 0 )
-				task.run(peer);
-		}
-	}
-	
 	public int getNumberOfConnections ()
 	{
 		return connectedPeers.size();
@@ -365,7 +349,6 @@ public abstract class P2P {
 										connectedPeers.put(client, peer);
 										client.register(selector, SelectionKey.OP_READ);
 
-										peer.callable.incrementAndGet();
 										peerThreads.execute(new Runnable() {
 											public void run() {
 												peer.onConnect();
@@ -387,7 +370,6 @@ public abstract class P2P {
 										final Peer peer;
 										if ( (peer = connectedPeers.get (client)) != null ) {
 											if (connectSlot.tryAcquire()) {
-												peer.callable.incrementAndGet();
 												peerThreads.execute(new Runnable() {
 													public void run() {
 														peer.onConnect();

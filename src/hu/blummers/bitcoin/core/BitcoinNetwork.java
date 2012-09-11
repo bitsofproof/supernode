@@ -6,7 +6,10 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,8 +27,8 @@ public class BitcoinNetwork extends P2P {
 	private Chain chain;
 	private ChainStore store;
 	
-	@SuppressWarnings("unchecked")
-	public Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
+	private Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
+	private Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
 	
 	private ScheduledExecutorService retryLater = Executors.newScheduledThreadPool(1);
 	
@@ -51,16 +54,28 @@ public class BitcoinNetwork extends P2P {
 		
 		super.start();
 	}
+	
+	public void addPeer (BitcoinPeer peer)
+	{
+		connectedPeers.add(peer);
+	}
+	
+	public void removePeer (BitcoinPeer peer)
+	{
+		connectedPeers.remove(peer);
+	}
+	
+	public boolean isConnected (Peer peer)
+	{
+		return connectedPeers.contains(peer);
+	}
 
 	public void addListener (final String type, final BitcoinMessageListener l)
 	{
-		// listen currently connected
-		forAllConnected(new PeerTask () {
-			@Override
-			public void run(Peer peer) {
-				BitcoinPeer bp = (BitcoinPeer)peer;
-				bp.addListener(type, l);
-			}});
+		for ( BitcoinPeer peer : connectedPeers )
+		{
+			peer.addListener(type, l);
+		}
 		
 		// store listener that should be added to new node
 		ArrayList<String> listenedTypes;

@@ -9,7 +9,6 @@ import hu.blummers.bitcoin.messages.GetBlocksMessage;
 import hu.blummers.bitcoin.messages.GetHeadersMessage;
 import hu.blummers.p2p.P2P;
 import hu.blummers.p2p.P2P.Peer;
-import hu.blummers.p2p.P2P.PeerTask;
 
 
 public class ChainLoader {
@@ -33,6 +32,7 @@ public class ChainLoader {
 					log.info("got blocks");
 				}});
 
+			/*
 			network.forAllConnected(new PeerTask (){
 				@Override
 				public void run(Peer peer) {
@@ -45,7 +45,7 @@ public class ChainLoader {
 						log.error("can not start header download", e);
 					}
 				}});
-
+*/
 		} catch (Exception e) {
 			log.error("Could not start chain loader", e);
 		}

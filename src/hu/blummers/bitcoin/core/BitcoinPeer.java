@@ -8,7 +8,6 @@ import hu.blummers.bitcoin.messages.GetDataMessage;
 import hu.blummers.bitcoin.messages.InvMessage;
 import hu.blummers.bitcoin.messages.VersionMessage;
 import hu.blummers.p2p.P2P;
-import hu.blummers.p2p.P2P.Message;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,7 +35,6 @@ public class BitcoinPeer extends P2P.Peer {
 	private String agent;
 	private long height;
 	private long peerVersion;
-	private boolean ready = false;
 	
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -114,7 +112,6 @@ public class BitcoinPeer extends P2P.Peer {
 		return new Message (command);
 	}
 	
-	@SuppressWarnings("unchecked")
 	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
 	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
@@ -135,7 +132,7 @@ public class BitcoinPeer extends P2P.Peer {
 		
 		addListener("verack", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
-				ready = true;
+				network.addPeer(peer);
 				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " acknowledged. Open connections: " + getNetwork().getNumberOfConnections());
 			}});
 	}
@@ -164,6 +161,7 @@ public class BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void onDisconnect() {
+		network.removePeer(this);
 		log.info("Disconnected '" + getAgent () + "' at " + getAddress() + ". Open connections: " + getNetwork().getNumberOfConnections());
 	}
 
@@ -222,7 +220,7 @@ public class BitcoinPeer extends P2P.Peer {
 			scheduler.schedule(new Runnable (){
 				@Override
 				public void run() {
-					if ( !peer.ready )
+					if ( !network.isConnected(peer) )
 						peer.disconnect();
 					}
 				}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
