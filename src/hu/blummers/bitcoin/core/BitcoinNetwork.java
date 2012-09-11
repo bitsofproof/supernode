@@ -7,12 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +26,7 @@ public class BitcoinNetwork extends P2P {
 	
 	private Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
 	private Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
-	
-	private ScheduledExecutorService retryLater = Executors.newScheduledThreadPool(1);
+	private Semaphore numberOfPeers = new Semaphore (0);
 	
 	public BitcoinNetwork (Chain chain, ChainStore store) throws IOException
 	{
@@ -58,11 +54,13 @@ public class BitcoinNetwork extends P2P {
 	public void addPeer (BitcoinPeer peer)
 	{
 		connectedPeers.add(peer);
+		numberOfPeers.release();
 	}
 	
 	public void removePeer (BitcoinPeer peer)
 	{
 		connectedPeers.remove(peer);
+		numberOfPeers.tryAcquire();
 	}
 	
 	public boolean isConnected (Peer peer)
@@ -70,6 +68,26 @@ public class BitcoinNetwork extends P2P {
 		return connectedPeers.contains(peer);
 	}
 
+	public void waitForConnectedPeers (int peersNeeded)
+	{
+		numberOfPeers.acquireUninterruptibly(peersNeeded);
+		numberOfPeers.release(peersNeeded);
+	}
+	
+	public interface PeerTask
+	{
+		public void run (BitcoinPeer peer);
+	}
+	
+	public void runForConnected (PeerTask task)
+	{
+		synchronized ( connectedPeers )
+		{
+			for ( BitcoinPeer peer : connectedPeers )
+				task.run(peer);
+		}
+	}
+	
 	public void addListener (final String type, final BitcoinMessageListener l)
 	{
 		for ( BitcoinPeer peer : connectedPeers )
@@ -101,11 +119,6 @@ public class BitcoinNetwork extends P2P {
 		return peer;
 	}
 
-	public void tryLater (Runnable what, int seconds)
-	{
-		retryLater.schedule(what, seconds, TimeUnit.SECONDS);
-	}
-	
 	public Chain getChain() {
 		return chain;
 	}

@@ -6,9 +6,7 @@ import org.slf4j.LoggerFactory;
 import hu.blummers.bitcoin.core.BitcoinPeer.Message;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.bitcoin.messages.GetBlocksMessage;
-import hu.blummers.bitcoin.messages.GetHeadersMessage;
-import hu.blummers.p2p.P2P;
-import hu.blummers.p2p.P2P.Peer;
+import hu.blummers.bitcoin.messages.InvMessage;
 
 
 public class ChainLoader {
@@ -26,26 +24,27 @@ public class ChainLoader {
 	public void start ()
 	{
 		try {
-			network.addListener ("block", new BitcoinMessageListener (){
+			network.addListener ("inv", new BitcoinMessageListener (){
 				@Override
 				public void process(Message m, BitcoinPeer peer) {
-					log.info("got blocks");
+					InvMessage im = (InvMessage)m;
+					if ( !im.getBlockHashes().isEmpty() )
+						log.info("got block adresses " + im.getBlockHashes().size());
 				}});
 
-			/*
-			network.forAllConnected(new PeerTask (){
-				@Override
-				public void run(Peer peer) {
-					BitcoinPeer bp = (BitcoinPeer)peer;
-					GetBlocksMessage gbm = (GetBlocksMessage) bp.createMessage("getblocks");					
+			network.waitForConnectedPeers(10);
+			
+			network.runForConnected(new BitcoinNetwork.PeerTask() {
+				public void run(BitcoinPeer peer) {
+					GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");					
 					try {
 						gbm.getHashes().add(new Hash (network.getStore().getHeadHash()).toByteArray());
 						peer.send(gbm);
 					} catch (ChainStoreException e) {
 						log.error("can not start header download", e);
 					}
-				}});
-*/
+				}
+			});
 		} catch (Exception e) {
 			log.error("Could not start chain loader", e);
 		}
