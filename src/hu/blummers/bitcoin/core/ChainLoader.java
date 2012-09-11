@@ -27,30 +27,27 @@ public class ChainLoader {
 	public void start ()
 	{
 		try {
-			network.addListener ("headers", new BitcoinMessageListener (){
+			network.addListener ("block", new BitcoinMessageListener (){
 				@Override
 				public void process(Message m, BitcoinPeer peer) {
-					log.info("got headers");
+					log.info("got blocks");
 				}});
+
+			network.forAllConnected(new PeerTask (){
+				@Override
+				public void run(Peer peer) {
+					BitcoinPeer bp = (BitcoinPeer)peer;
+					GetBlocksMessage gbm = (GetBlocksMessage) bp.createMessage("getblocks");					
+					try {
+						gbm.getHashes().add(new Hash (network.getStore().getHeadHash()).toByteArray());
+						peer.send(gbm);
+					} catch (ChainStoreException e) {
+						log.error("can not start header download", e);
+					}
+				}});
+
 		} catch (Exception e) {
 			log.error("Could not start chain loader", e);
 		}
-	}
-	
-	public void startDownloading (final BitcoinNetwork network, final ChainStore chainstore)
-	{
-		network.forAllConnected(new PeerTask (){
-			@Override
-			public void run(Peer peer) {
-				BitcoinPeer bp = (BitcoinPeer)peer;
-				GetHeadersMessage ghm = (GetHeadersMessage) bp.createMessage("getheaders");
-				try {
-					ghm.getLocators().add(new Hash (network.getStore().getHeadHash()).toByteArray());
-					peer.send(ghm);
-				} catch (ChainStoreException e) {
-					log.error("can not start header download", e);
-				}
-			}});
-		
 	}
 }

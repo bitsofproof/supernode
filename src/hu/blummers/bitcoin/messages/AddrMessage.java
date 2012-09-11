@@ -12,11 +12,8 @@ import hu.blummers.bitcoin.core.WireFormat.Writer;
 
 public class AddrMessage extends BitcoinPeer.Message {
 	
-	private long version;
-	
 	public AddrMessage(BitcoinPeer bitcoinPeer) {
 		bitcoinPeer.super("addr");
-		version = bitcoinPeer.getVersion();
 	}
 
 	private List<WireFormat.Address> addresses = new ArrayList<WireFormat.Address> ();
@@ -26,7 +23,7 @@ public class AddrMessage extends BitcoinPeer.Message {
 		writer.writeVarInt(addresses.size());
 		for ( WireFormat.Address a : addresses )
 		{
-			writer.writeAddress(a, version, false);
+			writer.writeAddress(a, getVersion (), false);
 		}
 	}
 
@@ -35,7 +32,7 @@ public class AddrMessage extends BitcoinPeer.Message {
 		long n = reader.readVarInt();
 		for ( long i = 0; i < n; ++i )
 		{
-			addresses.add(reader.readAddress(version, false));
+			addresses.add(reader.readAddress(getVersion (), false));
 		}
 	}
 

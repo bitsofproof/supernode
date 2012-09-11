@@ -2,6 +2,7 @@ package hu.blummers.bitcoin.main;
 
 import hu.blummers.bitcoin.core.BitcoinNetwork;
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.ChainLoader;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.UnconfirmedTransactions;
 
@@ -34,16 +35,15 @@ public class ChainDownloader {
 			log.info("Connect to bitcoin network");			
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production, chainStore);
 			network.start();
-		//	network.discover();
 
+			/*
 			UnconfirmedTransactions unconfirmed = new UnconfirmedTransactions (network);
 			unconfirmed.start();
+			*/
 			
-			/*
 			log.info("Start chainloader");
 			ChainLoader loader = new ChainLoader (network, chainStore);
 			loader.start();
-			*/
 			
 			
 			

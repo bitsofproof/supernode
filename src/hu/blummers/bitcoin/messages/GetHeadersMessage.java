@@ -10,18 +10,16 @@ import hu.blummers.bitcoin.core.WireFormat.Writer;
 
 public class GetHeadersMessage  extends BitcoinPeer.Message {
 
-	private long version;
 	List<byte[]> locators = new ArrayList<byte[]>();
 	byte [] stop = new byte [32];
 
 	public GetHeadersMessage(BitcoinPeer bitcoinPeer) {
 		bitcoinPeer.super("getheaders");
-		version = bitcoinPeer.getVersion();
 	}
 
 	@Override
 	public void toWire(Writer writer) {
-		writer.writeUint32(version);
+		writer.writeUint32(getVersion());
 		writer.writeVarInt(locators.size());
 		for ( byte [] l : locators )
 			writer.writeBytes(l);
@@ -30,7 +28,7 @@ public class GetHeadersMessage  extends BitcoinPeer.Message {
 
 	@Override
 	public void fromWire(Reader reader) {
-		version = reader.readUint32();
+		setVersion (reader.readUint32());
 		long n = reader.readVarInt();
 		for ( long i = 0; i < n; ++i )
 			locators.add(reader.readBytes(32));

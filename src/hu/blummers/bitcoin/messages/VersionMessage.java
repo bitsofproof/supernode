@@ -14,9 +14,7 @@ public class VersionMessage extends BitcoinPeer.Message {
 	public VersionMessage(BitcoinPeer bitcoinPeer) {
 		bitcoinPeer.super("version");
 		myport = bitcoinPeer.getNetwork().getChain().getPort();
-		version = bitcoinPeer.getVersion();
 	}
-	private long version;
 	private BigInteger services = new BigInteger ("1");;
 	private BigInteger timestamp  = new BigInteger (new Long (System.currentTimeMillis()/1000).toString());
 	private InetAddress peer;
@@ -29,7 +27,7 @@ public class VersionMessage extends BitcoinPeer.Message {
 
 	@Override
 	public void toWire(Writer writer) {
-		writer.writeUint32(version);
+		writer.writeUint32(getVersion ());
 		writer.writeUint64(services);
 		writer.writeUint64(timestamp);
 		WireFormat.Address a = new WireFormat.Address();
@@ -38,12 +36,12 @@ public class VersionMessage extends BitcoinPeer.Message {
 		try {
 			a.address = InetAddress.getLocalHost();
 			a.port = myport;
-			writer.writeAddress(a, version, true);
+			writer.writeAddress(a, getVersion(), true);
 		} catch (UnknownHostException e) {
 		}
 		a.address = peer;
 		a.port = remotePort;
-		writer.writeAddress(a, version, true);
+		writer.writeAddress(a, getVersion(), true);
 		
 		writer.writeUint64(nonce);
 		writer.writeString(agent);
@@ -52,13 +50,13 @@ public class VersionMessage extends BitcoinPeer.Message {
 	
 	@Override
 	public void fromWire(Reader reader) {
-		version = reader.readUint32();
+		setVersion(reader.readUint32());
 		services = reader.readUint64();
 		timestamp = reader.readUint64();
-		WireFormat.Address address = reader.readAddress(version, true);
+		WireFormat.Address address = reader.readAddress(getVersion (), true);
 		me = address.address;
 		myport = address.port;
-		address = reader.readAddress(version, true);
+		address = reader.readAddress(getVersion (), true);
 		peer = address.address;
 		remotePort = address.port;		
 		nonce = reader.readUint64();
@@ -66,14 +64,6 @@ public class VersionMessage extends BitcoinPeer.Message {
 		height = reader.readUint32();
 	}
 	
-	public long getVersion() {
-		return version;
-	}
-
-	public void setVersion(long version) {
-		this.version = version;
-	}
-
 	public BigInteger getServices() {
 		return services;
 	}

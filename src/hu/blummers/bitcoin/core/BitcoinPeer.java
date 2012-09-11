@@ -35,7 +35,7 @@ public class BitcoinPeer extends P2P.Peer {
 	private BitcoinNetwork network;
 	private String agent;
 	private long height;
-	private long version;
+	private long peerVersion;
 	private boolean ready = false;
 	
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -43,15 +43,28 @@ public class BitcoinPeer extends P2P.Peer {
 	
 	public class Message implements P2P.Message {
 		private final String command;
+		private long version;
 		
 		public Message (String command)
 		{
 			this.command = command;
+			version = peerVersion;
 		}
 		
+		
+		public long getVersion() {
+			return version;
+		}
+
+
+		public void setVersion(long version) {
+			this.version = version;
+		}
+
 		public String getCommand () {
 			return command;
 		}
+
 		@Override
 		public byte [] toByteArray ()
 		{
@@ -109,14 +122,14 @@ public class BitcoinPeer extends P2P.Peer {
 		network = (BitcoinNetwork)p2p;
 		
 		// this will be overwritten by the first version message we get
-		version = network.getChain().getVersion(); 
+		peerVersion = network.getChain().getVersion(); 
 		
 		addListener("version", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
 				VersionMessage v = (VersionMessage)m;
 				agent = v.getAgent();
 				height = v.getHeight();
-				version = v.getVersion();
+				peerVersion = v.getVersion();
 				peer.send (peer.createMessage("verack"));
 			}});
 		
@@ -137,7 +150,7 @@ public class BitcoinPeer extends P2P.Peer {
 
 	public long getVersion ()
 	{
-		return version;
+		return peerVersion;
 	}
 	
 	public String getAgent() {
