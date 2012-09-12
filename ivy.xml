@@ -7,15 +7,6 @@
         status="integration">
 	</info>
 	<dependencies>
-<!--
-		<dependency org="com.google" name="bitcoinj" rev="0.5.2">
-			<exclude module="guava-base"/>
-			<exclude module="derby"/>
-			<exclude module="slf4j-jdk14"/>			
-		</dependency>
-
-		-->	
-		<dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="1.47"/>
 		<dependency org="org.springframework" name="spring-context" rev="3.1.2.RELEASE">
 			<exclude module="com.springsource.org.hibernate.validator"/>
 			<exclude module="persistence-api"/>
@@ -31,6 +22,7 @@
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
 		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>
 		<dependency org="org.slf4j" name="slf4j-simple" rev="1.6.2"/>
+		<dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="1.47"/>
             
 	</dependencies>
 </ivy-module>

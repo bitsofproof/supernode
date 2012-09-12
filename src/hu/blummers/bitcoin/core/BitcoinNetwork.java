@@ -90,11 +90,13 @@ public class BitcoinNetwork extends P2P {
 	
 	public void addListener (final String type, final BitcoinMessageListener l)
 	{
-		for ( BitcoinPeer peer : connectedPeers )
+		synchronized ( connectedPeers )
 		{
-			peer.addListener(type, l);
+			for ( BitcoinPeer peer : connectedPeers )
+			{
+				peer.addListener(type, l);
+			}
 		}
-		
 		// store listener that should be added to new node
 		ArrayList<String> listenedTypes;
 		if ( (listenedTypes = listener.get(l)) == null )
@@ -106,16 +108,30 @@ public class BitcoinNetwork extends P2P {
 			listenedTypes.add(type);
 	}
 	
+	public void removeListener (final String type, final BitcoinMessageListener l)
+	{
+		synchronized ( connectedPeers )
+		{
+			for ( BitcoinPeer peer : connectedPeers )
+			{
+				peer.removeListener(type, l);
+			}
+		}
+		listener.get(l).remove(type);
+	}
+	
 	@Override
 	public Peer createPeer(InetSocketAddress address) {
 		BitcoinPeer peer = new BitcoinPeer (this, address);
 		// add stored listener to new nodes
-		for ( BitcoinMessageListener l : listener.keySet() )
+		synchronized ( listener )
 		{
-			for ( String type : listener.get(l) )
-				peer.addListener(type, l);
+			for ( BitcoinMessageListener l : listener.keySet() )
+			{
+				for ( String type : listener.get(l) )
+					peer.addListener(type, l);
+			}
 		}
-		
 		return peer;
 	}
 

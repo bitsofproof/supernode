@@ -150,6 +150,10 @@ public class BitcoinPeer extends P2P.Peer {
 		return peerVersion;
 	}
 	
+	public long getHeight ()
+	{
+		return height;
+	}
 	public String getAgent() {
 		return agent;
 	}
@@ -258,4 +262,12 @@ public class BitcoinPeer extends P2P.Peer {
 			ll.add(l);
 	}
 
+	public void removeListener (String type, BitcoinMessageListener l)
+	{
+		ArrayList<BitcoinMessageListener> ll = listener.get(type);
+		if ( ll != null )
+		{
+			ll.remove(l);
+		}
+	}
 }

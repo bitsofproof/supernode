@@ -1,8 +1,11 @@
 package hu.blummers.bitcoin.core;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import hu.blummers.bitcoin.core.BitcoinPeer.Message;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.bitcoin.messages.GetBlocksMessage;
+import hu.blummers.bitcoin.messages.GetDataMessage;
 import hu.blummers.bitcoin.messages.InvMessage;
 
 
@@ -30,12 +34,40 @@ public class ChainLoader {
 	public void start ()
 	{
 		try {
+			network.addListener("block", new BitcoinMessageListener (){
+				public void process(Message m, BitcoinPeer peer) {
+					log.info("got block");
+				}});
+			
 			network.addListener ("inv", new BitcoinMessageListener (){
 				@Override
 				public void process(Message m, BitcoinPeer peer) {
 					InvMessage im = (InvMessage)m;
 					if ( !im.getBlockHashes().isEmpty() )
-						log.info("got block adresses " + im.getBlockHashes().size());
+					{
+						GetDataMessage gdm = (GetDataMessage)peer.createMessage("getdata");
+						for ( byte [] h : im.getBlockHashes() )
+						{
+							String hash = new Hash (h).toString();
+							synchronized ( knownBlocks )
+							{
+								 if (!knownBlocks.contains(hash))
+									 gdm.getBlocks().add(h);
+								knownBlocks.add(hash);
+							}
+						}
+						peer.send(gdm);
+						if ( knownBlocks.size() < peer.getHeight() )
+						{
+							GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
+							gbm.getHashes().add(im.getBlockHashes().get(im.getBlockHashes().size()-1));
+							peer.send(gbm);
+						}
+						else
+						{
+							peer.removeListener("inv", this);
+						}
+					}
 				}});
 
 			network.waitForConnectedPeers(20);

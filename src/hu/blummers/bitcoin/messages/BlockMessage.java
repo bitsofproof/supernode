@@ -12,7 +12,7 @@ public class BlockMessage extends BitcoinPeer.Message  {
 		bitcoinPeer.super("block");
 	}
 
-	private JpaBlock block;
+	private JpaBlock block = new JpaBlock ();
 	
 	public JpaBlock getBlock() {
 		return block;
