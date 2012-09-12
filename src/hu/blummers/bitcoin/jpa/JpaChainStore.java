@@ -1,5 +1,7 @@
 package hu.blummers.bitcoin.jpa;
 
+import java.util.ArrayList;
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
@@ -25,7 +27,7 @@ public class JpaChainStore implements ChainStore {
 			QJpaChainHead head = QJpaChainHead.jpaChainHead;
 	
 			JPAQuery q1 = new JPAQuery(entityManager);
-			JpaChainHead h = q1.from(head).uniqueResult(head);
+			JpaChainHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(1);
 			return h.getHash();
 		}
 		catch ( Exception e )
@@ -37,10 +39,14 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public void resetStore(Chain chain) throws ChainStoreException {
 		try {
+			JpaBlock genesis = chain.getGenesis();	
 			JpaChainHead h = new JpaChainHead();
 			h.setHash(chain.getGenesis().getHash());			
-			
-			entityManager.persist(h);
+			h.setHeight (1);
+			h.setChainWork(genesis.getDifficulty());
+			genesis.setHead(h);
+			h.setBlocks(new ArrayList<JpaBlock> ());
+			h.getBlocks().add(genesis);
 			entityManager.persist(chain.getGenesis());
 		}
 		catch ( Exception e )
@@ -50,9 +56,39 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	@Override
-	public void store(JpaBlock block) throws ChainStoreException {
+	public void store(JpaBlock newBlock) throws ChainStoreException {
 		try {
-			entityManager.persist(block);
+			// find previous block
+			QJpaBlock block = QJpaBlock.jpaBlock;
+			JPAQuery query = new JPAQuery(entityManager);
+
+			JpaBlock prev = query.from(block).where(block.hash.eq(newBlock.getPreviousHash())).uniqueResult(block);
+			if ( prev == null )
+				throw new ChainStoreException ("Block not connected");
+			
+			newBlock.setPrevious(prev);
+			JpaChainHead head;
+			if ( prev.getHead().getHash().equals(prev.getHash()) )
+			{
+				// continuing
+				head = prev.getHead();
+			}
+			else
+			{
+				// branching
+				head = new JpaChainHead ();
+				head.setBlocks(new ArrayList<JpaBlock> ());
+				head.setJoinHeight(prev.getHeight());
+			}
+			head.getBlocks().add(newBlock);
+			newBlock.setHead(head);
+			newBlock.setHeight(head.getHeight()+1);
+			newBlock.setChainWork(head.getChainWork()+newBlock.getDifficulty ());
+			head.setHeight(newBlock.getHeight());
+			head.setChainWork(newBlock.getChainWork());
+				
+			
+			entityManager.persist(newBlock);
 		} catch (Exception e) {
 			throw new ChainStoreException (e);
 		}

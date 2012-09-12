@@ -47,8 +47,8 @@ public class Chain {
 	{
 		JpaBlock block = new JpaBlock();
 		
-		block.setChainWork(new byte [1]);
-		block.setHeight(0);
+		block.setChainWork(1);
+		block.setHeight(1);
 		
 		block.setVersion(1);
 		block.setCreateTime(1231006505L);

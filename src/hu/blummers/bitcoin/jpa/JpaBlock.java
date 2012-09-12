@@ -11,7 +11,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -19,10 +18,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 
@@ -50,17 +47,17 @@ public class JpaBlock {
 	private String merkleRoot;
 	
 	private long createTime;
-	
 	private long difficultyTarget;
-	
+	private double chainWork;
+	private int height;
 	private long nonce;
+	
+	@ManyToOne(optional=false,fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
+	private JpaChainHead head;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private List<JpaTransaction> transactions;
 
-	@Lob @Basic(fetch=FetchType.LAZY)
-	private byte [] chainWork;
-	private int height;
 	public Long getId() {
 		return id;
 	}
@@ -115,26 +112,40 @@ public class JpaBlock {
 	public void setTransactions(List<JpaTransaction> transactions) {
 		this.transactions = transactions;
 	}
-	public byte[] getChainWork() {
+	public double getChainWork() {
 		return chainWork;
 	}
-	public void setChainWork(byte[] chainWork) {
+	public void setChainWork(double chainWork) {
 		this.chainWork = chainWork;
 	}
-	public BigInteger getWork ()
-	{
-		return new BigInteger (chainWork);
-	}
-	public void setWork (BigInteger work)
-	{
-		chainWork = work.toByteArray();
-	}
-	
 	public int getHeight() {
 		return height;
 	}
 	public void setHeight(int height) {
 		this.height = height;
+	}
+	
+	public JpaChainHead getHead() {
+		return head;
+	}
+	public void setHead(JpaChainHead head) {
+		this.head = head;
+	}
+	
+	public String getPreviousHash() {
+		return previousHash;
+	}
+	public void setPreviousHash(String previousHash) {
+		this.previousHash = previousHash;
+	}
+
+	public double getDifficulty ()
+	{
+		BigInteger mintarget = new BigInteger ("FFFF", 16);
+		mintarget = mintarget.shiftLeft(8 * (0x1d - 3));
+		BigInteger target = new BigInteger (new Long(difficultyTarget & 0x7fffffL).toString(), 10);
+		target = target.shiftLeft((int)(8 * ((difficultyTarget >>> 24)- 3)));
+		return mintarget.divide(target).doubleValue();
 	}
 	
 	public void computeMerkleRoot ()
@@ -254,16 +265,6 @@ public class JpaBlock {
 		if ( previousHash == null )
 			return;
 		
-		if ( !previousHash.equals(Hash.ZERO_HASH.toString()) )
-		{
-			QJpaBlock block = QJpaBlock.jpaBlock;
-			JPAQuery query = new JPAQuery(entityManager);
-			previous = query.from(block).where(block.hash.eq(previousHash)).uniqueResult(block);
-			if ( previous == null )
-				throw new ValidationException ("Previous block '" + previousHash +"' not found");
-			
-			previousHash = null;
-		}
 		boolean coinbase = true;
 		for ( JpaTransaction t : transactions )
 		{

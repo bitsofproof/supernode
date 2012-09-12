@@ -32,6 +32,7 @@ public class ChainDownloader {
 			//chainStore.resetStore(Chain.production);
 			
 			
+			/*
 			log.info("Connect to bitcoin network");			
 			BitcoinNetwork network = new BitcoinNetwork (Chain.production, chainStore);
 			network.start();
@@ -42,7 +43,7 @@ public class ChainDownloader {
 			log.info("Start chainloader");
 			ChainLoader loader = new ChainLoader (network, chainStore);
 			loader.start();
-			
+			*/
 			
 			
 			synchronized ( log )
