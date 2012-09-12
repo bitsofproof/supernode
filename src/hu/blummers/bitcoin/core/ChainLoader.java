@@ -1,5 +1,9 @@
 package hu.blummers.bitcoin.core;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +15,8 @@ import hu.blummers.bitcoin.messages.InvMessage;
 
 public class ChainLoader {
 	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
+	
+	private Set<String> knownBlocks = Collections.synchronizedSet(new HashSet<String> ());
 
 	ChainStore store;
 	BitcoinNetwork network;
@@ -32,7 +38,7 @@ public class ChainLoader {
 						log.info("got block adresses " + im.getBlockHashes().size());
 				}});
 
-			network.waitForConnectedPeers(10);
+			network.waitForConnectedPeers(20);
 			
 			network.runForConnected(new BitcoinNetwork.PeerTask() {
 				public void run(BitcoinPeer peer) {

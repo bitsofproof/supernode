@@ -3,7 +3,8 @@ package hu.blummers.bitcoin.core;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.spongycastle.util.encoders.Hex;
+import org.bouncycastle.util.encoders.Hex;
+
 
 public class Hash {
 	private byte[] bytes;

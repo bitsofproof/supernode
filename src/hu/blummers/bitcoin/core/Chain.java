@@ -9,7 +9,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.spongycastle.util.encoders.Hex;
+import org.bouncycastle.util.encoders.Hex;
+
 
 public class Chain {
 	private final JpaBlock genesis;

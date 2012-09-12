@@ -27,7 +27,7 @@ public class JpaChainStore implements ChainStore {
 			QJpaChainHead head = QJpaChainHead.jpaChainHead;
 	
 			JPAQuery q1 = new JPAQuery(entityManager);
-			JpaChainHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(1);
+			JpaChainHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(0);
 			return h.getHash();
 		}
 		catch ( Exception e )
