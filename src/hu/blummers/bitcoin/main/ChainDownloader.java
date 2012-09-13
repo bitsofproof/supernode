@@ -28,8 +28,8 @@ public class ChainDownloader {
 
 			ChainStore chainStore = context.getBean (ChainStore.class);
 			
-			//log.info("Reset store");						
-			//chainStore.resetStore(Chain.production);
+			log.info("Reset store");						
+			chainStore.resetStore(Chain.production);
 			
 			
 			log.info("Connect to bitcoin network");			
