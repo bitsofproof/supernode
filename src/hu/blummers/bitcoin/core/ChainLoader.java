@@ -3,8 +3,10 @@ package hu.blummers.bitcoin.core;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +23,8 @@ import hu.blummers.bitcoin.messages.InvMessage;
 public class ChainLoader {
 	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
 	
-	private Map<String, ArrayList<JpaBlock>> orphanes = Collections.synchronizedMap(new HashMap<String, ArrayList<JpaBlock>>());
+	private Map<String, JpaBlock> orphanes = Collections.synchronizedMap(new HashMap<String, JpaBlock>());
+	private Set<String> askedFor = Collections.synchronizedSet(new HashSet<String> ());
 
 	ChainStore store;
 	BitcoinNetwork network;
@@ -32,23 +35,18 @@ public class ChainLoader {
 		this.store = store;
 	}
 	
-	private void storePending (String h)
+	private List<JpaBlock> storeable (String h) throws ChainStoreException
 	{
-		synchronized ( orphanes )
+		List<JpaBlock> toStore = new ArrayList<JpaBlock> ();
+		for ( JpaBlock b : orphanes.values() )
 		{
-			List<JpaBlock> pendingBlocks = orphanes.get(h);
-			if ( pendingBlocks != null )
-				for ( JpaBlock b : pendingBlocks)
-					try {
-						pendingBlocks.remove(b);
-						if ( store.store(b) )
-						{
-							log.info("storing (previously pending)" + b.getHash());
-							storePending (b.getHash());
-						}
-					} catch (ChainStoreException e) {
-					}
+			if ( b.getPreviousHash().equals(h) )
+			{
+				toStore.add(b);
+				toStore.addAll(storeable (b.getHash()));
+			}
 		}
+		return toStore;
 	}
 	
 	public void start ()
@@ -60,30 +58,29 @@ public class ChainLoader {
 					try {
 						JpaBlock block = bm.getBlock();
 						block.validate();
+						askedFor.remove(block.getHash());
 						try {
-								JpaBlock prev =  store.get(block.getPreviousHash());
-								if ( prev != null )
+								if ( store.get(block.getPreviousHash()) != null )
 								{
 									if ( store.store(block) )
 									{
 										log.info("stored " + block.getHash());
-										storePending (block.getHash());
+										synchronized ( orphanes )
+										{
+											for ( JpaBlock b : storeable (block.getHash()) )
+											{
+												log.info("flushing " + b.getHash ());
+												store.store (b);
+												orphanes.remove(b.getHash());
+											}
+										}
 									}
 								}
 								else
 								{
-									synchronized ( orphanes )
-									{
-										ArrayList<JpaBlock> l = orphanes.get(block.getPreviousHash());
-										if ( l == null )
-										{
-											l = new ArrayList<JpaBlock> ();
-											orphanes.put(block.getPreviousHash(), l);
-										}
-										log.info("pending " + block.getHash());
-										l.add(block);
-									}
+									orphanes.put(block.getHash(), block);
 								}
+
 						} catch (ChainStoreException e) {
 							log.error("can not store block", e);
 						}
@@ -103,15 +100,20 @@ public class ChainLoader {
 							for ( byte [] h : im.getBlockHashes() )
 							{
 								String hash = new Hash (h).toString();
-									if ( store.get(hash) == null )
-										gdm.getBlocks().add(h);
+								if ( !askedFor.contains(hash) && !orphanes.containsKey(hash) && store.get(hash) == null )
+								{
+									gdm.getBlocks().add(h);
+									askedFor.add(hash);
+								}
 							}
 							peer.send(gdm);
-	
-							GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
-							gbm.getHashes().add(im.getBlockHashes().get(im.getBlockHashes().size()-1));
-							peer.send(gbm);
-						} catch (ChainStoreException e) {
+							if ( im.getBlockHashes().size() > 100 )
+							{
+								GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
+								gbm.getHashes().add(im.getBlockHashes().get(im.getBlockHashes().size()-1));
+								peer.send(gbm);
+							}
+						} catch (Exception e) {
 							log.error("can not read store", e);
 						}
 					}

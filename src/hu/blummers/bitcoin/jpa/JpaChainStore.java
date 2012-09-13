@@ -90,14 +90,15 @@ public class JpaChainStore implements ChainStore {
 				head = new JpaChainHead ();
 				head.setBlocks(new ArrayList<JpaBlock> ());
 				head.setJoinHeight(prev.getHeight());
+				head.setHeight(prev.getHeight());
 			}
 			head.setHash(newBlock.getHash());
 			head.getBlocks().add(newBlock);
-			head.setHeight(newBlock.getHeight());
+			head.setHeight(head.getHeight()+1);
 			head.setChainWork(newBlock.getChainWork());
 
 			newBlock.setHead(head);
-			newBlock.setHeight(head.getHeight()+1);
+			newBlock.setHeight(head.getHeight());
 			newBlock.setChainWork(head.getChainWork()+newBlock.getDifficulty ());
 
 			boolean coinbase = true;
