@@ -2,6 +2,8 @@ package hu.blummers.bitcoin.jpa;
 
 import java.util.List;
 
+import hu.blummers.bitcoin.core.ChainStore;
+import hu.blummers.bitcoin.core.ChainStoreException;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
@@ -128,14 +130,17 @@ public class JpaTransactionInput {
 		sequence = reader.readUint32();
 	}
 	
-	public void validate (EntityManager entityManager) throws ValidationException
+	public void validate (ChainStore store) throws ValidationException
 	{
 		if ( sourceHash == null )
 			return;
-		QJpaTransaction tx = QJpaTransaction.jpaTransaction;
-		JPAQuery query = new JPAQuery (entityManager);
-		List<JpaTransaction> tl = query.from(tx).where(tx.hash.eq(sourceHash)).list(tx);
-		if ( tl == null || tl.isEmpty() )
+		List<JpaTransaction> tl;
+		try {
+			tl = store.getTransactions(sourceHash);
+		} catch (ChainStoreException e) {
+			throw new ValidationException ("Error retrieving source transaction '" + sourceHash +"'");
+		}
+		if ( tl.isEmpty() )
 			throw new ValidationException ("Transaction input refers to unknown transaction '" + sourceHash + "'");
 			
 		JpaTransaction latest = tl.get(tl.size()-1);

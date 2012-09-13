@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ public class BitcoinNetwork extends P2P {
 	
 	private Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
 	private Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
-	private Semaphore numberOfPeers = new Semaphore (0);
+	private List<PeerTask> registeredTasks = Collections.synchronizedList(new ArrayList<PeerTask> ());
 	
 	public BitcoinNetwork (Chain chain, ChainStore store) throws IOException
 	{
@@ -54,13 +54,29 @@ public class BitcoinNetwork extends P2P {
 	public void addPeer (BitcoinPeer peer)
 	{
 		connectedPeers.add(peer);
-		numberOfPeers.release();
+
+		// add stored listener to new nodes
+		synchronized ( listener )
+		{
+			for ( BitcoinMessageListener l : listener.keySet() )
+			{
+				for ( String type : listener.get(l) )
+					peer.addListener(type, l);
+			}
+		}
+		// execute registered tasks
+		synchronized ( registeredTasks )
+		{
+			for ( PeerTask task : registeredTasks )
+			{
+				task.run(peer);
+			}
+		}
 	}
 	
 	public void removePeer (BitcoinPeer peer)
 	{
 		connectedPeers.remove(peer);
-		numberOfPeers.tryAcquire();
 	}
 	
 	public boolean isConnected (Peer peer)
@@ -68,12 +84,6 @@ public class BitcoinNetwork extends P2P {
 		return connectedPeers.contains(peer);
 	}
 
-	public void waitForConnectedPeers (int peersNeeded)
-	{
-		numberOfPeers.acquireUninterruptibly(peersNeeded);
-		numberOfPeers.release(peersNeeded);
-	}
-	
 	public interface PeerTask
 	{
 		public void run (BitcoinPeer peer);
@@ -86,6 +96,21 @@ public class BitcoinNetwork extends P2P {
 			for ( BitcoinPeer peer : connectedPeers )
 				task.run(peer);
 		}
+	}
+	
+	public void runForAll (PeerTask task)
+	{
+		synchronized ( connectedPeers )
+		{
+			for ( BitcoinPeer peer : connectedPeers )
+				task.run(peer);
+			registeredTasks.add(task);
+		}
+	}
+	
+	public void stopRunning (PeerTask task)
+	{
+		registeredTasks.remove(task);
 	}
 	
 	public void addListener (final String type, final BitcoinMessageListener l)
@@ -123,15 +148,6 @@ public class BitcoinNetwork extends P2P {
 	@Override
 	public Peer createPeer(InetSocketAddress address) {
 		BitcoinPeer peer = new BitcoinPeer (this, address);
-		// add stored listener to new nodes
-		synchronized ( listener )
-		{
-			for ( BitcoinMessageListener l : listener.keySet() )
-			{
-				for ( String type : listener.get(l) )
-					peer.addListener(type, l);
-			}
-		}
 		return peer;
 	}
 

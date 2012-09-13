@@ -55,7 +55,7 @@ public class JpaBlock {
 	@ManyToOne(optional=false,fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
 	private JpaChainHead head;
 	
-	@OneToMany(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
+	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransaction> transactions;
 
 	public Long getId() {
@@ -148,7 +148,7 @@ public class JpaBlock {
 		return mintarget.divide(target).doubleValue();
 	}
 	
-	public void computeMerkleRoot ()
+	private void computeMerkleRoot ()
 	{
 		if ( merkleRoot != null )
 			return;
@@ -183,30 +183,6 @@ public class JpaBlock {
         merkleRoot = new Hash (tree.get(tree.size() - 1)).toString();
 	}
 	
-	
-	public void computeHash ()
-	{
-		if ( hash != null )
-			return;
-		
-		computeMerkleRoot ();
-		
-		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());
-		writer.writeUint32(version);
-		if ( previous != null )
-			writer.writeHash (new Hash (previous.getHash()));
-		else if ( previousHash != null )
-			writer.writeHash(new Hash (previousHash));
-		else
-			writer.writeHash (Hash.ZERO_HASH);
-		writer.writeHash(new Hash (merkleRoot));
-		writer.writeUint32(createTime);
-		writer.writeUint32(difficultyTarget);
-		writer.writeUint32(nonce);
-
-		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
-		hash = reader.hash().toString();
-	}
 	
 	public void toWire (WireFormat.Writer writer)
 	{
@@ -260,16 +236,45 @@ public class JpaBlock {
 		hash = reader.hash(cursor, 80).toString(); 
 	}
 	
-	public void validate (EntityManager entityManager) throws ValidationException
+	public void validate () throws ValidationException
 	{
-		if ( previousHash == null )
+		if ( hash != null )
 			return;
 		
-		boolean coinbase = true;
-		for ( JpaTransaction t : transactions )
+		computeMerkleRoot ();
+		
+		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());
+		writer.writeUint32(version);
+		if ( previous != null )
+			writer.writeHash (new Hash (previous.getHash()));
+		else if ( previousHash != null )
+			writer.writeHash(new Hash (previousHash));
+		else
+			writer.writeHash (Hash.ZERO_HASH);
+		writer.writeHash(new Hash (merkleRoot));
+		writer.writeUint32(createTime);
+		writer.writeUint32(difficultyTarget);
+		writer.writeUint32(nonce);
+
+		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
+		
+		Hash h = reader.hash();
+		
+		byte [] hashAsNumber = new byte [32];
+		System.arraycopy(h.toByteArray(), 0, hashAsNumber, 0, 32);
+		for( int i = 0, j = hashAsNumber.length - 1; i < hashAsNumber.length / 2; i++, j-- ) {
+			hashAsNumber[ i ] ^= hashAsNumber[ j ];
+			hashAsNumber[ j ] ^= hashAsNumber[ i ];
+			hashAsNumber[ i ] ^= hashAsNumber[ j ];
+	    }
+		
+		BigInteger target = new BigInteger (new Long(difficultyTarget & 0x7fffffL).toString(), 10);
+		target = target.shiftLeft((int)(8 * ((difficultyTarget >>> 24)- 3)));
+
+		if ( new BigInteger (hashAsNumber).compareTo(target) >= 0 )
 		{
-			t.validate (entityManager, coinbase);
-			coinbase = false;
+			throw new ValidationException ("Not sufficient proof of work");
 		}
+		hash = h.toString();		
 	}
 }

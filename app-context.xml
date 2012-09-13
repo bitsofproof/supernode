@@ -19,10 +19,11 @@
 		p:username="dbuser"
 	/>
 	 -->
-	<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource"
-		p:driverClass="org.apache.derby.jdbc.ClientDriver"
-		p:url="jdbc:derby://localhost:1527/data"
-		p:username="dbuser"
+	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
+		p:portNumber="1527"
+		p:serverName="localhost"
+		p:databaseName="data"
+		p:user="dbuser"
 	/>
 	<bean id="jpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
 		p:showSql="false"
@@ -30,6 +31,9 @@
 		p:database="DERBY"
 	/>
 	
+	<bean id="dataSource" class="hu.blummers.bitcoin.jpa.PooledDatasource">
+        <property name="dataSource" ref="derbyDataSource"/>  
+	</bean>
 	
 	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
         <property name="persistenceXmlLocation" value="persistence.xml"/>

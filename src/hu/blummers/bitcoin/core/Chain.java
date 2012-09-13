@@ -9,10 +9,15 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.openjpa.lib.log.Log;
 import org.bouncycastle.util.encoders.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class Chain {
+	private static final Logger log = LoggerFactory.getLogger(Chain.class);
+	
 	private final JpaBlock genesis;
 	private final long version;
 	private final long magic;
@@ -85,7 +90,12 @@ public class Chain {
 		output.setValue(new BigInteger("5000000000", 10));
 		output.setScript(Hex.decode
                     ("4104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac"));
-		block.computeHash();
+		try {
+			block.validate();
+		} catch (ValidationException e) {
+			log.error("Invalid genesis block", e);
+			return null;
+		}
 		return block;
 	}
 	

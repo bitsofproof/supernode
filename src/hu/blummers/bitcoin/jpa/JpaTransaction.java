@@ -1,5 +1,6 @@
 package hu.blummers.bitcoin.jpa;
 
+import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
@@ -159,14 +160,14 @@ public class JpaTransaction {
 		hash = reader.hash(cursor, reader.getCursor() - cursor).toString();
 	}
 	
-	public void validate (EntityManager entityManager, boolean coinbase) throws ValidationException
+	public void validate (ChainStore store, boolean coinbase) throws ValidationException
 	{
 		for ( JpaTransactionOutput output : outputs )
-			output.validate (entityManager);
+			output.validate (store);
 
 		if ( !coinbase )
 			for ( JpaTransactionInput input : inputs )
-				input.validate (entityManager);
+				input.validate (store);
 
 	}
 }

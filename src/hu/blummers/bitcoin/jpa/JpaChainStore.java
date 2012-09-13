@@ -1,6 +1,7 @@
 package hu.blummers.bitcoin.jpa;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -15,7 +16,7 @@ import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.ChainStoreException;
 
 @Transactional
-@Component
+@Component("JpaChainStore")
 public class JpaChainStore implements ChainStore {
 	@PersistenceContext
 	EntityManager entityManager;
@@ -34,10 +35,13 @@ public class JpaChainStore implements ChainStore {
 		{
 			throw new ChainStoreException (e);
 		}
+		finally
+		{
+		}
 	}
 
 	@Override
-	public void resetStore(Chain chain) throws ChainStoreException {
+	public synchronized void resetStore(Chain chain) throws ChainStoreException {
 		try {
 			JpaBlock genesis = chain.getGenesis();	
 			JpaChainHead h = new JpaChainHead();
@@ -53,11 +57,18 @@ public class JpaChainStore implements ChainStore {
 		{
 			throw new ChainStoreException (e);
 		}
+		finally
+		{
+		}
 	}
 
 	@Override
-	public void store(JpaBlock newBlock) throws ChainStoreException {
+	public synchronized boolean store(JpaBlock newBlock) throws ChainStoreException {
 		try {
+			JpaBlock stored = get (newBlock.getHash());
+			if ( stored != null )
+				return false;
+			
 			// find previous block
 			QJpaBlock block = QJpaBlock.jpaBlock;
 			JPAQuery query = new JPAQuery(entityManager);
@@ -80,17 +91,30 @@ public class JpaChainStore implements ChainStore {
 				head.setBlocks(new ArrayList<JpaBlock> ());
 				head.setJoinHeight(prev.getHeight());
 			}
+			head.setHash(newBlock.getHash());
 			head.getBlocks().add(newBlock);
+			head.setHeight(newBlock.getHeight());
+			head.setChainWork(newBlock.getChainWork());
+
 			newBlock.setHead(head);
 			newBlock.setHeight(head.getHeight()+1);
 			newBlock.setChainWork(head.getChainWork()+newBlock.getDifficulty ());
-			head.setHeight(newBlock.getHeight());
-			head.setChainWork(newBlock.getChainWork());
-				
+
+			boolean coinbase = true;
+			for ( JpaTransaction t : newBlock.getTransactions() )
+			{
+				t.validate(this, coinbase);
+				store (t);
+				coinbase = false;
+			}
 			
 			entityManager.persist(newBlock);
+			return true;
 		} catch (Exception e) {
 			throw new ChainStoreException (e);
+		}
+		finally
+		{
 		}
 	}
 
@@ -105,14 +129,35 @@ public class JpaChainStore implements ChainStore {
 		} catch (Exception e) {
 			throw new ChainStoreException (e);
 		}
+		finally
+		{
+		}
 	}
 
 	@Override
-	public JpaBlock getPrevious(JpaBlock block) throws ChainStoreException {
+	public List<JpaTransaction> getTransactions(String hash) throws ChainStoreException {
 		try {
-			return block.getPrevious();
+			QJpaTransaction tx = QJpaTransaction.jpaTransaction;
+			JPAQuery query = new JPAQuery (entityManager);
+			return query.from(tx).where(tx.hash.eq(hash)).list(tx);
 		} catch (Exception e) {
 			throw new ChainStoreException (e);
 		}
+		finally
+		{
+		}
 	}
+
+	@Override
+	public synchronized void store(JpaTransaction transaction) throws ChainStoreException {
+		try {
+			entityManager.persist(transaction);
+		} catch (Exception e) {
+			throw new ChainStoreException (e);
+		}
+		finally
+		{
+		}
+	}
+
 }

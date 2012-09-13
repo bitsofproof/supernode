@@ -319,6 +319,8 @@ public abstract class P2P {
 					try {
 						ChangeRequest cr;
 						while ((cr = selectorChanges.poll()) != null) {
+							if ( cr.socket == null )
+								continue;
 							if (cr.type == ChangeRequest.REGISTER)
 								cr.socket.register(selector, cr.ops);
 							else if (cr.type == ChangeRequest.CHANGEOPS) {
@@ -499,6 +501,6 @@ public abstract class P2P {
 		connector.setName("Peer connector");
 		connector.start();
 		
-
+		
 	}
 }
