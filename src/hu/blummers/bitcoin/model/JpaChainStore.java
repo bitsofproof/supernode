@@ -7,6 +7,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mysema.query.jpa.impl.JPAQuery;
@@ -18,8 +19,8 @@ import hu.blummers.bitcoin.model.QJpaBlock;
 import hu.blummers.bitcoin.model.QJpaHead;
 import hu.blummers.bitcoin.model.QJpaTransaction;
 
-@Transactional
 @Component("store")
+@Transactional(propagation=Propagation.MANDATORY)
 public class JpaChainStore implements ChainStore {
 	@PersistenceContext
 	EntityManager entityManager;

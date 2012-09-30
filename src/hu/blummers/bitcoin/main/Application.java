@@ -3,23 +3,40 @@ package hu.blummers.bitcoin.main;
 import java.io.IOException;
 
 import hu.blummers.bitcoin.core.BitcoinNetwork;
+import hu.blummers.bitcoin.core.Chain;
 import hu.blummers.bitcoin.core.ChainLoader;
+import hu.blummers.bitcoin.core.ChainStore;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Component
 public class Application {
 	@Autowired
-	BitcoinNetwork network;
+	private Chain chain;
 	
 	@Autowired
-	ChainLoader chainLoader;
+	private ChainStore store;
 	
-	public void start () throws IOException
+	@Autowired
+	PlatformTransactionManager transactionManager;
+
+	private ApplicationContext context;
+	
+	public ApplicationContext getContext ()
 	{
+		return context;
+	}
+	
+	public void start (ApplicationContext context) throws IOException
+	{
+		this.context = context;
+		BitcoinNetwork network = new BitcoinNetwork (transactionManager, chain, store);
 		network.start();
-		chainLoader.start();
+		ChainLoader loader = new ChainLoader (transactionManager, network, store);
+		loader.start();
 		synchronized ( this )
 		{
 			try {

@@ -17,7 +17,7 @@ public class ChainDownloader {
 			ApplicationContext context = 
 		            new ClassPathXmlApplicationContext("app-context.xml");
 			Application application = context.getBean (Application.class);
-			application.start ();
+			application.start (context);
 		} catch (Exception e) {
 			log.error("Application", e);
 		}

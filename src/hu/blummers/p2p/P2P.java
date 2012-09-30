@@ -242,7 +242,7 @@ public abstract class P2P {
 	private static final int NUMBEROFPEERTHREADS = 10;
 
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 50;
+	private static final int DESIREDCONNECTIONS = 10;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;
@@ -283,13 +283,12 @@ public abstract class P2P {
 
 	private final ConcurrentLinkedQueue<ChangeRequest> selectorChanges = new ConcurrentLinkedQueue<ChangeRequest>();
 
-	private Selector selector;
+	private final Selector selector = Selector.open();
 	
-	private Executor peerThreads;
+	private final Executor peerThreads;
 	
-	public void start() throws IOException {
-		// NIO selector
-		selector = Selector.open();
+	public P2P () throws IOException
+	{
 		// create a pool of threads
 		peerThreads = Executors.newFixedThreadPool(NUMBEROFPEERTHREADS, new ThreadFactory() {
 			@Override
@@ -306,6 +305,9 @@ public abstract class P2P {
 				return peerThread;
 			}
 		});
+	}
+	
+	public void start() throws IOException {
 		// create a server channel for the chain's port, work non-blocking and
 		// wait for accept events
 		final ServerSocketChannel serverChannel = ServerSocketChannel.open();

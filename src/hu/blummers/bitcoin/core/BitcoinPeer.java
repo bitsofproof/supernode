@@ -27,11 +27,16 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class BitcoinPeer extends P2P.Peer {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinPeer.class);
 
+	private final TransactionTemplate transactionTemplate;
 	private BitcoinNetwork network;
+	
 	private String agent;
 	private long height;
 	private long peerVersion;
@@ -114,9 +119,10 @@ public class BitcoinPeer extends P2P.Peer {
 	
 	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
-	public BitcoinPeer(P2P p2p, InetSocketAddress address) {
+	public BitcoinPeer(P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address) {
 		p2p.super(address);
 		network = (BitcoinNetwork)p2p;
+		this.transactionTemplate = transactionTemplate;
 		
 		// this will be overwritten by the first version message we get
 		peerVersion = network.getChain().getVersion(); 
@@ -215,7 +221,7 @@ public class BitcoinPeer extends P2P.Peer {
 	@Override
 	public void onConnect() {
 		VersionMessage m = (VersionMessage) createMessage("version");
-		m.setHeight(network.getStore().getChainHeight());
+		m.setHeight(network.getChainHeight());
 		m.setPeer(getAddress().getAddress());
 		m.setRemotePort(getAddress().getPort());
 		send(m);
@@ -231,19 +237,25 @@ public class BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void receive(P2P.Message m) {
-		Message bm = (Message) m;
-		try {
-			bm.validate ();
-			
-			List<BitcoinMessageListener> classListener = listener.get(bm.getCommand());
-			if ( classListener != null )
-				for ( BitcoinMessageListener l : classListener )
-					l.process(bm, this);
-			
-		} catch (ValidationException e) {
-			log.error("Invalid message ", e);
-			disconnect ();
-		}
+		final BitcoinPeer self = this;
+		final Message bm = (Message) m;
+			transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+				@Override
+				protected void doInTransactionWithoutResult(TransactionStatus arg0) {
+					try {
+						bm.validate ();
+	
+						List<BitcoinMessageListener> classListener = listener.get(bm.getCommand());
+						if ( classListener != null )
+							for ( BitcoinMessageListener l : classListener )
+								l.process(bm, self);
+						
+					} catch (ValidationException e) {
+						log.error("Invalid message ", e);
+						disconnect ();
+					}
+				}
+			});
 	}
 	
 	public void addListener (String type, BitcoinMessageListener l)

@@ -11,9 +11,10 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import hu.blummers.bitcoin.core.BitcoinPeer.Message;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
@@ -23,14 +24,16 @@ import hu.blummers.bitcoin.messages.GetDataMessage;
 import hu.blummers.bitcoin.messages.InvMessage;
 import hu.blummers.bitcoin.model.JpaBlock;
 
-@Component("chainLoader")
 public class ChainLoader {
 	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
-
-	@Autowired
-	ChainStore store;
 	
-	@Autowired
+	public ChainLoader (PlatformTransactionManager transactionManager, BitcoinNetwork network, ChainStore store)
+	{
+		this.network = network;
+		this.store = store;
+	}
+
+	ChainStore store;
 	BitcoinNetwork network;
 
 	private Set<String> currentBatch = Collections.synchronizedSet(new HashSet<String>());
@@ -49,7 +52,6 @@ public class ChainLoader {
 		return stored;
 	}
 
-	@Transactional
 	private void getAnotherBatch(BitcoinPeer peer) {
 		GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
 		String headHash = network.getStore().getHeadHash();
@@ -57,6 +59,7 @@ public class ChainLoader {
 		
 		JpaBlock curr = store.get(headHash);
 		JpaBlock prev = curr.getPrevious();
+		
 		for (int i = 0; prev!=null && i < 9; ++i) {
 			gbm.getHashes().add(new Hash(headHash).toByteArray());
 			curr = prev;
@@ -77,7 +80,7 @@ public class ChainLoader {
 		peer.send(gbm);
 	}
 
-	private void getABlock(BitcoinPeer peer) {
+	private void getABlock(final BitcoinPeer peer) {
 		synchronized (currentBatch) {
 			if (!currentBatch.isEmpty()) {
 				GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
@@ -92,8 +95,7 @@ public class ChainLoader {
 		}
 	}
 
-	@Transactional
-	private void processBlock(BlockMessage m, BitcoinPeer peer) {
+	private void processBlock(BlockMessage m, final BitcoinPeer peer) {
 		JpaBlock block = m.getBlock();
 		try {
 			block.validate();
@@ -125,8 +127,7 @@ public class ChainLoader {
 		}
 	}
 
-	@Transactional
-	private void processInv(InvMessage m, BitcoinPeer peer) {
+	private void processInv(final InvMessage m, final BitcoinPeer peer) {
 		if (!m.getBlockHashes().isEmpty()) {
 			try {
 				synchronized (currentBatch) {
@@ -161,7 +162,7 @@ public class ChainLoader {
 			});
 
 			network.runForAll(new BitcoinNetwork.PeerTask() {
-				public void run(BitcoinPeer peer) {
+				public void run(final BitcoinPeer peer) {
 					getAnotherBatch(peer);
 				}
 
