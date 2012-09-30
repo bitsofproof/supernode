@@ -3,7 +3,7 @@ package hu.blummers.bitcoin.messages;
 import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.WireFormat.Reader;
 import hu.blummers.bitcoin.core.WireFormat.Writer;
-import hu.blummers.bitcoin.jpa.JpaBlock;
+import hu.blummers.bitcoin.model.JpaBlock;
 
 
 public class BlockMessage extends BitcoinPeer.Message  {

@@ -1,5 +1,7 @@
-package hu.blummers.bitcoin.jpa;
+package hu.blummers.bitcoin.model;
 
+
+import java.io.Serializable;
 import java.util.List;
 
 import javax.persistence.Column;
@@ -13,7 +15,8 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name="blkhead")
-public class JpaChainHead {
+public class JpaHead implements Serializable{
+	private static final long serialVersionUID = 1L;
 	@Id
 	@GeneratedValue
 	private Long id;
@@ -22,7 +25,7 @@ public class JpaChainHead {
 	private int joinHeight;
 	
 	@ManyToOne(fetch=FetchType.LAZY,optional=true)
-	private JpaChainHead previous;
+	private JpaHead previous;
 	
 	@OneToMany(fetch=FetchType.LAZY, orphanRemoval=false)
 	private List <JpaBlock> blocks;
@@ -70,11 +73,11 @@ public class JpaChainHead {
 		this.joinHeight = joinHeight;
 	}
 
-	public JpaChainHead getPrevious() {
+	public JpaHead getPrevious() {
 		return previous;
 	}
 
-	public void setPrevious(JpaChainHead previous) {
+	public void setPrevious(JpaHead previous) {
 		this.previous = previous;
 	}
 
@@ -84,7 +87,6 @@ public class JpaChainHead {
 
 	public void setBlocks(List<JpaBlock> blocks) {
 		this.blocks = blocks;
-	}	
-	
-	
+	}
+
 }

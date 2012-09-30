@@ -6,130 +6,165 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import hu.blummers.bitcoin.core.BitcoinPeer.Message;
-import hu.blummers.bitcoin.jpa.JpaBlock;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.bitcoin.messages.BlockMessage;
 import hu.blummers.bitcoin.messages.GetBlocksMessage;
 import hu.blummers.bitcoin.messages.GetDataMessage;
 import hu.blummers.bitcoin.messages.InvMessage;
+import hu.blummers.bitcoin.model.JpaBlock;
 
-
+@Component("chainLoader")
 public class ChainLoader {
 	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
-	
-	private Map<String, JpaBlock> orphanes = Collections.synchronizedMap(new HashMap<String, JpaBlock>());
-	private Set<String> askedFor = Collections.synchronizedSet(new HashSet<String> ());
 
+	@Autowired
 	ChainStore store;
+	
+	@Autowired
 	BitcoinNetwork network;
 
-	public ChainLoader (BitcoinNetwork network, ChainStore store)
-	{
-		this.network = network;
-		this.store = store;
+	private Set<String> currentBatch = Collections.synchronizedSet(new HashSet<String>());
+	private Map<String, HashSet<JpaBlock>> pending = Collections.synchronizedMap(new HashMap<String, HashSet<JpaBlock>>());
+
+	private List<JpaBlock> storePending(String hash) throws ChainStoreException {
+		List<JpaBlock> stored = new ArrayList<JpaBlock>();
+		Set<JpaBlock> bs = pending.get(hash);
+		if (bs != null)
+			for (JpaBlock b : bs) {
+				store.store(b);
+				log.info("stored pending " + b.getHash());
+				stored.add(b);
+				stored.addAll(storePending(b.getHash()));
+			}
+		return stored;
 	}
-	
-	private List<JpaBlock> storeable (String h) throws ChainStoreException
-	{
-		List<JpaBlock> toStore = new ArrayList<JpaBlock> ();
-		for ( JpaBlock b : orphanes.values() )
+
+	@Transactional
+	private void getAnotherBatch(BitcoinPeer peer) {
+		GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
+		String headHash = network.getStore().getHeadHash();
+		gbm.getHashes().add(new Hash(headHash).toByteArray());
+		
+		JpaBlock curr = store.get(headHash);
+		JpaBlock prev = curr.getPrevious();
+		for (int i = 0; prev!=null && i < 9; ++i) {
+			gbm.getHashes().add(new Hash(headHash).toByteArray());
+			curr = prev;
+			prev = curr.getPrevious();
+		}
+		for (int step = 2; prev != null; step *= 2) {
+			for ( int i = 0; prev != null && i < step; ++i ) {
+				curr = prev;
+				prev = curr.getPrevious();
+			}
+			if ( prev != null )
+				gbm.getHashes().add(new Hash (prev.getHash()).toByteArray());
+		}
+		if ( !curr.getHash().equals(network.getChain().getGenesis().getHash()) )
 		{
-			if ( b.getPreviousHash().equals(h) )
-			{
-				toStore.add(b);
-				toStore.addAll(storeable (b.getHash()));
+			gbm.getHashes().add(new Hash (network.getChain().getGenesis().getHash()).toByteArray());
+		}
+		peer.send(gbm);
+	}
+
+	private void getABlock(BitcoinPeer peer) {
+		synchronized (currentBatch) {
+			if (!currentBatch.isEmpty()) {
+				GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
+				String pick = currentBatch.iterator().next();
+				currentBatch.remove(pick);
+
+				gdm.getBlocks().add(new Hash(pick).toByteArray());
+				peer.send(gdm);
+			} else {
+				getAnotherBatch(peer);
 			}
 		}
-		return toStore;
 	}
-	
-	public void start ()
-	{
+
+	@Transactional
+	private void processBlock(BlockMessage m, BitcoinPeer peer) {
+		JpaBlock block = m.getBlock();
 		try {
-			network.addListener("block", new BitcoinMessageListener (){
-				public void process(Message m, BitcoinPeer peer) {
-					BlockMessage bm = (BlockMessage)m;
-					try {
-						JpaBlock block = bm.getBlock();
-						block.validate();
-						askedFor.remove(block.getHash());
-						try {
-								if ( store.get(block.getPreviousHash()) != null )
-								{
-									if ( store.store(block) )
-									{
-										log.info("stored " + block.getHash());
-										synchronized ( orphanes )
-										{
-											for ( JpaBlock b : storeable (block.getHash()) )
-											{
-												log.info("flushing " + b.getHash ());
-												store.store (b);
-												orphanes.remove(b.getHash());
-											}
-										}
-									}
-								}
-								else
-								{
-									orphanes.put(block.getHash(), block);
-								}
-
-						} catch (ChainStoreException e) {
-							log.error("can not store block", e);
+			block.validate();
+			try {
+				synchronized (pending) {
+					if (store.get(block.getPreviousHash()) != null) {
+						if (store.get(block.getHash()) == null) {
+							store.store(block);
+							log.info("stored " + block.getHash());
+							List<JpaBlock> stored = storePending(block.getHash());
+							for (JpaBlock b : stored)
+								pending.remove(b);
 						}
-					} catch (ValidationException e) {
-						log.error("invalid block", e);
-					}
-				}});
-			
-			network.addListener ("inv", new BitcoinMessageListener (){
-				@Override
-				public void process(Message m, BitcoinPeer peer) {
-					InvMessage im = (InvMessage)m;
-					if ( !im.getBlockHashes().isEmpty() )
-					{
-						try {
-							GetDataMessage gdm = (GetDataMessage)peer.createMessage("getdata");
-							for ( byte [] h : im.getBlockHashes() )
-							{
-								String hash = new Hash (h).toString();
-								if ( !askedFor.contains(hash) && !orphanes.containsKey(hash) && store.get(hash) == null )
-								{
-									gdm.getBlocks().add(h);
-									askedFor.add(hash);
-								}
-							}
-							peer.send(gdm);
-							if ( im.getBlockHashes().size() > 100 )
-							{
-								GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
-								gbm.getHashes().add(im.getBlockHashes().get(im.getBlockHashes().size()-1));
-								peer.send(gbm);
-							}
-						} catch (Exception e) {
-							log.error("can not read store", e);
+					} else {
+						HashSet<JpaBlock> bs = pending.get(block.getPreviousHash());
+						if (bs == null) {
+							bs = new HashSet<JpaBlock>();
+							pending.put(block.getPreviousHash(), bs);
 						}
-					}
-				}});
-
-		
-			network.runForAll(new BitcoinNetwork.PeerTask() {
-				public void run(BitcoinPeer peer) {
-					GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");					
-					try {
-						gbm.getHashes().add(new Hash (network.getStore().getHeadHash()).toByteArray());
-						peer.send(gbm);
-					} catch (ChainStoreException e) {
-						log.error("can not start header download", e);
+						bs.add(block);
 					}
 				}
+				getABlock(peer);
+			} catch (ChainStoreException e) {
+				log.error("can not store block", e);
+			}
+		} catch (ValidationException e) {
+			log.error("invalid block", e);
+		}
+	}
+
+	@Transactional
+	private void processInv(InvMessage m, BitcoinPeer peer) {
+		if (!m.getBlockHashes().isEmpty()) {
+			try {
+				synchronized (currentBatch) {
+					for (byte[] h : m.getBlockHashes()) {
+						String hash = new Hash(h).toString();
+						if (!currentBatch.contains(hash) && store.get(hash) == null)
+							currentBatch.add(hash);
+					}
+				}
+				getABlock(peer);
+			} catch (Exception e) {
+				log.error("can not read store", e);
+			}
+		}
+	}
+
+	public void start() {
+		try {
+			network.addListener("block", new BitcoinMessageListener() {
+				public void process(Message m, BitcoinPeer peer) {
+					processBlock((BlockMessage)m, peer);
+				}
+
+			});
+
+			network.addListener("inv", new BitcoinMessageListener() {
+				@Override
+				public void process(Message m, BitcoinPeer peer) {
+					processInv((InvMessage)m, peer);
+				}
+
+			});
+
+			network.runForAll(new BitcoinNetwork.PeerTask() {
+				public void run(BitcoinPeer peer) {
+					getAnotherBatch(peer);
+				}
+
 			});
 		} catch (Exception e) {
 			log.error("Could not start chain loader", e);

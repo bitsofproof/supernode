@@ -215,22 +215,18 @@ public class BitcoinPeer extends P2P.Peer {
 	@Override
 	public void onConnect() {
 		VersionMessage m = (VersionMessage) createMessage("version");
-		try {
-			m.setHeight(network.getStore().get(network.getStore().getHeadHash()).getHeight());
-			m.setPeer(getAddress().getAddress());
-			m.setRemotePort(getAddress().getPort());
-			send(m);
-			final BitcoinPeer peer = this;
-			scheduler.schedule(new Runnable (){
-				@Override
-				public void run() {
-					if ( !network.isConnected(peer) )
-						peer.disconnect();
-					}
-				}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
-		} catch (ChainStoreException e) {
-			log.error("Error accessing chain store", e);
-		}
+		m.setHeight(network.getStore().getChainHeight());
+		m.setPeer(getAddress().getAddress());
+		m.setRemotePort(getAddress().getPort());
+		send(m);
+		final BitcoinPeer peer = this;
+		scheduler.schedule(new Runnable (){
+			@Override
+			public void run() {
+				if ( !network.isConnected(peer) )
+					peer.disconnect();
+				}
+			}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
 	}
 
 	@Override

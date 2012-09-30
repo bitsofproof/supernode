@@ -31,7 +31,7 @@
 		p:database="DERBY"
 	/>
 	
-	<bean id="dataSource" class="hu.blummers.bitcoin.jpa.PooledDatasource">
+	<bean id="dataSource" class="hu.blummers.bitcoin.model.PooledDatasource">
         <property name="dataSource" ref="derbyDataSource"/>  
 	</bean>
 	

@@ -1,10 +1,11 @@
-package hu.blummers.bitcoin.jpa;
+package hu.blummers.bitcoin.model;
 
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +15,6 @@ import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -23,12 +23,10 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 
-import com.mysema.query.jpa.impl.JPAQuery;
-
-
 @Entity
 @Table(name="blk")
-public class JpaBlock {
+public class JpaBlock implements Serializable {
+	private static final long serialVersionUID = 1L;
 
 	@Id	@GeneratedValue
 	private Long id;
@@ -40,7 +38,7 @@ public class JpaBlock {
 	
 	transient private String previousHash;
 
-	@ManyToOne(targetEntity=JpaBlock.class,optional=true)
+	@ManyToOne(targetEntity=JpaBlock.class,fetch=FetchType.LAZY,optional=true)
 	private JpaBlock previous;
 	
 	@Column(length=64,nullable=false)
@@ -53,7 +51,7 @@ public class JpaBlock {
 	private long nonce;
 	
 	@ManyToOne(optional=false,fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
-	private JpaChainHead head;
+	private JpaHead head;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
 	private List<JpaTransaction> transactions;
@@ -125,10 +123,10 @@ public class JpaBlock {
 		this.height = height;
 	}
 	
-	public JpaChainHead getHead() {
+	public JpaHead getHead() {
 		return head;
 	}
-	public void setHead(JpaChainHead head) {
+	public void setHead(JpaHead head) {
 		this.head = head;
 	}
 	

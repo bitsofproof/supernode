@@ -1,17 +1,17 @@
-package hu.blummers.bitcoin.jpa;
+package hu.blummers.bitcoin.model;
 
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -20,7 +20,8 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name="tx")
-public class JpaTransaction {
+public class JpaTransaction implements Serializable {
+	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue
@@ -162,9 +163,6 @@ public class JpaTransaction {
 	
 	public void validate (ChainStore store, boolean coinbase) throws ValidationException
 	{
-		for ( JpaTransactionOutput output : outputs )
-			output.validate (store);
-
 		if ( !coinbase )
 			for ( JpaTransactionInput input : inputs )
 				input.validate (store);

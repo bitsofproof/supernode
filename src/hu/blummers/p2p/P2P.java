@@ -255,10 +255,17 @@ public abstract class P2P {
 	
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	
-
-
-	private final int port;
-
+	private int port;
+	
+	public void setPort (int port)
+	{
+		this.port = port;
+	}
+	public int getPort ()
+	{
+		return port;
+	}
+	
 	private static class ChangeRequest {
 		public static final int REGISTER = 1;
 		public static final int CHANGEOPS = 2;
@@ -276,13 +283,14 @@ public abstract class P2P {
 
 	private final ConcurrentLinkedQueue<ChangeRequest> selectorChanges = new ConcurrentLinkedQueue<ChangeRequest>();
 
-	final Selector selector = Selector.open();
+	private Selector selector;
 	
-	private final Executor peerThreads;
+	private Executor peerThreads;
 	
-	public P2P (int port) throws IOException
-	{
-		this.port = port;
+	public void start() throws IOException {
+		// NIO selector
+		selector = Selector.open();
+		// create a pool of threads
 		peerThreads = Executors.newFixedThreadPool(NUMBEROFPEERTHREADS, new ThreadFactory() {
 			@Override
 			public Thread newThread(final Runnable r) {
@@ -298,10 +306,6 @@ public abstract class P2P {
 				return peerThread;
 			}
 		});
-	}
-
-	public void start() throws IOException {
-		// create a pool of threads
 		// create a server channel for the chain's port, work non-blocking and
 		// wait for accept events
 		final ServerSocketChannel serverChannel = ServerSocketChannel.open();

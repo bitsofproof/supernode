@@ -13,27 +13,27 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.messages.AddrMessage;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
 import hu.blummers.p2p.P2P;
 
+@Component("network")
 public class BitcoinNetwork extends P2P {
 	private static final Logger log = LoggerFactory.getLogger(BitcoinNetwork.class);
+	
+	@Autowired
 	private Chain chain;
+	
+	@Autowired
 	private ChainStore store;
 	
 	private Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
 	private Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
 	private List<PeerTask> registeredTasks = Collections.synchronizedList(new ArrayList<PeerTask> ());
-	
-	public BitcoinNetwork (Chain chain, ChainStore store) throws IOException
-	{
-		super (chain.getPort());
-		this.chain = chain;
-		this.store = store;
-	}
 	
 	@Override
 	public void start() throws IOException {

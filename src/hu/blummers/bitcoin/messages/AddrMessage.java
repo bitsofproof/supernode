@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import hu.blummers.bitcoin.core.BitcoinPeer;
-import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.ChainImpl;
 import hu.blummers.bitcoin.core.WireFormat;
 import hu.blummers.bitcoin.core.WireFormat.Address;
 import hu.blummers.bitcoin.core.WireFormat.Reader;

@@ -1,5 +1,6 @@
-package hu.blummers.bitcoin.jpa;
+package hu.blummers.bitcoin.model;
 
+import java.io.Serializable;
 import java.util.List;
 
 import hu.blummers.bitcoin.core.ChainStore;
@@ -11,7 +12,6 @@ import hu.blummers.bitcoin.core.WireFormat;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -20,12 +20,11 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-
-import com.mysema.query.jpa.impl.JPAQuery;
-
 @Entity
 @Table(name="txin")
-public class JpaTransactionInput {
+public class JpaTransactionInput implements Serializable {
+	private static final long serialVersionUID = 1L;
+
 	@Id
 	@GeneratedValue
 	private Long id;
@@ -41,7 +40,7 @@ public class JpaTransactionInput {
 	
 	private long sequence;	
 	
-	@Lob  @Basic(fetch=FetchType.LAZY)
+	@Lob  @Basic(fetch=FetchType.EAGER)
 	private byte [] script;
 	
 	public Long getId() {
@@ -134,12 +133,7 @@ public class JpaTransactionInput {
 	{
 		if ( sourceHash == null )
 			return;
-		List<JpaTransaction> tl;
-		try {
-			tl = store.getTransactions(sourceHash);
-		} catch (ChainStoreException e) {
-			throw new ValidationException ("Error retrieving source transaction '" + sourceHash +"'");
-		}
+		List<JpaTransaction> tl = store.getTransactions(sourceHash);
 		if ( tl.isEmpty() )
 			throw new ValidationException ("Transaction input refers to unknown transaction '" + sourceHash + "'");
 			
