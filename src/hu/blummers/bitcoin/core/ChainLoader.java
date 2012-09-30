@@ -65,7 +65,7 @@ public class ChainLoader {
 			curr = prev;
 			prev = curr.getPrevious();
 		}
-		for (int step = 2; prev != null; step *= 2) {
+		for (int step = 2; prev != null && step < 16; step *= 2) { // cut for performance
 			for ( int i = 0; prev != null && i < step; ++i ) {
 				curr = prev;
 				prev = curr.getPrevious();
@@ -116,22 +116,14 @@ public class ChainLoader {
 							storePending(block.getHash());
 						}
 					} else {
-						if ( pending.values().size() < 100 )
-						{
-							HashMap<String,JpaBlock> bs = pending.get(block.getPreviousHash());
-							if (bs == null) {
-								bs = new HashMap<String,JpaBlock>();
-								pending.put(block.getPreviousHash(), bs);
-							}
-							bs.put(block.getHash(), block);
-							inPending.add(block.getHash());
-							log.info("queueing block " + block.getHash() + " from " + peer.getAddress());
+						HashMap<String,JpaBlock> bs = pending.get(block.getPreviousHash());
+						if (bs == null) {
+							bs = new HashMap<String,JpaBlock>();
+							pending.put(block.getPreviousHash(), bs);
 						}
-						else
-						{
-							log.info("too many pending give up");
-							pending.clear();
-						}
+						bs.put(block.getHash(), block);
+						inPending.add(block.getHash());
+						log.trace("queueing block " + block.getHash() + " from " + peer.getAddress());
 					}
 				}
 				getABlock(peer);

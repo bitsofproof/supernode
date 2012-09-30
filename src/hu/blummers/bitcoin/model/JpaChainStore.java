@@ -33,7 +33,7 @@ public class JpaChainStore implements ChainStore {
 		JpaHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(0);
 		return h.getHash();
 	}
-
+	
 	@Override
 	public void resetStore(Chain chain) {
 		JpaBlock genesis = chain.getGenesis();	
