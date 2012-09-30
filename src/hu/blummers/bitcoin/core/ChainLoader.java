@@ -37,13 +37,13 @@ public class ChainLoader {
 	BitcoinNetwork network;
 
 	private Set<String> currentBatch = Collections.synchronizedSet(new HashSet<String>());
-	private Map<String, HashSet<JpaBlock>> pending = Collections.synchronizedMap(new HashMap<String, HashSet<JpaBlock>>());
+	private Map<String, HashMap<String,JpaBlock>> pending = Collections.synchronizedMap(new HashMap<String, HashMap<String,JpaBlock>>());
 
 	private List<JpaBlock> storePending(String hash) throws ChainStoreException {
 		List<JpaBlock> stored = new ArrayList<JpaBlock>();
-		Set<JpaBlock> bs = pending.get(hash);
+		HashMap<String,JpaBlock> bs = pending.get(hash);
 		if (bs != null)
-			for (JpaBlock b : bs) {
+			for (JpaBlock b : bs.values()) {
 				store.store(b);
 				log.info("stored pending " + b.getHash());
 				stored.add(b);
@@ -110,12 +110,12 @@ public class ChainLoader {
 								pending.remove(b);
 						}
 					} else {
-						HashSet<JpaBlock> bs = pending.get(block.getPreviousHash());
+						HashMap<String,JpaBlock> bs = pending.get(block.getPreviousHash());
 						if (bs == null) {
-							bs = new HashSet<JpaBlock>();
+							bs = new HashMap<String,JpaBlock>();
 							pending.put(block.getPreviousHash(), bs);
 						}
-						bs.add(block);
+						bs.put(block.getHash(), block);
 					}
 				}
 				getABlock(peer);
