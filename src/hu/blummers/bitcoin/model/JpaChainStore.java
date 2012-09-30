@@ -35,7 +35,7 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	@Override
-	public synchronized void resetStore(Chain chain) {
+	public void resetStore(Chain chain) {
 		JpaBlock genesis = chain.getGenesis();	
 		JpaHead h = new JpaHead();
 		h.setHash(chain.getGenesis().getHash());			
@@ -48,7 +48,7 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	@Override
-	public synchronized void store(JpaBlock newBlock) throws ChainStoreException {
+	public void store(JpaBlock newBlock) throws ChainStoreException {
 		try {
 			// find previous block
 			QJpaBlock block = QJpaBlock.jpaBlock;
@@ -118,7 +118,7 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	@Override
-	public synchronized void store(JpaTransaction transaction) {
+	public void store(JpaTransaction transaction) {
 		entityManager.persist(transaction);
 	}
 

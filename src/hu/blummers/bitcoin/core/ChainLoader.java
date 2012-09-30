@@ -1,9 +1,9 @@
 package hu.blummers.bitcoin.core;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +12,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import hu.blummers.bitcoin.core.BitcoinPeer.Message;
 import hu.blummers.bitcoin.messages.BitcoinMessageListener;
@@ -36,20 +33,23 @@ public class ChainLoader {
 	ChainStore store;
 	BitcoinNetwork network;
 
-	private Set<String> currentBatch = Collections.synchronizedSet(new HashSet<String>());
+	private List<String> currentBatch = Collections.synchronizedList(new LinkedList<String>());
 	private Map<String, HashMap<String,JpaBlock>> pending = Collections.synchronizedMap(new HashMap<String, HashMap<String,JpaBlock>>());
+	private Set<String> inPending = Collections.synchronizedSet(new HashSet<String>());
 
-	private List<JpaBlock> storePending(String hash) throws ChainStoreException {
-		List<JpaBlock> stored = new ArrayList<JpaBlock>();
+	// this is already synchronized on pending, factored out as recursive
+	private void storePending(String hash) throws ChainStoreException {
 		HashMap<String,JpaBlock> bs = pending.get(hash);
 		if (bs != null)
+		{
 			for (JpaBlock b : bs.values()) {
 				store.store(b);
+				inPending.remove(b.getHash());
 				log.info("stored pending " + b.getHash());
-				stored.add(b);
-				stored.addAll(storePending(b.getHash()));
+				storePending (b.getHash());
 			}
-		return stored;
+			pending.remove(hash);
+		}
 	}
 
 	private void getAnotherBatch(BitcoinPeer peer) {
@@ -78,21 +78,29 @@ public class ChainLoader {
 			gbm.getHashes().add(new Hash (network.getChain().getGenesis().getHash()).toByteArray());
 		}
 		peer.send(gbm);
+		log.info("asking for a batch of " + gbm.getHashes().size() + " from " + peer.getAddress());
 	}
 
 	private void getABlock(final BitcoinPeer peer) {
-		synchronized (currentBatch) {
 			if (!currentBatch.isEmpty()) {
-				GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
-				String pick = currentBatch.iterator().next();
-				currentBatch.remove(pick);
-
-				gdm.getBlocks().add(new Hash(pick).toByteArray());
-				peer.send(gdm);
+				GetDataMessage gdm = null;
+				synchronized (currentBatch) {
+					if ( !currentBatch.isEmpty() )
+					{
+						gdm = (GetDataMessage) peer.createMessage("getdata");
+						String pick = currentBatch.iterator().next();
+						currentBatch.remove(pick);
+						gdm.getBlocks().add(new Hash(pick).toByteArray());
+					}
+				}
+				if ( gdm != null )
+				{
+					peer.send(gdm);
+					log.info("asking for block " + new Hash(gdm.getBlocks().get(0)) + " from " + peer.getAddress());
+				}
 			} else {
 				getAnotherBatch(peer);
 			}
-		}
 	}
 
 	private void processBlock(BlockMessage m, final BitcoinPeer peer) {
@@ -105,17 +113,25 @@ public class ChainLoader {
 						if (store.get(block.getHash()) == null) {
 							store.store(block);
 							log.info("stored " + block.getHash());
-							List<JpaBlock> stored = storePending(block.getHash());
-							for (JpaBlock b : stored)
-								pending.remove(b);
+							storePending(block.getHash());
 						}
 					} else {
-						HashMap<String,JpaBlock> bs = pending.get(block.getPreviousHash());
-						if (bs == null) {
-							bs = new HashMap<String,JpaBlock>();
-							pending.put(block.getPreviousHash(), bs);
+						if ( pending.values().size() < 100 )
+						{
+							HashMap<String,JpaBlock> bs = pending.get(block.getPreviousHash());
+							if (bs == null) {
+								bs = new HashMap<String,JpaBlock>();
+								pending.put(block.getPreviousHash(), bs);
+							}
+							bs.put(block.getHash(), block);
+							inPending.add(block.getHash());
+							log.info("queueing block " + block.getHash() + " from " + peer.getAddress());
 						}
-						bs.put(block.getHash(), block);
+						else
+						{
+							log.info("too many pending give up");
+							pending.clear();
+						}
 					}
 				}
 				getABlock(peer);
@@ -130,11 +146,16 @@ public class ChainLoader {
 	private void processInv(final InvMessage m, final BitcoinPeer peer) {
 		if (!m.getBlockHashes().isEmpty()) {
 			try {
-				synchronized (currentBatch) {
-					for (byte[] h : m.getBlockHashes()) {
-						String hash = new Hash(h).toString();
-						if (!currentBatch.contains(hash) && store.get(hash) == null)
-							currentBatch.add(hash);
+				log.info("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
+				synchronized (pending) // avoid deadlock: using same order locks as in processBlock
+				{
+					synchronized (currentBatch) {
+						for (byte[] h : m.getBlockHashes()) {
+							String hash = new Hash(h).toString();
+							if (!currentBatch.contains(hash) && !inPending.contains(hash) && store.get(hash) == null)
+								currentBatch.add(hash);
+						}
+						log.info("makes current batch to " + currentBatch.size());
 					}
 				}
 				getABlock(peer);
