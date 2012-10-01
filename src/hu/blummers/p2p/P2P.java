@@ -266,6 +266,11 @@ public abstract class P2P {
 		return port;
 	}
 	
+	public ScheduledExecutorService getScheduler ()
+	{
+		return scheduler;
+	}
+	
 	private static class ChangeRequest {
 		public static final int REGISTER = 1;
 		public static final int CHANGEOPS = 2;

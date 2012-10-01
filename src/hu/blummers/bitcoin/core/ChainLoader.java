@@ -1,5 +1,6 @@
 package hu.blummers.bitcoin.core;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +35,10 @@ public class ChainLoader {
 	ChainStore store;
 	BitcoinNetwork network;
 
-	private List<String> currentBatch = Collections.synchronizedList(new LinkedList<String>());
+	private Map<String,HashSet<BitcoinPeer>> currentBatch = Collections.synchronizedMap(new HashMap<String,HashSet<BitcoinPeer>>());
 	private Map<String, HashMap<String,JpaBlock>> pending = Collections.synchronizedMap(new HashMap<String, HashMap<String,JpaBlock>>());
 	private Set<String> inPending = Collections.synchronizedSet(new HashSet<String>());
+	private List<String> sampleHashes = Collections.synchronizedList(new ArrayList<String> ());
 
 	// this is already synchronized on pending, factored out as recursive
 	private void storePending(String hash) throws ChainStoreException {
@@ -45,7 +48,7 @@ public class ChainLoader {
 			for (JpaBlock b : bs.values()) {
 				store.store(b);
 				inPending.remove(b.getHash());
-				log.info("stored pending " + b.getHash());
+				log.trace("stored pending " + b.getHash());
 				storePending (b.getHash());
 			}
 			pending.remove(hash);
@@ -54,28 +57,46 @@ public class ChainLoader {
 
 	private void getAnotherBatch(BitcoinPeer peer) {
 		GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
-		String headHash = network.getStore().getHeadHash();
-		gbm.getHashes().add(new Hash(headHash).toByteArray());
-		
-		JpaBlock curr = store.get(headHash);
-		JpaBlock prev = curr.getPrevious();
-		
-		for (int i = 0; prev!=null && i < 9; ++i) {
-			gbm.getHashes().add(new Hash(headHash).toByteArray());
-			curr = prev;
-			prev = curr.getPrevious();
-		}
-		for (int step = 2; prev != null && step < 16; step *= 2) { // cut for performance
-			for ( int i = 0; prev != null && i < step; ++i ) {
-				curr = prev;
-				prev = curr.getPrevious();
-			}
-			if ( prev != null )
-				gbm.getHashes().add(new Hash (prev.getHash()).toByteArray());
-		}
-		if ( !curr.getHash().equals(network.getChain().getGenesis().getHash()) )
+		synchronized ( sampleHashes )
 		{
-			gbm.getHashes().add(new Hash (network.getChain().getGenesis().getHash()).toByteArray());
+			if ( sampleHashes.isEmpty() )
+			{	
+				String headHash = network.getStore().getHeadHash();
+				gbm.getHashes().add(new Hash(headHash).toByteArray());
+				sampleHashes.add(headHash);
+				
+				JpaBlock curr = store.get(headHash);
+				JpaBlock prev = curr.getPrevious();
+				
+				for (int i = 0; prev!=null && i < 9; ++i) {
+					gbm.getHashes().add(new Hash(curr.getHash()).toByteArray());
+					sampleHashes.add(curr.getHash());
+					curr = prev;
+					prev = curr.getPrevious();
+				}
+				for (int step = 2; prev != null && step < 256; step *= 2) { // cut for performance
+					for ( int i = 0; prev != null && i < step; ++i ) {
+						curr = prev;
+						prev = curr.getPrevious();
+					}
+					if ( prev != null )
+					{
+						gbm.getHashes().add(new Hash (curr.getHash()).toByteArray());
+						sampleHashes.add(prev.getHash());
+					}
+				}
+				if ( !curr.getHash().equals(network.getChain().getGenesis().getHash()) )
+				{
+					String genesisHash = network.getChain().getGenesis().getHash();
+					gbm.getHashes().add(new Hash (genesisHash).toByteArray());
+					sampleHashes.add(genesisHash);
+				}
+			}
+			else
+			{
+				for ( String s : sampleHashes )
+					gbm.getHashes().add(new Hash (s).toByteArray());
+			}
 		}
 		peer.send(gbm);
 		log.info("asking for a batch of " + gbm.getHashes().size() + " from " + peer.getAddress());
@@ -83,20 +104,28 @@ public class ChainLoader {
 
 	private void getABlock(final BitcoinPeer peer) {
 			if (!currentBatch.isEmpty()) {
-				GetDataMessage gdm = null;
+				GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
 				synchronized (currentBatch) {
 					if ( !currentBatch.isEmpty() )
 					{
-						gdm = (GetDataMessage) peer.createMessage("getdata");
-						String pick = currentBatch.iterator().next();
-						currentBatch.remove(pick);
-						gdm.getBlocks().add(new Hash(pick).toByteArray());
+						List<String> toRemove = new ArrayList<String> ();
+						for ( String pick : currentBatch.keySet() )
+						{
+							if ( currentBatch.get(pick).contains(peer) )
+							{
+								toRemove.add(pick);
+								gdm.getBlocks().add(new Hash(pick).toByteArray());
+								if ( gdm.getBlocks().size() >= 3 )
+									break;
+							}
+						}
+						for ( String s : toRemove )
+							currentBatch.remove(s);
 					}
 				}
-				if ( gdm != null )
+				if ( gdm.getBlocks().size() > 0 )
 				{
 					peer.send(gdm);
-					log.info("asking for block " + new Hash(gdm.getBlocks().get(0)) + " from " + peer.getAddress());
 				}
 			} else {
 				getAnotherBatch(peer);
@@ -112,7 +141,8 @@ public class ChainLoader {
 					if (store.get(block.getPreviousHash()) != null) {
 						if (store.get(block.getHash()) == null) {
 							store.store(block);
-							log.info("stored " + block.getHash());
+							sampleHashes.clear();
+							log.trace("stored " + block.getHash());
 							storePending(block.getHash());
 						}
 					} else {
@@ -138,16 +168,23 @@ public class ChainLoader {
 	private void processInv(final InvMessage m, final BitcoinPeer peer) {
 		if (!m.getBlockHashes().isEmpty()) {
 			try {
-				log.info("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
+				log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
 				synchronized (pending) // avoid deadlock: using same order locks as in processBlock
 				{
 					synchronized (currentBatch) {
 						for (byte[] h : m.getBlockHashes()) {
 							String hash = new Hash(h).toString();
-							if (!currentBatch.contains(hash) && !inPending.contains(hash) && store.get(hash) == null)
-								currentBatch.add(hash);
+							HashSet<BitcoinPeer> peersHaveThis;
+							if ( (peersHaveThis = currentBatch.get(hash)) != null )
+								peersHaveThis.add(peer);
+							else if ( !inPending.contains(hash) && store.get(hash) == null)
+							{
+								peersHaveThis = new HashSet<BitcoinPeer> ();
+								peersHaveThis.add(peer);
+								currentBatch.put(hash, peersHaveThis);
+							}
 						}
-						log.info("makes current batch to " + currentBatch.size());
+						log.trace("current block batch to load " + currentBatch.size());
 					}
 				}
 				getABlock(peer);
