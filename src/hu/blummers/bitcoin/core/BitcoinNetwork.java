@@ -43,6 +43,7 @@ public class BitcoinNetwork extends P2P {
 	private Map<BitcoinMessageListener, ArrayList<String>> listener = Collections.synchronizedMap(new HashMap<BitcoinMessageListener, ArrayList<String>> ());
 	private Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
 	private List<PeerTask> registeredTasks = Collections.synchronizedList(new ArrayList<PeerTask> ());
+	private List<BitcoinPeerListener> peerListener = Collections.synchronizedList(new ArrayList<BitcoinPeerListener> ());
 	
 	@Override
 	public void start() throws IOException {
@@ -88,14 +89,27 @@ public class BitcoinNetwork extends P2P {
 		}
 	}
 	
-	public void removePeer (final BitcoinPeer peer)
+	public void notifyPeerRemoved (BitcoinPeer peer)
 	{
 		connectedPeers.remove(peer);
-		transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-			@Override
-			protected void doInTransactionWithoutResult(TransactionStatus arg0) {
-				store.removePeer (peer);
-			}});
+		for ( BitcoinPeerListener listener : peerListener )
+			listener.remove(peer);
+	}
+	
+	public void notifyPeerAdded (BitcoinPeer peer)
+	{
+		for ( BitcoinPeerListener listener : peerListener )
+			listener.add(peer);
+	}
+	
+	public void addPeerListener (BitcoinPeerListener listener)
+	{
+		peerListener.add(listener);
+	}
+	
+	public void removePeerListener (BitcoinPeerListener listener)
+	{
+		peerListener.remove(listener);
 	}
 	
 	public boolean isConnected (Peer peer)
@@ -189,11 +203,11 @@ public class BitcoinNetwork extends P2P {
 		return store;
 	}
 	
-	public int getChainHeight ()
+	public long getChainHeight ()
 	{
-		return transactionTemplate.execute(new TransactionCallback<Integer> (){
+		return transactionTemplate.execute(new TransactionCallback<Long> (){
 			@Override
-			public Integer doInTransaction(TransactionStatus arg0) {
+			public Long doInTransaction(TransactionStatus arg0) {
 				return store.getChainHeight();
 			}
 		});

@@ -7,13 +7,13 @@ import java.util.List;
 
 public interface ChainStore {
 	public void cache ();
-	public int getChainHeight ();
+	public long getChainHeight ();
 	public void resetStore (Chain chain);
 	public String getHeadHash ();	
-	public void store (JpaBlock block) throws ValidationException;	
+	public long store (JpaBlock block) throws ValidationException;	
 	public List<String> getLocator ();
 	public List<String> getRequests (BitcoinPeer peer);
-	public int getNumberOfPeersWorking ();
+	public int getNumberOfRequests (BitcoinPeer peer);
 	public void addInventory (String hash, BitcoinPeer peer);
 	public JpaBlock get (String hash);
 	public List<JpaTransaction> getTransactions (String hash);

@@ -38,6 +38,7 @@ public class JpaChainStore implements ChainStore {
 	@PersistenceContext
 	EntityManager entityManager;
 
+	private Head currentHead = null;
 	private Map<String, Head> heads = new HashMap<String, Head>();
 	private Map<String, Member> members = new HashMap<String, Member>();
 	private Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
@@ -59,12 +60,7 @@ public class JpaChainStore implements ChainStore {
 	public class Head {
 		private StoredMember last;
 		private double chainWork;
-
-		public Head(StoredMember last, double chainWork) {
-			super();
-			this.last = last;
-			this.chainWork = chainWork;
-		}
+		private long height;
 
 		public StoredMember getLast() {
 			return last;
@@ -73,6 +69,23 @@ public class JpaChainStore implements ChainStore {
 		public double getChainWork() {
 			return chainWork;
 		}
+
+		public long getHeight() {
+			return height;
+		}
+
+		public void setLast(StoredMember last) {
+			this.last = last;
+		}
+
+		public void setChainWork(double chainWork) {
+			this.chainWork = chainWork;
+		}
+
+		public void setHeight(long height) {
+			this.height = height;
+		}
+		
 	}
 
 	public class Member {
@@ -147,7 +160,13 @@ public class JpaChainStore implements ChainStore {
 		QJpaHead head = QJpaHead.jpaHead;
 		q = new JPAQuery(entityManager);
 		for (JpaHead h : q.from(head).list(head)) {
-			heads.put(h.getHash(), new Head((StoredMember) members.get(h.getHash()), h.getChainWork()));
+			Head sh = new Head();
+			sh.setChainWork(h.getChainWork());
+			sh.setHeight(h.getHeight());
+			sh.setLast((StoredMember)members.get(h.getHash()));
+			heads.put(h.getHash(), sh);
+			if ( currentHead == null || currentHead.getChainWork() < sh.getChainWork() )
+				currentHead = sh;
 		}
 	}
 	
@@ -173,12 +192,9 @@ public class JpaChainStore implements ChainStore {
 	
 	public synchronized List<String> getRequests (BitcoinPeer peer)
 	{
-		HashSet<String> requests;
-		if ( (requests = requestsByPeer.get(peer)) != null )
-			if ( !requests.isEmpty() )
-				return new ArrayList<String> ();
-		
-		requests = new HashSet<String> ();
+		HashSet<String> requests = requestsByPeer.get(peer);
+		if ( requests == null )
+			requests = new HashSet<String> ();
 		TreeSet<KnownMember> knownbyThisPeer = knownByPeer.get(peer);
 		ArrayList<String> result = new ArrayList<String> ();
 		if ( knownbyThisPeer != null )
@@ -195,11 +211,6 @@ public class JpaChainStore implements ChainStore {
 		return result;
 	}
 	
-	@Override
-	public synchronized int getNumberOfPeersWorking () {
-		return requestsByPeer.values().size();
-	}
-
 	public synchronized void removePeer (BitcoinPeer peer)
 	{
 		requestsByPeer.remove(peer);
@@ -213,13 +224,7 @@ public class JpaChainStore implements ChainStore {
 	public synchronized List<String> getLocator ()
 	{
 		List<String> locator = new ArrayList<String> ();
-		Head longest = null;
-		for ( Head h : heads.values() )
-		{
-			if ( longest == null || longest.getChainWork() < h.getChainWork() )
-				longest = h;
-		}
-		StoredMember curr = longest.getLast();
+		StoredMember curr = currentHead.getLast();
 		StoredMember prev = curr.getPrevious();
 		for ( int i =0, step = 1; prev != null;  ++i )
 		{
@@ -232,17 +237,28 @@ public class JpaChainStore implements ChainStore {
 			if ( i > 10 )
 				step *= 2;
 		}
-		if ( curr != longest.getLast() )
+		if ( curr != currentHead.getLast() )
 			locator.add(curr.getHash());
 		return locator;
 	}
 
 	@Override
-	public synchronized void store(JpaBlock b) throws ValidationException {
+	public synchronized long store(JpaBlock b) throws ValidationException {
+		
+		List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
+		for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
+		{
+			e.getValue().remove(b.getHash());
+			if ( e.getValue().size() == 0 )
+				finishedPeer.add(e.getKey ());
+		}
+		for ( BitcoinPeer p : finishedPeer )
+			requestsByPeer.remove(p);
+
 		
 		Member cached = members.get(b.getHash());
 		if (cached instanceof StoredMember)
-			return;
+			return currentHead.getHeight();
 
 		// find previous block
 		Member cachedPrevious = members.get(b.getPreviousHash());
@@ -253,24 +269,12 @@ public class JpaChainStore implements ChainStore {
 		}
 		if (prev != null) {
 			
-			List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-			for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
-			{
-				e.getValue().remove(b.getHash());
-				if ( e.getValue().size() == 0 )
-					finishedPeer.add(e.getKey ());
-			}
-			for ( BitcoinPeer p : finishedPeer )
-				requestsByPeer.remove(p);
-
-			
 			b.setPrevious(prev);
 			JpaHead head;
-			boolean oldhead = false;
+			Head usingHead = currentHead;
 			if (prev.getHead().getHash().equals(prev.getHash())) {
 				// continuing
 				head = prev.getHead();
-				oldhead = true;
 			} else {
 				// branching
 				head = new JpaHead();
@@ -278,14 +282,21 @@ public class JpaChainStore implements ChainStore {
 				head.setHeight(prev.getHeight());
 				head.setChainWork(prev.getChainWork());
 				head.setPrevious(prev.getHead());
+				heads.put(b.getHash(), usingHead = new Head ());
 			}
 			head.setHash(b.getHash());
 			head.setHeight(head.getHeight() + 1);
 			head.setChainWork(head.getChainWork() + b.getDifficulty());
-
+			if ( head.getChainWork() > currentHead.getChainWork() )
+			{
+				currentHead = usingHead;
+			}
+			
 			b.setHead(head);
 			b.setHeight(head.getHeight());
 			b.setChainWork(head.getChainWork());
+			usingHead.setChainWork(head.getChainWork());
+			usingHead.setHeight(head.getHeight());
 
 			boolean coinbase = true;
 			for (JpaTransaction t : b.getTransactions()) {
@@ -298,6 +309,7 @@ public class JpaChainStore implements ChainStore {
 			entityManager.persist(b);
 
 			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
+			usingHead.setLast(m);
 			
 			KnownMember kn = (KnownMember)members.get(b.getHash());
 			if ( kn != null )
@@ -309,21 +321,14 @@ public class JpaChainStore implements ChainStore {
 			}
 			members.put(b.getHash(), m);
 
-			if (oldhead)
-				heads.remove(prev.getHash());
-			heads.put(b.getHash(), new Head(m, head.getChainWork()));
-			
 			log.trace("stored block " + b.getHash());
 		}
+		return currentHead.getHeight();
 	}
 	
 	@Override
 	public String getHeadHash() {
-		QJpaHead head = QJpaHead.jpaHead;
-
-		JPAQuery q1 = new JPAQuery(entityManager);
-		JpaHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(0);
-		return h.getHash();
+		return currentHead.getLast().getHash();
 	}
 
 	@Override
@@ -354,12 +359,22 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	@Override
-	public int getChainHeight() {
-		QJpaHead head = QJpaHead.jpaHead;
+	public long getChainHeight() {
+		Head longest = null;
+		for ( Head h : heads.values() )
+		{
+			if ( longest == null || longest.getChainWork() < h.getChainWork() )
+				longest = h;
+		}
+		return longest.getHeight ();
+	}
 
-		JPAQuery q1 = new JPAQuery(entityManager);
-		JpaHead h = q1.from(head).orderBy(head.chainWork.desc()).limit(1).list(head).get(0);
-		return h.getHeight();
+	@Override
+	public synchronized int getNumberOfRequests(BitcoinPeer peer) {
+		HashSet<String> s = requestsByPeer.get(peer);
+		if ( s == null ) 
+			return 0;
+		return s.size();
 	}
 
 }

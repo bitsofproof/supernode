@@ -134,12 +134,13 @@ public class BitcoinPeer extends P2P.Peer {
 				height = v.getHeight();
 				peerVersion = v.getVersion();
 				peer.send (peer.createMessage("verack"));
+				network.addPeer(peer);
+				network.notifyPeerAdded(peer);
+				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " Open connections: " + getNetwork().getNumberOfConnections());
 			}});
 		
 		addListener("verack", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
-				network.addPeer(peer);
-				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " acknowledged. Open connections: " + getNetwork().getNumberOfConnections());
 			}});
 	}
 
@@ -171,7 +172,7 @@ public class BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void onDisconnect() {
-		network.removePeer(this);
+		network.notifyPeerRemoved(this);
 		log.info("Disconnected '" + getAgent () + "' at " + getAddress() + ". Open connections: " + getNetwork().getNumberOfConnections());
 	}
 
