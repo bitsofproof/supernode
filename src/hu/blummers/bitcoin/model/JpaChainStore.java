@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -20,15 +17,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.mysema.query.jpa.impl.JPAQuery;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.ChainStore;
@@ -50,7 +42,6 @@ public class JpaChainStore implements ChainStore {
 	private Map<String, Member> members = new HashMap<String, Member>();
 	private Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
 	private Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
-	private Map<String, HashSet<OrphanMember>> pendingOn = new HashMap<String, HashSet<OrphanMember>>();
 
 	private Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> (){
 		@Override
@@ -64,8 +55,6 @@ public class JpaChainStore implements ChainStore {
 	
 	@Autowired
 	PlatformTransactionManager transactionManager;
-
-	private Executor orphanFlusher = Executors.newFixedThreadPool(1);
 
 	public class Head {
 		private StoredMember last;
@@ -120,23 +109,6 @@ public class JpaChainStore implements ChainStore {
 
 		public StoredMember getPrevious() {
 			return previous;
-		}
-	}
-
-	public class OrphanMember extends Member {
-		protected JpaBlock block;
-
-		public OrphanMember(String hash, JpaBlock block) {
-			super(hash);
-			this.block = block;
-		}
-
-		public JpaBlock getBlock() {
-			return block;
-		}
-
-		public void setBlock(JpaBlock block) {
-			this.block = block;
 		}
 	}
 
@@ -231,6 +203,10 @@ public class JpaChainStore implements ChainStore {
 	public synchronized void removePeer (BitcoinPeer peer)
 	{
 		requestsByPeer.remove(peer);
+		TreeSet<KnownMember> ms = knownByPeer.get(peer);
+		if ( ms != null )
+			for ( KnownMember m : ms )
+				m.getKnownBy().remove(peer);
 		knownByPeer.remove(peer);
 	}
 	
@@ -264,16 +240,6 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public synchronized void store(JpaBlock b) throws ValidationException {
 		
-		List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-		for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
-		{
-			e.getValue().remove(b.getHash());
-			if ( e.getValue().size() == 0 )
-				finishedPeer.add(e.getKey ());
-		}
-		for ( BitcoinPeer p : finishedPeer )
-			requestsByPeer.remove(p);
-
 		Member cached = members.get(b.getHash());
 		if (cached instanceof StoredMember)
 			return;
@@ -285,27 +251,19 @@ public class JpaChainStore implements ChainStore {
 		{
 			prev = entityManager.find(JpaBlock.class, ((StoredMember) cachedPrevious).getId());
 		}
-		if (prev == null) {
-			if (cached instanceof OrphanMember)
-				return;
+		if (prev != null) {
+			
+			List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
+			for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
+			{
+				e.getValue().remove(b.getHash());
+				if ( e.getValue().size() == 0 )
+					finishedPeer.add(e.getKey ());
+			}
+			for ( BitcoinPeer p : finishedPeer )
+				requestsByPeer.remove(p);
 
-			if ( cached != null )
-			{
-				KnownMember kn = (KnownMember)cached;
-				for ( BitcoinPeer peer : kn.getKnownBy() )
-					knownByPeer.get(peer).remove(kn);
-			}
-			OrphanMember om;
-			members.put(b.getHash(), om = new OrphanMember(b.getHash(), b));
-			HashSet<OrphanMember> waiting = pendingOn.get(b.getPreviousHash());
-			if ( waiting == null )
-			{
-				waiting = new HashSet<OrphanMember> ();
-				pendingOn.put(b.getPreviousHash(), waiting);
-			}
-			waiting.add(om);
-			log.trace("storing orphan block "+ b.getHash() + " pending on " + b.getPreviousHash());
-		} else {
+			
 			b.setPrevious(prev);
 			JpaHead head;
 			boolean oldhead = false;
@@ -341,16 +299,12 @@ public class JpaChainStore implements ChainStore {
 
 			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
 			
-			Member member = members.get(b.getHash());
-			if ( member instanceof OrphanMember )
-				members.remove(b.getHash ());
-			else
+			KnownMember kn = (KnownMember)members.get(b.getHash());
+			if ( kn != null )
 			{
-				KnownMember kn;
-				if ( (kn = (KnownMember)members.get(b.getHash())) != null )
+				for ( BitcoinPeer peer : kn.getKnownBy() )
 				{
-					for ( BitcoinPeer peer : kn.getKnownBy() )
-						knownByPeer.get(peer).remove(kn);
+					knownByPeer.get(peer).remove(kn);
 				}
 			}
 			members.put(b.getHash(), m);
@@ -360,42 +314,9 @@ public class JpaChainStore implements ChainStore {
 			heads.put(b.getHash(), new Head(m, head.getChainWork()));
 			
 			log.trace("stored block " + b.getHash());
-
-			Set<OrphanMember> orphans;
-			if ((orphans = pendingOn.get(b.getHash())) != null) {
-				for (final OrphanMember o : orphans) {
-					try {
-						store(o.getBlock());
-					} catch (ValidationException e) {
-						log.error("rejected orphan block ", e);
-					}
-				}
-				pendingOn.remove(b.getHash());
-			}
-
 		}
 	}
 	
-	private synchronized void flushOrphans (final String hash)
-	{
-		new TransactionTemplate (transactionManager).execute(new TransactionCallbackWithoutResult() {
-			@Override
-			protected void doInTransactionWithoutResult(TransactionStatus status) {
-				Set<OrphanMember> orphans;
-				if ((orphans = pendingOn.get(hash)) != null) {
-					for (final OrphanMember o : orphans) {
-						try {
-							store(o.getBlock());
-						} catch (ValidationException e) {
-							log.error("rejected orphan block ", e);
-						}
-					}
-					pendingOn.remove(hash);
-				}
-			}
-		});
-	}
-
 	@Override
 	public String getHeadHash() {
 		QJpaHead head = QJpaHead.jpaHead;
