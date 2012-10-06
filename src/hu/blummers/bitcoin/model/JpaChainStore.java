@@ -318,16 +318,12 @@ public class JpaChainStore implements ChainStore {
 						else
 						{
 							QJpaTransaction tx = QJpaTransaction.jpaTransaction;
+							QJpaTransactionOutput txout = QJpaTransactionOutput.jpaTransactionOutput;
 							JPAQuery query = new JPAQuery(entityManager);
 							
-							List<JpaTransaction> transactions = query.from(tx).where(tx.hash.eq(i.getSourceHash())).
-											orderBy(tx.id.desc()).list(tx);
-							if ( !transactions.isEmpty() )
-							{ 
-								JpaTransaction transaction = transactions.iterator().next();
-								if ( i.getIx() < transaction.getOutputs().size() )
-									transactionOutput = transaction.getOutputs().get((int)i.getIx());
-							}
+							transactionOutput = query.from(txout).join(txout.transaction, tx)
+									.where(tx.hash.eq(i.getSourceHash()).and(txout.ix.eq(i.getIx()))).
+											orderBy(tx.id.desc()).limit(1).uniqueResult(txout);
 						}
 						if ( transactionOutput == null )
 							throw new ValidationException ("Transaction input refers to unknown output ");
