@@ -245,6 +245,16 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public synchronized long store(JpaBlock b) throws ValidationException {
 		
+		
+		Member cached = members.get(b.getHash());
+		if (cached instanceof StoredMember)
+			return currentHead.getHeight();
+
+		for ( TreeSet<KnownMember> k : knownByPeer.values () )
+		{
+			k.remove(cached);
+		}
+		
 		List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
 		for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
 		{
@@ -254,12 +264,7 @@ public class JpaChainStore implements ChainStore {
 		}
 		for ( BitcoinPeer p : finishedPeer )
 			requestsByPeer.remove(p);
-
 		
-		Member cached = members.get(b.getHash());
-		if (cached instanceof StoredMember)
-			return currentHead.getHeight();
-
 		// find previous block
 		Member cachedPrevious = members.get(b.getPreviousHash());
 		JpaBlock prev = null;
@@ -310,15 +315,6 @@ public class JpaChainStore implements ChainStore {
 
 			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
 			usingHead.setLast(m);
-			
-			KnownMember kn = (KnownMember)members.get(b.getHash());
-			if ( kn != null )
-			{
-				for ( BitcoinPeer peer : kn.getKnownBy() )
-				{
-					knownByPeer.get(peer).remove(kn);
-				}
-			}
 			members.put(b.getHash(), m);
 
 			log.trace("stored block " + b.getHash());

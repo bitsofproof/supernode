@@ -45,8 +45,8 @@ public class ChainLoader {
 				gbm.getHashes().add(new Hash(s).toByteArray());
 			peer.send(gbm);
 			waitingForInv.add(peer);
+			log.info("asking for known blocks from " + peer.getAddress());
 		}
-		log.info("asking for known blocks from " + peer.getAddress());
 	}
 
 	private void getBlocks(final BitcoinPeer peer) {
