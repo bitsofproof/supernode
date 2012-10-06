@@ -1,7 +1,5 @@
 package hu.blummers.bitcoin.model;
 
-import hu.blummers.bitcoin.core.ChainStore;
-import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import java.io.ByteArrayOutputStream;
@@ -159,13 +157,5 @@ public class JpaTransaction implements Serializable {
 		lockTime = reader.readUint32();
 		
 		hash = reader.hash(cursor, reader.getCursor() - cursor).toString();
-	}
-	
-	public void connect (ChainStore store, boolean coinbase) throws ValidationException
-	{
-		if ( !coinbase )
-			for ( JpaTransactionInput input : inputs )
-				input.connect (store);
-
 	}
 }

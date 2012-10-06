@@ -45,7 +45,7 @@ public class JpaTransactionOutput implements Serializable {
 
 	private long ix;
 	
-	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
+	@OneToOne(fetch=FetchType.LAZY,optional=true) 
 	private JpaTransactionInput sink;
 	
 	@Column(length=40,nullable=true)

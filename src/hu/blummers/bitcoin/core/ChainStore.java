@@ -16,6 +16,5 @@ public interface ChainStore {
 	public int getNumberOfRequests (BitcoinPeer peer);
 	public void addInventory (String hash, BitcoinPeer peer);
 	public JpaBlock get (String hash);
-	public List<JpaTransaction> getTransactions (String hash);
 	public void removePeer (BitcoinPeer peer);
 }

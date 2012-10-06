@@ -1,11 +1,8 @@
 package hu.blummers.bitcoin.model;
 
 import java.io.Serializable;
-import java.util.List;
 
-import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.Hash;
-import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
 
 import javax.persistence.Basic;
@@ -34,7 +31,7 @@ public class JpaTransactionInput implements Serializable {
 	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
 	private JpaTransaction transaction;
 	
-	@OneToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=true) 
+	@OneToOne(fetch=FetchType.LAZY,optional=true) 
 	private JpaTransactionOutput source;
 	
 	private long sequence;	
@@ -126,27 +123,5 @@ public class JpaTransactionInput implements Serializable {
 		source = null;
 		script = reader.readVarBytes();
 		sequence = reader.readUint32();
-	}
-	
-	public void connect (ChainStore store) throws ValidationException
-	{
-		if ( sourceHash == null )
-			return;
-		List<JpaTransaction> tl = store.getTransactions(sourceHash);
-		if ( tl.isEmpty() )
-			throw new ValidationException ("Transaction input refers to unknown transaction '" + sourceHash + "'");
-			
-		JpaTransaction latest = tl.get(tl.size()-1);
-		if ( latest.getOutputs().size() <= ix )
-		{
-			throw new ValidationException ("Transaction input refers to unknown output index "+ ix +" of transaction '" + sourceHash + "'");
-		}
-		JpaTransactionOutput prevout = latest.getOutputs().get((int)ix);
-		if ( prevout.getSink() != null )
-			throw new ValidationException ("Transaction input refers to spent output "+ ix +" of transaction '" + sourceHash + "'");
-		source = prevout;
-		source.setSink(this);
-		sourceHash = null;
-		
 	}
 }

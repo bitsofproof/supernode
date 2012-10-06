@@ -273,49 +273,99 @@ public class JpaChainStore implements ChainStore {
 			prev = entityManager.find(JpaBlock.class, ((StoredMember) cachedPrevious).getId());
 		}
 		if (prev != null) {
-			
 			b.setPrevious(prev);
+			b.setHead(prev.getHead());
+			boolean branching = false;
 			JpaHead head;
-			Head usingHead = currentHead;
 			if (prev.getHead().getHash().equals(prev.getHash())) {
 				// continuing
 				head = prev.getHead();
 			} else {
 				// branching
+				branching = true;
 				head = new JpaHead();
 				head.setJoinHeight(prev.getHeight());
 				head.setHeight(prev.getHeight());
 				head.setChainWork(prev.getChainWork());
 				head.setPrevious(prev.getHead());
-				heads.put(b.getHash(), usingHead = new Head ());
 			}
 			head.setHash(b.getHash());
 			head.setHeight(head.getHeight() + 1);
 			head.setChainWork(head.getChainWork() + b.getDifficulty());
+
+			boolean coinbase = true;
+			Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction> ();
+			for (JpaTransaction t : b.getTransactions()) {
+				t.calculateHash();
+				blockTransactions.put(t.getHash(), t);
+				if ( coinbase )
+				{
+					coinbase = false;
+					continue;
+				}
+
+				if ( t.getInputs () != null )
+				{
+					for ( JpaTransactionInput i : t.getInputs() )
+					{
+						JpaTransaction sourceTransaction;
+						JpaTransactionOutput transactionOutput = null;
+						if ( (sourceTransaction = blockTransactions.get(i.getSourceHash())) != null )
+						{
+							if ( i.getIx () < sourceTransaction.getOutputs().size () )
+								transactionOutput = sourceTransaction.getOutputs().get((int)i.getIx());
+						}
+						else
+						{
+							QJpaTransaction tx = QJpaTransaction.jpaTransaction;
+							JPAQuery query = new JPAQuery(entityManager);
+							
+							List<JpaTransaction> transactions = query.from(tx).where(tx.hash.eq(i.getSourceHash())).
+											orderBy(tx.id.desc()).list(tx);
+							if ( !transactions.isEmpty() )
+							{ 
+								JpaTransaction transaction = transactions.iterator().next();
+								if ( i.getIx() < transaction.getOutputs().size() )
+									transactionOutput = transaction.getOutputs().get((int)i.getIx());
+							}
+						}
+						if ( transactionOutput == null )
+							throw new ValidationException ("Transaction input refers to unknown output ");
+						i.setSource(transactionOutput);
+						if ( i.getSource().getSink() != null )
+							throw new ValidationException ("Double spending attempt");
+					}
+				}
+			}
+
+			entityManager.persist(b);
+
+			for (JpaTransaction t : b.getTransactions())
+				for ( JpaTransactionInput i : t.getInputs() )
+					if ( i.getSource() != null )
+					{
+						i.getSource().setSink(i);
+						entityManager.merge(i.getSource());
+					}
+			
+			
+			
+			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
+			members.put(b.getHash(), m);
+
+			Head usingHead = currentHead;
+			if ( branching )
+			{
+				heads.put(b.getHash(), usingHead = new Head ());
+			}
 			if ( head.getChainWork() > currentHead.getChainWork() )
 			{
 				currentHead = usingHead;
 			}
 			
-			b.setHead(head);
-			b.setHeight(head.getHeight());
-			b.setChainWork(head.getChainWork());
+			usingHead.setLast(m);
 			usingHead.setChainWork(head.getChainWork());
 			usingHead.setHeight(head.getHeight());
-
-			boolean coinbase = true;
-			for (JpaTransaction t : b.getTransactions()) {
-				t.connect(this, coinbase);
-				entityManager.persist(t);
-
-				coinbase = false;
-			}
-
-			entityManager.persist(b);
-
-			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
-			usingHead.setLast(m);
-			members.put(b.getHash(), m);
 
 			log.trace("stored block " + b.getHash());
 		}
@@ -345,13 +395,6 @@ public class JpaChainStore implements ChainStore {
 		JPAQuery query = new JPAQuery(entityManager);
 
 		return query.from(block).where(block.hash.eq(hash)).uniqueResult(block);
-	}
-
-	@Override
-	public List<JpaTransaction> getTransactions(String hash) {
-		QJpaTransaction tx = QJpaTransaction.jpaTransaction;
-		JPAQuery query = new JPAQuery(entityManager);
-		return query.from(tx).where(tx.hash.eq(hash)).list(tx);
 	}
 
 	@Override
