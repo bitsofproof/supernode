@@ -89,17 +89,27 @@ public class BitcoinNetwork extends P2P {
 		}
 	}
 	
-	public void notifyPeerRemoved (BitcoinPeer peer)
+	public void notifyPeerRemoved (final BitcoinPeer peer)
 	{
 		connectedPeers.remove(peer);
-		for ( BitcoinPeerListener listener : peerListener )
-			listener.remove(peer);
+		for ( final BitcoinPeerListener listener : peerListener )
+			transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+				@Override
+				protected void doInTransactionWithoutResult(TransactionStatus arg0) {
+					listener.remove(peer);
+				}
+			});
 	}
 	
-	public void notifyPeerAdded (BitcoinPeer peer)
+	public void notifyPeerAdded (final BitcoinPeer peer)
 	{
-		for ( BitcoinPeerListener listener : peerListener )
-			listener.add(peer);
+		for ( final BitcoinPeerListener listener : peerListener )
+			transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+				@Override
+				protected void doInTransactionWithoutResult(TransactionStatus arg0) {
+					listener.add(peer);
+				}
+			});
 	}
 	
 	public void addPeerListener (BitcoinPeerListener listener)
