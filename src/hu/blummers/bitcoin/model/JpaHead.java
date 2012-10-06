@@ -27,9 +27,6 @@ public class JpaHead implements Serializable{
 	@ManyToOne(fetch=FetchType.LAZY,optional=true)
 	private JpaHead previous;
 	
-	@OneToMany(fetch=FetchType.LAZY, orphanRemoval=false)
-	private List <JpaBlock> blocks;
-	
 	@Column(length=64)
 	private String hash;
 
@@ -80,13 +77,4 @@ public class JpaHead implements Serializable{
 	public void setPrevious(JpaHead previous) {
 		this.previous = previous;
 	}
-
-	public List<JpaBlock> getBlocks() {
-		return blocks;
-	}
-
-	public void setBlocks(List<JpaBlock> blocks) {
-		this.blocks = blocks;
-	}
-
 }

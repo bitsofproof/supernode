@@ -161,11 +161,11 @@ public class JpaTransaction implements Serializable {
 		hash = reader.hash(cursor, reader.getCursor() - cursor).toString();
 	}
 	
-	public void validate (ChainStore store, boolean coinbase) throws ValidationException
+	public void connect (ChainStore store, boolean coinbase) throws ValidationException
 	{
 		if ( !coinbase )
 			for ( JpaTransactionInput input : inputs )
-				input.validate (store);
+				input.connect (store);
 
 	}
 }

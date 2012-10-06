@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.List;
 
 import hu.blummers.bitcoin.core.ChainStore;
-import hu.blummers.bitcoin.core.ChainStoreException;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
@@ -129,7 +128,7 @@ public class JpaTransactionInput implements Serializable {
 		sequence = reader.readUint32();
 	}
 	
-	public void validate (ChainStore store) throws ValidationException
+	public void connect (ChainStore store) throws ValidationException
 	{
 		if ( sourceHash == null )
 			return;

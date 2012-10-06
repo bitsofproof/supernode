@@ -88,9 +88,14 @@ public class BitcoinNetwork extends P2P {
 		}
 	}
 	
-	public void removePeer (BitcoinPeer peer)
+	public void removePeer (final BitcoinPeer peer)
 	{
 		connectedPeers.remove(peer);
+		transactionTemplate.execute(new TransactionCallbackWithoutResult() {
+			@Override
+			protected void doInTransactionWithoutResult(TransactionStatus arg0) {
+				store.removePeer (peer);
+			}});
 	}
 	
 	public boolean isConnected (Peer peer)

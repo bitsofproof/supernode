@@ -239,7 +239,7 @@ public abstract class P2P {
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
 
 	// total number of threads deals with P2P
-	private static final int NUMBEROFPEERTHREADS = 20;
+	private static final int NUMBEROFPEERTHREADS = 10;
 
 	// number of connections we try to maintain
 	private static final int DESIREDCONNECTIONS = 50;
@@ -306,7 +306,6 @@ public abstract class P2P {
 				};
 				peerThread.setDaemon(true); // let VM exit if only these remain
 				peerThread.setName("Peer"); // name it for log
-				peerThread.setPriority(Math.max(Thread.currentThread().getPriority() - 1, Thread.MIN_PRIORITY));
 				return peerThread;
 			}
 		});
@@ -447,7 +446,6 @@ public abstract class P2P {
 				}
 			}
 		});
-		selectorThread.setPriority(Math.max(Thread.currentThread().getPriority() - 1, Thread.MIN_PRIORITY));
 		selectorThread.setDaemon(true);
 		selectorThread.setName("Peer selector");
 		selectorThread.start();
@@ -507,7 +505,6 @@ public abstract class P2P {
 				}
 			}
 		});
-		connector.setPriority(Math.max(Thread.currentThread().getPriority() - 1, Thread.MIN_PRIORITY));
 		connector.setDaemon(true);
 		connector.setName("Peer connector");
 		connector.start();
