@@ -256,9 +256,6 @@ public class JpaChainStore implements ChainStore {
 		
 		b.computeHash ();
 		
-		if ( b.getCreateTime() > System.currentTimeMillis()/1000 )
-			throw new ValidationException ("Future generation attempt or lagging system clock.");
-		
 		Member cached = members.get(b.getHash());
 		if (cached instanceof StoredMember)
 			return currentHead.getHeight();
@@ -286,6 +283,9 @@ public class JpaChainStore implements ChainStore {
 			prev = entityManager.find(JpaBlock.class, ((StoredMember) cachedPrevious).getId());
 		}
 		if (prev != null) {
+			if ( b.getCreateTime() > System.currentTimeMillis()/1000 )
+				throw new ValidationException ("Future generation attempt or lagging system clock.");
+			
 			b.setPrevious(prev);
 			boolean branching = false;
 			JpaHead head;
@@ -317,17 +317,19 @@ public class JpaChainStore implements ChainStore {
 			b.setChainWork(head.getChainWork());
 			if ( prev != null )
 			{
-				if ( b.getHeight() > 2016 && b.getHeight() % 2016 == 0 )
+				if ( b.getHeight() % 2016 == 0 )
 				{
 					StoredMember c = null;
 					StoredMember p = (StoredMember)cachedPrevious;
-					for ( int i = 0; i < 2016; ++i )
+					for ( int i = 0; i < 2015; ++i )
 					{
 						c = p;
 						p = c.getPrevious();
 					}
-					if (Difficulty.getNextTarget(b.getCreateTime() - p.getTime (), 
-								prev.getDifficultyTarget()) != b.getDifficultyTarget() )
+					
+					long next = Difficulty.getNextTarget(prev.getCreateTime() - p.getTime (), 
+							prev.getDifficultyTarget());
+					if (next != b.getDifficultyTarget() )
 					{
 						throw new ValidationException ("Difficulty does not match expectation");
 					}
@@ -426,7 +428,7 @@ public class JpaChainStore implements ChainStore {
 		JpaBlock genesis = chain.getGenesis();
 		JpaHead h = new JpaHead();
 		h.setLeaf(genesis.getHash());
-		h.setHeight(1);
+		h.setHeight(0);
 		h.setChainWork(Difficulty.getDifficulty(genesis.getDifficultyTarget()));
 		entityManager.persist(h);
 		genesis.setHead(h);

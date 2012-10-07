@@ -242,7 +242,7 @@ public abstract class P2P {
 	private static final int NUMBEROFPEERTHREADS = 5;
 
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 50;
+	private static final int DESIREDCONNECTIONS = 20;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;
