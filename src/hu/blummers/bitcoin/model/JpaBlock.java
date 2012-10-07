@@ -38,6 +38,8 @@ public class JpaBlock implements Serializable {
 	long version;
 	
 	transient private String previousHash;
+	transient private WireFormat.Reader wireTransactions;
+	transient private long nWireTransactions;
 
 	@ManyToOne(targetEntity=JpaBlock.class,fetch=FetchType.LAZY,optional=true)
 	private JpaBlock previous;
@@ -212,18 +214,28 @@ public class JpaBlock implements Serializable {
 		long nt = reader.readVarInt();
 		if ( nt > 0 )
 		{
-			transactions = new ArrayList<JpaTransaction> ();
-			for ( long i = 0; i < nt; ++i )
-			{
-				JpaTransaction t = new JpaTransaction ();
-				t.fromWire(reader);
-				transactions.add(t);
-			}
+			wireTransactions = reader;
+			nWireTransactions = nt;
 		}
 		else
 			transactions = null;
 		
 		hash = reader.hash(cursor, 80).toString(); 
+	}
+	
+	public void parseTransactions ()
+	{
+		if ( wireTransactions == null )
+			return;
+		
+		transactions = new ArrayList<JpaTransaction> ();
+		for ( long i = 0; i < nWireTransactions; ++i )
+		{
+			JpaTransaction t = new JpaTransaction ();
+			t.fromWire(wireTransactions);
+			transactions.add(t);
+		}
+		wireTransactions = null;
 	}
 	
 	public void computeHash ()

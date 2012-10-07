@@ -343,6 +343,7 @@ public class JpaChainStore implements ChainStore {
 			if ( new Hash(b.getHash()).toBigInteger().compareTo(Difficulty.getTarget(b.getDifficultyTarget())) > 0 )
 				throw new ValidationException ("Insufficuent proof of work for current difficulty");
 			
+			b.parseTransactions();
 			boolean coinbase = true;
 			Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction> ();
 			for (JpaTransaction t : b.getTransactions()) {
