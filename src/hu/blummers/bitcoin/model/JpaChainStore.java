@@ -326,9 +326,6 @@ public class JpaChainStore implements ChainStore {
 						c = p;
 						p = c.getPrevious();
 					}
-					System.out.println(b.getCreateTime());
-					System.out.println(p.getTime());
-					System.out.println(prev.getDifficultyTarget());
 					if (Difficulty.getNextTarget(b.getCreateTime() - p.getTime (), 
 								prev.getDifficultyTarget()) != b.getDifficultyTarget() )
 					{
