@@ -252,6 +252,7 @@ public class BitcoinPeer extends P2P.Peer {
 								l.process(bm, self);
 						
 					} catch (ValidationException e) {
+						arg0.setRollbackOnly();
 						log.error("Invalid message ", e);
 						disconnect ();
 					}

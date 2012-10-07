@@ -74,7 +74,7 @@ public class JpaTransactionOutput implements Serializable {
 		else
 		{
 			// old style
-			byte [] key = new byte [script [0]];
+			byte [] key = new byte [((int)script [0] & 0xff)];
 			System.arraycopy(script, 1, key, 0, script [0]);				
 			byte[] sha256;
 			try {

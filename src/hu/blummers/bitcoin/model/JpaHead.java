@@ -2,7 +2,6 @@ package hu.blummers.bitcoin.model;
 
 
 import java.io.Serializable;
-import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -10,7 +9,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 @Entity
@@ -22,21 +21,15 @@ public class JpaHead implements Serializable{
 	private Long id;
 	private double chainWork;
 	private int height;
-	private int joinHeight;
 	
 	@ManyToOne(fetch=FetchType.LAZY,optional=true)
 	private JpaHead previous;
 	
-	@Column(length=64)
-	private String hash;
-
-	public String getHash() {
-		return hash;
-	}
-
-	public void setHash(String hash) {
-		this.hash = hash;
-	}
+	@Column(length=64,nullable=false)
+	private String leaf;
+	
+	@Column(length=64,nullable=true)
+	private String trunk;
 
 	public Long getId() {
 		return id;
@@ -62,19 +55,27 @@ public class JpaHead implements Serializable{
 		this.height = height;
 	}
 
-	public int getJoinHeight() {
-		return joinHeight;
-	}
-
-	public void setJoinHeight(int joinHeight) {
-		this.joinHeight = joinHeight;
-	}
-
 	public JpaHead getPrevious() {
 		return previous;
 	}
 
 	public void setPrevious(JpaHead previous) {
 		this.previous = previous;
+	}
+
+	public String getLeaf() {
+		return leaf;
+	}
+
+	public void setLeaf(String leaf) {
+		this.leaf = leaf;
+	}
+
+	public String getTrunk() {
+		return trunk;
+	}
+
+	public void setTrunk(String trunk) {
+		this.trunk = trunk;
 	}
 }

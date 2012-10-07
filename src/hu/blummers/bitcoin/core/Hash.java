@@ -1,5 +1,6 @@
 package hu.blummers.bitcoin.core;
 
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -55,6 +56,14 @@ public class Hash {
 		byte [] copy = new byte [bytes.length];
 		System.arraycopy(bytes, 0, copy, 0, bytes.length);
 		return copy;
+	}
+	
+	public BigInteger toBigInteger ()
+	{
+		byte [] hashAsNumber = new byte [32];
+		System.arraycopy(bytes, 0, hashAsNumber, 0, 32);
+		reverse(hashAsNumber);
+		return new BigInteger (hashAsNumber);
 	}
 	
 	public String toString() {

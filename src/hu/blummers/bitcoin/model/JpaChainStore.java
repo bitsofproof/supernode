@@ -26,6 +26,7 @@ import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.Chain;
 import hu.blummers.bitcoin.core.Difficulty;
+import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.model.QJpaBlock;
 import hu.blummers.bitcoin.model.QJpaHead;
@@ -108,14 +109,16 @@ public class JpaChainStore implements ChainStore {
 	}
 
 	public class StoredMember extends Member {
-		public StoredMember(String hash, Long id, StoredMember previous) {
+		public StoredMember(String hash, Long id, StoredMember previous, long time) {
 			super(hash);
 			this.id = id;
 			this.previous = previous;
+			this.time = time;
 		}
 
 		protected Long id;
 		protected StoredMember previous;
+		protected long time;
 
 		public Long getId() {
 			return id;
@@ -124,6 +127,11 @@ public class JpaChainStore implements ChainStore {
 		public StoredMember getPrevious() {
 			return previous;
 		}
+
+		public long getTime() {
+			return time;
+		}
+
 	}
 
 	public class KnownMember extends Member {
@@ -152,9 +160,9 @@ public class JpaChainStore implements ChainStore {
 		JPAQuery q = new JPAQuery(entityManager);
 		for (JpaBlock b : q.from(block).list(block)) {
 			if ( b.getPrevious() != null )
-				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash())));
+				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime()));
 			else
-				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), null));	
+				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), null, b.getCreateTime()));	
 		}
 
 		log.trace("filling chain cache with heads");
@@ -164,8 +172,8 @@ public class JpaChainStore implements ChainStore {
 			Head sh = new Head();
 			sh.setChainWork(h.getChainWork());
 			sh.setHeight(h.getHeight());
-			sh.setLast((StoredMember)members.get(h.getHash()));
-			heads.put(h.getHash(), sh);
+			sh.setLast((StoredMember)members.get(h.getLeaf()));
+			heads.put(h.getLeaf(), sh);
 			if ( currentHead == null || currentHead.getChainWork() < sh.getChainWork() )
 				currentHead = sh;
 		}
@@ -246,6 +254,10 @@ public class JpaChainStore implements ChainStore {
 	@Override
 	public synchronized long store(JpaBlock b) throws ValidationException {
 		
+		b.computeHash ();
+		
+		if ( b.getCreateTime() > System.currentTimeMillis()/1000 )
+			throw new ValidationException ("Future generation attempt or lagging system clock.");
 		
 		Member cached = members.get(b.getHash());
 		if (cached instanceof StoredMember)
@@ -277,25 +289,61 @@ public class JpaChainStore implements ChainStore {
 			b.setPrevious(prev);
 			boolean branching = false;
 			JpaHead head;
-			if (prev.getHead().getHash().equals(prev.getHash())) {
+			if (prev.getHead().getLeaf ().equals(prev.getHash()) ) {
 				// continuing
 				head = prev.getHead();
+				
+				head.setLeaf(b.getHash());
+				head.setHeight(head.getHeight() + 1);
+				head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+				head = entityManager.merge(head);
 			} else {
 				// branching
 				branching = true;
 				head = new JpaHead();
-				head.setJoinHeight(prev.getHeight());
+				head.setTrunk(prev.getHash());
 				head.setHeight(prev.getHeight());
 				head.setChainWork(prev.getChainWork());
 				head.setPrevious(prev.getHead());
+
+				head.setLeaf(b.getHash());
+				head.setHeight(head.getHeight() + 1);
+				head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+				entityManager.persist(head);
 			}
-			head.setHash(b.getHash());
-			head.setHeight(head.getHeight() + 1);
-			head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+			
 			b.setHead(head);
 			b.setHeight(head.getHeight());
 			b.setChainWork(head.getChainWork());
-
+			if ( prev != null )
+			{
+				if ( b.getHeight() > 2016 && b.getHeight() % 2016 == 0 )
+				{
+					StoredMember c = null;
+					StoredMember p = (StoredMember)cachedPrevious;
+					for ( int i = 0; i < 2016; ++i )
+					{
+						c = p;
+						p = c.getPrevious();
+					}
+					System.out.println(b.getCreateTime());
+					System.out.println(p.getTime());
+					System.out.println(prev.getDifficultyTarget());
+					if (Difficulty.getNextTarget(b.getCreateTime() - p.getTime (), 
+								prev.getDifficultyTarget()) != b.getDifficultyTarget() )
+					{
+						throw new ValidationException ("Difficulty does not match expectation");
+					}
+				}
+				else
+				{
+					if ( b.getDifficultyTarget() != prev.getDifficultyTarget() )
+						throw new ValidationException ("Illegal attempt to change difficulty");
+				}
+			}
+			if ( new Hash(b.getHash()).toBigInteger().compareTo(Difficulty.getTarget(b.getDifficultyTarget())) > 0 )
+				throw new ValidationException ("Insufficuent proof of work for current difficulty");
+			
 			boolean coinbase = true;
 			Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction> ();
 			for (JpaTransaction t : b.getTransactions()) {
@@ -349,7 +397,7 @@ public class JpaChainStore implements ChainStore {
 			
 			
 			
-			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()));
+			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime());
 			members.put(b.getHash(), m);
 
 			Head usingHead = currentHead;
@@ -380,9 +428,10 @@ public class JpaChainStore implements ChainStore {
 	public void resetStore(Chain chain) {
 		JpaBlock genesis = chain.getGenesis();
 		JpaHead h = new JpaHead();
-		h.setHash(chain.getGenesis().getHash());
+		h.setLeaf(genesis.getHash());
 		h.setHeight(1);
 		h.setChainWork(Difficulty.getDifficulty(genesis.getDifficultyTarget()));
+		entityManager.persist(h);
 		genesis.setHead(h);
 		entityManager.persist(genesis);
 	}

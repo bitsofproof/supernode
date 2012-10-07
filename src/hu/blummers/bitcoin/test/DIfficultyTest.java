@@ -29,5 +29,6 @@ public class DIfficultyTest {
 	public void difficultyTest ()
 	{
 		assertTrue (getDifficulty (456101533L) == 1378.0);
+		assertTrue (getDifficulty (486604799L) == 1.0);
 	}
 }

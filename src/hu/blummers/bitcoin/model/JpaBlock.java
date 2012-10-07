@@ -51,7 +51,7 @@ public class JpaBlock implements Serializable {
 	private int height;
 	private long nonce;
 	
-	@ManyToOne(optional=false,fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH})
+	@ManyToOne(optional=false,fetch=FetchType.LAZY)
 	private JpaHead head;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
@@ -226,7 +226,7 @@ public class JpaBlock implements Serializable {
 		hash = reader.hash(cursor, 80).toString(); 
 	}
 	
-	public void validate () throws ValidationException
+	public void computeHash ()
 	{
 		if ( hash != null )
 			return;
@@ -248,20 +248,6 @@ public class JpaBlock implements Serializable {
 
 		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
 		
-		Hash h = reader.hash();
-		
-		byte [] hashAsNumber = new byte [32];
-		System.arraycopy(h.toByteArray(), 0, hashAsNumber, 0, 32);
-		for( int i = 0, j = hashAsNumber.length - 1; i < hashAsNumber.length / 2; i++, j-- ) {
-			hashAsNumber[ i ] ^= hashAsNumber[ j ];
-			hashAsNumber[ j ] ^= hashAsNumber[ i ];
-			hashAsNumber[ i ] ^= hashAsNumber[ j ];
-	    }
-
-		if ( new BigInteger (hashAsNumber).compareTo(Difficulty.getTarget(difficultyTarget)) > 0 )
-		{
-			throw new ValidationException ("Not sufficient proof of work");
-		}
-		hash = h.toString();		
+		hash = reader.hash().toString();
 	}
 }

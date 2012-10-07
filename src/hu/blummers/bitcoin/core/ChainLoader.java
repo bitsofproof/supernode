@@ -72,7 +72,6 @@ public class ChainLoader {
 	private void processBlock(BlockMessage m, final BitcoinPeer peer) {
 		JpaBlock block = m.getBlock();
 		try {
-			block.validate();
 			chainHeightStored = store.store(block);
 			if ( store.getNumberOfRequests(peer) == 0 )
 				getAnotherBatch (peer);
