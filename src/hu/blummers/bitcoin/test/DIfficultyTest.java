@@ -1,5 +1,7 @@
 package hu.blummers.bitcoin.test;
 
+import java.math.BigInteger;
+
 import org.junit.Test;
 import static hu.blummers.bitcoin.core.Difficulty.*;
 import static org.junit.Assert.*;
@@ -16,7 +18,9 @@ public class DIfficultyTest {
 	@Test
 	public void compactTargetTest ()
 	{
-		assertTrue (getCompactTarget (getTarget (454983370L))==454983370L); 
+		assertTrue (getCompactTarget (getTarget (454983370L))==454983370L);
+		assertTrue(getCompactTarget(
+				new BigInteger("ffff0000000000000000000000000000000000000000000000000000",16))==486604799L);
 	}
 	
 	@Test

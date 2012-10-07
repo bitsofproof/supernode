@@ -18,11 +18,11 @@ public class Difficulty {
 	
 	public static long getCompactTarget (BigInteger target)
 	{
-		int log2 = target.bitLength()-1;
+		int log2 = target.bitLength();
 		int s = (log2 / 8 + 1) * 8;
 
 		return (target.shiftRight(s - 24)).
-					add(new BigInteger (String.valueOf((s - 24)/8+3)).shiftLeft(24)).longValue();
+				or(new BigInteger (String.valueOf((s - 24)/8+3)).shiftLeft(24)).longValue();
 	}
 	
 	public static long getNextTarget (long periodLength, long currentTarget)
