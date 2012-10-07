@@ -69,36 +69,28 @@ public class ChainLoader {
 		}
 	}
 
-	private void processBlock(BlockMessage m, final BitcoinPeer peer) {
+	private void processBlock(BlockMessage m, final BitcoinPeer peer) throws ValidationException {
 		JpaBlock block = m.getBlock();
-		try {
-			chainHeightStored = store.store(block);
-			if ( store.getNumberOfRequests(peer) == 0 )
-				getAnotherBatch (peer);
-		} catch (ValidationException e) {
-			log.error("invalid block", e);
-		}
+		chainHeightStored = store.store(block);
+		if ( store.getNumberOfRequests(peer) == 0 )
+			getAnotherBatch (peer);
 	}
 
 	private void processInv(final InvMessage m, final BitcoinPeer peer) {
 		if (!m.getBlockHashes().isEmpty()) {
-			try {
-				waitingForInv.remove(peer);
-				log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
-				for (byte[] h : m.getBlockHashes()) {
-					store.addInventory(new Hash(h).toString(), peer);
-				}
-				getBlocks(peer);
-			} catch (Exception e) {
-				log.error("can not read store", e);
+			waitingForInv.remove(peer);
+			log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
+			for (byte[] h : m.getBlockHashes()) {
+				store.addInventory(new Hash(h).toString(), peer);
 			}
+			getBlocks(peer);
 		}
 	}
 
 	public void start() {
 		try {
 			network.addListener("block", new BitcoinMessageListener() {
-				public void process(Message m, BitcoinPeer peer) {
+				public void process(Message m, BitcoinPeer peer) throws ValidationException {
 					processBlock((BlockMessage) m, peer);
 				}
 
