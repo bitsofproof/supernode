@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Component
 public class Application {
@@ -32,6 +35,13 @@ public class Application {
 	
 	public void start (ApplicationContext context) throws IOException
 	{
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult() {
+			
+			@Override
+			protected void doInTransactionWithoutResult(TransactionStatus status) {
+		//		store.resetStore(chain);
+			}
+		});
 		this.context = context;
 		BitcoinNetwork network = new BitcoinNetwork (transactionManager, chain, store);
 		network.start();

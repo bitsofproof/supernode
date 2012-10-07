@@ -25,6 +25,7 @@ import com.mysema.query.jpa.impl.JPAQuery;
 import hu.blummers.bitcoin.core.BitcoinPeer;
 import hu.blummers.bitcoin.core.ChainStore;
 import hu.blummers.bitcoin.core.Chain;
+import hu.blummers.bitcoin.core.Difficulty;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.model.QJpaBlock;
 import hu.blummers.bitcoin.model.QJpaHead;
@@ -274,7 +275,6 @@ public class JpaChainStore implements ChainStore {
 		}
 		if (prev != null) {
 			b.setPrevious(prev);
-			b.setHead(prev.getHead());
 			boolean branching = false;
 			JpaHead head;
 			if (prev.getHead().getHash().equals(prev.getHash())) {
@@ -291,7 +291,10 @@ public class JpaChainStore implements ChainStore {
 			}
 			head.setHash(b.getHash());
 			head.setHeight(head.getHeight() + 1);
-			head.setChainWork(head.getChainWork() + b.getDifficulty());
+			head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+			b.setHead(head);
+			b.setHeight(head.getHeight());
+			b.setChainWork(head.getChainWork());
 
 			boolean coinbase = true;
 			Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction> ();
@@ -379,9 +382,9 @@ public class JpaChainStore implements ChainStore {
 		JpaHead h = new JpaHead();
 		h.setHash(chain.getGenesis().getHash());
 		h.setHeight(1);
-		h.setChainWork(genesis.getDifficulty());
+		h.setChainWork(Difficulty.getDifficulty(genesis.getDifficultyTarget()));
 		genesis.setHead(h);
-		entityManager.persist(chain.getGenesis());
+		entityManager.persist(genesis);
 	}
 
 	@Override

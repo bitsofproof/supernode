@@ -1,5 +1,6 @@
 package hu.blummers.bitcoin.model;
 
+import hu.blummers.bitcoin.core.Difficulty;
 import hu.blummers.bitcoin.core.Hash;
 import hu.blummers.bitcoin.core.ValidationException;
 import hu.blummers.bitcoin.core.WireFormat;
@@ -137,15 +138,6 @@ public class JpaBlock implements Serializable {
 		this.previousHash = previousHash;
 	}
 
-	public double getDifficulty ()
-	{
-		BigInteger mintarget = new BigInteger ("FFFF", 16);
-		mintarget = mintarget.shiftLeft(8 * (0x1d - 3));
-		BigInteger target = new BigInteger (new Long(difficultyTarget & 0x7fffffL).toString(), 10);
-		target = target.shiftLeft((int)(8 * ((difficultyTarget >>> 24)- 3)));
-		return mintarget.divide(target).doubleValue();
-	}
-	
 	private void computeMerkleRoot ()
 	{
 		if ( merkleRoot != null )
@@ -265,11 +257,8 @@ public class JpaBlock implements Serializable {
 			hashAsNumber[ j ] ^= hashAsNumber[ i ];
 			hashAsNumber[ i ] ^= hashAsNumber[ j ];
 	    }
-		
-		BigInteger target = new BigInteger (new Long(difficultyTarget & 0x7fffffL).toString(), 10);
-		target = target.shiftLeft((int)(8 * ((difficultyTarget >>> 24)- 3)));
 
-		if ( new BigInteger (hashAsNumber).compareTo(target) >= 0 )
+		if ( new BigInteger (hashAsNumber).compareTo(Difficulty.getTarget(difficultyTarget)) > 0 )
 		{
 			throw new ValidationException ("Not sufficient proof of work");
 		}

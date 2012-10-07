@@ -101,16 +101,4 @@ public class WireFormatTest {
 		}
 		return buf.toString();
 	}
-	
-	@Test
-	public void difficultyTest ()
-	{
-		long difficultyTarget = 0x1b0404cb;
-		BigInteger mintarget = new BigInteger ("FFFF", 16);
-		mintarget = mintarget.shiftLeft(8 * (0x1d - 3));
-		BigInteger target = new BigInteger (new Long(difficultyTarget & 0x7fffffL).toString(), 10);
-		target = target.shiftLeft((int)(8 * ((difficultyTarget >>> 24)- 3)));
-		assertTrue (mintarget.divide(target).doubleValue()==16307.0);
-	}
-	
 }

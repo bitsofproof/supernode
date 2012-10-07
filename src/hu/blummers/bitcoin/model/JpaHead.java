@@ -14,7 +14,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="blkhead")
+@Table(name="head")
 public class JpaHead implements Serializable{
 	private static final long serialVersionUID = 1L;
 	@Id
