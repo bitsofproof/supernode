@@ -76,6 +76,7 @@ public abstract class P2P {
 	public abstract class Peer {
 		private InetSocketAddress address;
 		private SocketChannel channel;
+		private Semaphore idle = new Semaphore (1);
 		
 		private LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
@@ -184,7 +185,8 @@ public abstract class P2P {
 					Message m = null;
 					try {
 						m = parse(readIn);
-					} catch (IOException e) {
+					}
+					catch (IOException e) {
 						disconnect();
 					}
 					try {
@@ -192,17 +194,28 @@ public abstract class P2P {
 							receive(m);
 							peerThreads.execute(this); // listen again
 						}
-					} catch (Exception e) {
-						logger.error("unhandled exception while processing a message ", e);
+					} 
+					catch (Exception e) {
+						logger.error("Unhandled exception in message processing", e);
+						disconnect();
 					}
 				}
 			});
 		}
 
 		public void send(Message m) {
-			writes.add(m.toByteArray());
-			selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
-			selector.wakeup();
+			try
+			{
+				idle.acquireUninterruptibly();
+				
+				writes.add(m.toByteArray());
+				selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
+				selector.wakeup();
+			}
+			finally
+			{
+				idle.release ();
+			}
 		}
 
 		public abstract Message parse(InputStream readIn) throws IOException;
@@ -242,7 +255,7 @@ public abstract class P2P {
 	private static final int NUMBEROFPEERTHREADS = 5;
 
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 20;
+	private static final int DESIREDCONNECTIONS = 10;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;

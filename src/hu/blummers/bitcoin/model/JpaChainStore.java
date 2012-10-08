@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -38,24 +39,26 @@ public class JpaChainStore implements ChainStore {
 	private static final Logger log = LoggerFactory.getLogger(JpaChainStore.class);
 
 	@PersistenceContext
-	EntityManager entityManager;
+	private EntityManager entityManager;
 
+	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	private Head currentHead = null;
 	private Map<String, Head> heads = new HashMap<String, Head>();
 	private Map<String, Member> members = new HashMap<String, Member>();
-	private Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
-	private Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
+	private Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>>();
+	private Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>>();
 
-	private Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> (){
+	private Comparator<KnownMember> incomingOrder = new Comparator<KnownMember>() {
 		@Override
 		public int compare(KnownMember arg0, KnownMember arg1) {
 			int diff = arg0.nr - arg1.nr;
-			if ( diff != 0 )
+			if (diff != 0)
 				return diff;
 			else
 				return arg0.equals(arg1) ? 0 : arg0.hashCode() - arg1.hashCode();
-		}};
-	
+		}
+	};
+
 	@Autowired
 	PlatformTransactionManager transactionManager;
 
@@ -87,7 +90,7 @@ public class JpaChainStore implements ChainStore {
 		public void setHeight(long height) {
 			this.height = height;
 		}
-		
+
 	}
 
 	public class Member {
@@ -159,10 +162,10 @@ public class JpaChainStore implements ChainStore {
 		QJpaBlock block = QJpaBlock.jpaBlock;
 		JPAQuery q = new JPAQuery(entityManager);
 		for (JpaBlock b : q.from(block).list(block)) {
-			if ( b.getPrevious() != null )
+			if (b.getPrevious() != null)
 				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime()));
 			else
-				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), null, b.getCreateTime()));	
+				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), null, b.getCreateTime()));
 		}
 
 		log.trace("filling chain cache with heads");
@@ -172,256 +175,261 @@ public class JpaChainStore implements ChainStore {
 			Head sh = new Head();
 			sh.setChainWork(h.getChainWork());
 			sh.setHeight(h.getHeight());
-			sh.setLast((StoredMember)members.get(h.getLeaf()));
+			sh.setLast((StoredMember) members.get(h.getLeaf()));
 			heads.put(h.getLeaf(), sh);
-			if ( currentHead == null || currentHead.getChainWork() < sh.getChainWork() )
+			if (currentHead == null || currentHead.getChainWork() < sh.getChainWork())
 				currentHead = sh;
 		}
 	}
-	
-	public synchronized void addInventory (String hash, BitcoinPeer peer)
-	{
-		Member cached = members.get(hash);
-		if ( cached == null )
-		{
-			HashSet<BitcoinPeer> peers = new HashSet<BitcoinPeer> ();
-			members.put(hash, cached = new KnownMember (hash, members.size(), peers));
-		}
-		if ( !(cached instanceof KnownMember) )
-			return;
-		((KnownMember)cached).getKnownBy().add(peer);
-		TreeSet<KnownMember> membersOfPeer = knownByPeer.get(peer);
-		if ( membersOfPeer == null )
-		{
-			membersOfPeer = new TreeSet<KnownMember> (incomingOrder);
-			knownByPeer.put(peer, membersOfPeer);
-		}
-		membersOfPeer.add((KnownMember)cached);
-	}
-	
-	public synchronized List<String> getRequests (BitcoinPeer peer)
-	{
-		HashSet<String> requests = requestsByPeer.get(peer);
-		if ( requests == null )
-			requests = new HashSet<String> ();
-		TreeSet<KnownMember> knownbyThisPeer = knownByPeer.get(peer);
-		ArrayList<String> result = new ArrayList<String> ();
-		if ( knownbyThisPeer != null )
-		{
-			for ( KnownMember kn : knownbyThisPeer )
-			{
-				requests.add(kn.getHash());
-				result.add(kn.getHash());
+
+	public void addInventory(List<String> hashes, BitcoinPeer peer) {
+		try {
+			lock.writeLock().lock();
+
+			long ms = System.currentTimeMillis();
+			for (String hash : hashes) {
+				Member cached = members.get(hash);
+				if (cached == null) {
+					HashSet<BitcoinPeer> peers = new HashSet<BitcoinPeer>();
+					members.put(hash, cached = new KnownMember(hash, members.size(), peers));
+				} else if (!(cached instanceof KnownMember))
+					return;
+				((KnownMember) cached).getKnownBy().add(peer);
+				TreeSet<KnownMember> membersOfPeer = knownByPeer.get(peer);
+				if (membersOfPeer == null) {
+					membersOfPeer = new TreeSet<KnownMember>(incomingOrder);
+					knownByPeer.put(peer, membersOfPeer);
+				}
+				membersOfPeer.add((KnownMember) cached);
 			}
-			requestsByPeer.put(peer, requests);
+		} finally {
+			lock.writeLock().unlock();
 		}
-		knownByPeer.get(peer).clear();
-		
-		return result;
 	}
-	
-	public synchronized void removePeer (BitcoinPeer peer)
-	{
-		requestsByPeer.remove(peer);
-		TreeSet<KnownMember> ms = knownByPeer.get(peer);
-		if ( ms != null )
-			for ( KnownMember m : ms )
-				m.getKnownBy().remove(peer);
-		knownByPeer.remove(peer);
-	}
-	
-	public synchronized List<String> getLocator ()
-	{
-		List<String> locator = new ArrayList<String> ();
-		StoredMember curr = currentHead.getLast();
-		StoredMember prev = curr.getPrevious();
-		for ( int i =0, step = 1; prev != null;  ++i )
-		{
-			locator.add(curr.getHash());
-			for ( int j =0; prev != null && j < step; ++j )
-			{
-				curr = prev;
-				prev = curr.getPrevious();
+
+	public synchronized List<String> getRequests(BitcoinPeer peer) {
+		try {
+			lock.writeLock().lock();
+			HashSet<String> requests = requestsByPeer.get(peer);
+			if (requests == null)
+				requests = new HashSet<String>();
+			TreeSet<KnownMember> knownbyThisPeer = knownByPeer.get(peer);
+			ArrayList<String> result = new ArrayList<String>();
+			if (knownbyThisPeer != null) {
+				for (KnownMember kn : knownbyThisPeer) {
+					requests.add(kn.getHash());
+					result.add(kn.getHash());
+				}
+				requestsByPeer.put(peer, requests);
+				knownbyThisPeer.clear();
 			}
-			if ( i > 10 )
-				step *= 2;
+
+			return result;
+		} finally {
+			lock.writeLock().unlock();
 		}
-		if ( curr != currentHead.getLast() )
-			locator.add(curr.getHash());
-		return locator;
+	}
+
+	public synchronized void removePeer(BitcoinPeer peer) {
+		try {
+			lock.writeLock().lock();
+
+			requestsByPeer.remove(peer);
+			TreeSet<KnownMember> ms = knownByPeer.get(peer);
+			if (ms != null)
+				for (KnownMember m : ms)
+					m.getKnownBy().remove(peer);
+			knownByPeer.remove(peer);
+		} finally {
+			lock.writeLock().unlock();
+		}
+	}
+
+	public synchronized List<String> getLocator() {
+		try {
+			lock.readLock().lock();
+
+			List<String> locator = new ArrayList<String>();
+			StoredMember curr = currentHead.getLast();
+			StoredMember prev = curr.getPrevious();
+			for (int i = 0, step = 1; prev != null; ++i) {
+				locator.add(curr.getHash());
+				for (int j = 0; prev != null && j < step; ++j) {
+					curr = prev;
+					prev = curr.getPrevious();
+				}
+				if (i > 10)
+					step *= 2;
+			}
+			if (curr != currentHead.getLast())
+				locator.add(curr.getHash());
+			return locator;
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 
 	@Override
 	public synchronized long store(JpaBlock b) throws ValidationException {
-		
-		b.computeHash ();
-		
-		Member cached = members.get(b.getHash());
-		if (cached instanceof StoredMember)
+
+		b.computeHash();
+
+		try {
+			lock.writeLock().lock();
+
+			Member cached = members.get(b.getHash());
+			if (cached instanceof StoredMember)
+				return currentHead.getHeight();
+
+			for (TreeSet<KnownMember> k : knownByPeer.values()) {
+				k.remove(cached);
+			}
+
+			List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer>();
+			for (Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet()) {
+				e.getValue().remove(b.getHash());
+				if (e.getValue().size() == 0)
+					finishedPeer.add(e.getKey());
+			}
+			for (BitcoinPeer p : finishedPeer)
+				requestsByPeer.remove(p);
+
+			// find previous block
+			Member cachedPrevious = members.get(b.getPreviousHash());
+			JpaBlock prev = null;
+			if (cachedPrevious instanceof StoredMember) {
+				prev = entityManager.find(JpaBlock.class, ((StoredMember) cachedPrevious).getId());
+			}
+			if (prev != null) {
+				if (b.getCreateTime() > System.currentTimeMillis() / 1000)
+					throw new ValidationException("Future generation attempt or lagging system clock.");
+
+				b.setPrevious(prev);
+				boolean branching = false;
+				JpaHead head;
+				if (prev.getHead().getLeaf().equals(prev.getHash())) {
+					// continuing
+					head = prev.getHead();
+
+					head.setLeaf(b.getHash());
+					head.setHeight(head.getHeight() + 1);
+					head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+					head = entityManager.merge(head);
+				} else {
+					// branching
+					branching = true;
+					head = new JpaHead();
+					head.setTrunk(prev.getHash());
+					head.setHeight(prev.getHeight());
+					head.setChainWork(prev.getChainWork());
+					head.setPrevious(prev.getHead());
+
+					head.setLeaf(b.getHash());
+					head.setHeight(head.getHeight() + 1);
+					head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
+					entityManager.persist(head);
+				}
+
+				b.setHead(head);
+				b.setHeight(head.getHeight());
+				b.setChainWork(head.getChainWork());
+				if (prev != null) {
+					if (b.getHeight() % 2016 == 0) {
+						StoredMember c = null;
+						StoredMember p = (StoredMember) cachedPrevious;
+						for (int i = 0; i < 2015; ++i) {
+							c = p;
+							p = c.getPrevious();
+						}
+
+						long next = Difficulty.getNextTarget(prev.getCreateTime() - p.getTime(), prev.getDifficultyTarget());
+						if (next != b.getDifficultyTarget()) {
+							throw new ValidationException("Difficulty does not match expectation");
+						}
+					} else {
+						if (b.getDifficultyTarget() != prev.getDifficultyTarget())
+							throw new ValidationException("Illegal attempt to change difficulty");
+					}
+				}
+				if (new Hash(b.getHash()).toBigInteger().compareTo(Difficulty.getTarget(b.getDifficultyTarget())) > 0)
+					throw new ValidationException("Insufficuent proof of work for current difficulty");
+
+				b.parseTransactions();
+				boolean coinbase = true;
+				Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction>();
+				for (JpaTransaction t : b.getTransactions()) {
+					t.calculateHash();
+					blockTransactions.put(t.getHash(), t);
+					if (coinbase) {
+						coinbase = false;
+						continue;
+					}
+
+					if (t.getInputs() != null) {
+						for (JpaTransactionInput i : t.getInputs()) {
+							JpaTransaction sourceTransaction;
+							JpaTransactionOutput transactionOutput = null;
+							if ((sourceTransaction = blockTransactions.get(i.getSourceHash())) != null) {
+								if (i.getIx() < sourceTransaction.getOutputs().size())
+									transactionOutput = sourceTransaction.getOutputs().get((int) i.getIx());
+							} else {
+								QJpaTransaction tx = QJpaTransaction.jpaTransaction;
+								QJpaTransactionOutput txout = QJpaTransactionOutput.jpaTransactionOutput;
+								JPAQuery query = new JPAQuery(entityManager);
+
+								transactionOutput = query.from(txout).join(txout.transaction, tx)
+										.where(tx.hash.eq(i.getSourceHash()).and(txout.ix.eq(i.getIx()))).orderBy(tx.id.desc()).limit(1).uniqueResult(txout);
+							}
+							if (transactionOutput == null)
+								throw new ValidationException("Transaction input refers to unknown output ");
+							i.setSource(transactionOutput);
+							if (i.getSource().getSink() != null)
+								throw new ValidationException("Double spending attempt");
+						}
+					}
+				}
+
+				entityManager.persist(b);
+
+				for (JpaTransaction t : b.getTransactions())
+					for (JpaTransactionInput i : t.getInputs())
+						if (i.getSource() != null) {
+							i.getSource().setSink(i);
+							entityManager.merge(i.getSource());
+						}
+
+				StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime());
+				members.put(b.getHash(), m);
+
+				Head usingHead = currentHead;
+				if (branching) {
+					heads.put(b.getHash(), usingHead = new Head());
+				}
+				if (head.getChainWork() > currentHead.getChainWork()) {
+					currentHead = usingHead;
+				}
+
+				usingHead.setLast(m);
+				usingHead.setChainWork(head.getChainWork());
+				usingHead.setHeight(head.getHeight());
+
+				log.trace("stored block " + b.getHash());
+			}
 			return currentHead.getHeight();
-
-		for ( TreeSet<KnownMember> k : knownByPeer.values () )
-		{
-			k.remove(cached);
+		} finally {
+			lock.writeLock().unlock();
 		}
-		
-		List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-		for ( Map.Entry<BitcoinPeer,HashSet<String>> e : requestsByPeer.entrySet() )
-		{
-			e.getValue().remove(b.getHash());
-			if ( e.getValue().size() == 0 )
-				finishedPeer.add(e.getKey ());
-		}
-		for ( BitcoinPeer p : finishedPeer )
-			requestsByPeer.remove(p);
-		
-		// find previous block
-		Member cachedPrevious = members.get(b.getPreviousHash());
-		JpaBlock prev = null;
-		if ( cachedPrevious instanceof StoredMember )
-		{
-			prev = entityManager.find(JpaBlock.class, ((StoredMember) cachedPrevious).getId());
-		}
-		if (prev != null) {
-			if ( b.getCreateTime() > System.currentTimeMillis()/1000 )
-				throw new ValidationException ("Future generation attempt or lagging system clock.");
-			
-			b.setPrevious(prev);
-			boolean branching = false;
-			JpaHead head;
-			if (prev.getHead().getLeaf ().equals(prev.getHash()) ) {
-				// continuing
-				head = prev.getHead();
-				
-				head.setLeaf(b.getHash());
-				head.setHeight(head.getHeight() + 1);
-				head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
-				head = entityManager.merge(head);
-			} else {
-				// branching
-				branching = true;
-				head = new JpaHead();
-				head.setTrunk(prev.getHash());
-				head.setHeight(prev.getHeight());
-				head.setChainWork(prev.getChainWork());
-				head.setPrevious(prev.getHead());
-
-				head.setLeaf(b.getHash());
-				head.setHeight(head.getHeight() + 1);
-				head.setChainWork(head.getChainWork() + Difficulty.getDifficulty(b.getDifficultyTarget()));
-				entityManager.persist(head);
-			}
-			
-			b.setHead(head);
-			b.setHeight(head.getHeight());
-			b.setChainWork(head.getChainWork());
-			if ( prev != null )
-			{
-				if ( b.getHeight() % 2016 == 0 )
-				{
-					StoredMember c = null;
-					StoredMember p = (StoredMember)cachedPrevious;
-					for ( int i = 0; i < 2015; ++i )
-					{
-						c = p;
-						p = c.getPrevious();
-					}
-					
-					long next = Difficulty.getNextTarget(prev.getCreateTime() - p.getTime (), 
-							prev.getDifficultyTarget());
-					if (next != b.getDifficultyTarget() )
-					{
-						throw new ValidationException ("Difficulty does not match expectation");
-					}
-				}
-				else
-				{
-					if ( b.getDifficultyTarget() != prev.getDifficultyTarget() )
-						throw new ValidationException ("Illegal attempt to change difficulty");
-				}
-			}
-			if ( new Hash(b.getHash()).toBigInteger().compareTo(Difficulty.getTarget(b.getDifficultyTarget())) > 0 )
-				throw new ValidationException ("Insufficuent proof of work for current difficulty");
-			
-			b.parseTransactions();
-			boolean coinbase = true;
-			Map<String, JpaTransaction> blockTransactions = new HashMap<String, JpaTransaction> ();
-			for (JpaTransaction t : b.getTransactions()) {
-				t.calculateHash();
-				blockTransactions.put(t.getHash(), t);
-				if ( coinbase )
-				{
-					coinbase = false;
-					continue;
-				}
-
-				if ( t.getInputs () != null )
-				{
-					for ( JpaTransactionInput i : t.getInputs() )
-					{
-						JpaTransaction sourceTransaction;
-						JpaTransactionOutput transactionOutput = null;
-						if ( (sourceTransaction = blockTransactions.get(i.getSourceHash())) != null )
-						{
-							if ( i.getIx () < sourceTransaction.getOutputs().size () )
-								transactionOutput = sourceTransaction.getOutputs().get((int)i.getIx());
-						}
-						else
-						{
-							QJpaTransaction tx = QJpaTransaction.jpaTransaction;
-							QJpaTransactionOutput txout = QJpaTransactionOutput.jpaTransactionOutput;
-							JPAQuery query = new JPAQuery(entityManager);
-							
-							transactionOutput = query.from(txout).join(txout.transaction, tx)
-									.where(tx.hash.eq(i.getSourceHash()).and(txout.ix.eq(i.getIx()))).
-											orderBy(tx.id.desc()).limit(1).uniqueResult(txout);
-						}
-						if ( transactionOutput == null )
-							throw new ValidationException ("Transaction input refers to unknown output ");
-						i.setSource(transactionOutput);
-						if ( i.getSource().getSink() != null )
-							throw new ValidationException ("Double spending attempt");
-					}
-				}
-			}
-
-			entityManager.persist(b);
-
-			for (JpaTransaction t : b.getTransactions())
-				for ( JpaTransactionInput i : t.getInputs() )
-					if ( i.getSource() != null )
-					{
-						i.getSource().setSink(i);
-						entityManager.merge(i.getSource());
-					}
-			
-			
-			
-			StoredMember m = new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime());
-			members.put(b.getHash(), m);
-
-			Head usingHead = currentHead;
-			if ( branching )
-			{
-				heads.put(b.getHash(), usingHead = new Head ());
-			}
-			if ( head.getChainWork() > currentHead.getChainWork() )
-			{
-				currentHead = usingHead;
-			}
-			
-			usingHead.setLast(m);
-			usingHead.setChainWork(head.getChainWork());
-			usingHead.setHeight(head.getHeight());
-
-			log.trace("stored block " + b.getHash());
-		}
-		return currentHead.getHeight();
 	}
-	
+
 	@Override
 	public String getHeadHash() {
-		return currentHead.getLast().getHash();
+		try {
+			lock.readLock().lock();
+
+			return currentHead.getLast().getHash();
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 
 	@Override
@@ -438,6 +446,18 @@ public class JpaChainStore implements ChainStore {
 
 	@Override
 	public JpaBlock get(String hash) {
+
+		Member cached = null;
+		try {
+			lock.readLock().lock();
+			cached = members.get(hash);
+		} finally {
+			lock.readLock().unlock();
+		}
+
+		if (cached instanceof StoredMember)
+			return entityManager.find(JpaBlock.class, ((StoredMember) cached).getId());
+
 		QJpaBlock block = QJpaBlock.jpaBlock;
 
 		JPAQuery query = new JPAQuery(entityManager);
@@ -447,21 +467,32 @@ public class JpaChainStore implements ChainStore {
 
 	@Override
 	public long getChainHeight() {
-		Head longest = null;
-		for ( Head h : heads.values() )
-		{
-			if ( longest == null || longest.getChainWork() < h.getChainWork() )
-				longest = h;
+		try {
+			lock.readLock().lock();
+			Head longest = null;
+			for (Head h : heads.values()) {
+				if (longest == null || longest.getChainWork() < h.getChainWork())
+					longest = h;
+			}
+			return longest.getHeight();
+		} finally {
+			lock.readLock().unlock();
 		}
-		return longest.getHeight ();
 	}
 
 	@Override
 	public synchronized int getNumberOfRequests(BitcoinPeer peer) {
-		HashSet<String> s = requestsByPeer.get(peer);
-		if ( s == null ) 
-			return 0;
-		return s.size();
+		try {
+			lock.readLock().lock();
+			HashSet<String> s = requestsByPeer.get(peer);
+			if (s == null)
+				return 0;
+			return s.size();
+		}
+		finally
+		{
+			lock.readLock().unlock();
+		}
 	}
 
 }

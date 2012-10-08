@@ -1,5 +1,6 @@
 package hu.blummers.bitcoin.core;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -80,9 +81,11 @@ public class ChainLoader {
 		if (!m.getBlockHashes().isEmpty()) {
 			waitingForInv.remove(peer);
 			log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
+			List<String> hashes = new ArrayList<String> ();
 			for (byte[] h : m.getBlockHashes()) {
-				store.addInventory(new Hash(h).toString(), peer);
+				hashes.add(new Hash(h).toString());
 			}
+			store.addInventory(hashes, peer);
 			getBlocks(peer);
 		}
 	}

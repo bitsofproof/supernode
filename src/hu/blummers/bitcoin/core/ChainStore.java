@@ -4,6 +4,7 @@ import hu.blummers.bitcoin.model.JpaBlock;
 import hu.blummers.bitcoin.model.JpaTransaction;
 
 import java.util.List;
+import java.util.Set;
 
 public interface ChainStore {
 	public void cache ();
@@ -14,7 +15,7 @@ public interface ChainStore {
 	public List<String> getLocator ();
 	public List<String> getRequests (BitcoinPeer peer);
 	public int getNumberOfRequests (BitcoinPeer peer);
-	public void addInventory (String hash, BitcoinPeer peer);
+	public void addInventory (List<String> hash, BitcoinPeer peer);
 	public JpaBlock get (String hash);
 	public void removePeer (BitcoinPeer peer);
 }

@@ -166,11 +166,6 @@ public class BitcoinPeer extends P2P.Peer {
 	}
 
 	@Override
-	public void send(final P2P.Message m) {
-		super.send(m);
-	}
-
-	@Override
 	public void onDisconnect() {
 		network.notifyPeerRemoved(this);
 		log.info("Disconnected '" + getAgent () + "' at " + getAddress() + ". Open connections: " + getNetwork().getNumberOfConnections());
