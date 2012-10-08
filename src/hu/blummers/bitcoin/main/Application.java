@@ -40,6 +40,7 @@ public class Application {
 			@Override
 			protected void doInTransactionWithoutResult(TransactionStatus status) {
 		//		store.resetStore(chain);
+				store.cache();
 			}
 		});
 		this.context = context;

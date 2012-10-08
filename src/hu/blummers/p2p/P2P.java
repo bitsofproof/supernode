@@ -60,13 +60,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class P2P {
-	private static final Logger logger = LoggerFactory.getLogger(P2P.class);
+	private static final Logger log = LoggerFactory.getLogger(P2P.class);
 	
 	public interface Message
 	{
@@ -76,7 +75,7 @@ public abstract class P2P {
 	public abstract class Peer {
 		private InetSocketAddress address;
 		private SocketChannel channel;
-		private Semaphore idle = new Semaphore (1);
+		private Semaphore writeable = new Semaphore (1);
 		
 		private LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
@@ -101,7 +100,9 @@ public abstract class P2P {
 					try {
 						buf = reads.poll(READTIMEOUT, TimeUnit.SECONDS);
 						if (buf == null)
+						{
 							return -1;
+						}
 					} catch (InterruptedException e) {
 						throw new IOException(e);
 					}
@@ -196,7 +197,7 @@ public abstract class P2P {
 						}
 					} 
 					catch (Exception e) {
-						logger.error("Unhandled exception in message processing", e);
+						log.error("Unhandled exception in message processing", e);
 						disconnect();
 					}
 				}
@@ -206,7 +207,7 @@ public abstract class P2P {
 		public void send(Message m) {
 			try
 			{
-				idle.acquireUninterruptibly();
+				writeable.acquireUninterruptibly();
 				
 				writes.add(m.toByteArray());
 				selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
@@ -214,7 +215,7 @@ public abstract class P2P {
 			}
 			finally
 			{
-				idle.release ();
+				writeable.release ();
 			}
 		}
 
@@ -338,6 +339,7 @@ public abstract class P2P {
 		Thread selectorThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
+				ByteBuffer readBuffer = ByteBuffer.allocate(1024*1024);
 				while (true) {
 					try {
 						ChangeRequest cr;
@@ -417,11 +419,11 @@ public abstract class P2P {
 									SocketChannel client = (SocketChannel) key.channel();
 									final Peer peer = connectedPeers.get(client);
 									if (peer != null) {
-										ByteBuffer b = ByteBuffer.allocate(8912);
 										try {
-											int len = client.read(b);
+											int len = client.read(readBuffer);
 											if (len > 0) {
-												peer.process(b, len);
+												peer.process(readBuffer, len);
+												readBuffer.clear();
 											}
 										} catch (IOException e) {
 											peer.disconnect();
@@ -450,11 +452,11 @@ public abstract class P2P {
 								}
 							} catch (CancelledKeyException e) {
 							} catch (Exception e) {
-								logger.error("Error processing a selector key", e);
+								log.error("Error processing a selector key", e);
 							}
 						}
 					} catch (Exception e) {
-						logger.error("Unhandled Exception in selector thread", e);
+						log.error("Unhandled Exception in selector thread", e);
 					}
 				}
 			}
@@ -491,7 +493,7 @@ public abstract class P2P {
 										if ( peer.channel.isConnectionPending() )
 											try {
 												// give up if not connected within CONNECTIONTIMEOUT
-												logger.info("Give up connect on " + peer.channel);
+												log.info("Give up connect on " + peer.channel);
 												peer.channel.close();
 												connectedPeers.remove(peer);
 											} catch (IOException e) {
@@ -502,18 +504,18 @@ public abstract class P2P {
 							{
 								if ( connectedPeers.size() < DESIREDCONNECTIONS )
 								{
-									logger.info("Need to discover new adresses.");
+									log.info("Need to discover new adresses.");
 									discover ();
 									if ( runqueue.size() == 0 )
 									{
-										logger.error("Can not find new adresses");
+										log.error("Can not find new adresses");
 										Thread.sleep(60*1000);
 									}
 								}
 							}
 						}
 					} catch (Exception e) {
-						logger.error("Unhandled exception in peer queue", e);
+						log.error("Unhandled exception in peer queue", e);
 					}
 				}
 			}

@@ -124,12 +124,6 @@ public class ChainLoader {
 						chainHeightSeen = peer.getHeight();
 				}
 				});
-
-			new TransactionTemplate (transactionManager).execute(new TransactionCallbackWithoutResult() {
-				@Override
-				protected void doInTransactionWithoutResult(TransactionStatus arg0) {
-					store.cache();
-				}});
 			network.runForAll(new BitcoinNetwork.PeerTask() {
 				public void run(final BitcoinPeer peer) {
 					getAnotherBatch(peer);
