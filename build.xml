@@ -1,5 +1,5 @@
  <!-- APT based code generation -->
-<project name="chainloader" default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="supernode" default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 	
     <property name="src.dir" location="src"/>
     <property name="build.dir" location="bin"/>
@@ -8,7 +8,7 @@
     <property name="dist.jar" location="${dist.dir}/${ant.project.name}.jar"/>
 	<property name="generated.dir" value="generated"/>
  
-	<property name="dist.main.class" value="hu.blummers.bitcoin.main.ChainDownloader"/>
+	<property name="dist.main.class" value="com.bitsofproof.supernode.main.Supernode"/>
 
 	<target name="generate" depends="retrieve">
 	    <javac srcdir="${src.dir}">
@@ -29,7 +29,7 @@
         <ivy:cachepath pathid="build.path"/> 
     </target>
 
-    <target name="compile" depends="retrieve">
+    <target name="compile" depends="retrieve, generate">
         <mkdir dir="${build.dir}"/>
         <javac srcdir="${src.dir}" destdir="${build.dir}" classpathref="build.path"/>
     </target>

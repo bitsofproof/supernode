@@ -2,12 +2,12 @@
 <classpath>
 	<classpathentry excluding="src/generated/" kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=supernode&amp;ivyXmlPath=ivy.xml&amp;confs=*"/>
 	<classpathentry kind="src" path="generated">
 		<attributes>
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/bitcoinj/bin" sourcepath="/bitcoinj/core/src/main/java"/>
-	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=bitipo&amp;ivyXmlPath=ivy.xml&amp;confs=*"/>
+	<classpathentry kind="lib" path="config"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
