@@ -46,7 +46,7 @@ public class ChainLoader {
 				gbm.getHashes().add(new Hash(s).toByteArray());
 			peer.send(gbm);
 			waitingForInv.add(peer);
-			log.info("asking for known blocks from " + peer.getAddress());
+			log.trace("asking for known blocks from " + peer.getAddress());
 		}
 	}
 
@@ -61,7 +61,7 @@ public class ChainLoader {
 			GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
 			for (String pick : requests)
 				gdm.getBlocks().add(new Hash(pick).toByteArray());
-			log.info("asking for blocks "+gdm.getBlocks().size()+" from " + peer.getAddress());
+			log.trace("asking for blocks "+gdm.getBlocks().size()+" from " + peer.getAddress());
 			peer.send(gdm);
 		}
 		else

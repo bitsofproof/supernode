@@ -1,21 +1,58 @@
  <!-- APT based code generation -->
-<project default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="chainloader" default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 	
-	<target name="generate">
-		<ivy:cachepath pathid="ivy.path" />
+    <property name="src.dir" location="src"/>
+    <property name="build.dir" location="bin"/>
+    <property name="lib.dir" location="lib/jars"/>
+    <property name="dist.dir" location="dist"/>
+    <property name="dist.jar" location="${dist.dir}/${ant.project.name}.jar"/>
+	<property name="generated.dir" value="generated"/>
+ 
+	<property name="dist.main.class" value="hu.blummers.bitcoin.main.ChainDownloader"/>
 
-		<property name="src" value="src"/>
-		<property name="generated" value="generated"/>
-		
-	    <javac srcdir="${src}">
+	<target name="generate" depends="retrieve">
+	    <javac srcdir="${src.dir}">
     		<classpath>
-	          <path refid="ivy.path" />
+	          <path refid="build.path" />
            </classpath>
 	      <compilerarg value="-proc:only"/>      
 	      <compilerarg value="-processor"/>
 	      <compilerarg value="com.mysema.query.apt.jpa.JPAAnnotationProcessor"/>
 	      <compilerarg value="-s"/>
-	      <compilerarg value="${generated}"/>
+	      <compilerarg value="${generated.dir}"/>
 	    </javac>
     </target>
+	
+
+    <target name="retrieve">
+        <ivy:resolve/>
+        <ivy:cachepath pathid="build.path"/> 
+    </target>
+
+    <target name="compile" depends="retrieve">
+        <mkdir dir="${build.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${build.dir}" classpathref="build.path"/>
+    </target>
+
+    <target name="dist">
+
+        <manifestclasspath property="jar.classpath" jarfile="${dist.jar}">
+            <classpath>
+            	<fileset dir="${lib.dir}" includes="*.jar"/>
+            </classpath>
+        </manifestclasspath>
+
+        <jar destfile="${dist.jar}" basedir="${build.dir}" >
+                <manifest>
+                    <attribute name="Main-Class" value="${dist.main.class}" />
+                    <attribute name="Class-Path" value="${jar.classpath}" />
+                </manifest>
+         </jar>
+    </target>
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+
 </project>

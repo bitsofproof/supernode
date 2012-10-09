@@ -253,10 +253,10 @@ public abstract class P2P {
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
 
 	// total number of threads deals with P2P
-	private static final int NUMBEROFPEERTHREADS = 5;
+	private static final int NUMBEROFPEERTHREADS = 10;
 
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 10;
+	private static final int DESIREDCONNECTIONS = 50;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;
