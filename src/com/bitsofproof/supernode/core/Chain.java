@@ -1,10 +1,10 @@
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.model.Block;
+import com.bitsofproof.supernode.model.Blk;
 
 public interface Chain {
 
-	public Block getGenesis();
+	public Blk getGenesis();
 
 	public long getMagic();
 

@@ -3,7 +3,7 @@ package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 
-import com.bitsofproof.supernode.model.Block;
+import com.bitsofproof.supernode.model.Blk;
 
 
 public abstract class ChainImpl implements Chain {
@@ -49,7 +49,7 @@ public abstract class ChainImpl implements Chain {
 		this.seedHosts = seedHosts;
 	}
 	
-	public abstract Block getGenesis ();
+	public abstract Blk getGenesis ();
 
 	/* (non-Javadoc)
 	 * @see hu.blummers.bitcoin.core.IFChain#getMagic()

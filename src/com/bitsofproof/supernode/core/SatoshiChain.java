@@ -7,10 +7,10 @@ import java.util.List;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.stereotype.Component;
 
-import com.bitsofproof.supernode.model.Block;
-import com.bitsofproof.supernode.model.Transaction;
-import com.bitsofproof.supernode.model.TransactionInput;
-import com.bitsofproof.supernode.model.TransactionOutput;
+import com.bitsofproof.supernode.model.Blk;
+import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 
 @Component("satoshiChain")
@@ -38,9 +38,9 @@ public class SatoshiChain extends ChainImpl {
 			);
 	}
 	
-	public Block getGenesis ()
+	public Blk getGenesis ()
 	{
-		Block block = new Block();
+		Blk block = new Blk();
 		
 		block.setChainWork(1);
 		block.setHeight(1);
@@ -51,15 +51,15 @@ public class SatoshiChain extends ChainImpl {
 		block.setNonce(2083236893);
 		block.setPrevious(null);
 
-		List<Transaction> transactions = new ArrayList<Transaction>();
+		List<Tx> transactions = new ArrayList<Tx>();
 		block.setTransactions(transactions);
-		Transaction t = new Transaction();
+		Tx t = new Tx();
 		transactions.add(t);
 		t.setVersion(1);
 		
-		List<TransactionInput> inputs = new ArrayList<TransactionInput>();
+		List<TxIn> inputs = new ArrayList<TxIn>();
 		t.setInputs(inputs);
-		TransactionInput input = new TransactionInput();
+		TxIn input = new TxIn();
 		input.setTransaction(t);
 		inputs.add(input);
 		input.setSource(null);
@@ -71,9 +71,9 @@ public class SatoshiChain extends ChainImpl {
                 		// text: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
                 		"5468652054696d65732030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73"));						
 		
-		List<TransactionOutput>outputs = new ArrayList<TransactionOutput>();
+		List<TxOut>outputs = new ArrayList<TxOut>();
 		t.setOutputs(outputs);
-		TransactionOutput output = new TransactionOutput();
+		TxOut output = new TxOut();
 		output.setTransaction(t);
 		outputs.add(output);
 		output.setValue(new BigInteger("5000000000", 10));

@@ -154,9 +154,9 @@ public class ChainStore  {
 
 	public void cache() {
 		log.trace("filling chain cache with stored blocks");
-		QBlock block = QBlock.block;
+		QBlk block = QBlk.blk;
 		JPAQuery q = new JPAQuery(entityManager);
-		for (Block b : q.from(block).list(block)) {
+		for (Blk b : q.from(block).list(block)) {
 			if (b.getPrevious() != null)
 				members.put(b.getHash(), new StoredMember(b.getHash(), b.getId(), (StoredMember) members.get(b.getPrevious().getHash()), b.getCreateTime()));
 			else
@@ -263,7 +263,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized long store(Block b) throws ValidationException {
+	public synchronized long store(Blk b) throws ValidationException {
 
 		b.computeHash();
 
@@ -289,9 +289,9 @@ public class ChainStore  {
 
 			// find previous block
 			Member cachedPrevious = members.get(b.getPreviousHash());
-			Block prev = null;
+			Blk prev = null;
 			if (cachedPrevious instanceof StoredMember) {
-				prev = entityManager.find(Block.class, ((StoredMember) cachedPrevious).getId());
+				prev = entityManager.find(Blk.class, ((StoredMember) cachedPrevious).getId());
 			}
 			if (prev != null) {
 				if (b.getCreateTime() > System.currentTimeMillis() / 1000)
@@ -349,8 +349,8 @@ public class ChainStore  {
 
 				b.parseTransactions();
 				boolean coinbase = true;
-				Map<String, Transaction> blockTransactions = new HashMap<String, Transaction>();
-				for (Transaction t : b.getTransactions()) {
+				Map<String, Tx> blockTransactions = new HashMap<String, Tx>();
+				for (Tx t : b.getTransactions()) {
 					t.calculateHash();
 					blockTransactions.put(t.getHash(), t);
 					if (coinbase) {
@@ -359,15 +359,15 @@ public class ChainStore  {
 					}
 
 					if (t.getInputs() != null) {
-						for (TransactionInput i : t.getInputs()) {
-							Transaction sourceTransaction;
-							TransactionOutput transactionOutput = null;
+						for (TxIn i : t.getInputs()) {
+							Tx sourceTransaction;
+							TxOut transactionOutput = null;
 							if ((sourceTransaction = blockTransactions.get(i.getSourceHash())) != null) {
 								if (i.getIx() < sourceTransaction.getOutputs().size())
 									transactionOutput = sourceTransaction.getOutputs().get((int) i.getIx());
 							} else {
-								QTransaction tx = QTransaction.transaction;
-								QTransactionOutput txout = QTransactionOutput.transactionOutput;
+								QTx tx = QTx.tx;
+								QTxOut txout = QTxOut.txOut;
 								JPAQuery query = new JPAQuery(entityManager);
 
 								transactionOutput = query.from(txout).join(txout.transaction, tx)
@@ -384,8 +384,8 @@ public class ChainStore  {
 
 				entityManager.persist(b);
 
-				for (Transaction t : b.getTransactions())
-					for (TransactionInput i : t.getInputs())
+				for (Tx t : b.getTransactions())
+					for (TxIn i : t.getInputs())
 						if (i.getSource() != null) {
 							i.getSource().setSink(i);
 							entityManager.merge(i.getSource());
@@ -425,7 +425,7 @@ public class ChainStore  {
 	}
 
 	public void resetStore(Chain chain) {
-		Block genesis = chain.getGenesis();
+		Blk genesis = chain.getGenesis();
 		Head h = new Head();
 		h.setLeaf(genesis.getHash());
 		h.setHeight(0);
@@ -435,7 +435,7 @@ public class ChainStore  {
 		entityManager.persist(genesis);
 	}
 
-	public Block get(String hash) {
+	public Blk get(String hash) {
 
 		Member cached = null;
 		try {
@@ -446,9 +446,9 @@ public class ChainStore  {
 		}
 
 		if (cached instanceof StoredMember)
-			return entityManager.find(Block.class, ((StoredMember) cached).getId());
+			return entityManager.find(Blk.class, ((StoredMember) cached).getId());
 
-		QBlock block = QBlock.block;
+		QBlk block = QBlk.blk;
 
 		JPAQuery query = new JPAQuery(entityManager);
 

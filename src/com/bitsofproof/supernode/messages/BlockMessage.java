@@ -3,7 +3,7 @@ package com.bitsofproof.supernode.messages;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
-import com.bitsofproof.supernode.model.Block;
+import com.bitsofproof.supernode.model.Blk;
 
 
 
@@ -13,13 +13,13 @@ public class BlockMessage extends BitcoinPeer.Message  {
 		bitcoinPeer.super("block");
 	}
 
-	private Block block = new Block ();
+	private Blk block = new Blk ();
 	
-	public Block getBlock() {
+	public Blk getBlock() {
 		return block;
 	}
 
-	public void setBlock(Block block) {
+	public void setBlock(Blk block) {
 		this.block = block;
 	}
 

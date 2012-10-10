@@ -18,7 +18,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table(name="txin")
-public class TransactionInput implements Serializable {
+public class TxIn implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
@@ -29,10 +29,10 @@ public class TransactionInput implements Serializable {
 	transient private long ix;
 	
 	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
-	private Transaction transaction;
+	private Tx transaction;
 	
 	@OneToOne(fetch=FetchType.LAZY,optional=true) 
-	private TransactionOutput source;
+	private TxOut source;
 	
 	private long sequence;	
 	
@@ -63,11 +63,11 @@ public class TransactionInput implements Serializable {
 		this.sourceHash = sourceHash;
 	}
 
-	public TransactionOutput getSource() {
+	public TxOut getSource() {
 		return source;
 	}
 
-	public void setSource(TransactionOutput source) {
+	public void setSource(TxOut source) {
 		this.source = source;
 	}
 
@@ -87,11 +87,11 @@ public class TransactionInput implements Serializable {
 		this.script = script;
 	}
 
-	public Transaction getTransaction() {
+	public Tx getTransaction() {
 		return transaction;
 	}
 
-	public void setTransaction(Transaction transaction) {
+	public void setTransaction(Tx transaction) {
 		this.transaction = transaction;
 	}
 

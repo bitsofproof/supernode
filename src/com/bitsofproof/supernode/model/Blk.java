@@ -24,7 +24,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table(name="blk")
-public class Block implements Serializable {
+public class Blk implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id	@GeneratedValue
@@ -39,8 +39,8 @@ public class Block implements Serializable {
 	transient private WireFormat.Reader wireTransactions;
 	transient private long nWireTransactions;
 
-	@ManyToOne(targetEntity=Block.class,fetch=FetchType.LAZY,optional=true)
-	private Block previous;
+	@ManyToOne(targetEntity=Blk.class,fetch=FetchType.LAZY,optional=true)
+	private Blk previous;
 	
 	@Column(length=64,nullable=false)
 	private String merkleRoot;
@@ -55,7 +55,7 @@ public class Block implements Serializable {
 	private Head head;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
-	private List<Transaction> transactions;
+	private List<Tx> transactions;
 
 	public Long getId() {
 		return id;
@@ -75,10 +75,10 @@ public class Block implements Serializable {
 	public void setVersion(long version) {
 		this.version = version;
 	}
-	public Block getPrevious() {
+	public Blk getPrevious() {
 		return previous;
 	}
-	public void setPrevious(Block previous) {
+	public void setPrevious(Blk previous) {
 		this.previous = previous;
 	}
 	public String getMerkleRoot() {
@@ -105,10 +105,10 @@ public class Block implements Serializable {
 	public void setNonce(long nonce) {
 		this.nonce = nonce;
 	}
-	public List<Transaction> getTransactions() {
+	public List<Tx> getTransactions() {
 		return transactions;
 	}
-	public void setTransactions(List<Transaction> transactions) {
+	public void setTransactions(List<Tx> transactions) {
 		this.transactions = transactions;
 	}
 	public double getChainWork() {
@@ -145,7 +145,7 @@ public class Block implements Serializable {
 		
         ArrayList<byte[]> tree = new ArrayList<byte[]>();
         // Start by adding all the hashes of the transactions as leaves of the tree.
-        for (Transaction t : transactions) {
+        for (Tx t : transactions) {
         	t.calculateHash();
             tree.add(new Hash (t.getHash()).toByteArray());
         }
@@ -190,7 +190,7 @@ public class Block implements Serializable {
 		if ( transactions != null )
 		{
 			writer.writeVarInt(transactions.size());
-			for ( Transaction t : transactions )
+			for ( Tx t : transactions )
 				t.toWire(writer);
 		}
 		else
@@ -226,10 +226,10 @@ public class Block implements Serializable {
 		if ( wireTransactions == null )
 			return;
 		
-		transactions = new ArrayList<Transaction> ();
+		transactions = new ArrayList<Tx> ();
 		for ( long i = 0; i < nWireTransactions; ++i )
 		{
-			Transaction t = new Transaction ();
+			Tx t = new Tx ();
 			t.fromWire(wireTransactions);
 			transactions.add(t);
 		}

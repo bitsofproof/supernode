@@ -19,7 +19,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table(name="tx")
-public class Transaction implements Serializable {
+public class Tx implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
@@ -35,10 +35,10 @@ public class Transaction implements Serializable {
 	private String hash;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
-	private List<TransactionInput> inputs;
+	private List<TxIn> inputs;
 	
 	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
-	private List<TransactionOutput> outputs;
+	private List<TxOut> outputs;
 
 	public Long getId() {
 		return id;
@@ -64,19 +64,19 @@ public class Transaction implements Serializable {
 		this.lockTime = lockTime;
 	}
 
-	public List<TransactionInput> getInputs() {
+	public List<TxIn> getInputs() {
 		return inputs;
 	}
 
-	public void setInputs(List<TransactionInput> inputs) {
+	public void setInputs(List<TxIn> inputs) {
 		this.inputs = inputs;
 	}
 
-	public List<TransactionOutput> getOutputs() {
+	public List<TxOut> getOutputs() {
 		return outputs;
 	}
 
-	public void setOutputs(List<TransactionOutput> outputs) {
+	public void setOutputs(List<TxOut> outputs) {
 		this.outputs = outputs;
 	}
 	
@@ -101,7 +101,7 @@ public class Transaction implements Serializable {
 		if ( inputs != null )
 		{
 			writer.writeVarInt(inputs.size());
-			for ( TransactionInput input : inputs )
+			for ( TxIn input : inputs )
 				input.toWire(writer);
 		}
 		else
@@ -110,7 +110,7 @@ public class Transaction implements Serializable {
 		if ( outputs != null )
 		{
 			writer.writeVarInt(outputs.size());
-			for ( TransactionOutput output : outputs )
+			for ( TxOut output : outputs )
 				output.toWire(writer);
 		}
 		else
@@ -127,10 +127,10 @@ public class Transaction implements Serializable {
 		long nin = reader.readVarInt();
 		if ( nin > 0 )
 		{
-			inputs = new ArrayList<TransactionInput> ();
+			inputs = new ArrayList<TxIn> ();
 			for ( int i = 0; i < nin; ++i )
 			{
-				TransactionInput input = new TransactionInput ();
+				TxIn input = new TxIn ();
 				input.fromWire(reader);
 				input.setTransaction(this);
 				inputs.add(input);
@@ -142,10 +142,10 @@ public class Transaction implements Serializable {
 		long nout = reader.readVarInt();
 		if ( nout > 0 )
 		{
-			outputs = new ArrayList<TransactionOutput> ();
+			outputs = new ArrayList<TxOut> ();
 			for ( int i = 0; i < nout; ++i )
 			{
-				TransactionOutput output = new TransactionOutput ();
+				TxOut output = new TxOut ();
 				output.fromWire(reader);
 				output.setTransaction(this);
 				output.setIx(i);

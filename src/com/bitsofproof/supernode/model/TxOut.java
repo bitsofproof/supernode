@@ -29,7 +29,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table(name="txout")
-public class TransactionOutput implements Serializable {
+public class TxOut implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
@@ -42,12 +42,12 @@ public class TransactionOutput implements Serializable {
 	private byte [] script;
 	
 	@ManyToOne(fetch=FetchType.LAZY,cascade={CascadeType.MERGE,CascadeType.DETACH,CascadeType.PERSIST,CascadeType.REFRESH},optional=false) 
-	private Transaction transaction;
+	private Tx transaction;
 
 	private long ix;
 	
 	@OneToOne(fetch=FetchType.LAZY,optional=true) 
-	private TransactionInput sink;
+	private TxIn sink;
 	
 	@Column(length=40,nullable=true)
 	private String address;
@@ -122,11 +122,11 @@ public class TransactionOutput implements Serializable {
 		this.script = script;
 	}
 	
-	public Transaction getTransaction() {
+	public Tx getTransaction() {
 		return transaction;
 	}
 
-	public void setTransaction(Transaction transaction) {
+	public void setTransaction(Tx transaction) {
 		this.transaction = transaction;
 	}
 
@@ -138,11 +138,11 @@ public class TransactionOutput implements Serializable {
 		this.ix = ix;
 	}
 
-	public TransactionInput getSink() {
+	public TxIn getSink() {
 		return sink;
 	}
 
-	public void setSink(TransactionInput sink) {
+	public void setSink(TxIn sink) {
 		this.sink = sink;
 	}
 

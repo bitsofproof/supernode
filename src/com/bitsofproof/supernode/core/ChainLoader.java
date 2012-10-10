@@ -19,7 +19,7 @@ import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
-import com.bitsofproof.supernode.model.Block;
+import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.ChainStore;
 
 
@@ -73,7 +73,7 @@ public class ChainLoader {
 	}
 
 	private void processBlock(BlockMessage m, final BitcoinPeer peer) throws ValidationException {
-		Block block = m.getBlock();
+		Blk block = m.getBlock();
 		chainHeightStored = store.store(block);
 		if ( store.getNumberOfRequests(peer) == 0 )
 			getAnotherBatch (peer);
