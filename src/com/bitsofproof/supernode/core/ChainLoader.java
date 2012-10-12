@@ -40,7 +40,7 @@ public class ChainLoader {
 	private long chainHeightStored = 0;
 	private Set<BitcoinPeer> waitingForInv = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
 
-	private void getAnotherBatch(BitcoinPeer peer) {
+	private void getAnotherBatch(BitcoinPeer peer) throws Exception {
 		if ( chainHeightSeen > chainHeightStored && !waitingForInv.contains(peer) )
 		{
 			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
@@ -52,7 +52,7 @@ public class ChainLoader {
 		}
 	}
 
-	private void getBlocks(final BitcoinPeer peer) {
+	private void getBlocks(final BitcoinPeer peer) throws Exception {
 		if ( store.getNumberOfRequests(peer) > 0 )
 		{
 			log.trace("peer busy");
@@ -72,14 +72,14 @@ public class ChainLoader {
 		}
 	}
 
-	private void processBlock(BlockMessage m, final BitcoinPeer peer) throws ValidationException {
+	private void processBlock(BlockMessage m, final BitcoinPeer peer) throws Exception {
 		Blk block = m.getBlock();
 		chainHeightStored = store.store(block);
 		if ( store.getNumberOfRequests(peer) == 0 )
 			getAnotherBatch (peer);
 	}
 
-	private void processInv(final InvMessage m, final BitcoinPeer peer) {
+	private void processInv(final InvMessage m, final BitcoinPeer peer) throws Exception {
 		if (!m.getBlockHashes().isEmpty()) {
 			waitingForInv.remove(peer);
 			log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
@@ -95,7 +95,7 @@ public class ChainLoader {
 	public void start() {
 		try {
 			network.addListener("block", new BitcoinMessageListener() {
-				public void process(Message m, BitcoinPeer peer) throws ValidationException {
+				public void process(Message m, BitcoinPeer peer) throws Exception {
 					processBlock((BlockMessage) m, peer);
 				}
 
@@ -103,7 +103,7 @@ public class ChainLoader {
 
 			network.addListener("inv", new BitcoinMessageListener() {
 				@Override
-				public void process(Message m, BitcoinPeer peer) {
+				public void process(Message m, BitcoinPeer peer) throws Exception {
 					processInv((InvMessage) m, peer);
 				}
 
@@ -127,7 +127,7 @@ public class ChainLoader {
 				}
 				});
 			network.runForAll(new BitcoinNetwork.PeerTask() {
-				public void run(final BitcoinPeer peer) {
+				public void run(final BitcoinPeer peer) throws Exception {
 					getAnotherBatch(peer);
 				}
 

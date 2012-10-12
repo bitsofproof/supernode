@@ -24,6 +24,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.AddrMessage;
+import com.bitsofproof.supernode.messages.AlertMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
@@ -69,7 +70,7 @@ public class BitcoinPeer extends P2P.Peer {
 		}
 
 		@Override
-		public byte [] toByteArray ()
+		public byte [] toByteArray () throws NoSuchAlgorithmException
 		{
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			WireFormat.Writer writer = new WireFormat.Writer(out);
@@ -82,11 +83,8 @@ public class BitcoinPeer extends P2P.Peer {
 
 			byte[] checksum = new byte[4];
 			MessageDigest sha;
-			try {
-				sha = MessageDigest.getInstance("SHA-256");
-				System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
-			} catch (NoSuchAlgorithmException e) {
-			}
+			sha = MessageDigest.getInstance("SHA-256");
+			System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
 			writer.writeBytes(checksum);
 
 			writer.writeBytes(data);
@@ -113,6 +111,8 @@ public class BitcoinPeer extends P2P.Peer {
 			return new GetBlocksMessage (this);
 		else if ( command.equals("block") )
 			return new BlockMessage (this);
+		else if ( command.equals("alert") )
+			return new AlertMessage (this);
 
 		return new Message (command);
 	}
@@ -128,19 +128,19 @@ public class BitcoinPeer extends P2P.Peer {
 		peerVersion = network.getChain().getVersion(); 
 		
 		addListener("version", new BitcoinMessageListener () {
-			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
+			public void process(BitcoinPeer.Message m, BitcoinPeer peer) throws Exception {
 				VersionMessage v = (VersionMessage)m;
 				agent = v.getAgent();
 				height = v.getHeight();
 				peerVersion = v.getVersion();
 				peer.send (peer.createMessage("verack"));
-				network.addPeer(peer);
-				network.notifyPeerAdded(peer);
-				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " Open connections: " + getNetwork().getNumberOfConnections());
 			}});
 		
 		addListener("verack", new BitcoinMessageListener () {
 			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
+				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " Open connections: " + getNetwork().getNumberOfConnections());
+				network.addPeer(peer);
+				network.notifyPeerAdded(peer);
 			}});
 	}
 
@@ -198,12 +198,18 @@ public class BitcoinPeer extends P2P.Peer {
 					sha = MessageDigest.getInstance("SHA-256");
 					System.arraycopy(sha.digest(sha.digest(buf)), 0, cs, 0, 4);
 				} catch (NoSuchAlgorithmException e) {
+					throw new ValidationException("SHA-256 implementation missing");
 				}
 				if (!Arrays.equals(cs, checksum))
 					throw new ValidationException("Checksum mismatch");
 
 				if (m != null) {
 					m.fromWire(new WireFormat.Reader(buf));
+					if ( m instanceof AlertMessage )
+					{
+						m.validate();
+						log.warn(((AlertMessage) m).getPayload());
+					}
 				}
 			}
 			return m;
@@ -214,19 +220,23 @@ public class BitcoinPeer extends P2P.Peer {
 
 	@Override
 	public void onConnect() {
-		VersionMessage m = (VersionMessage) createMessage("version");
-		m.setHeight(network.getChainHeight());
-		m.setPeer(getAddress().getAddress());
-		m.setRemotePort(getAddress().getPort());
-		send(m);
-		final BitcoinPeer peer = this;
-		scheduler.schedule(new Runnable (){
-			@Override
-			public void run() {
-				if ( !network.isConnected(peer) )
-					peer.disconnect();
-				}
-			}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
+		try {
+			VersionMessage m = (VersionMessage) createMessage("version");
+			m.setHeight(network.getChainHeight());
+			m.setPeer(getAddress().getAddress());
+			m.setRemotePort(getAddress().getPort());
+			send(m);
+			final BitcoinPeer peer = this;
+			scheduler.schedule(new Runnable (){
+				@Override
+				public void run() {
+					if ( !network.isConnected(peer) )
+						peer.disconnect();
+					}
+				}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
+		} catch (Exception e) {
+			log.error("Can not connect peer " + getAddress (), e);
+		}
 	}
 
 	@Override
@@ -244,9 +254,9 @@ public class BitcoinPeer extends P2P.Peer {
 							for ( BitcoinMessageListener l : classListener )
 								l.process(bm, self);
 						
-					} catch (ValidationException e) {
+					} catch (Exception e) {
 						arg0.setRollbackOnly();
-						log.error("Validation failed ", e);
+						log.error("Failed to process " + bm.getCommand(), e);
 						disconnect ();
 					}
 				}

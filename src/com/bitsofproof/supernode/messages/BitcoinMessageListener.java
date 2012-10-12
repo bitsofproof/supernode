@@ -4,5 +4,5 @@ import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.ValidationException;
 
 public interface BitcoinMessageListener {
-	public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws ValidationException;
+	public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception;
 }

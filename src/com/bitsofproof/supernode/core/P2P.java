@@ -69,7 +69,7 @@ public abstract class P2P {
 	
 	public interface Message
 	{
-		public byte [] toByteArray ();
+		public byte [] toByteArray () throws Exception;
 	}
 	
 	public abstract class Peer {
@@ -185,7 +185,6 @@ public abstract class P2P {
 		}
 
 		private void listen() {
-			final Peer self = this;
 			peerThreads.execute(new Runnable() {
 				public void run() {
 					Message m = null;
@@ -202,7 +201,7 @@ public abstract class P2P {
 			});
 		}
 
-		public void send(Message m) {
+		public void send(Message m) throws Exception {
 			try
 			{
 				writeable.acquireUninterruptibly();
@@ -376,7 +375,6 @@ public abstract class P2P {
 										peerThreads.execute(new Runnable() {
 											public void run() {
 												peer.onConnect();
-												peer.listen();
 											}
 										});
 									} else {
@@ -496,7 +494,7 @@ public abstract class P2P {
 										if ( peer.channel.isConnectionPending() )
 											try {
 												// give up if not connected within CONNECTIONTIMEOUT
-												log.info("Give up connect on " + peer.channel);
+												log.trace("Give up connect on " + peer.channel);
 												peer.channel.close();
 												connectedPeers.remove(peer);
 											} catch (IOException e) {
