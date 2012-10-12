@@ -70,6 +70,7 @@ public abstract class P2P {
 	public interface Message
 	{
 		public byte [] toByteArray () throws Exception;
+		public String dump ();
 	}
 	
 	public abstract class Peer {

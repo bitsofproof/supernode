@@ -4,6 +4,7 @@ package com.bitsofproof.supernode.core;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -17,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.TransactionStatus;
@@ -89,6 +91,16 @@ public class BitcoinPeer extends P2P.Peer {
 
 			writer.writeBytes(data);
 			return writer.toByteArray();
+		}
+		
+		public String dump ()
+		{
+			try {
+				return new String (Hex.encode(toByteArray ()),"UTF-8");
+			} catch (UnsupportedEncodingException e) {
+			} catch (NoSuchAlgorithmException e) {
+			}
+			return null;
 		}
 		
 		public void validate () throws ValidationException {}

@@ -245,18 +245,17 @@ public class ChainStore  {
 
 			List<String> locator = new ArrayList<String>();
 			StoredMember curr = currentHead.getLast();
+			locator.add(curr.getHash());
 			StoredMember prev = curr.getPrevious();
 			for (int i = 0, step = 1; prev != null; ++i) {
-				locator.add(curr.getHash());
 				for (int j = 0; prev != null && j < step; ++j) {
 					curr = prev;
 					prev = curr.getPrevious();
 				}
-				if (i > 10)
+				locator.add(curr.getHash());
+				if (i >= 10)
 					step *= 2;
 			}
-			if (curr != currentHead.getLast())
-				locator.add(curr.getHash());
 			return locator;
 		} finally {
 			lock.readLock().unlock();
