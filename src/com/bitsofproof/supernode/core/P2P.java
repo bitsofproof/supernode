@@ -80,6 +80,8 @@ public abstract class P2P {
 		private LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]>();
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
 		private ByteArrayInputStream currentRead = null;
+		private final Semaphore notYetListened = new Semaphore (1);
+		
 		private InputStream readIn = new InputStream() {
 			public int read(byte[] b, int off, int len) throws IOException {
 				int need = len;
@@ -152,6 +154,8 @@ public abstract class P2P {
 				byte[] b = new byte[len];
 				System.arraycopy(buffer.array(), 0, b, 0, len);
 				reads.add(b);
+				if ( notYetListened.tryAcquire() )
+					listen ();
 			}
 		}
 
@@ -181,23 +185,17 @@ public abstract class P2P {
 		}
 
 		private void listen() {
+			final Peer self = this;
 			peerThreads.execute(new Runnable() {
 				public void run() {
 					Message m = null;
 					try {
 						m = parse(readIn);
-					}
-					catch (IOException e) {
-						disconnect();
-					}
-					try {
-						if (m != null) {
-							receive(m);
-							peerThreads.execute(this); // listen again
-						}
+						receive(m);
+						peerThreads.execute(this); // listen again
 					} 
 					catch (Exception e) {
-						log.error("Unhandled exception in message processing", e);
+						log.error("Exception in message processing", e);
 						disconnect();
 					}
 				}
@@ -208,7 +206,6 @@ public abstract class P2P {
 			try
 			{
 				writeable.acquireUninterruptibly();
-				
 				writes.add(m.toByteArray());
 				selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
 				selector.wakeup();
@@ -253,10 +250,10 @@ public abstract class P2P {
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
 
 	// total number of threads deals with P2P
-	private static final int NUMBEROFPEERTHREADS = 10;
+	private static final int NUMBEROFPEERTHREADS = 5;
 
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 50;
+	private static final int DESIREDCONNECTIONS = 10;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;
@@ -400,7 +397,6 @@ public abstract class P2P {
 												peerThreads.execute(new Runnable() {
 													public void run() {
 														peer.onConnect();
-														peer.listen();
 													}
 												});
 											} else {
@@ -425,6 +421,11 @@ public abstract class P2P {
 												peer.process(readBuffer, len);
 												readBuffer.clear();
 											}
+											else
+											{
+												peer.disconnect();
+												key.cancel();
+											}
 										} catch (IOException e) {
 											peer.disconnect();
 											key.cancel();
@@ -440,7 +441,9 @@ public abstract class P2P {
 										try {
 											ByteBuffer b;
 											if ((b = peer.getBuffer()) != null)
+											{
 												client.write(b);
+											}
 											key.interestOps(SelectionKey.OP_READ);
 										} catch (IOException e) {
 											peer.disconnect();

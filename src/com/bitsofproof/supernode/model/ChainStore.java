@@ -201,7 +201,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized List<String> getRequests(BitcoinPeer peer) {
+	public  List<String> getRequests(BitcoinPeer peer) {
 		try {
 			lock.writeLock().lock();
 			HashSet<String> requests = requestsByPeer.get(peer);
@@ -224,7 +224,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized void removePeer(BitcoinPeer peer) {
+	public  void removePeer(BitcoinPeer peer) {
 		try {
 			lock.writeLock().lock();
 
@@ -239,7 +239,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized List<String> getLocator() {
+	public  List<String> getLocator() {
 		try {
 			lock.readLock().lock();
 
@@ -263,7 +263,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized long store(Blk b) throws ValidationException {
+	public long store(Blk b) throws ValidationException {
 
 		b.computeHash();
 
@@ -469,7 +469,7 @@ public class ChainStore  {
 		}
 	}
 
-	public synchronized int getNumberOfRequests(BitcoinPeer peer) {
+	public int getNumberOfRequests(BitcoinPeer peer) {
 		try {
 			lock.readLock().lock();
 			HashSet<String> s = requestsByPeer.get(peer);

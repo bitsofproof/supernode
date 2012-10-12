@@ -207,11 +207,9 @@ public class BitcoinPeer extends P2P.Peer {
 				}
 			}
 			return m;
-		} catch (Exception e) {
-			log.error("Exception reading message", e);
-			disconnect();
+		} catch (ValidationException e) {
+			throw new IOException (e);
 		}
-		return null;
 	}
 
 	@Override
