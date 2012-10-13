@@ -22,8 +22,6 @@ import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.ChainStore;
 
-
-
 public class ChainLoader {
 	private static final Logger log = LoggerFactory.getLogger(ChainLoader.class);
 
@@ -38,52 +36,42 @@ public class ChainLoader {
 	private PlatformTransactionManager transactionManager;
 	private long chainHeightSeen = 0;
 	private long chainHeightStored = 0;
-	private Set<BitcoinPeer> waitingForInv = Collections.synchronizedSet(new HashSet<BitcoinPeer> ());
 
 	private void getAnotherBatch(BitcoinPeer peer) throws Exception {
-		if ( chainHeightSeen > chainHeightStored && !waitingForInv.contains(peer) )
-		{
+		if ( chainHeightSeen > chainHeightStored ) {
 			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage("getblocks");
 			for (String s : store.getLocator())
 				gbm.getHashes().add(new Hash(s).toByteArray());
 			peer.send(gbm);
-			waitingForInv.add(peer);
 			log.trace("asking for known blocks from " + peer.getAddress());
 		}
 	}
 
 	private void getBlocks(final BitcoinPeer peer) throws Exception {
-		if ( store.getNumberOfRequests(peer) > 0 )
+		if (store.getNumberOfRequests(peer) == 0)
 		{
-			log.trace("peer busy");
-				return;
-		}
-		List<String> requests = store.getRequests(peer);
-		if (!requests.isEmpty()) {
-			GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
-			for (String pick : requests)
-				gdm.getBlocks().add(new Hash(pick).toByteArray());
-			log.trace("asking for blocks "+gdm.getBlocks().size()+" from " + peer.getAddress());
-			peer.send(gdm);
-		}
-		else
-		{
-			getAnotherBatch (peer);
+			List<String> requests = store.getRequests(peer);
+			if (!requests.isEmpty()) {
+				GetDataMessage gdm = (GetDataMessage) peer.createMessage("getdata");
+				for (String pick : requests)
+					gdm.getBlocks().add(new Hash(pick).toByteArray());
+				log.trace("asking for blocks " + gdm.getBlocks().size() + " from " + peer.getAddress());
+				peer.send(gdm);
+			}
 		}
 	}
 
 	private void processBlock(BlockMessage m, final BitcoinPeer peer) throws Exception {
 		Blk block = m.getBlock();
 		chainHeightStored = store.store(block);
-		if ( store.getNumberOfRequests(peer) == 0 )
-			getAnotherBatch (peer);
+		if (store.getNumberOfRequests(peer) == 0)
+			getAnotherBatch(peer);
 	}
 
 	private void processInv(final InvMessage m, final BitcoinPeer peer) throws Exception {
-		if (!m.getBlockHashes().isEmpty()) {
-			waitingForInv.remove(peer);
+		if ( !m.getBlockHashes().isEmpty() ) {
 			log.trace("received inventory of " + m.getBlockHashes().size() + " from " + peer.getAddress());
-			List<String> hashes = new ArrayList<String> ();
+			List<String> hashes = new ArrayList<String>();
 			for (byte[] h : m.getBlockHashes()) {
 				hashes.add(new Hash(h).toString());
 			}
@@ -108,24 +96,25 @@ public class ChainLoader {
 				}
 
 			});
-			
-			network.addPeerListener(new BitcoinPeerListener (){
+
+			network.addPeerListener(new BitcoinPeerListener() {
 
 				@Override
 				public void remove(final BitcoinPeer peer) {
 					new TransactionTemplate(transactionManager).execute(new TransactionCallbackWithoutResult() {
 						@Override
 						protected void doInTransactionWithoutResult(TransactionStatus arg0) {
-							store.removePeer (peer);
-						}});
+							store.removePeer(peer);
+						}
+					});
 				}
 
 				@Override
 				public void add(BitcoinPeer peer) {
-					if ( chainHeightSeen < peer.getHeight() )
+					if (chainHeightSeen < peer.getHeight())
 						chainHeightSeen = peer.getHeight();
 				}
-				});
+			});
 			network.runForAll(new BitcoinNetwork.PeerTask() {
 				public void run(final BitcoinPeer peer) throws Exception {
 					getAnotherBatch(peer);

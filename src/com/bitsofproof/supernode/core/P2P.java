@@ -84,6 +84,7 @@ public abstract class P2P {
 		private LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]>();
 		private ByteArrayInputStream currentRead = null;
 		private final Semaphore notYetListened = new Semaphore (1);
+		private ByteBuffer pushBackBuffer = null;
 		
 		private InputStream readIn = new InputStream() {
 			public int read(byte[] b, int off, int len) throws IOException {
@@ -163,12 +164,21 @@ public abstract class P2P {
 		}
 
 		private ByteBuffer getBuffer() {
+			if ( pushBackBuffer != null )
+				return pushBackBuffer;
+
 			byte[] next;
+			
 			if ((next = writes.poll()) != null)
 			{
 				return ByteBuffer.wrap(next);
 			}
 			return null;
+		}
+		
+		private void pushBack (ByteBuffer b)
+		{
+			pushBackBuffer = b;
 		}
 
 		public InetSocketAddress getAddress() {
@@ -263,11 +273,8 @@ public abstract class P2P {
 	// peers waiting to be connected
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress>();
 
-	// total number of threads deals with P2P
-	private static final int NUMBEROFPEERTHREADS = 5;
-
 	// number of connections we try to maintain
-	private static final int DESIREDCONNECTIONS = 10;
+	private final int desiredConnections;
 
 	// we want fast answering nodes
 	private static final int CONNECTIONTIMEOUT = 5;
@@ -276,7 +283,7 @@ public abstract class P2P {
 	private static final int READTIMEOUT = 60; // seconds
 
 	// keep track with number of connections we asked for here
-	private final Semaphore connectSlot = new Semaphore(DESIREDCONNECTIONS);
+	private final Semaphore connectSlot;
 	
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 	
@@ -317,10 +324,15 @@ public abstract class P2P {
 	
 	private final Executor peerThreads;
 	
-	public P2P () throws IOException
+	public P2P (int connections) throws IOException
 	{
+		desiredConnections = connections;
+		connectSlot = new Semaphore(desiredConnections);
 		// create a pool of threads
-		peerThreads = Executors.newFixedThreadPool(NUMBEROFPEERTHREADS, new ThreadFactory() {
+		peerThreads = Executors.newFixedThreadPool(Math.max(
+				Math.min(desiredConnections/4,
+							Runtime.getRuntime ().availableProcessors()*4),
+							1), new ThreadFactory() {
 			@Override
 			public Thread newThread(final Runnable r) {
 				Thread peerThread = new Thread() {
@@ -456,6 +468,11 @@ public abstract class P2P {
 											if ((b = peer.getBuffer()) != null)
 											{
 												client.write(b);
+												int rest = b.remaining();
+												if ( rest != 0 )
+													peer.pushBack (b);
+												else
+													peer.pushBack (null);
 											}
 											else
 												key.interestOps(SelectionKey.OP_READ);
@@ -488,7 +505,7 @@ public abstract class P2P {
 			public void run() {
 				while (true) { // forever
 					try {
-						if ( connectedPeers.size() >= DESIREDCONNECTIONS )
+						if ( connectedPeers.size() >= desiredConnections )
 						{
 							Thread.sleep(1000);
 						}
@@ -519,7 +536,7 @@ public abstract class P2P {
 							}
 							else
 							{
-								if ( connectedPeers.size() < DESIREDCONNECTIONS )
+								if ( connectedPeers.size() < desiredConnections )
 								{
 									log.info("Need to discover new adresses.");
 									if ( !discover () )

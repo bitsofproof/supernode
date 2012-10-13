@@ -26,8 +26,9 @@ import com.bitsofproof.supernode.model.ChainStore;
 
 public class BitcoinNetwork extends P2P {
 
-	public BitcoinNetwork(PlatformTransactionManager transactionManager, Chain chain, ChainStore store) throws IOException {
-		super();
+	public BitcoinNetwork(PlatformTransactionManager transactionManager, Chain chain, ChainStore store,
+							int connections) throws IOException {
+		super(connections);
 		this.chain = chain;
 		this.store = store;
 		transactionTemplate = new TransactionTemplate(transactionManager);

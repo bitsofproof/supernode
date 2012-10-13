@@ -187,7 +187,7 @@ public class ChainStore  {
 					HashSet<BitcoinPeer> peers = new HashSet<BitcoinPeer>();
 					members.put(hash, cached = new KnownMember(hash, members.size(), peers));
 				} else if (!(cached instanceof KnownMember))
-					return;
+					continue;
 				((KnownMember) cached).getKnownBy().add(peer);
 				TreeSet<KnownMember> membersOfPeer = knownByPeer.get(peer);
 				if (membersOfPeer == null) {
