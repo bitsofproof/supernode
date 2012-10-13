@@ -59,7 +59,7 @@ public class BitcoinNetwork extends P2P {
 		setPort(chain.getPort());
 		super.start();
 	}
-
+	
 	public void addPeer(final BitcoinPeer peer) {
 		connectedPeers.add(peer);
 
@@ -215,9 +215,14 @@ public class BitcoinNetwork extends P2P {
 			}
 		});
 	}
+	
+	private boolean testPeer = false;
 
 	@Override
-	public void discover() {
+	public boolean discover() {
+		if ( testPeer )
+			return false;
+		
 		log.info("Discovering network");
 		int n = 0;
 		for (String hostName : chain.getSeedHosts()) {
@@ -233,5 +238,16 @@ public class BitcoinNetwork extends P2P {
 			}
 		}
 		log.info("Found " + n + " addresses of seed hosts");
+		return true;
 	}
+	
+	// for tests
+	public void start (InetAddress address, int port) throws IOException
+	{
+		testPeer = true;
+		setPort (port);
+		super.start();
+	}
+
+
 }

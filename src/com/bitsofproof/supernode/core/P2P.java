@@ -67,6 +67,8 @@ import org.slf4j.LoggerFactory;
 public abstract class P2P {
 	private static final Logger log = LoggerFactory.getLogger(P2P.class);
 	
+	private final static int BUFFSIZE = 8*1024;
+	
 	public interface Message
 	{
 		public byte [] toByteArray () throws Exception;
@@ -206,7 +208,19 @@ public abstract class P2P {
 			try
 			{
 				writeable.acquireUninterruptibly();
-				writes.add(m.toByteArray());
+				
+				byte []  wiremsg = m.toByteArray();
+				int len = wiremsg.length;
+				int off = 0;
+				while ( len > 0 )
+				{
+					int s = Math.min(BUFFSIZE, len);
+					byte [] b = new byte [s];
+					System.arraycopy(wiremsg, off, b, 0, s);
+					off +=s;
+					writes.add(b);
+					len -= s;
+				}
 				selectorChanges.add(new ChangeRequest((SocketChannel) channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
 				selector.wakeup();
 			}
@@ -228,7 +242,7 @@ public abstract class P2P {
 	
 	public abstract Peer createPeer (InetSocketAddress address);
 	
-	public abstract void discover ();
+	public abstract boolean discover ();
 	
 	public void addPeer(InetAddress addr, int port) {
 		InetSocketAddress address = new InetSocketAddress(addr, port);
@@ -336,7 +350,7 @@ public abstract class P2P {
 		Thread selectorThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
-				ByteBuffer readBuffer = ByteBuffer.allocate(1024*1024);
+				ByteBuffer readBuffer = ByteBuffer.allocate(BUFFSIZE);
 				while (true) {
 					try {
 						ChangeRequest cr;
@@ -443,7 +457,8 @@ public abstract class P2P {
 											{
 												client.write(b);
 											}
-											key.interestOps(SelectionKey.OP_READ);
+											else
+												key.interestOps(SelectionKey.OP_READ);
 										} catch (IOException e) {
 											peer.disconnect();
 											key.cancel();
@@ -507,7 +522,10 @@ public abstract class P2P {
 								if ( connectedPeers.size() < DESIREDCONNECTIONS )
 								{
 									log.info("Need to discover new adresses.");
-									discover ();
+									if ( !discover () )
+									{
+										break; // testing
+									}
 									if ( runqueue.size() == 0 )
 									{
 										log.error("Can not find new adresses");
