@@ -380,8 +380,8 @@ public abstract class P2P {
 						selector.select(); // wait for events
 						Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
 						while (keys.hasNext()) {
+							SelectionKey key = keys.next();
 							try {
-								SelectionKey key = keys.next();
 								keys.remove();
 								if ( !key.isValid() )
 									continue;
@@ -407,33 +407,30 @@ public abstract class P2P {
 									} else {
 										client.close();
 										runqueue.add(address); // try later
+										key.cancel();
 									}
 								}
 								if (key.isConnectable()) {
-									try {
-										// we asked for connection here
-										key.interestOps(SelectionKey.OP_READ);
-										SocketChannel client = (SocketChannel) key.channel();
-										client.finishConnect(); // finish
-										InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
-										final Peer peer;
-										if ( (peer = connectedPeers.get (client)) != null ) {
-											if (connectSlot.tryAcquire()) {
-												peerThreads.execute(new Runnable() {
-													public void run() {
-														peer.onConnect();
-													}
-												});
-											} else {
-												client.close();
-												runqueue.add(address); // try again later
-											}
+									// we asked for connection here
+									key.interestOps(SelectionKey.OP_READ);
+									SocketChannel client = (SocketChannel) key.channel();
+									client.finishConnect(); // finish
+									InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
+									final Peer peer;
+									if ( (peer = connectedPeers.get (client)) != null ) {
+										if (connectSlot.tryAcquire()) {
+											peerThreads.execute(new Runnable() {
+												public void run() {
+													peer.onConnect();
+												}
+											});
 										} else {
-											client.close(); // do not know you
-											key.cancel();
+											client.close();
+											runqueue.add(address); // try again later
 										}
-
-									} catch (ConnectException e) {
+									} else {
+										client.close(); // do not know you
+										key.cancel();
 									}
 								}
 								if (key.isReadable()) {
@@ -487,6 +484,7 @@ public abstract class P2P {
 							} catch (CancelledKeyException e) {
 							} catch (Exception e) {
 								log.error("Error processing a selector key", e);
+								key.cancel();
 							}
 						}
 					} catch (Exception e) {
