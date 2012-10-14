@@ -194,7 +194,12 @@ public abstract class P2P {
 			} catch (IOException e) {
 			}
 			connectSlot.release();
-			onDisconnect ();
+			peerThreads.execute(new Runnable (){
+				@Override
+				public void run() {
+					onDisconnect ();
+				}				
+			});
 		}
 
 		private void listen() {
@@ -405,9 +410,9 @@ public abstract class P2P {
 											}
 										});
 									} else {
+										key.cancel();
 										client.close();
 										runqueue.add(address); // try later
-										key.cancel();
 									}
 								}
 								if (key.isConnectable()) {
@@ -429,8 +434,8 @@ public abstract class P2P {
 											runqueue.add(address); // try again later
 										}
 									} else {
-										client.close(); // do not know you
 										key.cancel();
+										client.close(); // do not know you
 									}
 								}
 								if (key.isReadable()) {
@@ -445,12 +450,12 @@ public abstract class P2P {
 											}
 											else
 											{
-												peer.disconnect();
 												key.cancel();
+												peer.disconnect();
 											}
 										} catch (IOException e) {
-											peer.disconnect();
 											key.cancel();
+											peer.disconnect();
 										}
 									}
 									else
