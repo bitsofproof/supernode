@@ -419,21 +419,29 @@ public abstract class P2P {
 									// we asked for connection here
 									key.interestOps(SelectionKey.OP_READ);
 									SocketChannel client = (SocketChannel) key.channel();
-									client.finishConnect(); // finish
-									InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
-									final Peer peer;
-									if ( (peer = connectedPeers.get (client)) != null ) {
-										if (connectSlot.tryAcquire()) {
-											peerThreads.execute(new Runnable() {
-												public void run() {
-													peer.onConnect();
-												}
-											});
+									try
+									{
+										client.finishConnect(); // finish
+										InetSocketAddress address = (InetSocketAddress) client.socket().getRemoteSocketAddress();
+										final Peer peer;
+										if ( (peer = connectedPeers.get (client)) != null ) {
+											if (connectSlot.tryAcquire()) {
+												peerThreads.execute(new Runnable() {
+													public void run() {
+														peer.onConnect();
+													}
+												});
+											} else {
+												client.close();
+												runqueue.add(address); // try again later
+											}
 										} else {
-											client.close();
-											runqueue.add(address); // try again later
+											key.cancel();
+											client.close(); // do not know you
 										}
-									} else {
+									}
+									catch ( ConnectException ce )
+									{
 										key.cancel();
 										client.close(); // do not know you
 									}
