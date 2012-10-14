@@ -440,18 +440,12 @@ public class ChainStore  {
 		try {
 			lock.readLock().lock();
 			cached = members.get(hash);
+			if ( cached == null || !(cached instanceof StoredMember) )
+				return null;
 		} finally {
 			lock.readLock().unlock();
 		}
-
-		if (cached instanceof StoredMember)
-			return entityManager.find(Blk.class, ((StoredMember) cached).getId());
-
-		QBlk block = QBlk.blk;
-
-		JPAQuery query = new JPAQuery(entityManager);
-
-		return query.from(block).where(block.hash.eq(hash)).uniqueResult(block);
+		return entityManager.find(Blk.class, ((StoredMember) cached).getId());
 	}
 
 	public long getChainHeight() {

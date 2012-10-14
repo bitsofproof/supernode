@@ -226,18 +226,24 @@ public class BitcoinNetwork extends P2P {
 		
 		log.info("Discovering network");
 		int n = 0;
+		List<InetAddress> al = new ArrayList<InetAddress> ();
 		for (String hostName : chain.getSeedHosts()) {
 			try {
 				InetAddress[] hostAddresses = InetAddress.getAllByName(hostName);
 
 				for (InetAddress inetAddress : hostAddresses) {
-					addPeer(inetAddress, chain.getPort());
+					al.add(inetAddress);
 					++n;
 				}
 			} catch (Exception e) {
 				log.trace("DNS lookup for " + hostName + " failed.");
 			}
 		}
+
+		Collections.shuffle(al);
+		for ( InetAddress a : al )
+			addPeer(a, chain.getPort());
+
 		log.info("Found " + n + " addresses of seed hosts");
 		return true;
 	}
