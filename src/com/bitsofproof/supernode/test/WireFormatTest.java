@@ -67,8 +67,7 @@ public class WireFormatTest {
 	public void testReadHash() {
 		ByteArrayOutputStream bs = new ByteArrayOutputStream ();
 		WireFormat.Writer writer = new WireFormat.Writer(bs);
-		Hash h = new Hash ();
-		h.digest(new String ("Hello World !").getBytes());
+		Hash h = Hash.digest(new String ("Hello World !").getBytes());
 		writer.writeHash(h);
 		
 		WireFormat.Reader reader = new WireFormat.Reader (bs.toByteArray());

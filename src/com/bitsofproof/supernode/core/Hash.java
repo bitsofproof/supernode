@@ -30,22 +30,20 @@ public class Hash {
 		this.bytes = reverse (Hex.decode(hex));
 	}
 
-	public Hash digest(byte[] data) {
+	public static Hash digest(byte[] data) {
 		try {
 			MessageDigest a = MessageDigest.getInstance("SHA-256");
-			bytes = a.digest(data);
-			return this;
+			return new Hash(a.digest(data));
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	public Hash hash(byte[] data, int offset, int len) {
+	public static Hash hash(byte[] data, int offset, int len) {
 		try {
 			MessageDigest a = MessageDigest.getInstance("SHA-256");
 			a.update(data, offset, len);
-			bytes = a.digest(a.digest());
-			return this;
+			return new Hash (a.digest(a.digest()));
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
 		} 

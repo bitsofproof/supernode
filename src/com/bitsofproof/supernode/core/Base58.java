@@ -175,7 +175,7 @@ public class Base58 {
 		byte[] bytes = copyOfRange(tmp, 0, tmp.length - 4);
 		byte[] checksum = copyOfRange(tmp, tmp.length - 4, tmp.length);
 		
-		tmp = new Hash ().digest(bytes).toByteArray();
+		tmp = Hash.digest(bytes).toByteArray();
 		byte[] hash = copyOfRange(tmp, 0, 4);
 		if (!Arrays.equals(checksum, hash)) 
 			throw new AddressFormatException("Checksum does not validate");
