@@ -83,6 +83,25 @@ public class Tx implements Serializable {
 	public String getHash() {
 		return hash;
 	}
+	
+	public Tx flatCopy ()
+	{
+		Tx copy = new Tx ();
+
+		copy.hash = hash;
+		copy.id = null;
+		copy.version = version;
+		copy.lockTime = lockTime;
+
+		copy.inputs = new ArrayList<TxIn> ();
+		for ( TxIn in : inputs )
+			copy.inputs.add(in);
+		copy.outputs = new ArrayList<TxOut> ();
+		for ( TxOut out : outputs )
+			copy.outputs.add(out);
+
+		return copy;
+	}
 
 	public void calculateHash ()
 	{

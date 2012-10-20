@@ -34,9 +34,27 @@ public class WireFormat {
 			return cursor >= bytes.length;
 		}
 
+		public int readScriptInt8 () {
+			int n = bytes [cursor] & 0x7f;
+			if ( (bytes [cursor++] & 0x80) != 0  )
+				return -n;
+			return n;
+		}
+
+		public int readScriptOpcode () {
+			return bytes [cursor++] & 0xff;
+		}
+		
 		public long readUint16() {
 			long value = ((bytes[cursor] & 0xFFL) << 0)
 					| ((bytes[cursor + 1] & 0xFFL) << 8);
+			cursor += 2;
+			return value;
+		}
+
+		public long readScriptInt16() {
+			long value = ((bytes[cursor + 1] & 0xFFL) << 0)
+					| ((bytes[cursor] & 0xFFL) << 8);
 			cursor += 2;
 			return value;
 		}
@@ -46,6 +64,15 @@ public class WireFormat {
 					| ((bytes[cursor + 1] & 0xFFL) << 8)
 					| ((bytes[cursor + 2] & 0xFFL) << 16)
 					| ((bytes[cursor + 3] & 0xFFL) << 24);
+			cursor += 4;
+			return value;
+		}
+
+		public long readScriptInt32() {
+			long value = ((bytes[cursor + 3] & 0xFFL) << 0)
+					| ((bytes[cursor + 2] & 0xFFL) << 8)
+					| ((bytes[cursor + 1] & 0xFFL) << 16)
+					| ((bytes[cursor] & 0xFFL) << 24);
 			cursor += 4;
 			return value;
 		}
@@ -69,6 +96,11 @@ public class WireFormat {
 			return value;
 		}
 
+		public void skipBytes (int length)
+		{
+			cursor += length;
+		}
+		
 		public byte[] readBytes(int length) {
 			byte[] b = new byte[length];
 			System.arraycopy(bytes, cursor, b, 0, length);
@@ -169,9 +201,26 @@ public class WireFormat {
 			return bs.toByteArray();
 		}
 
+		public void writeByte (int n)
+		{
+			bs.write(n);
+		}
+		
+		public void writeScriptInt16(long n) {
+			bs.write((int) (0xFF & (n >> 8)));
+			bs.write((int) (0xFF & n));
+		}
+
 		public void writeUint16(long n) {
 			bs.write((int) (0xFF & n));
 			bs.write((int) (0xFF & (n >> 8)));
+		}
+
+		public void writeScriptInt32(long n) {
+			bs.write((int) (0xFF & (n >> 24)));
+			bs.write((int) (0xFF & (n >> 16)));
+			bs.write((int) (0xFF & (n >> 8)));
+			bs.write((int) (0xFF & n));
 		}
 
 		public void writeUint32(long n) {
