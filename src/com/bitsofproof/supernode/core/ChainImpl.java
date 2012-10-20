@@ -1,13 +1,12 @@
 package com.bitsofproof.supernode.core;
 
-
 import java.math.BigInteger;
 
 import com.bitsofproof.supernode.model.Blk;
 
+public abstract class ChainImpl implements Chain
+{
 
-public abstract class ChainImpl implements Chain {
-	
 	private final long version;
 	private final long magic;
 	private final int port;
@@ -16,28 +15,35 @@ public abstract class ChainImpl implements Chain {
 	private final int difficultyReviewBlocks;
 	private final int targetBlockTime;
 	private final byte[] alertKey;
-	private final String[] seedHosts; 
-	
-	public static BigInteger difficultyToNumber(long difficulty) {
+	private final String[] seedHosts;
+
+	public static BigInteger difficultyToNumber (long difficulty)
+	{
 		int size = ((int) (difficulty >> 24)) & 0xFF;
-		byte[] b = new byte[size+4];
+		byte[] b = new byte[size + 4];
 		b[3] = (byte) size;
-		if (size >= 1)
+		if ( size >= 1 )
+		{
 			b[4] = (byte) ((difficulty >> 16) & 0xFF);
-		if (size >= 2)
+		}
+		if ( size >= 2 )
+		{
 			b[5] = (byte) ((difficulty >> 8) & 0xFF);
-		if (size >= 3)
+		}
+		if ( size >= 3 )
+		{
 			b[6] = (byte) ((difficulty >> 0) & 0xFF);
-		WireFormat.Reader reader = new WireFormat.Reader(b);
-		int length = (int) reader.readUint32();
+		}
+		WireFormat.Reader reader = new WireFormat.Reader (b);
+		int length = (int) reader.readUint32 ();
 		byte[] buf = new byte[length];
-		System.arraycopy(b, 4, buf, 0, length);
-		return new BigInteger(buf);
+		System.arraycopy (b, 4, buf, 0, length);
+		return new BigInteger (buf);
 	}
 
-	public ChainImpl(long version, long magic,
-			int port, int addressType, int privateKeyType,
-			int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey, String [] seedHosts) {
+	public ChainImpl (long version, long magic, int port, int addressType, int privateKeyType, int difficultyReviewBlocks, int targetBlockTime,
+			byte[] alertKey, String[] seedHosts)
+	{
 		this.version = version;
 		this.magic = magic;
 		this.port = port;
@@ -48,73 +54,62 @@ public abstract class ChainImpl implements Chain {
 		this.alertKey = alertKey;
 		this.seedHosts = seedHosts;
 	}
-	
+
+	@Override
 	public abstract Blk getGenesis ();
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getMagic()
-	 */
-	public long getMagic() {
+	@Override
+	public long getMagic ()
+	{
 		return magic;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getPort()
-	 */
-	public int getPort() {
+	@Override
+	public int getPort ()
+	{
 		return port;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getAddressType()
-	 */
-	public int getAddressType() {
+	@Override
+	public int getAddressType ()
+	{
 		return addressType;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getPrivateKeyType()
-	 */
-	public int getPrivateKeyType() {
+	@Override
+	public int getPrivateKeyType ()
+	{
 		return privateKeyType;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getDifficultyReviewBlocks()
-	 */
-	public int getDifficultyReviewBlocks() {
+	@Override
+	public int getDifficultyReviewBlocks ()
+	{
 		return difficultyReviewBlocks;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getTargetBlockTime()
-	 */
-	public int getTargetBlockTime() {
+	@Override
+	public int getTargetBlockTime ()
+	{
 		return targetBlockTime;
 	}
 
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getAlertKey()
-	 */
-	public byte[] getAlertKey() {
+	@Override
+	public byte[] getAlertKey ()
+	{
 		return alertKey;
 	}
 
-
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getSeedHosts()
-	 */
-	public String[] getSeedHosts() {
+	@Override
+	public String[] getSeedHosts ()
+	{
 		return seedHosts;
 	}
 
-
-	/* (non-Javadoc)
-	 * @see hu.blummers.bitcoin.core.IFChain#getVersion()
-	 */
-	public long getVersion() {
+	@Override
+	public long getVersion ()
+	{
 		return version;
 	}
-	
-	
+
 }

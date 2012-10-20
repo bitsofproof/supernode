@@ -5,31 +5,35 @@ import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 import com.bitsofproof.supernode.model.Blk;
 
+public class BlockMessage extends BitcoinPeer.Message
+{
 
-
-public class BlockMessage extends BitcoinPeer.Message  {
-
-	public BlockMessage(BitcoinPeer bitcoinPeer) {
-		bitcoinPeer.super("block");
+	public BlockMessage (BitcoinPeer bitcoinPeer)
+	{
+		bitcoinPeer.super ("block");
 	}
 
 	private Blk block = new Blk ();
-	
-	public Blk getBlock() {
+
+	public Blk getBlock ()
+	{
 		return block;
 	}
 
-	public void setBlock(Blk block) {
+	public void setBlock (Blk block)
+	{
 		this.block = block;
 	}
 
 	@Override
-	public void toWire(Writer writer) {
-		block.toWire(writer);
+	public void toWire (Writer writer)
+	{
+		block.toWire (writer);
 	}
 
 	@Override
-	public void fromWire(Reader reader) {
-		block.fromWire(reader);
+	public void fromWire (Reader reader)
+	{
+		block.fromWire (reader);
 	}
 }

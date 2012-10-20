@@ -1,6 +1,5 @@
 package com.bitsofproof.supernode.model;
 
-
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -18,164 +17,171 @@ import javax.persistence.Table;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
-@Table(name="tx")
-public class Tx implements Serializable {
+@Table (name = "tx")
+public class Tx implements Serializable
+{
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue
 	private Long id;
-	
+
 	private long version;
-	
+
 	private long lockTime;
 
-	// this is not unique on the chain see http://r6.ca/blog/20120206T005236Z.html	
-	@Column(length=64,nullable=false)
+	// this is not unique on the chain see http://r6.ca/blog/20120206T005236Z.html
+	@Column (length = 64, nullable = false)
 	private String hash;
-	
-	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
+
+	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<TxIn> inputs;
-	
-	@OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL)
+
+	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<TxOut> outputs;
 
-	public Long getId() {
+	public Long getId ()
+	{
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId (Long id)
+	{
 		this.id = id;
 	}
 
-	public long getVersion() {
+	public long getVersion ()
+	{
 		return version;
 	}
 
-	public void setVersion(long version) {
+	public void setVersion (long version)
+	{
 		this.version = version;
 	}
 
-	public long getLockTime() {
+	public long getLockTime ()
+	{
 		return lockTime;
 	}
 
-	public void setLockTime(long lockTime) {
+	public void setLockTime (long lockTime)
+	{
 		this.lockTime = lockTime;
 	}
 
-	public List<TxIn> getInputs() {
+	public List<TxIn> getInputs ()
+	{
 		return inputs;
 	}
 
-	public void setInputs(List<TxIn> inputs) {
+	public void setInputs (List<TxIn> inputs)
+	{
 		this.inputs = inputs;
 	}
 
-	public List<TxOut> getOutputs() {
+	public List<TxOut> getOutputs ()
+	{
 		return outputs;
 	}
 
-	public void setOutputs(List<TxOut> outputs) {
+	public void setOutputs (List<TxOut> outputs)
+	{
 		this.outputs = outputs;
 	}
-	
-	public String getHash() {
-		return hash;
-	}
-	
-	public Tx flatCopy ()
+
+	public String getHash ()
 	{
-		Tx copy = new Tx ();
-
-		copy.hash = hash;
-		copy.id = null;
-		copy.version = version;
-		copy.lockTime = lockTime;
-
-		copy.inputs = new ArrayList<TxIn> ();
-		for ( TxIn in : inputs )
-			copy.inputs.add(in);
-		copy.outputs = new ArrayList<TxOut> ();
-		for ( TxOut out : outputs )
-			copy.outputs.add(out);
-
-		return copy;
+		return hash;
 	}
 
 	public void calculateHash ()
 	{
 		if ( hash != null )
+		{
 			return;
-		
-		WireFormat.Writer writer = new WireFormat.Writer(new ByteArrayOutputStream());
+		}
+
+		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
 		toWire (writer);
-		WireFormat.Reader reader = new WireFormat.Reader(writer.toByteArray());
-		hash = reader.hash().toString();
+		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
+		hash = reader.hash ().toString ();
 	}
-	
+
 	public void toWire (WireFormat.Writer writer)
 	{
-		writer.writeUint32(version);
+		writer.writeUint32 (version);
 		if ( inputs != null )
 		{
-			writer.writeVarInt(inputs.size());
+			writer.writeVarInt (inputs.size ());
 			for ( TxIn input : inputs )
-				input.toWire(writer);
+			{
+				input.toWire (writer);
+			}
 		}
 		else
-			writer.writeVarInt(0);
+		{
+			writer.writeVarInt (0);
+		}
 
 		if ( outputs != null )
 		{
-			writer.writeVarInt(outputs.size());
+			writer.writeVarInt (outputs.size ());
 			for ( TxOut output : outputs )
-				output.toWire(writer);
+			{
+				output.toWire (writer);
+			}
 		}
 		else
-			writer.writeVarInt(0);
-			
-		writer.writeUint32(lockTime);	
+		{
+			writer.writeVarInt (0);
+		}
+
+		writer.writeUint32 (lockTime);
 	}
 
 	public void fromWire (WireFormat.Reader reader)
 	{
-		int cursor = reader.getCursor();
-		
-		version = reader.readUint32();
-		long nin = reader.readVarInt();
+		int cursor = reader.getCursor ();
+
+		version = reader.readUint32 ();
+		long nin = reader.readVarInt ();
 		if ( nin > 0 )
 		{
 			inputs = new ArrayList<TxIn> ();
 			for ( int i = 0; i < nin; ++i )
 			{
 				TxIn input = new TxIn ();
-				input.fromWire(reader);
-				input.setTransaction(this);
-				inputs.add(input);
+				input.fromWire (reader);
+				input.setTransaction (this);
+				inputs.add (input);
 			}
 		}
 		else
+		{
 			inputs = null;
-		
-		long nout = reader.readVarInt();
+		}
+
+		long nout = reader.readVarInt ();
 		if ( nout > 0 )
 		{
 			outputs = new ArrayList<TxOut> ();
 			for ( int i = 0; i < nout; ++i )
 			{
 				TxOut output = new TxOut ();
-				output.fromWire(reader);
-				output.setTransaction(this);
-				output.setIx(i);
-				outputs.add(output);
+				output.fromWire (reader);
+				output.setTransaction (this);
+				output.setIx (i);
+				outputs.add (output);
 			}
 		}
 		else
+		{
 			outputs = null;
-		
-		lockTime = reader.readUint32();
-		
-		hash = reader.hash(cursor, reader.getCursor() - cursor).toString();
+		}
+
+		lockTime = reader.readUint32 ();
+
+		hash = reader.hash (cursor, reader.getCursor () - cursor).toString ();
 	}
 }

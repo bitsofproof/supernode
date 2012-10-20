@@ -5,6 +5,8 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -12,6 +14,7 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.util.encoders.Hex;
 
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
 
 public class Script
 {
@@ -255,7 +258,7 @@ public class Script
 		script = new byte[sign.length + out.length];
 		System.arraycopy (script, 0, sign, 0, sign.length);
 		System.arraycopy (script, sign.length, out, 0, out.length);
-		this.tx = tx.flatCopy ();
+		this.tx = tx;
 		this.inr = inr;
 	}
 
@@ -382,14 +385,12 @@ public class Script
 		return b.toString ();
 	}
 
-	private byte[] findAndDeleteSignature (byte[] data)
+	private byte[] findAndDeleteSignatureAndSeparator (byte[] data)
 	{
 		WireFormat.Reader reader = new WireFormat.Reader (script);
 		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
-		int offset = -1;
 		while ( !reader.eof () )
 		{
-			offset++;
 			int op = reader.readScriptOpcode ();
 			if ( op == data.length )
 			{
@@ -411,7 +412,36 @@ public class Script
 			}
 			else
 			{
-				writer.writeByte (op);
+				Opcode code = Opcode.values ()[op];
+				switch ( code )
+				{
+					case OP_PUSHDATA1:
+					{
+						int n = reader.readScriptOpcode ();
+						writer.writeByte (op);
+						writer.writeBytes (reader.readBytes (n));
+					}
+						break;
+					case OP_PUSHDATA2:
+					{
+						long n = reader.readScriptInt16 ();
+						writer.writeByte (op);
+						writer.writeBytes (reader.readBytes ((int) n));
+					}
+						break;
+					case OP_PUSHDATA4:
+					{
+						long n = reader.readScriptInt32 ();
+						writer.writeByte (op);
+						writer.writeBytes (reader.readBytes ((int) n));
+					}
+						break;
+					case OP_CODESEPARATOR:
+						break;
+					default:
+						writer.writeByte (op);
+						break;
+				}
 			}
 		}
 		return writer.toByteArray ();
@@ -1009,6 +1039,12 @@ public class Script
 												// OP_CODESEPARATOR.
 							codeseparator = offset + 1;
 							break;
+						case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
+							// Same
+							// as OP_CHECKSIG, but OP_VERIFY
+							// is
+							// executed afterward.
+							// / no break;
 						case OP_CHECKSIG: // 0xac sig pubkey True / false The
 											// entire
 											// transaction's outputs, inputs,
@@ -1029,14 +1065,41 @@ public class Script
 							byte[] sig = stack.pop ();
 							byte[] signedScript = new byte[script.length - codeseparator];
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator - 1);
-							signedScript = findAndDeleteSignature (sig);
+							signedScript = findAndDeleteSignatureAndSeparator (sig);
+							Map<TxIn, byte[]> originalScripts = new HashMap<TxIn, byte[]> ();
+							for ( TxIn in : tx.getInputs () )
+							{
+								if ( in.getIx () == inr )
+								{
+									in.setScript (signedScript);
+								}
+								else
+								{
+									originalScripts.put (in, in.getScript ());
+									in.setScript (null);
+								}
+							}
+							WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+							tx.toWire (writer);
+							for ( Map.Entry<TxIn, byte[]> e : originalScripts.entrySet () )
+							{
+								e.getKey ().setScript (e.getValue ());
+							}
+							byte[] txwire = writer.toByteArray ();
+							boolean valid = ECKeyPair.verify (Hash.hash (txwire, 0, txwire.length).toByteArray (), sig, pubkey);
+							pushInt (valid ? 1 : 0);
+							if ( op == Opcode.OP_CHECKSIGVERIFY )
+							{
+								if ( !isTrue (stack.peek ()) )
+								{
+									return false;
+								}
+								else
+								{
+									stack.pop ();
+								}
+							}
 						}
-							break;
-						case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
-												// Same
-												// as OP_CHECKSIG, but OP_VERIFY
-												// is
-												// executed afterward.
 							break;
 						case OP_CHECKMULTISIG: // 0xae x sig1 sig2 ... <number
 												// of

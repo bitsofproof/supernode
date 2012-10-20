@@ -3,17 +3,48 @@ package com.bitsofproof.supernode.test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.bouncycastle.util.encoders.Hex;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.transaction.PlatformTransactionManager;
 
+import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.main.Setup;
+import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.JpaChainStore;
 
 public class ScriptTest
 {
+	private Chain chain;
+	private ChainStore store;
+
+	PlatformTransactionManager transactionManager;
+
+	@BeforeClass
+	public void setup ()
+	{
+		try
+		{
+			Setup.setup ();
+			ApplicationContext context = new ClassPathXmlApplicationContext ("app-context.xml");
+			chain = context.getBean (Chain.class);
+			store = context.getBean (JpaChainStore.class);
+			transactionManager = context.getBean (PlatformTransactionManager.class);
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace ();
+		}
+	}
+
 	@Test
 	public void stringTest ()
 	{
@@ -43,6 +74,7 @@ public class ScriptTest
 	{
 		assertTrue (new Script ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUALVERIFY").evaluate ());
 		assertTrue (new Script ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUALVERIFY").evaluate ());
+		assertTrue (new Script ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUALVERIFY").evaluate ());
 	}
 
 	@Test
@@ -67,7 +99,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void optCryptTest ()
+	public void digestTest ()
 	{
 		byte[] b = { 'H', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!' };
 		try
@@ -81,6 +113,12 @@ public class ScriptTest
 		catch ( NoSuchAlgorithmException e )
 		{
 		}
+	}
+
+	@Test
+	public void transactionTest ()
+	{
+
 	}
 
 }

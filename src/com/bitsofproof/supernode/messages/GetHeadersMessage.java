@@ -7,47 +7,58 @@ import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 
+public class GetHeadersMessage extends BitcoinPeer.Message
+{
 
-public class GetHeadersMessage  extends BitcoinPeer.Message {
+	List<byte[]> locators = new ArrayList<byte[]> ();
+	byte[] stop = new byte[32];
 
-	List<byte[]> locators = new ArrayList<byte[]>();
-	byte [] stop = new byte [32];
-
-	public GetHeadersMessage(BitcoinPeer bitcoinPeer) {
-		bitcoinPeer.super("getheaders");
+	public GetHeadersMessage (BitcoinPeer bitcoinPeer)
+	{
+		bitcoinPeer.super ("getheaders");
 	}
 
 	@Override
-	public void toWire(Writer writer) {
-		writer.writeUint32(getVersion());
-		writer.writeVarInt(locators.size());
-		for ( byte [] l : locators )
-			writer.writeBytes(l);
-		writer.writeBytes(stop);
+	public void toWire (Writer writer)
+	{
+		writer.writeUint32 (getVersion ());
+		writer.writeVarInt (locators.size ());
+		for ( byte[] l : locators )
+		{
+			writer.writeBytes (l);
+		}
+		writer.writeBytes (stop);
 	}
 
 	@Override
-	public void fromWire(Reader reader) {
-		setVersion (reader.readUint32());
-		long n = reader.readVarInt();
+	public void fromWire (Reader reader)
+	{
+		setVersion (reader.readUint32 ());
+		long n = reader.readVarInt ();
 		for ( long i = 0; i < n; ++i )
-			locators.add(reader.readBytes(32));
-		stop = reader.readBytes(32);
+		{
+			locators.add (reader.readBytes (32));
+		}
+		stop = reader.readBytes (32);
 	}
 
-	public List<byte[]> getLocators() {
+	public List<byte[]> getLocators ()
+	{
 		return locators;
 	}
 
-	public void setLocators(List<byte[]> locators) {
+	public void setLocators (List<byte[]> locators)
+	{
 		this.locators = locators;
 	}
 
-	public byte[] getStop() {
+	public byte[] getStop ()
+	{
 		return stop;
 	}
 
-	public void setStop(byte[] stop) {
+	public void setStop (byte[] stop)
+	{
 		this.stop = stop;
 	}
 }

@@ -5,40 +5,52 @@ import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 
-public class AlertMessage extends BitcoinPeer.Message {
+public class AlertMessage extends BitcoinPeer.Message
+{
 	private String payload;
 	private String signature;
-	
-	public AlertMessage(BitcoinPeer bitcoinPeer) {
-		bitcoinPeer.super("alert");
+
+	public AlertMessage (BitcoinPeer bitcoinPeer)
+	{
+		bitcoinPeer.super ("alert");
 	}
 
 	@Override
-	public void toWire(Writer writer) {
+	public void toWire (Writer writer)
+	{
 	}
+
 	@Override
-	public void fromWire(Reader reader) {
-		payload = reader.readString();
-		signature = reader.readString();
+	public void fromWire (Reader reader)
+	{
+		payload = reader.readString ();
+		signature = reader.readString ();
 	}
-	public void validate () throws ValidationException {
+
+	@Override
+	public void validate () throws ValidationException
+	{
 		// TODO: validate signature
 	}
 
-	public String getPayload() {
+	public String getPayload ()
+	{
 		return payload;
 	}
 
-	public void setPayload(String payload) {
+	public void setPayload (String payload)
+	{
 		this.payload = payload;
 	}
 
-	public String getSignature() {
+	public String getSignature ()
+	{
 		return signature;
 	}
 
-	public void setSignature(String signature) {
+	public void setSignature (String signature)
+	{
 		this.signature = signature;
 	}
-	
+
 }

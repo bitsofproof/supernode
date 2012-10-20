@@ -1,6 +1,5 @@
 package com.bitsofproof.supernode.core;
 
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,133 +33,174 @@ import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.VersionMessage;
 
-public class BitcoinPeer extends P2P.Peer {
-	private static final Logger log = LoggerFactory.getLogger(BitcoinPeer.class);
+public class BitcoinPeer extends P2P.Peer
+{
+	private static final Logger log = LoggerFactory.getLogger (BitcoinPeer.class);
 
 	private final TransactionTemplate transactionTemplate;
 	private BitcoinNetwork network;
-	
+
 	private String agent;
 	private long height;
 	private long peerVersion;
-	
-	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
-	
-	public class Message implements P2P.Message {
+
+	public class Message implements P2P.Message
+	{
 		private final String command;
 		private long version;
-		
+
 		public Message (String command)
 		{
 			this.command = command;
 			version = peerVersion;
 		}
-		
-		
-		public long getVersion() {
+
+		public long getVersion ()
+		{
 			return version;
 		}
 
-
-		public void setVersion(long version) {
+		public void setVersion (long version)
+		{
 			this.version = version;
 		}
 
-		public String getCommand () {
+		public String getCommand ()
+		{
 			return command;
 		}
 
 		@Override
-		public byte [] toByteArray () throws NoSuchAlgorithmException
+		public byte[] toByteArray () throws NoSuchAlgorithmException
 		{
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			WireFormat.Writer writer = new WireFormat.Writer(out);
-			writer.writeUint32(network.getChain().getMagic());
-			writer.writeZeroDelimitedString(getCommand(), 12);
-			WireFormat.Writer payload = new WireFormat.Writer(new ByteArrayOutputStream());
-			toWire(payload);
-			byte[] data = payload.toByteArray();
-			writer.writeUint32(data.length);
+			ByteArrayOutputStream out = new ByteArrayOutputStream ();
+			WireFormat.Writer writer = new WireFormat.Writer (out);
+			writer.writeUint32 (network.getChain ().getMagic ());
+			writer.writeZeroDelimitedString (getCommand (), 12);
+			WireFormat.Writer payload = new WireFormat.Writer (new ByteArrayOutputStream ());
+			toWire (payload);
+			byte[] data = payload.toByteArray ();
+			writer.writeUint32 (data.length);
 
 			byte[] checksum = new byte[4];
 			MessageDigest sha;
-			sha = MessageDigest.getInstance("SHA-256");
-			System.arraycopy(sha.digest(sha.digest(data)), 0, checksum, 0, 4);
-			writer.writeBytes(checksum);
+			sha = MessageDigest.getInstance ("SHA-256");
+			System.arraycopy (sha.digest (sha.digest (data)), 0, checksum, 0, 4);
+			writer.writeBytes (checksum);
 
-			writer.writeBytes(data);
-			return writer.toByteArray();
+			writer.writeBytes (data);
+			return writer.toByteArray ();
 		}
-		
+
+		@Override
 		public String dump ()
 		{
-			try {
-				return new String (Hex.encode(toByteArray ()),"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-			} catch (NoSuchAlgorithmException e) {
+			try
+			{
+				return new String (Hex.encode (toByteArray ()), "UTF-8");
+			}
+			catch ( UnsupportedEncodingException e )
+			{
+			}
+			catch ( NoSuchAlgorithmException e )
+			{
 			}
 			return null;
 		}
-		
-		public void validate () throws ValidationException {}
-		public void toWire (WireFormat.Writer writer) {};
-		public void fromWire (WireFormat.Reader reader) {};
+
+		public void validate () throws ValidationException
+		{
+		}
+
+		public void toWire (WireFormat.Writer writer)
+		{
+		};
+
+		public void fromWire (WireFormat.Reader reader)
+		{
+		};
 	}
 
-	
 	public Message createMessage (String command)
 	{
-		if ( command.equals("version") )
+		if ( command.equals ("version") )
+		{
 			return new VersionMessage (this);
-		else if ( command.equals("inv") )
+		}
+		else if ( command.equals ("inv") )
+		{
 			return new InvMessage (this);
-		else if ( command.equals("addr") )
+		}
+		else if ( command.equals ("addr") )
+		{
 			return new AddrMessage (this);
-		else if ( command.equals("getdata") )
-			return new GetDataMessage(this);
-		else if ( command.equals("getblocks") )
+		}
+		else if ( command.equals ("getdata") )
+		{
+			return new GetDataMessage (this);
+		}
+		else if ( command.equals ("getblocks") )
+		{
 			return new GetBlocksMessage (this);
-		else if ( command.equals("block") )
+		}
+		else if ( command.equals ("block") )
+		{
 			return new BlockMessage (this);
-		else if ( command.equals("alert") )
+		}
+		else if ( command.equals ("alert") )
+		{
 			return new AlertMessage (this);
+		}
 
 		return new Message (command);
 	}
-	
-	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap(new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
-	public BitcoinPeer(P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address) {
-		p2p.super(address);
-		network = (BitcoinNetwork)p2p;
+	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener>> ());
+
+	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address)
+	{
+		p2p.super (address);
+		network = (BitcoinNetwork) p2p;
 		this.transactionTemplate = transactionTemplate;
-		
+
 		// this will be overwritten by the first version message we get
-		peerVersion = network.getChain().getVersion(); 
-		
-		addListener("version", new BitcoinMessageListener () {
-			public void process(BitcoinPeer.Message m, BitcoinPeer peer) throws Exception {
-				VersionMessage v = (VersionMessage)m;
-				agent = v.getAgent();
-				height = v.getHeight();
-				peerVersion = v.getVersion();
-				peer.send (peer.createMessage("verack"));
-			}});
-		
-		addListener("verack", new BitcoinMessageListener () {
-			public void process(BitcoinPeer.Message m, BitcoinPeer peer) {
-				log.info("Connection to '" + getAgent () + "' at " + getAddress() + " Open connections: " + getNetwork().getNumberOfConnections());
-				network.addPeer(peer);
-				network.notifyPeerAdded(peer);
-			}});
+		peerVersion = network.getChain ().getVersion ();
+
+		addListener ("version", new BitcoinMessageListener ()
+		{
+			@Override
+			public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
+			{
+				VersionMessage v = (VersionMessage) m;
+				agent = v.getAgent ();
+				height = v.getHeight ();
+				peerVersion = v.getVersion ();
+				peer.send (peer.createMessage ("verack"));
+			}
+		});
+
+		addListener ("verack", new BitcoinMessageListener ()
+		{
+			@Override
+			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
+			{
+				log.info ("Connection to '" + getAgent () + "' at " + getAddress () + " Open connections: " + getNetwork ().getNumberOfConnections ());
+				network.addPeer (peer);
+				network.notifyPeerAdded (peer);
+			}
+		});
 	}
 
-	public BitcoinNetwork getNetwork() {
+	public BitcoinNetwork getNetwork ()
+	{
 		return network;
 	}
 
-	public void setNetwork(BitcoinNetwork network) {
+	public void setNetwork (BitcoinNetwork network)
+	{
 		this.network = network;
 	}
 
@@ -168,131 +208,171 @@ public class BitcoinPeer extends P2P.Peer {
 	{
 		return peerVersion;
 	}
-	
+
 	public long getHeight ()
 	{
 		return height;
 	}
-	public String getAgent() {
+
+	public String getAgent ()
+	{
 		return agent;
 	}
 
 	@Override
-	public void onDisconnect() {
-		network.notifyPeerRemoved(this);
-		log.info("Disconnected '" + getAgent () + "' at " + getAddress() + ". Open connections: " + getNetwork().getNumberOfConnections());
+	public void onDisconnect ()
+	{
+		network.notifyPeerRemoved (this);
+		log.info ("Disconnected '" + getAgent () + "' at " + getAddress () + ". Open connections: " + getNetwork ().getNumberOfConnections ());
 	}
 
-    public static final int MAX_SIZE = 0x02000000;
+	public static final int MAX_SIZE = 0x02000000;
 
-    @Override
-	public Message parse(InputStream readIn) throws IOException {
-		try {
+	@Override
+	public Message parse (InputStream readIn) throws IOException
+	{
+		try
+		{
 			byte[] head = new byte[24];
-			if (readIn.read(head) != head.length)
-				throw new ValidationException("Invalid package header");
-			WireFormat.Reader reader = new WireFormat.Reader(head);
-			long mag = reader.readUint32();
-			if (mag != network.getChain().getMagic())
-				throw new ValidationException("Wrong magic for this chain");
+			if ( readIn.read (head) != head.length )
+			{
+				throw new ValidationException ("Invalid package header");
+			}
+			WireFormat.Reader reader = new WireFormat.Reader (head);
+			long mag = reader.readUint32 ();
+			if ( mag != network.getChain ().getMagic () )
+			{
+				throw new ValidationException ("Wrong magic for this chain");
+			}
 
-			String command = reader.readZeroDelimitedString(12);
-			Message m = createMessage(command);
-			long length = reader.readUint32();
-			byte[] checksum = reader.readBytes(4);
-			if (length > 0 && length < MAX_SIZE) {
+			String command = reader.readZeroDelimitedString (12);
+			Message m = createMessage (command);
+			long length = reader.readUint32 ();
+			byte[] checksum = reader.readBytes (4);
+			if ( length > 0 && length < MAX_SIZE )
+			{
 				byte[] buf = new byte[(int) length];
-				if (readIn.read(buf) != buf.length)
-					throw new ValidationException("Package length mismatch");
+				if ( readIn.read (buf) != buf.length )
+				{
+					throw new ValidationException ("Package length mismatch");
+				}
 				byte[] cs = new byte[4];
 				MessageDigest sha;
-				try {
-					sha = MessageDigest.getInstance("SHA-256");
-					System.arraycopy(sha.digest(sha.digest(buf)), 0, cs, 0, 4);
-				} catch (NoSuchAlgorithmException e) {
-					throw new ValidationException("SHA-256 implementation missing");
+				try
+				{
+					sha = MessageDigest.getInstance ("SHA-256");
+					System.arraycopy (sha.digest (sha.digest (buf)), 0, cs, 0, 4);
 				}
-				if (!Arrays.equals(cs, checksum))
-					throw new ValidationException("Checksum mismatch");
+				catch ( NoSuchAlgorithmException e )
+				{
+					throw new ValidationException ("SHA-256 implementation missing");
+				}
+				if ( !Arrays.equals (cs, checksum) )
+				{
+					throw new ValidationException ("Checksum mismatch");
+				}
 
-				if (m != null) {
-					m.fromWire(new WireFormat.Reader(buf));
+				if ( m != null )
+				{
+					m.fromWire (new WireFormat.Reader (buf));
 					if ( m instanceof AlertMessage )
 					{
-						m.validate();
-						log.warn(((AlertMessage) m).getPayload());
+						m.validate ();
+						log.warn (((AlertMessage) m).getPayload ());
 					}
 				}
 			}
 			return m;
-		} catch (ValidationException e) {
+		}
+		catch ( ValidationException e )
+		{
 			throw new IOException (e);
 		}
 	}
 
 	@Override
-	public void onConnect() {
-		try {
-			VersionMessage m = (VersionMessage) createMessage("version");
-			m.setHeight(network.getChainHeight());
-			m.setPeer(getAddress().getAddress());
-			m.setRemotePort(getAddress().getPort());
-			send(m);
+	public void onConnect ()
+	{
+		try
+		{
+			VersionMessage m = (VersionMessage) createMessage ("version");
+			m.setHeight (network.getChainHeight ());
+			m.setPeer (getAddress ().getAddress ());
+			m.setRemotePort (getAddress ().getPort ());
+			send (m);
 			final BitcoinPeer peer = this;
-			scheduler.schedule(new Runnable (){
+			scheduler.schedule (new Runnable ()
+			{
 				@Override
-				public void run() {
-					if ( !network.isConnected(peer) )
-						peer.disconnect();
+				public void run ()
+				{
+					if ( !network.isConnected (peer) )
+					{
+						peer.disconnect ();
 					}
-				}, CONNECTIONTIMEOUT,TimeUnit.SECONDS);
-		} catch (Exception e) {
-			log.error("Can not connect peer " + getAddress (), e);
+				}
+			}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not connect peer " + getAddress (), e);
 		}
 	}
 
 	@Override
-	public void receive(P2P.Message m) {
+	public void receive (P2P.Message m)
+	{
 		final BitcoinPeer self = this;
 		final Message bm = (Message) m;
-			transactionTemplate.execute(new TransactionCallbackWithoutResult() {
-				@Override
-				protected void doInTransactionWithoutResult(TransactionStatus arg0) {
-					try {
-						bm.validate ();
-	
-						List<BitcoinMessageListener> classListener = listener.get(bm.getCommand());
-						if ( classListener != null )
-							for ( BitcoinMessageListener l : classListener )
-								l.process(bm, self);
-						
-					} catch (Exception e) {
-						arg0.setRollbackOnly();
-						log.error("Failed to process " + bm.getCommand(), e);
-						disconnect ();
+		transactionTemplate.execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus arg0)
+			{
+				try
+				{
+					bm.validate ();
+
+					List<BitcoinMessageListener> classListener = listener.get (bm.getCommand ());
+					if ( classListener != null )
+					{
+						for ( BitcoinMessageListener l : classListener )
+						{
+							l.process (bm, self);
+						}
 					}
+
 				}
-			});
+				catch ( Exception e )
+				{
+					arg0.setRollbackOnly ();
+					log.error ("Failed to process " + bm.getCommand (), e);
+					disconnect ();
+				}
+			}
+		});
 	}
-	
+
 	public void addListener (String type, BitcoinMessageListener l)
 	{
-		ArrayList<BitcoinMessageListener> ll = listener.get(type);
+		ArrayList<BitcoinMessageListener> ll = listener.get (type);
 		if ( ll == null )
 		{
 			ll = new ArrayList<BitcoinMessageListener> ();
-			listener.put(type, ll);
+			listener.put (type, ll);
 		}
-		if ( !ll.contains(l) )
-			ll.add(l);
+		if ( !ll.contains (l) )
+		{
+			ll.add (l);
+		}
 	}
 
 	public void removeListener (String type, BitcoinMessageListener l)
 	{
-		ArrayList<BitcoinMessageListener> ll = listener.get(type);
+		ArrayList<BitcoinMessageListener> ll = listener.get (type);
 		if ( ll != null )
 		{
-			ll.remove(l);
+			ll.remove (l);
 		}
 	}
 }
