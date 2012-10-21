@@ -1079,11 +1079,10 @@ public class Script
 						{
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
+							// hastype is appended to sig but satoshi client does not honor it
 							byte[] signedScript = new byte[script.length - codeseparator];
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
 							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
-							String s = new Script (signedScript).toString ();
-							System.out.println (s);
 							Map<TxIn, byte[]> originalScripts = new HashMap<TxIn, byte[]> ();
 							for ( TxIn in : tx.getInputs () )
 							{
@@ -1109,7 +1108,7 @@ public class Script
 							{
 								MessageDigest a = MessageDigest.getInstance ("SHA-256");
 								a.update (txwire);
-								a.update (new byte[] { 1, 0, 0, 0 }); // HASH_ALL
+								a.update (new byte[] { 1, 0, 0, 0 }); // HASH_ALL & !ANYONECANPAY
 								hash = a.digest (a.digest ());
 							}
 							catch ( NoSuchAlgorithmException e )
