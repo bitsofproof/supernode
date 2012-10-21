@@ -256,8 +256,8 @@ public class Script
 		byte[] sign = tx.getInputs ().get (inr).getScript ();
 		byte[] out = tx.getInputs ().get (inr).getSource ().getScript ();
 		script = new byte[sign.length + out.length];
-		System.arraycopy (script, 0, sign, 0, sign.length);
-		System.arraycopy (script, sign.length, out, 0, out.length);
+		System.arraycopy (sign, 0, script, 0, sign.length);
+		System.arraycopy (out, 0, script, sign.length, out.length);
 		this.tx = tx;
 		this.inr = inr;
 	}
@@ -325,6 +325,7 @@ public class Script
 					try
 					{
 						b.append (new String (Hex.encode (reader.readBytes (op.o)), "US-ASCII"));
+						b.append (" ");
 					}
 					catch ( UnsupportedEncodingException e )
 					{
@@ -343,6 +344,7 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes (n)), "US-ASCII"));
+							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -357,6 +359,7 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
+							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -371,6 +374,7 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
+							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -379,29 +383,37 @@ public class Script
 						break;
 					default:
 						b.append (op.toString ());
+						b.append (" ");
 				}
 			}
 		}
 		return b.toString ();
 	}
 
-	private byte[] findAndDeleteSignatureAndSeparator (byte[] data)
+	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
 	{
 		WireFormat.Reader reader = new WireFormat.Reader (script);
 		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
 		while ( !reader.eof () )
 		{
 			int op = reader.readScriptOpcode ();
-			if ( op == data.length )
+			if ( op <= 75 )
 			{
 				boolean found = false;
 				byte[] b = reader.readBytes (op);
-				for ( int i = 0; i < b.length; ++i )
+				if ( op == data.length )
 				{
-					if ( b[i] != data[i] )
+					int i = 0;
+					for ( ; i < b.length; ++i )
+					{
+						if ( b[i] != data[i] )
+						{
+							break;
+						}
+					}
+					if ( i == b.length )
 					{
 						found = true;
-						break;
 					}
 				}
 				if ( !found )
@@ -449,6 +461,7 @@ public class Script
 
 	public boolean evaluate ()
 	{
+		System.out.println (toString ());
 		WireFormat.Reader reader = new WireFormat.Reader (script);
 
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
@@ -1064,19 +1077,21 @@ public class Script
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
 							byte[] signedScript = new byte[script.length - codeseparator];
-							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator - 1);
-							signedScript = findAndDeleteSignatureAndSeparator (sig);
+							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
+							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
+							String s = new Script (signedScript).toString ();
+							System.out.println (s);
 							Map<TxIn, byte[]> originalScripts = new HashMap<TxIn, byte[]> ();
 							for ( TxIn in : tx.getInputs () )
 							{
+								originalScripts.put (in, in.getScript ());
 								if ( in.getIx () == inr )
 								{
 									in.setScript (signedScript);
 								}
 								else
 								{
-									originalScripts.put (in, in.getScript ());
-									in.setScript (null);
+									in.setScript (new byte[0]);
 								}
 							}
 							WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
@@ -1086,7 +1101,20 @@ public class Script
 								e.getKey ().setScript (e.getValue ());
 							}
 							byte[] txwire = writer.toByteArray ();
-							boolean valid = ECKeyPair.verify (Hash.hash (txwire, 0, txwire.length).toByteArray (), sig, pubkey);
+							byte[] hash;
+							try
+							{
+								MessageDigest a = MessageDigest.getInstance ("SHA-256");
+								a.update (txwire);
+								a.update (new byte[4]);
+								hash = a.digest (a.digest ());
+							}
+							catch ( NoSuchAlgorithmException e )
+							{
+								return false;
+							}
+
+							boolean valid = ECKeyPair.verify (hash, sig, pubkey);
 							pushInt (valid ? 1 : 0);
 							if ( op == Opcode.OP_CHECKSIGVERIFY )
 							{

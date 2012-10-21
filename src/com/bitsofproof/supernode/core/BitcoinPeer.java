@@ -152,7 +152,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 		else if ( command.equals ("alert") )
 		{
-			return new AlertMessage (this);
+			return new AlertMessage (this, this.getNetwork ().getChain ().getAlertKey ());
 		}
 
 		return new Message (command);

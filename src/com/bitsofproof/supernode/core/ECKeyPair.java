@@ -35,7 +35,7 @@ public class ECKeyPair
 	private BigInteger priv;
 	private byte[] pub;
 
-	protected ECKeyPair ()
+	private ECKeyPair ()
 	{
 	}
 
@@ -77,6 +77,12 @@ public class ECKeyPair
 		byte[] check = Hash.hash (addressBytes, 0, ph.length + 1).toByteArray ();
 		System.arraycopy (check, 0, addressBytes, ph.length + 1, 4);
 		return Base58.encode (addressBytes);
+	}
+
+	public ECKeyPair (BigInteger priv)
+	{
+		this.priv = priv;
+		pub = curve.getG ().multiply (priv).getEncoded ();
 	}
 
 	public ECKeyPair (byte[] store) throws ValidationException

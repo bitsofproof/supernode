@@ -8,36 +8,46 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+
 import org.bouncycastle.util.encoders.Hex;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.orm.jpa.EntityManagerFactoryUtils;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.main.Setup;
 import com.bitsofproof.supernode.model.ChainStore;
-import com.bitsofproof.supernode.model.JpaChainStore;
+import com.bitsofproof.supernode.model.Tx;
 
 public class ScriptTest
 {
-	private Chain chain;
-	private ChainStore store;
+	private static Chain chain;
+	private static ChainStore store;
 
-	PlatformTransactionManager transactionManager;
+	private static PlatformTransactionManager transactionManager;
+	private static ApplicationContext context;
+	private static EntityManagerFactory emf;
 
 	@BeforeClass
-	public void setup ()
+	public static void setup ()
 	{
 		try
 		{
 			Setup.setup ();
-			ApplicationContext context = new ClassPathXmlApplicationContext ("app-context.xml");
+			context = new ClassPathXmlApplicationContext ("app-context.xml");
 			chain = context.getBean (Chain.class);
-			store = context.getBean (JpaChainStore.class);
+			store = context.getBean (ChainStore.class);
 			transactionManager = context.getBean (PlatformTransactionManager.class);
+			emf = context.getBean (EntityManagerFactory.class);
 		}
 		catch ( IOException e )
 		{
@@ -118,7 +128,16 @@ public class ScriptTest
 	@Test
 	public void transactionTest ()
 	{
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
 
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				EntityManager entityManager = EntityManagerFactoryUtils.getTransactionalEntityManager (emf);
+				Tx tx = entityManager.find (Tx.class, new Long (184));
+				new Script (tx, 0).evaluate ();
+			}
+		});
 	}
-
 }
