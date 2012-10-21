@@ -14,6 +14,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -21,6 +23,17 @@ import com.bitsofproof.supernode.core.WireFormat;
 public class Tx implements Serializable
 {
 	private static final long serialVersionUID = 1L;
+
+	private static final long COIN = 100000000;
+	private static final long MAX_MONEY = 21000000 * COIN;
+
+	private void checkMoneyRange (long n) throws ValidationException
+	{
+		if ( n < 0 || n > MAX_MONEY )
+		{
+			throw new ValidationException ("outside money range");
+		}
+	}
 
 	@Id
 	@GeneratedValue
@@ -93,6 +106,38 @@ public class Tx implements Serializable
 	public String getHash ()
 	{
 		return hash;
+	}
+
+	public void basicValidation () throws ValidationException
+	{
+		// cheap validations only
+		if ( inputs.isEmpty () || outputs.isEmpty () )
+		{
+			throw new ValidationException ("Input or Output of transaction is empty");
+		}
+		long sum = 0;
+		for ( TxOut out : outputs )
+		{
+			if ( out.getScript ().length > 520 )
+			{
+				throw new ValidationException ("script too long");
+			}
+			long n = out.getValue ().longValue ();
+			checkMoneyRange (n);
+			sum += n;
+		}
+		checkMoneyRange (sum);
+		for ( TxIn in : inputs )
+		{
+			if ( in.getScript ().length > 520 )
+			{
+				throw new ValidationException ("script too long");
+			}
+			if ( !Script.isPushOnly (in.getScript ()) )
+			{
+				throw new ValidationException ("input script should be push only");
+			}
+		}
 	}
 
 	public void calculateHash ()

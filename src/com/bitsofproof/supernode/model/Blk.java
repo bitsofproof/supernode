@@ -18,6 +18,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -305,6 +306,22 @@ public class Blk implements Serializable
 			transactions.add (t);
 		}
 		wireTransactions = null;
+	}
+
+	public void basicValidation () throws ValidationException
+	{
+		if ( createTime > System.currentTimeMillis () / 1000 + 2 * 60 * 60 )
+		{
+			throw new ValidationException ("Block too far in the future");
+		}
+		if ( transactions.isEmpty () )
+		{
+			throw new ValidationException ("Block must have transactions");
+		}
+		for ( Tx tx : transactions )
+		{
+			tx.basicValidation ();
+		}
 	}
 
 	public void computeHash ()

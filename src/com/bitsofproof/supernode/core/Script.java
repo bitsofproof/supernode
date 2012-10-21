@@ -391,6 +391,28 @@ public class Script
 		return b.toString ();
 	}
 
+	public static boolean isPushOnly (byte[] script)
+	{
+		WireFormat.Reader reader = new WireFormat.Reader (script);
+		while ( !reader.eof () )
+		{
+			int op = reader.readScriptOpcode ();
+			if ( op <= 75 )
+			{
+				reader.skipBytes (op);
+			}
+			else
+			{
+				Opcode code = Opcode.values ()[op];
+				if ( !(code == Opcode.OP_PUSHDATA1 || code == Opcode.OP_PUSHDATA2 || code == Opcode.OP_PUSHDATA4) )
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
 	{
 		WireFormat.Reader reader = new WireFormat.Reader (script);

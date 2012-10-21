@@ -18,8 +18,7 @@ public class TxMessage extends BitcoinPeer.Message
 	@Override
 	public void validate () throws ValidationException
 	{
-		// TODO Auto-generated method stub
-		super.validate ();
+		tx.basicValidation ();
 	}
 
 	@Override

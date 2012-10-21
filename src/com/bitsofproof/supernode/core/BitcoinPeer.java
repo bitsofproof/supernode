@@ -226,7 +226,7 @@ public class BitcoinPeer extends P2P.Peer
 		log.info ("Disconnected '" + getAgent () + "' at " + getAddress () + ". Open connections: " + getNetwork ().getNumberOfConnections ());
 	}
 
-	public static final int MAX_SIZE = 0x02000000;
+	public static final int MAX_BLOCK_SIZE = 1000000;
 
 	@Override
 	public Message parse (InputStream readIn) throws IOException
@@ -249,7 +249,11 @@ public class BitcoinPeer extends P2P.Peer
 			Message m = createMessage (command);
 			long length = reader.readUint32 ();
 			byte[] checksum = reader.readBytes (4);
-			if ( length > 0 && length < MAX_SIZE )
+			if ( length < 0 || length >= MAX_BLOCK_SIZE )
+			{
+				throw new ValidationException ("Block size limit exceeded");
+			}
+			else
 			{
 				byte[] buf = new byte[(int) length];
 				if ( readIn.read (buf) != buf.length )
