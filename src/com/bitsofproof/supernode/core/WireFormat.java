@@ -180,8 +180,7 @@ public class WireFormat
 
 		public Hash hash (int offset, int length)
 		{
-			Hash hash = new Hash ();
-			return hash.hash (bytes, offset, length);
+			return Hash.hash (bytes, offset, length);
 		}
 
 		public Hash hash ()

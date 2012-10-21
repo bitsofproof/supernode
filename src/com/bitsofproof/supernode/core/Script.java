@@ -313,8 +313,14 @@ public class Script
 	{
 		StringBuffer b = new StringBuffer ();
 		WireFormat.Reader reader = new WireFormat.Reader (script);
+		boolean first = true;
 		while ( !reader.eof () )
 		{
+			if ( !first )
+			{
+				b.append (" ");
+			}
+			first = false;
 			Opcode op = Opcode.values ()[reader.readScriptOpcode ()];
 			if ( op.o <= 75 )
 			{
@@ -325,7 +331,6 @@ public class Script
 					try
 					{
 						b.append (new String (Hex.encode (reader.readBytes (op.o)), "US-ASCII"));
-						b.append (" ");
 					}
 					catch ( UnsupportedEncodingException e )
 					{
@@ -344,7 +349,6 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes (n)), "US-ASCII"));
-							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -359,7 +363,6 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
-							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -374,7 +377,6 @@ public class Script
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
-							b.append (" ");
 						}
 						catch ( UnsupportedEncodingException e )
 						{
@@ -383,7 +385,6 @@ public class Script
 						break;
 					default:
 						b.append (op.toString ());
-						b.append (" ");
 				}
 			}
 		}
@@ -459,6 +460,7 @@ public class Script
 		return writer.toByteArray ();
 	}
 
+	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluate ()
 	{
 		System.out.println (toString ());
@@ -723,7 +725,7 @@ public class Script
 						case OP_NIP:
 						{
 							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
+							stack.pop ();
 							stack.push (a1);
 						}
 							break;
@@ -825,6 +827,7 @@ public class Script
 								break;
 							}
 						}
+							break;
 						case OP_RESERVED1:
 						case OP_RESERVED2:
 							return false;
@@ -1106,16 +1109,14 @@ public class Script
 							{
 								MessageDigest a = MessageDigest.getInstance ("SHA-256");
 								a.update (txwire);
-								a.update (new byte[4]);
+								a.update (new byte[] { 1, 0, 0, 0 }); // HASH_ALL
 								hash = a.digest (a.digest ());
 							}
 							catch ( NoSuchAlgorithmException e )
 							{
 								return false;
 							}
-
-							boolean valid = ECKeyPair.verify (hash, sig, pubkey);
-							pushInt (valid ? 1 : 0);
+							pushInt (ECKeyPair.verify (hash, sig, pubkey) ? 1 : 0);
 							if ( op == Opcode.OP_CHECKSIGVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
@@ -1150,7 +1151,7 @@ public class Script
 												// bug, one extra unused value
 												// is
 												// removed from the stack.
-							break;
+												// / no break;
 						case OP_CHECKMULTISIGVERIFY:// 0xaf x sig1 sig2 ...
 													// <number
 													// of signatures> pub1 pub2
@@ -1161,8 +1162,7 @@ public class Script
 													// OP_CHECKMULTISIG, but
 													// OP_VERIFY is executed
 													// afterward.
-							break;
-
+							return false; // not yet implemented
 					}
 					if ( op.o >= 176 && op.o <= 185 )
 					{
@@ -1180,6 +1180,6 @@ public class Script
 		{
 			return false;
 		}
-		return true;
+		return popBoolean ();
 	}
 }

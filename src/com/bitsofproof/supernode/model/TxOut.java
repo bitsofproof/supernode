@@ -87,7 +87,7 @@ public class TxOut implements Serializable
 				byte[] addressBytes = new byte[1 + ph.length + 4];
 				addressBytes[0] = (byte) 0; // 0 for production
 				System.arraycopy (ph, 0, addressBytes, 1, ph.length);
-				byte[] check = new Hash ().hash (addressBytes, 0, ph.length + 1).toByteArray ();
+				byte[] check = Hash.hash (addressBytes, 0, ph.length + 1).toByteArray ();
 				System.arraycopy (check, 0, addressBytes, ph.length + 1, 4);
 				address = Base58.encode (addressBytes);
 

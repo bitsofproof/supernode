@@ -22,17 +22,12 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.main.Setup;
-import com.bitsofproof.supernode.model.ChainStore;
 import com.bitsofproof.supernode.model.Tx;
 
 public class ScriptTest
 {
-	private static Chain chain;
-	private static ChainStore store;
-
 	private static PlatformTransactionManager transactionManager;
 	private static ApplicationContext context;
 	private static EntityManagerFactory emf;
@@ -44,8 +39,6 @@ public class ScriptTest
 		{
 			Setup.setup ();
 			context = new ClassPathXmlApplicationContext ("app-context.xml");
-			chain = context.getBean (Chain.class);
-			store = context.getBean (ChainStore.class);
 			transactionManager = context.getBean (PlatformTransactionManager.class);
 			emf = context.getBean (EntityManagerFactory.class);
 		}
@@ -65,35 +58,35 @@ public class ScriptTest
 	@Test
 	public void dataPushTest ()
 	{
-		Script s = new Script ("OP_PUSH3 0a0b0c OP_PUSHDATA1 03 0a0b0c OP_EQUALVERIFY");
+		Script s = new Script ("OP_PUSH3 0a0b0c OP_PUSHDATA1 03 0a0b0c OP_EQUAL");
 		assertTrue (s.evaluate ());
 	}
 
 	@Test
 	public void ifTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_1 OP_EQUALVERIFY").evaluate ());
+		assertTrue (new Script ("OP_1 OP_1 OP_EQUAL").evaluate ());
 		assertTrue (new Script ("OP_1 OP_IF OP_1 OP_ELSE OP_1 OP_ENDIF").evaluate ());
-		assertFalse (new Script ("OP_1 OP_IF OP_FALSE OP_ELSE OP_1 OP_ENDIF OP_EQUALVERIFY").evaluate ());
-		assertFalse (new Script ("OP_1 OP_IF OP_1 OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_1 OP_NOTIF OP_FALSE OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_1 OP_EQUALVERIFY").evaluate ());
+		assertFalse (new Script ("OP_1 OP_IF OP_FALSE OP_ELSE OP_1 OP_ENDIF OP_EQUAL").evaluate ());
+		assertFalse (new Script ("OP_1 OP_IF OP_1 OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_1 OP_NOTIF OP_FALSE OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_1 OP_EQUAL").evaluate ());
 	}
 
 	@Test
 	public void stackTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUALVERIFY").evaluate ());
+		assertTrue (new Script ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUAL").evaluate ());
 	}
 
 	@Test
 	public void mathTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_2 OP_ADD OP_3 OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_3 OP_DUP OP_SUB OP_FALSE OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_1 OP_5 OP_SUB OP_ABS OP_4 OP_EQUALVERIFY").evaluate ());
-		assertTrue (new Script ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUALVERIFY").evaluate ());
+		assertTrue (new Script ("OP_1 OP_2 OP_ADD OP_3 OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_3 OP_DUP OP_SUB OP_FALSE OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_1 OP_5 OP_SUB OP_ABS OP_4 OP_EQUAL").evaluate ());
+		assertTrue (new Script ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUAL").evaluate ());
 	}
 
 	private static String toHex (byte[] b)
@@ -118,7 +111,7 @@ public class ScriptTest
 			byte[] h = a.digest (b);
 
 			assertTrue (new Script ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + toHex (b) + " OP_SHA256 OP_PUSHDATA1 20 " + toHex (h)
-					+ " OP_EQUALVERIFY").evaluate ());
+					+ " OP_EQUAL").evaluate ());
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
