@@ -1266,10 +1266,6 @@ public class Script
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
 							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
 							Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
-							for ( TxIn in : tx.getInputs () )
-							{
-								originalInputs.put (in, in.getScript ());
-							}
 							int ninr = 0;
 							for ( TxIn in : tx.getInputs () )
 							{
