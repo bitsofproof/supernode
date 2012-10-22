@@ -158,6 +158,7 @@ public class Tx implements Serializable
 	{
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");
+		b.append ("hash:\"" + getHash () + "\",");
 		b.append ("version:" + String.valueOf (version) + ",");
 		b.append ("inputs:[");
 		boolean first = true;
