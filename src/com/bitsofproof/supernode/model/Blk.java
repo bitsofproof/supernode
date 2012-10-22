@@ -1,6 +1,5 @@
 package com.bitsofproof.supernode.model;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -315,7 +314,7 @@ public class Blk implements Serializable
 	{
 		merkleRoot = computeMerkleRoot ();
 
-		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint32 (version);
 		if ( previous != null )
 		{

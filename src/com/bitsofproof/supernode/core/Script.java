@@ -1,6 +1,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -148,6 +149,108 @@ public class Script
 		}
 	};
 
+	public static class ScriptReader
+	{
+		private final byte[] bytes;
+		private int cursor;
+
+		public ScriptReader (byte[] script)
+		{
+			this.bytes = script;
+			this.cursor = 0;
+		}
+
+		public boolean eof ()
+		{
+			return cursor == bytes.length;
+		}
+
+		public byte[] readBytes (int n)
+		{
+			byte[] b = new byte[n];
+			System.arraycopy (bytes, cursor, b, 0, n);
+			cursor += n;
+			return b;
+		}
+
+		public void skipBytes (int n)
+		{
+			cursor += n;
+		}
+
+		public int readByte ()
+		{
+			return bytes[cursor++] & 0xff;
+		}
+
+		public long readInt16 ()
+		{
+			long value = ((bytes[cursor + 1] & 0xFFL) << 0) | ((bytes[cursor] & 0xFFL) << 8);
+			cursor += 2;
+			return value;
+		}
+
+		public long readInt32 ()
+		{
+			long value =
+					((bytes[cursor + 3] & 0xFFL) << 0) | ((bytes[cursor + 2] & 0xFFL) << 8) | ((bytes[cursor + 1] & 0xFFL) << 16)
+							| ((bytes[cursor] & 0xFFL) << 24);
+			cursor += 4;
+			return value;
+
+		}
+	}
+
+	public static class ScriptWriter
+	{
+		private final ByteArrayOutputStream s;
+
+		public ScriptWriter ()
+		{
+			s = new ByteArrayOutputStream ();
+		}
+
+		public ScriptWriter (ByteArrayOutputStream s)
+		{
+			this.s = s;
+		}
+
+		public void writeByte (int n)
+		{
+			s.write (n);
+		}
+
+		public void writeBytes (byte[] b)
+		{
+			try
+			{
+				s.write (b);
+			}
+			catch ( IOException e )
+			{
+			}
+		}
+
+		public void writeInt16 (long n)
+		{
+			s.write ((int) (0xFFL & (n >> 8)));
+			s.write ((int) (0xFFL & n));
+		}
+
+		public void writeInt32 (long n)
+		{
+			s.write ((int) (0xFF & (n >> 24)));
+			s.write ((int) (0xFF & (n >> 16)));
+			s.write ((int) (0xFF & (n >> 8)));
+			s.write ((int) (0xFF & n));
+		}
+
+		public byte[] toByteArray ()
+		{
+			return s.toByteArray ();
+		}
+	}
+
 	private void pushInt (long n)
 	{
 		if ( n > 0xffffffffL )
@@ -264,7 +367,7 @@ public class Script
 
 	public Script (String s)
 	{
-		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+		ScriptWriter writer = new ScriptWriter ();
 		StringTokenizer tokenizer = new StringTokenizer (s, " ");
 		while ( tokenizer.hasMoreElements () )
 		{
@@ -289,14 +392,14 @@ public class Script
 					case OP_PUSHDATA2:
 					{
 						byte[] b = Hex.decode (tokenizer.nextToken ());
-						writer.writeScriptInt16 (b[0] << 8 | b[1]);
+						writer.writeInt16 (b[0] << 8 | b[1]);
 						writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
 					}
 						break;
 					case OP_PUSHDATA4:
 					{
 						byte[] b = Hex.decode (tokenizer.nextToken ());
-						writer.writeScriptInt32 (b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
+						writer.writeInt32 (b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
 						writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
 					}
 						break;
@@ -312,7 +415,7 @@ public class Script
 	public String toString ()
 	{
 		StringBuffer b = new StringBuffer ();
-		WireFormat.Reader reader = new WireFormat.Reader (script);
+		ScriptReader reader = new ScriptReader (script);
 		boolean first = true;
 		while ( !reader.eof () )
 		{
@@ -321,7 +424,7 @@ public class Script
 				b.append (" ");
 			}
 			first = false;
-			Opcode op = Opcode.values ()[reader.readScriptOpcode ()];
+			Opcode op = Opcode.values ()[reader.readByte ()];
 			if ( op.o <= 75 )
 			{
 				b.append ("OP_PUSH" + op.o);
@@ -343,7 +446,7 @@ public class Script
 				{
 					case OP_PUSHDATA1:
 					{
-						int n = reader.readScriptOpcode ();
+						int n = reader.readByte ();
 						b.append ("OP_PUSHDATA1 ");
 						b.append (" ");
 						try
@@ -359,7 +462,7 @@ public class Script
 					{
 						b.append ("OP_PUSHDATA2 ");
 						b.append (" ");
-						long n = reader.readScriptInt16 ();
+						long n = reader.readInt16 ();
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
@@ -373,7 +476,7 @@ public class Script
 					{
 						b.append ("OP_PUSHDATA4 ");
 						b.append (" ");
-						long n = reader.readScriptInt32 ();
+						long n = reader.readInt32 ();
 						try
 						{
 							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
@@ -393,10 +496,10 @@ public class Script
 
 	public static boolean isPushOnly (byte[] script)
 	{
-		WireFormat.Reader reader = new WireFormat.Reader (script);
+		ScriptReader reader = new ScriptReader (script);
 		while ( !reader.eof () )
 		{
-			int op = reader.readScriptOpcode ();
+			int op = reader.readByte ();
 			if ( op <= 75 )
 			{
 				reader.skipBytes (op);
@@ -417,10 +520,10 @@ public class Script
 	public static int sigOpCount (byte[] script)
 	{
 		int nsig = 0;
-		WireFormat.Reader reader = new WireFormat.Reader (script);
+		ScriptReader reader = new ScriptReader (script);
 		while ( !reader.eof () )
 		{
-			int op = reader.readScriptOpcode ();
+			int op = reader.readByte ();
 			if ( op <= 75 )
 			{
 				reader.skipBytes (op);
@@ -432,19 +535,19 @@ public class Script
 				{
 					case OP_PUSHDATA1:
 					{
-						int n = reader.readScriptOpcode ();
+						int n = reader.readByte ();
 						reader.skipBytes (n);
 					}
 						break;
 					case OP_PUSHDATA2:
 					{
-						long n = reader.readScriptInt16 ();
+						long n = reader.readInt16 ();
 						reader.skipBytes ((int) n);
 					}
 						break;
 					case OP_PUSHDATA4:
 					{
-						long n = reader.readScriptInt32 ();
+						long n = reader.readInt32 ();
 						reader.skipBytes ((int) n);
 					}
 						break;
@@ -464,11 +567,11 @@ public class Script
 
 	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
 	{
-		WireFormat.Reader reader = new WireFormat.Reader (script);
-		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+		ScriptReader reader = new ScriptReader (script);
+		ScriptWriter writer = new ScriptWriter ();
 		while ( !reader.eof () )
 		{
-			int op = reader.readScriptOpcode ();
+			int op = reader.readByte ();
 			if ( op <= 75 )
 			{
 				boolean found = false;
@@ -501,21 +604,21 @@ public class Script
 				{
 					case OP_PUSHDATA1:
 					{
-						int n = reader.readScriptOpcode ();
+						int n = reader.readByte ();
 						writer.writeByte (op);
 						writer.writeBytes (reader.readBytes (n));
 					}
 						break;
 					case OP_PUSHDATA2:
 					{
-						long n = reader.readScriptInt16 ();
+						long n = reader.readInt16 ();
 						writer.writeByte (op);
 						writer.writeBytes (reader.readBytes ((int) n));
 					}
 						break;
 					case OP_PUSHDATA4:
 					{
-						long n = reader.readScriptInt32 ();
+						long n = reader.readInt32 ();
 						writer.writeByte (op);
 						writer.writeBytes (reader.readBytes ((int) n));
 					}
@@ -535,7 +638,7 @@ public class Script
 	public boolean evaluate ()
 	{
 		System.out.println (toString ());
-		WireFormat.Reader reader = new WireFormat.Reader (script);
+		ScriptReader reader = new ScriptReader (script);
 
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
 		ignoreStack.push (false);
@@ -547,7 +650,7 @@ public class Script
 			while ( !reader.eof () )
 			{
 				++offset;
-				Opcode op = Opcode.values ()[reader.readScriptOpcode ()];
+				Opcode op = Opcode.values ()[reader.readByte ()];
 				if ( op.o <= 75 )
 				{
 					if ( ignoreStack.peek () )
@@ -563,7 +666,7 @@ public class Script
 				{
 					case OP_PUSHDATA1:
 					{
-						int n = reader.readScriptOpcode ();
+						int n = reader.readByte ();
 						if ( ignoreStack.peek () )
 						{
 							reader.skipBytes (n);
@@ -576,7 +679,7 @@ public class Script
 						break;
 					case OP_PUSHDATA2:
 					{
-						long n = reader.readScriptInt16 ();
+						long n = reader.readInt16 ();
 						if ( ignoreStack.peek () )
 						{
 							reader.skipBytes ((int) n);
@@ -589,7 +692,7 @@ public class Script
 						break;
 					case OP_PUSHDATA4:
 					{
-						long n = reader.readScriptInt32 ();
+						long n = reader.readInt32 ();
 						if ( ignoreStack.peek () )
 						{
 							reader.skipBytes ((int) n);
@@ -1167,7 +1270,7 @@ public class Script
 									in.setScript (new byte[0]);
 								}
 							}
-							WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+							WireFormat.Writer writer = new WireFormat.Writer ();
 							tx.toWire (writer);
 							for ( Map.Entry<TxIn, byte[]> e : originalScripts.entrySet () )
 							{

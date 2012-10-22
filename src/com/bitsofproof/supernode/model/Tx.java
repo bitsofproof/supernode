@@ -1,6 +1,5 @@
 package com.bitsofproof.supernode.model;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,7 +148,7 @@ public class Tx implements Serializable
 			return;
 		}
 
-		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
+		WireFormat.Writer writer = new WireFormat.Writer ();
 		toWire (writer);
 		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
 		hash = reader.hash ().toString ();

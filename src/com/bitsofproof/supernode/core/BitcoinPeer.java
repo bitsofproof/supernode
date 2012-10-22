@@ -80,7 +80,7 @@ public class BitcoinPeer extends P2P.Peer
 			WireFormat.Writer writer = new WireFormat.Writer (out);
 			writer.writeUint32 (network.getChain ().getMagic ());
 			writer.writeZeroDelimitedString (getCommand (), 12);
-			WireFormat.Writer payload = new WireFormat.Writer (new ByteArrayOutputStream ());
+			WireFormat.Writer payload = new WireFormat.Writer ();
 			toWire (payload);
 			byte[] data = payload.toByteArray ();
 			writer.writeUint32 (data.length);
