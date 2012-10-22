@@ -489,6 +489,7 @@ public class JpaChainStore implements ChainStore
 				Map<String, Tx> blockTransactions = new HashMap<String, Tx> ();
 				for ( Tx t : b.getTransactions () )
 				{
+					blockTransactions.put (t.getHash (), t);
 					if ( coinbase )
 					{
 						if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
@@ -517,7 +518,6 @@ public class JpaChainStore implements ChainStore
 						{
 							throw new ValidationException ("only the first transaction can be coinbase");
 						}
-						blockTransactions.put (t.getHash (), t);
 						if ( t.getOutputs ().isEmpty () )
 						{
 							throw new ValidationException ("Transaction must have outputs " + t.toJSON ());
@@ -567,6 +567,10 @@ public class JpaChainStore implements ChainStore
 								{
 									transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
 								}
+								else
+								{
+									throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
+								}
 							}
 							else
 							{
@@ -586,7 +590,7 @@ public class JpaChainStore implements ChainStore
 							{
 								throw new ValidationException ("Double spending attempt " + t.toJSON ());
 							}
-							if ( transactionOutput.getTransaction ().getInputs () == null )
+							if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
 							{
 								QBlk blk = QBlk.blk;
 								QTx tx = QTx.tx;

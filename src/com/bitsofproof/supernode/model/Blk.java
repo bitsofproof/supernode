@@ -193,7 +193,6 @@ public class Blk implements Serializable
 		// Start by adding all the hashes of the transactions as leaves of the tree.
 		for ( Tx t : transactions )
 		{
-			t.calculateHash ();
 			tree.add (new Hash (t.getHash ()).toByteArray ());
 		}
 		int levelOffset = 0; // Offset in the list where the currently processed level starts.

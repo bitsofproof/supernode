@@ -144,15 +144,18 @@ public class TxIn implements Serializable
 			writer.writeHash (new Hash (source.getTransaction ().getHash ()));
 			writer.writeUint32 (source.getIx ());
 		}
-		else if ( sourceHash != null )
-		{
-			writer.writeHash (new Hash (sourceHash));
-			writer.writeUint32 (ix);
-		}
 		else
 		{
-			writer.writeBytes (Hash.ZERO_HASH.toByteArray ());
-			writer.writeUint32 (-1);
+			if ( sourceHash != null && !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
+			{
+				writer.writeHash (new Hash (sourceHash));
+				writer.writeUint32 (ix);
+			}
+			else
+			{
+				writer.writeBytes (Hash.ZERO_HASH.toByteArray ());
+				writer.writeUint32 (-1);
+			}
 		}
 		writer.writeVarBytes (script);
 		writer.writeUint32 (sequence);

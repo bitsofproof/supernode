@@ -104,6 +104,13 @@ public class Tx implements Serializable
 
 	public String getHash ()
 	{
+		if ( hash == null )
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			toWire (writer);
+			WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
+			hash = reader.hash ().toString ();
+		}
 		return hash;
 	}
 
@@ -139,19 +146,6 @@ public class Tx implements Serializable
 			}
 		}
 
-	}
-
-	public void calculateHash ()
-	{
-		if ( hash != null )
-		{
-			return;
-		}
-
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		toWire (writer);
-		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
-		hash = reader.hash ().toString ();
 	}
 
 	public String toJSON ()
