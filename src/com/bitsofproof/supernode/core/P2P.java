@@ -249,6 +249,8 @@ public abstract class P2P
 
 		private void listen ()
 		{
+			final P2P.Peer self = this;
+
 			peerThreads.execute (new Runnable ()
 			{
 				@Override
@@ -259,7 +261,10 @@ public abstract class P2P
 					{
 						m = parse (readIn);
 						receive (m);
-						peerThreads.execute (this); // listen again
+						if ( connectedPeers.containsKey (self.channel) )
+						{
+							peerThreads.execute (this); // listen again
+						}
 					}
 					catch ( Exception e )
 					{
