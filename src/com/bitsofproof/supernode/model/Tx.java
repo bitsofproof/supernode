@@ -122,7 +122,7 @@ public class Tx implements Serializable
 			{
 				throw new ValidationException ("script too long");
 			}
-			long n = out.getValue ().longValue ();
+			long n = out.getValue ();
 			checkMoneyRange (n);
 			sumOut += n;
 		}

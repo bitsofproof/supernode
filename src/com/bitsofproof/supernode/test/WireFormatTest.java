@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
 
 import org.junit.Test;
 
@@ -43,8 +42,7 @@ public class WireFormatTest
 	{
 		ByteArrayOutputStream bs = new ByteArrayOutputStream ();
 		WireFormat.Writer writer = new WireFormat.Writer (bs);
-		BigInteger n = new BigInteger ("286331153");
-		n = n.multiply (n);
+		long n = 286331153L * 286331153;
 		writer.writeUint64 (n);
 
 		WireFormat.Reader reader = new WireFormat.Reader (bs.toByteArray ());

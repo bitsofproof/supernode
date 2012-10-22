@@ -13,7 +13,7 @@ public class WireFormat
 	public static class Address
 	{
 		public long time;
-		public BigInteger services;
+		public long services;
 		public InetAddress address;
 		public long port;
 	}
@@ -60,9 +60,9 @@ public class WireFormat
 			return value;
 		}
 
-		public BigInteger readUint64 ()
+		public long readUint64 ()
 		{
-			return new BigInteger (reverse (readBytes (8)));
+			return new BigInteger (reverse (readBytes (8))).longValue ();
 		}
 
 		public long readVarInt ()
@@ -243,11 +243,12 @@ public class WireFormat
 			bs.write ((int) (0xFF & (n >> 24)));
 		}
 
-		public void writeUint64 (BigInteger n)
+		public void writeUint64 (long n)
 		{
 			try
 			{
-				byte[] b = reverse (n.toByteArray ());
+				BigInteger bi = BigInteger.valueOf (n);
+				byte[] b = reverse (bi.toByteArray ());
 				bs.write (b);
 				if ( b.length < 8 )
 				{

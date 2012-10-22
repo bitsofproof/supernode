@@ -18,13 +18,13 @@ public class VersionMessage extends BitcoinPeer.Message
 		myport = bitcoinPeer.getNetwork ().getChain ().getPort ();
 	}
 
-	private BigInteger services = new BigInteger ("1");;
-	private BigInteger timestamp = new BigInteger (new Long (System.currentTimeMillis () / 1000).toString ());
+	private long services = 1;
+	private long timestamp = System.currentTimeMillis () / 1000;
 	private InetAddress peer;
 	private long remotePort;
 	private InetAddress me;
 	private long myport;
-	private BigInteger nonce = new BigInteger (64, new Random ());
+	private long nonce = new BigInteger (64, new Random ()).longValue ();
 	private String agent = "/bitsofproof:0.1/";
 	private long height;
 
@@ -72,12 +72,12 @@ public class VersionMessage extends BitcoinPeer.Message
 		height = reader.readUint32 ();
 	}
 
-	public BigInteger getServices ()
+	public long getServices ()
 	{
 		return services;
 	}
 
-	public void setServices (BigInteger services)
+	public void setServices (long services)
 	{
 		this.services = services;
 	}
@@ -102,22 +102,22 @@ public class VersionMessage extends BitcoinPeer.Message
 		this.me = me;
 	}
 
-	public BigInteger getTimestamp ()
+	public long getTimestamp ()
 	{
 		return timestamp;
 	}
 
-	public void setTimestamp (BigInteger timestamp)
+	public void setTimestamp (long timestamp)
 	{
 		this.timestamp = timestamp;
 	}
 
-	public BigInteger getNonce ()
+	public long getNonce ()
 	{
 		return nonce;
 	}
 
-	public void setNonce (BigInteger nounce)
+	public void setNonce (long nounce)
 	{
 		this.nonce = nounce;
 	}

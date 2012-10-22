@@ -1,7 +1,6 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -33,7 +32,7 @@ public class TxOut implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	private BigInteger value;
+	private long value;
 
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
@@ -108,12 +107,12 @@ public class TxOut implements Serializable
 		this.id = id;
 	}
 
-	public BigInteger getValue ()
+	public long getValue ()
 	{
 		return value;
 	}
 
-	public void setValue (BigInteger value)
+	public void setValue (long value)
 	{
 		this.value = value;
 	}

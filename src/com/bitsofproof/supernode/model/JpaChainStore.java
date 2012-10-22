@@ -523,7 +523,7 @@ public class JpaChainStore implements ChainStore
 						coinbase = false;
 						for ( TxOut o : t.getOutputs () )
 						{
-							blkSumOutput = blkSumOutput.add (o.getValue ());
+							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 							nsigs += Script.sigOpCount (o.getScript ());
 						}
 						if ( nsigs > MAX_BLOCK_SIGOPS )
@@ -560,12 +560,12 @@ public class JpaChainStore implements ChainStore
 							{
 								throw new ValidationException ("too many signatures in this block");
 							}
-							if ( o.getValue ().compareTo (BigInteger.ZERO) < 0 || o.getValue ().longValue () > Tx.MAX_MONEY )
+							if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
 							{
 								throw new ValidationException ("Transaction output not in money range");
 							}
-							blkSumOutput = blkSumOutput.add (o.getValue ());
-							sumOut += o.getValue ().longValue ();
+							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
+							sumOut += o.getValue ();
 						}
 						long sumIn = 0;
 						for ( TxIn i : t.getInputs () )
@@ -628,8 +628,8 @@ public class JpaChainStore implements ChainStore
 								throw new ValidationException ("The transaction script does not evaluate to true");
 							}
 
-							blkSumInput = blkSumInput.add (i.getSource ().getValue ());
-							sumIn += transactionOutput.getValue ().longValue ();
+							blkSumInput = blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
+							sumIn += transactionOutput.getValue ();
 						}
 						if ( sumOut > sumIn )
 						{
