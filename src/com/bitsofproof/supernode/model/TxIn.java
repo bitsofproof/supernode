@@ -14,6 +14,7 @@ import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -109,6 +110,31 @@ public class TxIn implements Serializable
 	public void setTransaction (Tx transaction)
 	{
 		this.transaction = transaction;
+	}
+
+	public String toJSON ()
+	{
+		StringBuffer b = new StringBuffer ();
+		b.append ("{");
+		if ( source != null )
+		{
+			b.append ("sourceHash:\"" + source.getTransaction ().getHash () + "\",");
+			b.append ("sourceIx:" + source.getIx () + ",");
+		}
+		else if ( sourceHash != null )
+		{
+			b.append ("sourceHash:\"" + sourceHash + "\",");
+			b.append ("sourceIx:" + ix + ",");
+		}
+		else
+		{
+			b.append ("sourceHash:\"" + Hash.ZERO_HASH.toByteArray () + "\",");
+			b.append ("sourceIx:" + -1 + ",");
+		}
+		b.append ("script:\"" + new Script (script).toString () + "\"" + ",");
+		b.append ("sequence:" + String.valueOf (sequence));
+		b.append ("}");
+		return b.toString ();
 	}
 
 	public void toWire (WireFormat.Writer writer)

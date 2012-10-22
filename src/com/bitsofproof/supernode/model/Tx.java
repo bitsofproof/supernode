@@ -154,6 +154,40 @@ public class Tx implements Serializable
 		hash = reader.hash ().toString ();
 	}
 
+	public String toJSON ()
+	{
+		StringBuffer b = new StringBuffer ();
+		b.append ("{");
+		b.append ("version:" + String.valueOf (version) + ",");
+		b.append ("inputs:[");
+		boolean first = true;
+		for ( TxIn input : inputs )
+		{
+			if ( !first )
+			{
+				b.append (",");
+			}
+			first = false;
+			b.append (input.toJSON ());
+		}
+		b.append ("],");
+		b.append ("outputs:[");
+		first = true;
+		for ( TxOut output : outputs )
+		{
+			if ( !first )
+			{
+				b.append (",");
+			}
+			first = false;
+			b.append (output.toJSON ());
+		}
+		b.append ("],");
+		b.append ("lockTime:" + String.valueOf (lockTime));
+		b.append ("}");
+		return b.toString ();
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);

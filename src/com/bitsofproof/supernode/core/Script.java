@@ -637,7 +637,6 @@ public class Script
 	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluate ()
 	{
-		System.out.println (toString ());
 		ScriptReader reader = new ScriptReader (script);
 
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
@@ -1258,10 +1257,11 @@ public class Script
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
 							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
 							Map<TxIn, byte[]> originalScripts = new HashMap<TxIn, byte[]> ();
+							int ninr = 0;
 							for ( TxIn in : tx.getInputs () )
 							{
 								originalScripts.put (in, in.getScript ());
-								if ( in.getIx () == inr )
+								if ( ninr == inr )
 								{
 									in.setScript (signedScript);
 								}
@@ -1269,6 +1269,7 @@ public class Script
 								{
 									in.setScript (new byte[0]);
 								}
+								++ninr;
 							}
 							WireFormat.Writer writer = new WireFormat.Writer ();
 							tx.toWire (writer);

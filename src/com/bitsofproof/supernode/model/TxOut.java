@@ -20,6 +20,7 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
 import com.bitsofproof.supernode.core.Base58;
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -48,6 +49,16 @@ public class TxOut implements Serializable
 
 	@Column (length = 40, nullable = true)
 	private String address;
+
+	public String toJSON ()
+	{
+		StringBuffer b = new StringBuffer ();
+		b.append ("{");
+		b.append ("value:" + getValue () + ",");
+		b.append ("script:\"" + new Script (script).toString () + "\"");
+		b.append ("}");
+		return b.toString ();
+	}
 
 	public void toWire (WireFormat.Writer writer)
 	{

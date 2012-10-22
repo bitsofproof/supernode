@@ -357,25 +357,6 @@ public class JpaChainStore implements ChainStore
 				return currentHead.getHeight ();
 			}
 
-			for ( TreeSet<KnownMember> k : knownByPeer.values () )
-			{
-				k.remove (cached);
-			}
-
-			List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-			for ( Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet () )
-			{
-				e.getValue ().remove (b.getHash ());
-				if ( e.getValue ().size () == 0 )
-				{
-					finishedPeer.add (e.getKey ());
-				}
-			}
-			for ( BitcoinPeer p : finishedPeer )
-			{
-				requestsByPeer.remove (p);
-			}
-
 			// find previous block
 			Member cachedPrevious = members.get (b.getPreviousHash ());
 			Blk prev = null;
@@ -389,7 +370,7 @@ public class JpaChainStore implements ChainStore
 
 				if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
 				{
-					throw new ValidationException ("Future generation attempt");
+					throw new ValidationException ("Future generation attempt " + b.getHash ());
 				}
 
 				if ( b.getHeight () >= 2016 && b.getHeight () % 2016 == 0 )
@@ -405,19 +386,19 @@ public class JpaChainStore implements ChainStore
 					long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
 					if ( next != b.getDifficultyTarget () )
 					{
-						throw new ValidationException ("Difficulty does not match expectation");
+						throw new ValidationException ("Difficulty does not match expectation " + b.getHash ());
 					}
 				}
 				else
 				{
 					if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
 					{
-						throw new ValidationException ("Illegal attempt to change difficulty");
+						throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
 					}
 				}
 				if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
 				{
-					throw new ValidationException ("Insufficuent proof of work for current difficulty");
+					throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash ());
 				}
 
 				boolean branching = false;
@@ -494,7 +475,7 @@ public class JpaChainStore implements ChainStore
 
 				if ( b.getTransactions ().isEmpty () )
 				{
-					throw new ValidationException ("Block must have transactions");
+					throw new ValidationException ("Block must have transactions " + b.getHash ());
 				}
 
 				b.checkMerkleRoot ();
@@ -510,15 +491,14 @@ public class JpaChainStore implements ChainStore
 				{
 					if ( coinbase )
 					{
-						if ( t.getInputs ().size () != 1
-								|| !t.getInputs ().get (0).getSourceHash ().equals ("0000000000000000000000000000000000000000000000000000000000000000")
+						if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
 								|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
 						{
-							throw new ValidationException ("first transaction must be coinbase");
+							throw new ValidationException ("first transaction must be coinbase " + b.getHash ());
 						}
 						if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
 						{
-							throw new ValidationException ("coinbase scriptsig must be in 2-100");
+							throw new ValidationException ("coinbase scriptsig must be in 2-100 " + b.getHash ());
 						}
 						coinbase = false;
 						for ( TxOut o : t.getOutputs () )
@@ -528,24 +508,23 @@ public class JpaChainStore implements ChainStore
 						}
 						if ( nsigs > MAX_BLOCK_SIGOPS )
 						{
-							throw new ValidationException ("too many signatures in this block");
+							throw new ValidationException ("too many signatures in this block " + b.getHash ());
 						}
 					}
 					else
 					{
-						if ( t.getInputs ().size () == 1
-								&& t.getInputs ().get (0).getSourceHash ().equals ("0000000000000000000000000000000000000000000000000000000000000000") )
+						if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
 						{
 							throw new ValidationException ("only the first transaction can be coinbase");
 						}
 						blockTransactions.put (t.getHash (), t);
 						if ( t.getOutputs ().isEmpty () )
 						{
-							throw new ValidationException ("Transaction must have outputs");
+							throw new ValidationException ("Transaction must have outputs " + t.toJSON ());
 						}
 						if ( t.getInputs ().isEmpty () )
 						{
-							throw new ValidationException ("Transaction must have inputs");
+							throw new ValidationException ("Transaction must have inputs " + t.toJSON ());
 						}
 
 						long sumOut = 0;
@@ -553,30 +532,31 @@ public class JpaChainStore implements ChainStore
 						{
 							if ( o.getScript ().length > 520 )
 							{
-								throw new ValidationException ("script too long");
+								throw new ValidationException ("script too long " + t.toJSON ());
 							}
 							nsigs += Script.sigOpCount (o.getScript ());
 							if ( nsigs > MAX_BLOCK_SIGOPS )
 							{
-								throw new ValidationException ("too many signatures in this block");
+								throw new ValidationException ("too many signatures in this block " + b.getHash ());
 							}
 							if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
 							{
-								throw new ValidationException ("Transaction output not in money range");
+								throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
 							}
 							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 							sumOut += o.getValue ();
 						}
 						long sumIn = 0;
+						int inNumber = 0;
 						for ( TxIn i : t.getInputs () )
 						{
 							if ( i.getScript ().length > 520 )
 							{
-								throw new ValidationException ("script too long");
+								throw new ValidationException ("script too long " + t.toJSON ());
 							}
 							if ( !Script.isPushOnly (i.getScript ()) )
 							{
-								throw new ValidationException ("input script should be push only");
+								throw new ValidationException ("input script should be push only " + t.toJSON ());
 							}
 
 							Tx sourceTransaction;
@@ -600,11 +580,11 @@ public class JpaChainStore implements ChainStore
 							}
 							if ( transactionOutput == null )
 							{
-								throw new ValidationException ("Transaction input refers to unknown output ");
+								throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
 							}
 							if ( transactionOutput.getSink () != null )
 							{
-								throw new ValidationException ("Double spending attempt");
+								throw new ValidationException ("Double spending attempt " + t.toJSON ());
 							}
 							if ( transactionOutput.getTransaction ().getInputs () == null )
 							{
@@ -617,30 +597,31 @@ public class JpaChainStore implements ChainStore
 												.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
 								if ( origin.getHeight () > (b.getHeight () - 100) )
 								{
-									throw new ValidationException ("coinbase spent too early");
+									throw new ValidationException ("coinbase spent too early " + t.toJSON ());
 								}
 							}
 
 							i.setSource (transactionOutput);
 
-							if ( !new Script (t, (int) i.getIx ()).evaluate () )
+							if ( !new Script (t, inNumber).evaluate () )
 							{
-								throw new ValidationException ("The transaction script does not evaluate to true");
+								throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ());
 							}
 
 							blkSumInput = blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
 							sumIn += transactionOutput.getValue ();
+							++inNumber;
 						}
 						if ( sumOut > sumIn )
 						{
-							throw new ValidationException ("Transaction value out more than in");
+							throw new ValidationException ("Transaction value out more than in " + t.toJSON ());
 						}
 					}
 				}
 
 				if ( blkSumOutput.subtract (blkSumInput).longValue () != ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
 				{
-					throw new ValidationException ("Invalid block reward");
+					throw new ValidationException ("Invalid block reward " + b.getHash ());
 				}
 
 				entityManager.persist (b);
@@ -655,6 +636,27 @@ public class JpaChainStore implements ChainStore
 							entityManager.merge (i.getSource ());
 						}
 					}
+				}
+
+				// modify transients after persistent stored
+
+				for ( TreeSet<KnownMember> k : knownByPeer.values () )
+				{
+					k.remove (cached);
+				}
+
+				List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
+				for ( Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet () )
+				{
+					e.getValue ().remove (b.getHash ());
+					if ( e.getValue ().size () == 0 )
+					{
+						finishedPeer.add (e.getKey ());
+					}
+				}
+				for ( BitcoinPeer p : finishedPeer )
+				{
+					requestsByPeer.remove (p);
 				}
 
 				StoredMember m = new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ());

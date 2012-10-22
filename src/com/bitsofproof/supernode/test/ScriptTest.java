@@ -24,7 +24,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.main.Setup;
+import com.bitsofproof.supernode.model.QTx;
 import com.bitsofproof.supernode.model.Tx;
+import com.mysema.query.jpa.impl.JPAQuery;
 
 public class ScriptTest
 {
@@ -128,8 +130,20 @@ public class ScriptTest
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				EntityManager entityManager = EntityManagerFactoryUtils.getTransactionalEntityManager (emf);
-				Tx tx = entityManager.find (Tx.class, new Long (184));
-				new Script (tx, 0).evaluate ();
+
+				QTx tx = QTx.tx;
+
+				JPAQuery query = new JPAQuery (entityManager);
+
+				Tx t = query.from (tx).where (tx.hash.eq ("a16f3ce4dd5deb92d98ef5cf8afeaf0775ebca408f708b2146c4fb42b41e14be")).singleResult (tx);
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+
+				query = new JPAQuery (entityManager);
+
+				t = query.from (tx).where (tx.hash.eq ("4d6edbeb62735d45ff1565385a8b0045f066055c9425e21540ea7a8060f08bf2")).singleResult (tx);
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
 			}
 		});
 	}
