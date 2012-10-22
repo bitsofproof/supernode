@@ -25,6 +25,11 @@ public class Script
 	private Tx tx;
 	private int inr;
 
+	private static final int SIGHASH_ALL = 1;
+	private static final int SIGHASH_NONE = 2;
+	private static final int SIGHASH_SINGLE = 3;
+	private static final int SIGHASH_ANYONECANPAY = 0x80;
+
 	public enum Opcode
 	{
 		OP_FALSE (0), OP_PUSH1 (1), OP_PUSH2 (2), OP_PUSH3 (3), OP_PUSH4 (4), OP_PUSH5 (5), OP_PUSH6 (6), OP_PUSH7 (7), OP_PUSH8 (8), OP_PUSH9 (9), OP_PUSH10 (
@@ -997,7 +1002,6 @@ public class Script
 								{
 									stack.pop ();
 								}
-								break;
 							}
 						}
 							break;
@@ -1252,15 +1256,24 @@ public class Script
 						{
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
-							// hastype is appended to sig but satoshi client does not honor it
+							byte hashType = sig[sig.length - 1];
+							if ( hashType != SIGHASH_ALL )
+							{
+								return false; // no other supported for now.
+							}
+
 							byte[] signedScript = new byte[script.length - codeseparator];
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
 							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
-							Map<TxIn, byte[]> originalScripts = new HashMap<TxIn, byte[]> ();
+							Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
+							for ( TxIn in : tx.getInputs () )
+							{
+								originalInputs.put (in, in.getScript ());
+							}
 							int ninr = 0;
 							for ( TxIn in : tx.getInputs () )
 							{
-								originalScripts.put (in, in.getScript ());
+								originalInputs.put (in, in.getScript ());
 								if ( ninr == inr )
 								{
 									in.setScript (signedScript);
@@ -1271,19 +1284,21 @@ public class Script
 								}
 								++ninr;
 							}
+
 							WireFormat.Writer writer = new WireFormat.Writer ();
 							tx.toWire (writer);
-							for ( Map.Entry<TxIn, byte[]> e : originalScripts.entrySet () )
+							for ( Map.Entry<TxIn, byte[]> e : originalInputs.entrySet () )
 							{
 								e.getKey ().setScript (e.getValue ());
 							}
+
 							byte[] txwire = writer.toByteArray ();
 							byte[] hash;
 							try
 							{
 								MessageDigest a = MessageDigest.getInstance ("SHA-256");
 								a.update (txwire);
-								a.update (new byte[] { 1, 0, 0, 0 }); // HASH_ALL & !ANYONECANPAY
+								a.update (new byte[] { hashType, 0, 0, 0 });
 								hash = a.digest (a.digest ());
 							}
 							catch ( NoSuchAlgorithmException e )

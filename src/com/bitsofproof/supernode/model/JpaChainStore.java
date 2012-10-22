@@ -638,27 +638,6 @@ public class JpaChainStore implements ChainStore
 					}
 				}
 
-				// modify transients after persistent stored
-
-				for ( TreeSet<KnownMember> k : knownByPeer.values () )
-				{
-					k.remove (cached);
-				}
-
-				List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-				for ( Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet () )
-				{
-					e.getValue ().remove (b.getHash ());
-					if ( e.getValue ().size () == 0 )
-					{
-						finishedPeer.add (e.getKey ());
-					}
-				}
-				for ( BitcoinPeer p : finishedPeer )
-				{
-					requestsByPeer.remove (p);
-				}
-
 				StoredMember m = new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ());
 				members.put (b.getHash (), m);
 
@@ -678,6 +657,27 @@ public class JpaChainStore implements ChainStore
 
 				log.trace ("stored block " + b.getHash ());
 			}
+			// modify transients after persistent stored
+
+			for ( TreeSet<KnownMember> k : knownByPeer.values () )
+			{
+				k.remove (cached);
+			}
+
+			List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
+			for ( Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet () )
+			{
+				e.getValue ().remove (b.getHash ());
+				if ( e.getValue ().size () == 0 )
+				{
+					finishedPeer.add (e.getKey ());
+				}
+			}
+			for ( BitcoinPeer p : finishedPeer )
+			{
+				requestsByPeer.remove (p);
+			}
+
 			return currentHead.getHeight ();
 		}
 		finally

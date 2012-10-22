@@ -221,6 +221,11 @@ public abstract class P2P
 
 		public void disconnect ()
 		{
+			if ( !connectedPeers.containsKey (channel) )
+			{
+				return;
+			}
+
 			try
 			{
 				// note that no other reference to peer is stored here
@@ -269,6 +274,11 @@ public abstract class P2P
 		{
 			try
 			{
+				if ( !connectedPeers.containsKey (this.channel) )
+				{
+					throw new IOException ("Peer disconneted");
+				}
+
 				writeable.acquireUninterruptibly ();
 
 				byte[] wiremsg = m.toByteArray ();

@@ -140,10 +140,20 @@ public class ScriptTest
 				assertTrue (new Script (t, 0).evaluate ());
 
 				query = new JPAQuery (entityManager);
-
 				t = query.from (tx).where (tx.hash.eq ("4d6edbeb62735d45ff1565385a8b0045f066055c9425e21540ea7a8060f08bf2")).singleResult (tx);
 				System.out.println (t.toJSON ());
 				assertTrue (new Script (t, 0).evaluate ());
+
+				query = new JPAQuery (entityManager);
+				t = query.from (tx).where (tx.hash.eq ("74c1a6dd6e88f73035143f8fc7420b5c395d28300a70bb35b943f7f2eddc656d")).singleResult (tx);
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+
+				query = new JPAQuery (entityManager);
+				t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+
 			}
 		});
 	}
