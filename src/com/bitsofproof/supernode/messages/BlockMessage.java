@@ -1,7 +1,6 @@
 package com.bitsofproof.supernode.messages;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
-import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 import com.bitsofproof.supernode.model.Blk;
@@ -30,12 +29,6 @@ public class BlockMessage extends BitcoinPeer.Message
 	public void toWire (Writer writer)
 	{
 		block.toWire (writer);
-	}
-
-	@Override
-	public void validate () throws ValidationException
-	{
-		block.basicValidation ();
 	}
 
 	@Override

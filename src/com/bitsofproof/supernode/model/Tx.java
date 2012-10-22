@@ -24,8 +24,8 @@ public class Tx implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
-	private static final long COIN = 100000000;
-	private static final long MAX_MONEY = 21000000 * COIN;
+	public static final long COIN = 100000000;
+	public static final long MAX_MONEY = 2099999997690000L;
 
 	private void checkMoneyRange (long n) throws ValidationException
 	{
@@ -115,7 +115,8 @@ public class Tx implements Serializable
 		{
 			throw new ValidationException ("Input or Output of transaction is empty");
 		}
-		long sum = 0;
+
+		long sumOut = 0;
 		for ( TxOut out : outputs )
 		{
 			if ( out.getScript ().length > 520 )
@@ -124,9 +125,9 @@ public class Tx implements Serializable
 			}
 			long n = out.getValue ().longValue ();
 			checkMoneyRange (n);
-			sum += n;
+			sumOut += n;
 		}
-		checkMoneyRange (sum);
+		checkMoneyRange (sumOut);
 		for ( TxIn in : inputs )
 		{
 			if ( in.getScript ().length > 520 )
@@ -138,6 +139,7 @@ public class Tx implements Serializable
 				throw new ValidationException ("input script should be push only");
 			}
 		}
+
 	}
 
 	public void calculateHash ()

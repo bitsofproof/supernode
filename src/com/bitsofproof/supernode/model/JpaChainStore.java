@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.model;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
@@ -33,6 +35,8 @@ import com.mysema.query.jpa.impl.JPAQuery;
 public class JpaChainStore implements ChainStore
 {
 	private static final Logger log = LoggerFactory.getLogger (JpaChainStore.class);
+
+	private static final long MAX_BLOCK_SIGOPS = 20000;
 
 	@PersistenceContext
 	private EntityManager entityManager;
@@ -256,6 +260,7 @@ public class JpaChainStore implements ChainStore
 		try
 		{
 			lock.writeLock ().lock ();
+
 			HashSet<String> requests = requestsByPeer.get (peer);
 			if ( requests == null )
 			{
@@ -341,9 +346,6 @@ public class JpaChainStore implements ChainStore
 	@Override
 	public long store (Blk b) throws ValidationException
 	{
-
-		b.computeHash ();
-
 		try
 		{
 			lock.writeLock ().lock ();
@@ -351,6 +353,7 @@ public class JpaChainStore implements ChainStore
 			Member cached = members.get (b.getHash ());
 			if ( cached instanceof StoredMember )
 			{
+				// we are done with this already
 				return currentHead.getHeight ();
 			}
 
@@ -382,12 +385,41 @@ public class JpaChainStore implements ChainStore
 			}
 			if ( prev != null )
 			{
-				if ( b.getCreateTime () > System.currentTimeMillis () / 1000 )
+				b.setPrevious (prev);
+
+				if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
 				{
-					throw new ValidationException ("Future generation attempt or lagging system clock.");
+					throw new ValidationException ("Future generation attempt");
 				}
 
-				b.setPrevious (prev);
+				if ( b.getHeight () % 2016 == 0 )
+				{
+					StoredMember c = null;
+					StoredMember p = (StoredMember) cachedPrevious;
+					for ( int i = 0; i < 2015; ++i )
+					{
+						c = p;
+						p = c.getPrevious ();
+					}
+
+					long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
+					if ( next != b.getDifficultyTarget () )
+					{
+						throw new ValidationException ("Difficulty does not match expectation");
+					}
+				}
+				else
+				{
+					if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
+					{
+						throw new ValidationException ("Illegal attempt to change difficulty");
+					}
+				}
+				if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+				{
+					throw new ValidationException ("Insufficuent proof of work for current difficulty");
+				}
+
 				boolean branching = false;
 				Head head;
 				if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
@@ -397,7 +429,7 @@ public class JpaChainStore implements ChainStore
 
 					head.setLeaf (b.getHash ());
 					head.setHeight (head.getHeight () + 1);
-					head.setChainWork (head.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
+					head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
 					head = entityManager.merge (head);
 				}
 				else
@@ -412,61 +444,141 @@ public class JpaChainStore implements ChainStore
 
 					head.setLeaf (b.getHash ());
 					head.setHeight (head.getHeight () + 1);
-					head.setChainWork (head.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
+					head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
 					entityManager.persist (head);
 				}
-
 				b.setHead (head);
 				b.setHeight (head.getHeight ());
 				b.setChainWork (head.getChainWork ());
-				if ( prev != null )
-				{
-					if ( b.getHeight () % 2016 == 0 )
-					{
-						StoredMember c = null;
-						StoredMember p = (StoredMember) cachedPrevious;
-						for ( int i = 0; i < 2015; ++i )
-						{
-							c = p;
-							p = c.getPrevious ();
-						}
 
-						long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
-						if ( next != b.getDifficultyTarget () )
-						{
-							throw new ValidationException ("Difficulty does not match expectation");
-						}
-					}
-					else
-					{
-						if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
-						{
-							throw new ValidationException ("Illegal attempt to change difficulty");
-						}
-					}
-				}
-				if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+				// do we have a new main chain ?
+				if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )
 				{
-					throw new ValidationException ("Insufficuent proof of work for current difficulty");
+					// find where we left off the previous main and blank out sinks thereafter
+					StoredMember newMain = (StoredMember) cachedPrevious;
+					StoredMember oldMain = currentHead.getLast ();
+					while ( newMain != null )
+					{
+						while ( oldMain != null && oldMain != newMain )
+						{
+							oldMain = oldMain.getPrevious ();
+						}
+						if ( oldMain != null )
+						{
+							break;
+						}
+						newMain = newMain.getPrevious ();
+						oldMain = (StoredMember) cachedPrevious;
+					}
+					if ( oldMain == null )
+					{
+						throw new ValidationException ("chain corruption " + newMain.getHash () + "is an orphan branch");
+					}
+					StoredMember top = (StoredMember) cachedPrevious;
+					while ( top != oldMain )
+					{
+						Blk nb = entityManager.find (Blk.class, top.getId ());
+						for ( Tx tx : nb.getTransactions () )
+						{
+							for ( TxOut o : tx.getOutputs () )
+							{
+								o.setSink (null);
+								entityManager.merge (o);
+							}
+						}
+						top = top.getPrevious ();
+					}
 				}
 
 				b.parseTransactions ();
+
+				if ( b.getTransactions ().isEmpty () )
+				{
+					throw new ValidationException ("Block must have transactions");
+				}
+
+				b.checkMerkleRoot ();
+
+				BigInteger blkSumInput = BigInteger.ZERO;
+				BigInteger blkSumOutput = BigInteger.ZERO;
+
+				int nsigs = 0;
+
 				boolean coinbase = true;
 				Map<String, Tx> blockTransactions = new HashMap<String, Tx> ();
 				for ( Tx t : b.getTransactions () )
 				{
-					t.calculateHash ();
-					blockTransactions.put (t.getHash (), t);
 					if ( coinbase )
 					{
+						if ( t.getInputs ().size () != 1
+								|| !t.getInputs ().get (0).getSourceHash ().equals ("0000000000000000000000000000000000000000000000000000000000000000")
+								|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
+						{
+							throw new ValidationException ("first transaction must be coinbase");
+						}
+						if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
+						{
+							throw new ValidationException ("coinbase scriptsig must be in 2-100");
+						}
 						coinbase = false;
-						continue;
+						for ( TxOut o : t.getOutputs () )
+						{
+							blkSumOutput = blkSumOutput.add (o.getValue ());
+							nsigs += Script.sigOpCount (o.getScript ());
+						}
+						if ( nsigs > MAX_BLOCK_SIGOPS )
+						{
+							throw new ValidationException ("too many signatures in this block");
+						}
 					}
-
-					if ( t.getInputs () != null )
+					else
 					{
+						if ( t.getInputs ().size () == 1
+								&& t.getInputs ().get (0).getSourceHash ().equals ("0000000000000000000000000000000000000000000000000000000000000000") )
+						{
+							throw new ValidationException ("only the first transaction can be coinbase");
+						}
+						blockTransactions.put (t.getHash (), t);
+						if ( t.getOutputs ().isEmpty () )
+						{
+							throw new ValidationException ("Transaction must have outputs");
+						}
+						if ( t.getInputs ().isEmpty () )
+						{
+							throw new ValidationException ("Transaction must have inputs");
+						}
+
+						long sumOut = 0;
+						for ( TxOut o : t.getOutputs () )
+						{
+							if ( o.getScript ().length > 520 )
+							{
+								throw new ValidationException ("script too long");
+							}
+							nsigs += Script.sigOpCount (o.getScript ());
+							if ( nsigs > MAX_BLOCK_SIGOPS )
+							{
+								throw new ValidationException ("too many signatures in this block");
+							}
+							if ( o.getValue ().compareTo (BigInteger.ZERO) < 0 || o.getValue ().longValue () > Tx.MAX_MONEY )
+							{
+								throw new ValidationException ("Transaction output not in money range");
+							}
+							blkSumOutput = blkSumOutput.add (o.getValue ());
+							sumOut += o.getValue ().longValue ();
+						}
+						long sumIn = 0;
 						for ( TxIn i : t.getInputs () )
 						{
+							if ( i.getScript ().length > 520 )
+							{
+								throw new ValidationException ("script too long");
+							}
+							if ( !Script.isPushOnly (i.getScript ()) )
+							{
+								throw new ValidationException ("input script should be push only");
+							}
+
 							Tx sourceTransaction;
 							TxOut transactionOutput = null;
 							if ( (sourceTransaction = blockTransactions.get (i.getSourceHash ())) != null )
@@ -490,13 +602,45 @@ public class JpaChainStore implements ChainStore
 							{
 								throw new ValidationException ("Transaction input refers to unknown output ");
 							}
-							i.setSource (transactionOutput);
-							if ( i.getSource ().getSink () != null )
+							if ( transactionOutput.getSink () != null )
 							{
 								throw new ValidationException ("Double spending attempt");
 							}
+							if ( transactionOutput.getTransaction ().getInputs () == null )
+							{
+								QBlk blk = QBlk.blk;
+								QTx tx = QTx.tx;
+
+								JPAQuery query = new JPAQuery (entityManager);
+								Blk origin =
+										query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
+												.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
+								if ( origin.getHeight () > (b.getHeight () - 100) )
+								{
+									throw new ValidationException ("coinbase spent too early");
+								}
+							}
+
+							i.setSource (transactionOutput);
+
+							if ( !new Script (t, (int) i.getIx ()).evaluate () )
+							{
+								throw new ValidationException ("The transaction script does not evaluate to true");
+							}
+
+							blkSumInput = blkSumInput.add (i.getSource ().getValue ());
+							sumIn += transactionOutput.getValue ().longValue ();
+						}
+						if ( sumOut > sumIn )
+						{
+							throw new ValidationException ("Transaction value out more than in");
 						}
 					}
+				}
+
+				if ( blkSumOutput.subtract (blkSumInput).longValue () != ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
+				{
+					throw new ValidationException ("Invalid block reward");
 				}
 
 				entityManager.persist (b);

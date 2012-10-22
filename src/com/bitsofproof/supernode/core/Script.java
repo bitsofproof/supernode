@@ -413,6 +413,55 @@ public class Script
 		return true;
 	}
 
+	@SuppressWarnings ("incomplete-switch")
+	public static int sigOpCount (byte[] script)
+	{
+		int nsig = 0;
+		WireFormat.Reader reader = new WireFormat.Reader (script);
+		while ( !reader.eof () )
+		{
+			int op = reader.readScriptOpcode ();
+			if ( op <= 75 )
+			{
+				reader.skipBytes (op);
+			}
+			else
+			{
+				Opcode code = Opcode.values ()[op];
+				switch ( code )
+				{
+					case OP_PUSHDATA1:
+					{
+						int n = reader.readScriptOpcode ();
+						reader.skipBytes (n);
+					}
+						break;
+					case OP_PUSHDATA2:
+					{
+						long n = reader.readScriptInt16 ();
+						reader.skipBytes ((int) n);
+					}
+						break;
+					case OP_PUSHDATA4:
+					{
+						long n = reader.readScriptInt32 ();
+						reader.skipBytes ((int) n);
+					}
+						break;
+					case OP_CHECKSIG:
+					case OP_CHECKSIGVERIFY:
+						++nsig;
+						break;
+					case OP_CHECKMULTISIG:
+					case OP_CHECKMULTISIGVERIFY:
+						nsig += 20; // not accurate
+						break;
+				}
+			}
+		}
+		return nsig;
+	}
+
 	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
 	{
 		WireFormat.Reader reader = new WireFormat.Reader (script);

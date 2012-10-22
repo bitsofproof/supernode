@@ -188,13 +188,8 @@ public class Blk implements Serializable
 		this.previousHash = previousHash;
 	}
 
-	private void computeMerkleRoot ()
+	private String computeMerkleRoot ()
 	{
-		if ( merkleRoot != null )
-		{
-			return;
-		}
-
 		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
 		// Start by adding all the hashes of the transactions as leaves of the tree.
 		for ( Tx t : transactions )
@@ -229,7 +224,7 @@ public class Blk implements Serializable
 		catch ( NoSuchAlgorithmException e )
 		{
 		}
-		merkleRoot = new Hash (tree.get (tree.size () - 1)).toString ();
+		return new Hash (tree.get (tree.size () - 1)).toString ();
 	}
 
 	public void toWire (WireFormat.Writer writer)
@@ -308,30 +303,17 @@ public class Blk implements Serializable
 		wireTransactions = null;
 	}
 
-	public void basicValidation () throws ValidationException
+	public void checkMerkleRoot () throws ValidationException
 	{
-		if ( createTime > System.currentTimeMillis () / 1000 + 2 * 60 * 60 )
+		if ( merkleRoot.equals (computeMerkleRoot ()) )
 		{
-			throw new ValidationException ("Block too far in the future");
-		}
-		if ( transactions.isEmpty () )
-		{
-			throw new ValidationException ("Block must have transactions");
-		}
-		for ( Tx tx : transactions )
-		{
-			tx.basicValidation ();
+			throw new ValidationException ("merkle root mismatch");
 		}
 	}
 
 	public void computeHash ()
 	{
-		if ( hash != null )
-		{
-			return;
-		}
-
-		computeMerkleRoot ();
+		merkleRoot = computeMerkleRoot ();
 
 		WireFormat.Writer writer = new WireFormat.Writer (new ByteArrayOutputStream ());
 		writer.writeUint32 (version);
