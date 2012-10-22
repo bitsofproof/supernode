@@ -24,6 +24,7 @@ public class Script
 	private final byte[] script;
 	private Tx tx;
 	private int inr;
+	private int codeseparator;
 
 	private static final int SIGHASH_ALL = 1;
 	private static final int SIGHASH_NONE = 2;
@@ -357,6 +358,7 @@ public class Script
 	{
 		this.script = script;
 		this.tx = null;
+		this.codeseparator = 0;
 	}
 
 	public Script (Tx tx, int inr)
@@ -368,6 +370,7 @@ public class Script
 		System.arraycopy (out, 0, script, sign.length, out.length);
 		this.tx = tx;
 		this.inr = inr;
+		this.codeseparator = sign.length;
 	}
 
 	public Script (String s)
@@ -648,7 +651,6 @@ public class Script
 		ignoreStack.push (false);
 
 		int offset = -1;
-		int codeseparator = 0;
 		try
 		{
 			while ( !reader.eof () )
