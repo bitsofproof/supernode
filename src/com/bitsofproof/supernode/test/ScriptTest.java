@@ -154,6 +154,11 @@ public class ScriptTest
 				System.out.println (t.toJSON ());
 				assertTrue (new Script (t, 0).evaluate ());
 
+				query = new JPAQuery (entityManager);
+				t = query.from (tx).where (tx.hash.eq ("66ac54c1a3196e839c32c7700fbd91ee37b1ed4a53332e491bf5ddcd3901d0b1")).singleResult (tx);
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+
 			}
 		});
 	}
