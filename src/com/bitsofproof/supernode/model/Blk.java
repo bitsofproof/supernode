@@ -304,7 +304,7 @@ public class Blk implements Serializable
 
 	public void checkMerkleRoot () throws ValidationException
 	{
-		if ( merkleRoot.equals (computeMerkleRoot ()) )
+		if ( !merkleRoot.equals (computeMerkleRoot ()) )
 		{
 			throw new ValidationException ("merkle root mismatch");
 		}

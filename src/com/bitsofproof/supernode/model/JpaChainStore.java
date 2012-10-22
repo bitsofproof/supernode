@@ -392,7 +392,7 @@ public class JpaChainStore implements ChainStore
 					throw new ValidationException ("Future generation attempt");
 				}
 
-				if ( b.getHeight () % 2016 == 0 )
+				if ( b.getHeight () >= 2016 && b.getHeight () % 2016 == 0 )
 				{
 					StoredMember c = null;
 					StoredMember p = (StoredMember) cachedPrevious;
