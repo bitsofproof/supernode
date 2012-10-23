@@ -534,7 +534,7 @@ public abstract class P2P
 											else
 											{
 												client.close ();
-												runqueue.add (address); // try again later
+												addPeer (address.getAddress (), port); // try later
 											}
 										}
 										else

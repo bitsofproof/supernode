@@ -373,34 +373,6 @@ public class JpaChainStore implements ChainStore
 					throw new ValidationException ("Future generation attempt " + b.getHash ());
 				}
 
-				if ( b.getHeight () >= 2016 && b.getHeight () % 2016 == 0 )
-				{
-					StoredMember c = null;
-					StoredMember p = (StoredMember) cachedPrevious;
-					for ( int i = 0; i < 2015; ++i )
-					{
-						c = p;
-						p = c.getPrevious ();
-					}
-
-					long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
-					if ( next != b.getDifficultyTarget () )
-					{
-						throw new ValidationException ("Difficulty does not match expectation " + b.getHash ());
-					}
-				}
-				else
-				{
-					if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
-					{
-						throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
-					}
-				}
-				if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
-				{
-					throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash ());
-				}
-
 				boolean branching = false;
 				Head head;
 				if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
@@ -431,6 +403,34 @@ public class JpaChainStore implements ChainStore
 				b.setHead (head);
 				b.setHeight (head.getHeight ());
 				b.setChainWork (head.getChainWork ());
+
+				if ( b.getHeight () >= 2016 && b.getHeight () % 2016 == 0 )
+				{
+					StoredMember c = null;
+					StoredMember p = (StoredMember) cachedPrevious;
+					for ( int i = 0; i < 2015; ++i )
+					{
+						c = p;
+						p = c.getPrevious ();
+					}
+
+					long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
+					if ( next != b.getDifficultyTarget () )
+					{
+						throw new ValidationException ("Difficulty does not match expectation " + b.getHash ());
+					}
+				}
+				else
+				{
+					if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
+					{
+						throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
+					}
+				}
+				if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+				{
+					throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash ());
+				}
 
 				// do we have a new main chain ?
 				if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )

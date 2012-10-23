@@ -236,13 +236,13 @@ public class BitcoinPeer extends P2P.Peer
 			byte[] head = new byte[24];
 			if ( readIn.read (head) != head.length )
 			{
-				throw new ValidationException ("Invalid package header");
+				throw new ValidationException ("Read timeout for " + getAddress ());
 			}
 			WireFormat.Reader reader = new WireFormat.Reader (head);
 			long mag = reader.readUint32 ();
 			if ( mag != network.getChain ().getMagic () )
 			{
-				throw new ValidationException ("Wrong magic for this chain");
+				throw new ValidationException ("Wrong magic for this chain " + getAddress ());
 			}
 
 			String command = reader.readZeroDelimitedString (12);
@@ -251,14 +251,14 @@ public class BitcoinPeer extends P2P.Peer
 			byte[] checksum = reader.readBytes (4);
 			if ( length < 0 || length >= MAX_BLOCK_SIZE )
 			{
-				throw new ValidationException ("Block size limit exceeded");
+				throw new ValidationException ("Block size limit exceeded " + getAddress ());
 			}
 			else
 			{
 				byte[] buf = new byte[(int) length];
 				if ( readIn.read (buf) != buf.length )
 				{
-					throw new ValidationException ("Package length mismatch");
+					throw new ValidationException ("Package length mismatch " + getAddress ());
 				}
 				byte[] cs = new byte[4];
 				MessageDigest sha;
@@ -269,11 +269,11 @@ public class BitcoinPeer extends P2P.Peer
 				}
 				catch ( NoSuchAlgorithmException e )
 				{
-					throw new ValidationException ("SHA-256 implementation missing");
+					throw new ValidationException ("SHA-256 implementation missing " + getAddress ());
 				}
 				if ( !Arrays.equals (cs, checksum) )
 				{
-					throw new ValidationException ("Checksum mismatch");
+					throw new ValidationException ("Checksum mismatch " + getAddress ());
 				}
 
 				if ( m != null )
