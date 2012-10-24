@@ -43,6 +43,7 @@ public class BitcoinPeer extends P2P.Peer
 	private String agent;
 	private long height;
 	private long peerVersion;
+	private long peerServices;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -178,6 +179,7 @@ public class BitcoinPeer extends P2P.Peer
 				agent = v.getAgent ();
 				height = v.getHeight ();
 				peerVersion = v.getVersion ();
+				peerServices = v.getServices ();
 				peer.send (peer.createMessage ("verack"));
 			}
 		});
@@ -207,6 +209,11 @@ public class BitcoinPeer extends P2P.Peer
 	public long getVersion ()
 	{
 		return peerVersion;
+	}
+
+	public long getServices ()
+	{
+		return peerServices;
 	}
 
 	public long getHeight ()

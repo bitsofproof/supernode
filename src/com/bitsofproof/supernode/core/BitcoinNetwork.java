@@ -10,6 +10,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +50,12 @@ public class BitcoinNetwork extends P2P
 	private final List<PeerTask> registeredTasks = Collections.synchronizedList (new ArrayList<PeerTask> ());
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
+	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
+
 	@Override
 	public void start () throws IOException
 	{
+		// receive adresses
 		addListener ("addr", new BitcoinMessageListener ()
 		{
 			@Override
@@ -65,6 +71,51 @@ public class BitcoinNetwork extends P2P
 		});
 		setPort (chain.getPort ());
 		super.start ();
+
+		// send a pick of own adresses
+		scheduler.scheduleWithFixedDelay (new Runnable ()
+		{
+
+			@Override
+			public void run ()
+			{
+				try
+				{
+					synchronized ( connectedPeers )
+					{
+						BitcoinPeer[] peers = connectedPeers.toArray (new BitcoinPeer[0]);
+						BitcoinPeer pick = peers[(int) (Math.floor (Math.random () * peers.length))];
+						List<Address> al = new ArrayList<Address> ();
+						Address address = new Address ();
+						address.address = pick.getAddress ().getAddress ();
+						address.port = getPort ();
+						address.services = pick.getServices ();
+						address.time = System.currentTimeMillis () / 1000;
+						al.add (address);
+						for ( BitcoinPeer peer : peers )
+						{
+							if ( peer != pick )
+							{
+								AddrMessage m = new AddrMessage (peer);
+								m.setAddresses (al);
+								try
+								{
+									peer.send (m);
+								}
+								catch ( Exception e )
+								{
+								}
+							}
+						}
+						log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
+					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Exception while broadcasting addresses", e);
+				}
+			}
+		}, 60, 60, TimeUnit.SECONDS);
 	}
 
 	public void addPeer (final BitcoinPeer peer)
