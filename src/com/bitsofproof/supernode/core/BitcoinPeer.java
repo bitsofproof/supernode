@@ -178,7 +178,7 @@ public class BitcoinPeer extends P2P.Peer
 				VersionMessage v = (VersionMessage) m;
 				agent = v.getAgent ();
 				height = v.getHeight ();
-				peerVersion = v.getVersion ();
+				peerVersion = Math.min (peerVersion, v.getVersion ());
 				peerServices = v.getServices ();
 				peer.send (peer.createMessage ("verack"));
 			}
