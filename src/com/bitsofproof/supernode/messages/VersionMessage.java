@@ -25,7 +25,7 @@ public class VersionMessage extends BitcoinPeer.Message
 	private InetAddress me;
 	private long myport;
 	private long nonce = new BigInteger (64, new Random ()).longValue ();
-	private String agent = "/bitsofproof:0.1/";
+	private String agent = "/bitsofproof:0.2/";
 	private long height;
 
 	@Override

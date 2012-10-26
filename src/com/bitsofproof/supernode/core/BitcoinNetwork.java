@@ -25,6 +25,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.core.WireFormat.Address;
 import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
+import com.bitsofproof.supernode.messages.PingMessage;
+import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.model.ChainStore;
 
 public class BitcoinNetwork extends P2P
@@ -69,6 +71,29 @@ public class BitcoinNetwork extends P2P
 				}
 			}
 		});
+
+		addListener ("ping", new BitcoinMessageListener ()
+		{
+			@Override
+			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
+			{
+				PingMessage pi = (PingMessage) m;
+				if ( peer.getVersion () > 60000 )
+				{
+					PongMessage po = (PongMessage) peer.createMessage ("pong");
+					po.setNonce (pi.getNonce ());
+					try
+					{
+						peer.send (po);
+					}
+					catch ( Exception e )
+					{
+						peer.disconnect ();
+					}
+				}
+			}
+		});
+
 		setPort (chain.getPort ());
 		super.start ();
 
@@ -84,6 +109,10 @@ public class BitcoinNetwork extends P2P
 					synchronized ( connectedPeers )
 					{
 						BitcoinPeer[] peers = connectedPeers.toArray (new BitcoinPeer[0]);
+						if ( peers.length == 0 )
+						{
+							return;
+						}
 						BitcoinPeer pick = peers[(int) (Math.floor (Math.random () * peers.length))];
 						List<Address> al = new ArrayList<Address> ();
 						Address address = new Address ();
@@ -133,6 +162,9 @@ public class BitcoinNetwork extends P2P
 				}
 			}
 		}
+
+		notifyPeerAdded (peer);
+
 		// execute registered tasks
 		synchronized ( registeredTasks )
 		{
@@ -176,7 +208,7 @@ public class BitcoinNetwork extends P2P
 		}
 	}
 
-	public void notifyPeerAdded (final BitcoinPeer peer)
+	private void notifyPeerAdded (final BitcoinPeer peer)
 	{
 		for ( final BitcoinPeerListener listener : peerListener )
 		{
@@ -306,9 +338,9 @@ public class BitcoinNetwork extends P2P
 	}
 
 	@Override
-	public Peer createPeer (InetSocketAddress address)
+	public Peer createPeer (InetSocketAddress address, boolean outgoing)
 	{
-		BitcoinPeer peer = new BitcoinPeer (this, transactionTemplate, address);
+		BitcoinPeer peer = new BitcoinPeer (this, transactionTemplate, address, outgoing);
 		return peer;
 	}
 

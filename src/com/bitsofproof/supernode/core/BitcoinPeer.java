@@ -44,6 +44,7 @@ public class BitcoinPeer extends P2P.Peer
 	private long height;
 	private long peerVersion;
 	private long peerServices;
+	private final boolean outgoing;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -161,11 +162,12 @@ public class BitcoinPeer extends P2P.Peer
 
 	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener>> ());
 
-	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address)
+	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
 	{
 		p2p.super (address);
 		network = (BitcoinNetwork) p2p;
 		this.transactionTemplate = transactionTemplate;
+		this.outgoing = out;
 
 		// this will be overwritten by the first version message we get
 		peerVersion = network.getChain ().getVersion ();
@@ -180,6 +182,10 @@ public class BitcoinPeer extends P2P.Peer
 				height = v.getHeight ();
 				peerVersion = Math.min (peerVersion, v.getVersion ());
 				peerServices = v.getServices ();
+				if ( !outgoing )
+				{
+					onConnect ();
+				}
 				peer.send (peer.createMessage ("verack"));
 			}
 		});
@@ -189,9 +195,10 @@ public class BitcoinPeer extends P2P.Peer
 			@Override
 			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
 			{
-				log.info ("Connection to '" + getAgent () + "' at " + getAddress () + " Open connections: " + getNetwork ().getNumberOfConnections ());
+				log.trace ("got verack from " + getAddress ());
+				log.info ("Connection to '" + getAgent () + "' [" + peerVersion + "] at " + getAddress () + " Open connections: "
+						+ getNetwork ().getNumberOfConnections ());
 				network.addPeer (peer);
-				network.notifyPeerAdded (peer);
 			}
 		});
 	}
@@ -311,6 +318,7 @@ public class BitcoinPeer extends P2P.Peer
 			m.setPeer (getAddress ().getAddress ());
 			m.setRemotePort (getAddress ().getPort ());
 			send (m);
+			log.trace ("Sent version to " + getAddress ());
 			final BitcoinPeer peer = this;
 			scheduler.schedule (new Runnable ()
 			{
