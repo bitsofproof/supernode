@@ -527,12 +527,23 @@ public class JpaChainStore implements ChainStore
 							throw new ValidationException ("Transaction must have inputs " + t.toJSON ());
 						}
 
+						// ignore some old successful DoD attacks
+						boolean oldDod = false;
+
 						long sumOut = 0;
 						for ( TxOut o : t.getOutputs () )
 						{
 							if ( o.getScript ().length > 520 )
 							{
-								throw new ValidationException ("script too long " + t.toJSON ());
+								if ( b.getHeight () < 80000 )
+								{
+									oldDod = true;
+									log.trace ("Old DoD at [" + b.getHeight () + "]" + b.getHash ());
+								}
+								else
+								{
+									throw new ValidationException ("script too long " + t.toJSON ());
+								}
 							}
 							nsigs += Script.sigOpCount (o.getScript ());
 							if ( nsigs > MAX_BLOCK_SIGOPS )
@@ -545,14 +556,27 @@ public class JpaChainStore implements ChainStore
 							}
 							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 							sumOut += o.getValue ();
+							if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
+							{
+								throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
+							}
 						}
+
 						long sumIn = 0;
 						int inNumber = 0;
 						for ( TxIn i : t.getInputs () )
 						{
 							if ( i.getScript ().length > 520 )
 							{
-								throw new ValidationException ("script too long " + t.toJSON ());
+								if ( b.getHeight () < 80000 )
+								{
+									oldDod = true;
+									log.trace ("Old DoD at [" + b.getHeight () + "]" + b.getHash ());
+								}
+								else
+								{
+									throw new ValidationException ("script too long " + t.toJSON ());
+								}
 							}
 							if ( !Script.isPushOnly (i.getScript ()) )
 							{
@@ -610,7 +634,7 @@ public class JpaChainStore implements ChainStore
 
 								i.setSource (transactionOutput);
 							}
-							if ( !new Script (t, inNumber).evaluate () )
+							if ( !oldDod && !new Script (t, inNumber).evaluate () )
 							{
 								throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ());
 							}
