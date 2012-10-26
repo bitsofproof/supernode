@@ -161,6 +161,7 @@ public abstract class P2P
 				channel.connect (address);
 				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
 				selector.wakeup ();
+				log.trace ("Trying to connect " + address);
 			}
 			catch ( IOException e )
 			{
@@ -317,7 +318,7 @@ public abstract class P2P
 
 	}
 
-	public abstract Peer createPeer (InetSocketAddress address);
+	public abstract Peer createPeer (InetSocketAddress address, boolean active);
 
 	public abstract boolean discover ();
 
@@ -484,29 +485,10 @@ public abstract class P2P
 									client.configureBlocking (false);
 									InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
 									final Peer peer;
-									peer = createPeer (address);
+									peer = createPeer (address, false);
 									peer.channel = client;
-									if ( connectSlot.tryAcquire () )
-									{
-										// if we have interest ...
-										connectedPeers.put (client, peer);
-										client.register (selector, SelectionKey.OP_READ);
-
-										peerThreads.execute (new Runnable ()
-										{
-											@Override
-											public void run ()
-											{
-												peer.onConnect ();
-											}
-										});
-									}
-									else
-									{
-										key.cancel ();
-										client.close ();
-										runqueue.add (address); // try later
-									}
+									connectedPeers.put (client, peer);
+									client.register (selector, SelectionKey.OP_READ);
 								}
 								if ( key.isConnectable () )
 								{
@@ -520,22 +502,14 @@ public abstract class P2P
 										final Peer peer;
 										if ( (peer = connectedPeers.get (client)) != null )
 										{
-											if ( connectSlot.tryAcquire () )
+											peerThreads.execute (new Runnable ()
 											{
-												peerThreads.execute (new Runnable ()
+												@Override
+												public void run ()
 												{
-													@Override
-													public void run ()
-													{
-														peer.onConnect ();
-													}
-												});
-											}
-											else
-											{
-												client.close ();
-												addPeer (address.getAddress (), port); // try later
-											}
+													peer.onConnect ();
+												}
+											});
 										}
 										else
 										{
@@ -650,59 +624,47 @@ public abstract class P2P
 				{ // forever
 					try
 					{
-						if ( connectedPeers.size () >= desiredConnections )
+						connectSlot.acquireUninterruptibly ();
+
+						InetSocketAddress address = runqueue.poll ();
+						if ( address != null )
 						{
-							Thread.sleep (1000);
-						}
-						else if ( connectSlot.availablePermits () > 0 )
-						{
-							InetSocketAddress address = runqueue.poll ();
-							if ( address != null )
+							final Peer peer = createPeer (address, true);
+							peer.connect ();
+							scheduler.schedule (new Runnable ()
 							{
-								for ( Peer p : connectedPeers.values () )
+								@Override
+								public void run ()
 								{
-									if ( p.address.equals (address) )
+									if ( peer.channel.isConnectionPending () )
 									{
-										continue;
-									}
-								}
-								final Peer peer = createPeer (address);
-								peer.connect ();
-								scheduler.schedule (new Runnable ()
-								{
-									@Override
-									public void run ()
-									{
-										if ( peer.channel.isConnectionPending () )
+										try
 										{
-											try
-											{
-												// give up if not connected within CONNECTIONTIMEOUT
-												log.trace ("Give up connect on " + peer.channel);
-												peer.channel.close ();
-												connectedPeers.remove (peer);
-											}
-											catch ( IOException e )
-											{
-											}
+											log.trace ("Give up connect on " + peer.channel);
+											peer.channel.close ();
+											connectedPeers.remove (peer);
+											connectSlot.release ();
+										}
+										catch ( IOException e )
+										{
 										}
 									}
-								}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
-							}
-							else
+								}
+							}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+						}
+						else
+						{
+							if ( connectedPeers.size () < desiredConnections )
 							{
-								if ( connectedPeers.size () < desiredConnections )
+								log.info ("Need to discover new adresses.");
+								if ( !discover () )
 								{
-									log.info ("Need to discover new adresses.");
-									if ( !discover () )
-									{
-										break; // testing
-									}
-									if ( runqueue.size () == 0 )
-									{
-										log.error ("Can not find new adresses");
-										Thread.sleep (60 * 1000);
-									}
+									break; // testing
+								}
+								if ( runqueue.size () == 0 )
+								{
+									log.error ("Can not find new adresses");
+									Thread.sleep (60 * 1000);
 								}
 							}
 						}
