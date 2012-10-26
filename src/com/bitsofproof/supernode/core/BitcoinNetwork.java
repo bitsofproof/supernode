@@ -3,6 +3,7 @@ package com.bitsofproof.supernode.core;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -45,6 +46,7 @@ public class BitcoinNetwork extends P2P
 	private final Chain chain;
 	private final ChainStore store;
 	private final TransactionTemplate transactionTemplate;
+	private final long versionNonce = new SecureRandom ().nextLong ();
 
 	private final Map<BitcoinMessageListener, ArrayList<String>> listener = Collections
 			.synchronizedMap (new HashMap<BitcoinMessageListener, ArrayList<String>> ());
@@ -352,6 +354,11 @@ public class BitcoinNetwork extends P2P
 	public ChainStore getStore ()
 	{
 		return store;
+	}
+
+	public long getVersionNonce ()
+	{
+		return versionNonce;
 	}
 
 	public long getChainHeight ()

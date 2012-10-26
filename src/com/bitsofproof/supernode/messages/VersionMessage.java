@@ -1,9 +1,7 @@
 package com.bitsofproof.supernode.messages;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Random;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -16,6 +14,7 @@ public class VersionMessage extends BitcoinPeer.Message
 	{
 		bitcoinPeer.super ("version");
 		myport = bitcoinPeer.getNetwork ().getChain ().getPort ();
+		nonce = bitcoinPeer.getNetwork ().getVersionNonce ();
 	}
 
 	private long services = 1;
@@ -24,7 +23,7 @@ public class VersionMessage extends BitcoinPeer.Message
 	private long remotePort;
 	private InetAddress me;
 	private long myport;
-	private long nonce = new BigInteger (64, new Random ()).longValue ();
+	private long nonce;
 	private String agent = "/bitsofproof:0.2/";
 	private long height;
 

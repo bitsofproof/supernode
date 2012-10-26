@@ -178,15 +178,22 @@ public class BitcoinPeer extends P2P.Peer
 			public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
 			{
 				VersionMessage v = (VersionMessage) m;
-				agent = v.getAgent ();
-				height = v.getHeight ();
-				peerVersion = Math.min (peerVersion, v.getVersion ());
-				peerServices = v.getServices ();
-				if ( !outgoing )
+				if ( v.getNonce () == network.getVersionNonce () )
 				{
-					onConnect ();
+					disconnect (); // connect to self
 				}
-				peer.send (peer.createMessage ("verack"));
+				else
+				{
+					agent = v.getAgent ();
+					height = v.getHeight ();
+					peerVersion = Math.min (peerVersion, v.getVersion ());
+					peerServices = v.getServices ();
+					if ( !outgoing )
+					{
+						onConnect ();
+					}
+					peer.send (peer.createMessage ("verack"));
+				}
 			}
 		});
 
