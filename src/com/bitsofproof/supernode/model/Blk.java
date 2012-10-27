@@ -189,6 +189,8 @@ public class Blk implements Serializable
 
 	private String computeMerkleRoot ()
 	{
+		parseTransactions ();
+
 		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
 		// Start by adding all the hashes of the transactions as leaves of the tree.
 		for ( Tx t : transactions )
