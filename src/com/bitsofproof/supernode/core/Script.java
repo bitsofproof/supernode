@@ -1263,6 +1263,7 @@ public class Script
 							{
 								return false; // not supported as of now.
 							}
+							// implicit SIGHASH_ALL
 
 							byte[] signedScript = new byte[script.length - codeseparator];
 							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);

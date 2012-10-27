@@ -35,22 +35,25 @@ public class ScriptTest
 	private static ApplicationContext context;
 	private static EntityManagerFactory emf;
 
+	private static final boolean usedb = false;
+
 	@BeforeClass
 	public static void setup ()
 	{
-		/*
 		try
 		{
-			Setup.setup ();
-			context = new ClassPathXmlApplicationContext ("app-context.xml");
-			transactionManager = context.getBean (PlatformTransactionManager.class);
-			emf = context.getBean (EntityManagerFactory.class);
+			if ( usedb )
+			{
+				Setup.setup ();
+				context = new ClassPathXmlApplicationContext ("app-context.xml");
+				transactionManager = context.getBean (PlatformTransactionManager.class);
+				emf = context.getBean (EntityManagerFactory.class);
+			}
 		}
 		catch ( IOException e )
 		{
 			e.printStackTrace ();
 		}
-		*/
 	}
 
 	@Test
@@ -140,7 +143,7 @@ public class ScriptTest
 		t2.fromWire (reader);
 		assertTrue (t2.getHash ().equals ("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16"));
 		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
-		assertTrue (new Script (t1, 0).evaluate ());
+		// assertTrue (new Script (t1, 0).evaluate ());
 
 		reader =
 				new WireFormat.Reader (
@@ -157,9 +160,30 @@ public class ScriptTest
 		assertTrue (t2.getHash ().equals ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25"));
 
 		t2.getInputs ().get (0).setSource (t1.getOutputs ().get (0));
+		// assertTrue (new Script (t2, 0).evaluate ());
+
+		reader =
+				new WireFormat.Reader (
+						Hex.decode ("01000000017fd8dfdb54b5212c4e3151a39f4ffe279fd7f238d516a2ca731529c095d97449010000008b483045022100b6a7fe5eea81894bbdd0df61043e42780543457fa5581ac1af023761a098e92202201d4752785be5f9d1b9f8d362b8cf3b05e298a78c4abff874b838bb500dcf2a120141042e3c4aeac1ffb1c86ce3621afb1ca92773e02badf0d4b1c836eb26bd27d0c2e59ffec3d6ab6b8bbeca81b0990ab5224ebdd73696c4255d1d0c6b3c518a1a053effffffff01404b4c00000000001976a914dc44b1164188067c3a32d4780f5996fa14a4f2d988ac00000000"));
+		t1 = new Tx ();
+		t1.fromWire (reader);
+		assertTrue (t1.getHash ().equals ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602"));
+
+		reader =
+				new WireFormat.Reader (
+						Hex.decode ("01000000010276b76b07f4935c70acf54fbf1f438a4c397a9fb7e633873c4dd3bc062b6b40000000008c493046022100d23459d03ed7e9511a47d13292d3430a04627de6235b6e51a40f9cd386f2abe3022100e7d25b080f0bb8d8d5f878bba7d54ad2fda650ea8d158a33ee3cbd11768191fd004104b0e2c879e4daf7b9ab68350228c159766676a14f5815084ba166432aab46198d4cca98fa3e9981d0a90b2effc514b76279476550ba3663fdcaff94c38420e9d5000000000100093d00000000001976a9149a7b0f3b80c6baaeedce0a0842553800f832ba1f88ac00000000"));
+		t2 = new Tx ();
+		t2.fromWire (reader); // this is the transaction with the wrong SIGHASH_ALL
+		assertTrue (t2.getHash ().equals ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73"));
+
+		t2.getInputs ().get (0).setSource (t1.getOutputs ().get (0));
 		assertTrue (new Script (t2, 0).evaluate ());
 
-		/*
+		if ( !usedb )
+		{
+			return;
+		}
+
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
 
@@ -203,8 +227,37 @@ public class ScriptTest
 				System.out.println (t.toJSON ());
 				assertTrue (new Script (t, 0).evaluate ());
 
+				query = new JPAQuery (entityManager);
+				t = query.from (tx).where (tx.hash.eq ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73")).singleResult (tx);
+				writer = new WireFormat.Writer ();
+				t.toWire (writer);
+				try
+				{
+					System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
+				}
+				catch ( UnsupportedEncodingException e )
+				{
+					e.printStackTrace ();
+				}
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+				query = new JPAQuery (entityManager);
+				t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
+				writer = new WireFormat.Writer ();
+				t.toWire (writer);
+				try
+				{
+					System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
+				}
+				catch ( UnsupportedEncodingException e )
+				{
+					e.printStackTrace ();
+				}
+				System.out.println (t.toJSON ());
+				assertTrue (new Script (t, 0).evaluate ());
+
 			}
 		});
-				*/
+
 	}
 }
