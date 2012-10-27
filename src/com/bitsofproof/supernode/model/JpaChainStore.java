@@ -636,7 +636,8 @@ public class JpaChainStore implements ChainStore
 							}
 							if ( !oldDod && !new Script (t, inNumber).evaluate () )
 							{
-								throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ());
+								throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ()
+										+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
 							}
 
 							blkSumInput = blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
