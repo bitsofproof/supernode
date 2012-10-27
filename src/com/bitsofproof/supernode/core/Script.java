@@ -1259,9 +1259,9 @@ public class Script
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
 							byte hashType = sig[sig.length - 1];
-							if ( hashType != SIGHASH_ALL )
+							if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )
 							{
-								return false; // no other supported for now.
+								return false; // not supported as of now.
 							}
 
 							byte[] signedScript = new byte[script.length - codeseparator];
