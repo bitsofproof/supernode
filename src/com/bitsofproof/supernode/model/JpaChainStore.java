@@ -358,6 +358,17 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
+	private class TransactionContext
+	{
+		String blockHash;
+		int blockHeight;
+		BigInteger blkSumInput = BigInteger.ZERO;
+		BigInteger blkSumOutput = BigInteger.ZERO;
+		int nsigs = 0;
+		boolean coinbase = true;
+		Map<String, Tx> blockTransactions = new HashMap<String, Tx> ();
+	}
+
 	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public long store (Blk b) throws ValidationException
@@ -496,179 +507,18 @@ class JpaChainStore implements ChainStore
 
 				b.checkMerkleRoot ();
 
-				BigInteger blkSumInput = BigInteger.ZERO;
-				BigInteger blkSumOutput = BigInteger.ZERO;
+				TransactionContext tcontext = new TransactionContext ();
+				tcontext.blockHash = b.getHash ();
+				tcontext.blockHeight = b.getHeight ();
 
-				int nsigs = 0;
-
-				boolean coinbase = true;
-				Map<String, Tx> blockTransactions = new HashMap<String, Tx> ();
 				for ( Tx t : b.getTransactions () )
 				{
-					blockTransactions.put (t.getHash (), t);
-					if ( coinbase )
-					{
-						if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
-								|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
-						{
-							throw new ValidationException ("first transaction must be coinbase " + b.getHash ());
-						}
-						if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
-						{
-							throw new ValidationException ("coinbase scriptsig must be in 2-100 " + b.getHash ());
-						}
-						coinbase = false;
-						for ( TxOut o : t.getOutputs () )
-						{
-							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-							nsigs += Script.sigOpCount (o.getScript ());
-						}
-						if ( nsigs > MAX_BLOCK_SIGOPS )
-						{
-							throw new ValidationException ("too many signatures in this block " + b.getHash ());
-						}
-					}
-					else
-					{
-						if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
-						{
-							throw new ValidationException ("only the first transaction can be coinbase");
-						}
-						if ( t.getOutputs ().isEmpty () )
-						{
-							throw new ValidationException ("Transaction must have outputs " + t.toJSON ());
-						}
-						if ( t.getInputs ().isEmpty () )
-						{
-							throw new ValidationException ("Transaction must have inputs " + t.toJSON ());
-						}
-
-						// ignore some old successful DoD attacks
-						boolean oldDod = false;
-
-						long sumOut = 0;
-						for ( TxOut o : t.getOutputs () )
-						{
-							if ( o.getScript ().length > 520 )
-							{
-								if ( b.getHeight () < 80000 )
-								{
-									oldDod = true;
-									log.trace ("Old DoD at [" + b.getHeight () + "]" + b.getHash ());
-								}
-								else
-								{
-									throw new ValidationException ("script too long " + t.toJSON ());
-								}
-							}
-							nsigs += Script.sigOpCount (o.getScript ());
-							if ( nsigs > MAX_BLOCK_SIGOPS )
-							{
-								throw new ValidationException ("too many signatures in this block " + b.getHash ());
-							}
-							if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
-							{
-								throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
-							}
-							blkSumOutput = blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-							sumOut += o.getValue ();
-							if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
-							{
-								throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
-							}
-						}
-
-						long sumIn = 0;
-						int inNumber = 0;
-						for ( TxIn i : t.getInputs () )
-						{
-							if ( i.getScript ().length > 520 )
-							{
-								if ( b.getHeight () < 80000 )
-								{
-									oldDod = true;
-									log.trace ("Old DoD at [" + b.getHeight () + "]" + b.getHash ());
-								}
-								else
-								{
-									throw new ValidationException ("script too long " + t.toJSON ());
-								}
-							}
-							if ( !Script.isPushOnly (i.getScript ()) )
-							{
-								throw new ValidationException ("input script should be push only " + t.toJSON ());
-							}
-
-							if ( i.getSource () == null )
-							{
-								Tx sourceTransaction;
-								TxOut transactionOutput = null;
-								if ( (sourceTransaction = blockTransactions.get (i.getSourceHash ())) != null )
-								{
-									if ( i.getIx () < sourceTransaction.getOutputs ().size () )
-									{
-										transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
-									}
-									else
-									{
-										throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
-									}
-								}
-								else
-								{
-									QTx tx = QTx.tx;
-									QTxOut txout = QTxOut.txOut;
-									JPAQuery query = new JPAQuery (entityManager);
-
-									transactionOutput =
-											query.from (txout).join (txout.transaction, tx)
-													.where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ()))).orderBy (tx.id.desc ()).limit (1)
-													.uniqueResult (txout);
-								}
-								if ( transactionOutput == null )
-								{
-									throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
-								}
-								if ( transactionOutput.getSink () != null )
-								{
-									throw new ValidationException ("Double spending attempt " + t.toJSON ());
-								}
-								if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
-								{
-									QBlk blk = QBlk.blk;
-									QTx tx = QTx.tx;
-
-									JPAQuery query = new JPAQuery (entityManager);
-									Blk origin =
-											query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
-													.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
-									if ( origin.getHeight () > (b.getHeight () - 100) )
-									{
-										throw new ValidationException ("coinbase spent too early " + t.toJSON ());
-									}
-								}
-
-								i.setSource (transactionOutput);
-							}
-							if ( !oldDod && !new Script (t, inNumber).evaluate () )
-							{
-								throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ()
-										+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
-							}
-
-							blkSumInput = blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
-							sumIn += i.getSource ().getValue ();
-							++inNumber;
-						}
-						if ( sumOut > sumIn )
-						{
-							throw new ValidationException ("Transaction value out more than in " + t.toJSON ());
-						}
-					}
+					tcontext.blockTransactions.put (t.getHash (), t);
+					validateTransaction (tcontext, t);
 				}
 
 				// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
-				if ( blkSumOutput.subtract (blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
+				if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
 				{
 					throw new ValidationException ("Invalid block reward " + b.getHash ());
 				}
@@ -756,6 +606,169 @@ class JpaChainStore implements ChainStore
 		finally
 		{
 			lock.writeLock ().unlock ();
+		}
+	}
+
+	private void validateTransaction (TransactionContext tcontext, Tx t) throws ValidationException
+	{
+		if ( tcontext.coinbase )
+		{
+			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
+					|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
+			{
+				throw new ValidationException ("first transaction must be coinbase " + tcontext.blockHash);
+			}
+			if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
+			{
+				throw new ValidationException ("coinbase scriptsig must be in 2-100 " + tcontext.blockHash);
+			}
+			tcontext.coinbase = false;
+			for ( TxOut o : t.getOutputs () )
+			{
+				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
+				tcontext.nsigs += Script.sigOpCount (o.getScript ());
+			}
+			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+			{
+				throw new ValidationException ("too many signatures in this block " + tcontext.blockHash);
+			}
+		}
+		else
+		{
+			if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
+			{
+				throw new ValidationException ("only the first transaction can be coinbase");
+			}
+			if ( t.getOutputs ().isEmpty () )
+			{
+				throw new ValidationException ("Transaction must have outputs " + t.toJSON ());
+			}
+			if ( t.getInputs ().isEmpty () )
+			{
+				throw new ValidationException ("Transaction must have inputs " + t.toJSON ());
+			}
+
+			// ignore some old successful DoD attacks
+			boolean oldDod = false;
+
+			long sumOut = 0;
+			for ( TxOut o : t.getOutputs () )
+			{
+				if ( o.getScript ().length > 520 )
+				{
+					if ( tcontext.blockHeight < 80000 )
+					{
+						oldDod = true;
+						log.trace ("Old DoD at [" + tcontext.blockHeight + "]" + tcontext.blockHash);
+					}
+					else
+					{
+						throw new ValidationException ("script too long " + t.toJSON ());
+					}
+				}
+				tcontext.nsigs += Script.sigOpCount (o.getScript ());
+				if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+				{
+					throw new ValidationException ("too many signatures in this block " + tcontext.blockHash);
+				}
+				if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
+				{
+					throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
+				}
+				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
+				sumOut += o.getValue ();
+				if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
+				{
+					throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
+				}
+			}
+
+			long sumIn = 0;
+			int inNumber = 0;
+			for ( TxIn i : t.getInputs () )
+			{
+				if ( i.getScript ().length > 520 )
+				{
+					if ( tcontext.blockHeight < 80000 )
+					{
+						oldDod = true;
+						log.trace ("Old DoD at [" + tcontext.blockHeight + "]" + tcontext.blockHash);
+					}
+					else
+					{
+						throw new ValidationException ("script too long " + t.toJSON ());
+					}
+				}
+				if ( !Script.isPushOnly (i.getScript ()) )
+				{
+					throw new ValidationException ("input script should be push only " + t.toJSON ());
+				}
+
+				if ( i.getSource () == null )
+				{
+					Tx sourceTransaction;
+					TxOut transactionOutput = null;
+					if ( (sourceTransaction = tcontext.blockTransactions.get (i.getSourceHash ())) != null )
+					{
+						if ( i.getIx () < sourceTransaction.getOutputs ().size () )
+						{
+							transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
+						}
+						else
+						{
+							throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
+						}
+					}
+					else
+					{
+						QTx tx = QTx.tx;
+						QTxOut txout = QTxOut.txOut;
+						JPAQuery query = new JPAQuery (entityManager);
+
+						transactionOutput =
+								query.from (txout).join (txout.transaction, tx)
+										.where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ()))).orderBy (tx.id.desc ()).limit (1)
+										.uniqueResult (txout);
+					}
+					if ( transactionOutput == null )
+					{
+						throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
+					}
+					if ( transactionOutput.getSink () != null )
+					{
+						throw new ValidationException ("Double spending attempt " + t.toJSON ());
+					}
+					if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+					{
+						QBlk blk = QBlk.blk;
+						QTx tx = QTx.tx;
+
+						JPAQuery query = new JPAQuery (entityManager);
+						Blk origin =
+								query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
+										.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
+						if ( origin.getHeight () > (tcontext.blockHeight - 100) )
+						{
+							throw new ValidationException ("coinbase spent too early " + t.toJSON ());
+						}
+					}
+
+					i.setSource (transactionOutput);
+				}
+				if ( !oldDod && !new Script (t, inNumber).evaluate () )
+				{
+					throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ()
+							+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
+				}
+
+				tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
+				sumIn += i.getSource ().getValue ();
+				++inNumber;
+			}
+			if ( sumOut > sumIn )
+			{
+				throw new ValidationException ("Transaction value out more than in " + t.toJSON ());
+			}
 		}
 	}
 
