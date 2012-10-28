@@ -20,7 +20,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
@@ -35,16 +34,14 @@ public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	public ChainLoader (PlatformTransactionManager transactionManager, BitcoinNetwork network, ChainStore store)
+	public ChainLoader (BitcoinNetwork network, ChainStore store)
 	{
 		this.network = network;
 		this.store = store;
-		this.transactionManager = transactionManager;
 	}
 
 	private final ChainStore store;
 	private final BitcoinNetwork network;
-	private final PlatformTransactionManager transactionManager;
 
 	private long chainHeightSeen = 0;
 	private long chainHeightStored = 0;

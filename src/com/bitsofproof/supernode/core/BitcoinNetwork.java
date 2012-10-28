@@ -72,7 +72,7 @@ public class BitcoinNetwork extends P2P
 		setPort (chain.getPort ());
 
 		transactionTemplate = new TransactionTemplate (transactionManager);
-		loader = new ChainLoader (transactionManager, this, store);
+		loader = new ChainLoader (this, store);
 
 		super.start ();
 		loader.start ();
