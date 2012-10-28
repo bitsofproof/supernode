@@ -39,6 +39,11 @@ public class TransactionHandler implements BitcoinMessageListener
 	@Override
 	public synchronized void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
 	{
+		if ( peer.getNetwork ().isBehind () )
+		{
+			return;
+		}
+
 		if ( m instanceof InvMessage )
 		{
 			InvMessage im = (InvMessage) m;
@@ -61,18 +66,7 @@ public class TransactionHandler implements BitcoinMessageListener
 		if ( m instanceof TxMessage )
 		{
 			log.trace ("received transaction details for " + ((TxMessage) m).getTx ().getHash () + " from " + peer.getAddress ());
-			try
-			{
-				store.storeTransaction (((TxMessage) m).getTx (), (int) peer.getNetwork ().getChainHeight ());
-			}
-			catch ( ValidationException e )
-			{
-				// do not drop peer if we are behind
-				if ( !peer.getNetwork ().isBehind () )
-				{
-					throw e;
-				}
-			}
+			store.storeTransaction (((TxMessage) m).getTx (), (int) peer.getNetwork ().getChainHeight ());
 		}
 	}
 
