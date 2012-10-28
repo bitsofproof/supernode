@@ -23,22 +23,18 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.core.WireFormat.Address;
-import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
-import com.bitsofproof.supernode.messages.PingMessage;
-import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.model.ChainStore;
 
 public class BitcoinNetwork extends P2P
 {
-
 	public BitcoinNetwork (PlatformTransactionManager transactionManager, Chain chain, ChainStore store, int connections) throws IOException
 	{
 		super (connections);
 		this.chain = chain;
 		this.store = store;
 		transactionTemplate = new TransactionTemplate (transactionManager);
+		loader = new ChainLoader (transactionManager, this, store);
 	}
 
 	private static final Logger log = LoggerFactory.getLogger (BitcoinNetwork.class);
@@ -47,6 +43,7 @@ public class BitcoinNetwork extends P2P
 	private final ChainStore store;
 	private final TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
+	private final ChainLoader loader;
 
 	private final Map<BitcoinMessageListener, ArrayList<String>> listener = Collections
 			.synchronizedMap (new HashMap<BitcoinMessageListener, ArrayList<String>> ());
@@ -59,94 +56,18 @@ public class BitcoinNetwork extends P2P
 	@Override
 	public void start () throws IOException
 	{
-		// receive adresses
-		addListener ("addr", new BitcoinMessageListener ()
-		{
-			@Override
-			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
-			{
-				AddrMessage am = (AddrMessage) m;
-				for ( Address a : am.getAddresses () )
-				{
-					log.trace ("received new address " + a.address);
-					addPeer (a.address, (int) a.port);
-				}
-			}
-		});
-
-		addListener ("ping", new BitcoinMessageListener ()
-		{
-			@Override
-			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
-			{
-				PingMessage pi = (PingMessage) m;
-				if ( peer.getVersion () > 60000 )
-				{
-					PongMessage po = (PongMessage) peer.createMessage ("pong");
-					po.setNonce (pi.getNonce ());
-					try
-					{
-						peer.send (po);
-					}
-					catch ( Exception e )
-					{
-						peer.disconnect ();
-					}
-				}
-			}
-		});
-
 		setPort (chain.getPort ());
 		super.start ();
+		loader.start ();
 
-		// send a pick of own adresses
-		scheduler.scheduleWithFixedDelay (new Runnable ()
-		{
+		addListener ("ping", new PingPongHandler ());
+		addListener ("addr", new AddressHandler ());
+		scheduler.scheduleWithFixedDelay (new AddressSeeder (this), 60, 60, TimeUnit.SECONDS);
+	}
 
-			@Override
-			public void run ()
-			{
-				try
-				{
-					synchronized ( connectedPeers )
-					{
-						BitcoinPeer[] peers = connectedPeers.toArray (new BitcoinPeer[0]);
-						if ( peers.length == 0 )
-						{
-							return;
-						}
-						BitcoinPeer pick = peers[(int) (Math.floor (Math.random () * peers.length))];
-						List<Address> al = new ArrayList<Address> ();
-						Address address = new Address ();
-						address.address = pick.getAddress ().getAddress ();
-						address.port = getPort ();
-						address.services = pick.getServices ();
-						address.time = System.currentTimeMillis () / 1000;
-						al.add (address);
-						for ( BitcoinPeer peer : peers )
-						{
-							if ( peer != pick )
-							{
-								AddrMessage m = new AddrMessage (peer);
-								m.setAddresses (al);
-								try
-								{
-									peer.send (m);
-								}
-								catch ( Exception e )
-								{
-								}
-							}
-						}
-						log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
-					}
-				}
-				catch ( Exception e )
-				{
-					log.error ("Exception while broadcasting addresses", e);
-				}
-			}
-		}, 60, 60, TimeUnit.SECONDS);
+	public BitcoinPeer[] getConnectPeers ()
+	{
+		return connectedPeers.toArray (new BitcoinPeer[0]);
 	}
 
 	public void addPeer (final BitcoinPeer peer)

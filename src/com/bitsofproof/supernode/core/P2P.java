@@ -328,6 +328,7 @@ public abstract class P2P
 		if ( !runqueue.contains (address) )
 		{
 			runqueue.add (address);
+			log.trace ("added new peer to runqueue " + address);
 		}
 	}
 

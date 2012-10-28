@@ -19,7 +19,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.core.ChainLoader;
 import com.bitsofproof.supernode.model.ChainStore;
 
 @Component
@@ -83,8 +82,6 @@ public class Application
 		this.context = context;
 		BitcoinNetwork network = new BitcoinNetwork (transactionManager, chain, store, connections);
 		network.start ();
-		ChainLoader loader = new ChainLoader (transactionManager, network, store);
-		loader.start ();
 		synchronized ( this )
 		{
 			try
