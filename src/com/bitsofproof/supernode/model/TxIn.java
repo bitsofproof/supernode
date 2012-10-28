@@ -128,7 +128,7 @@ public class TxIn implements Serializable
 		}
 		else
 		{
-			b.append ("sourceHash:\"" + Hash.ZERO_HASH.toByteArray () + "\",");
+			b.append ("sourceHash:\"" + Hash.ZERO_HASH.toString () + "\",");
 			b.append ("sourceIx:" + -1 + ",");
 		}
 		b.append ("script:\"" + new Script (script).toString () + "\"" + ",");

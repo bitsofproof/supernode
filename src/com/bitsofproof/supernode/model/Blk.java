@@ -57,6 +57,30 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
+	public String toJSON ()
+	{
+		parseTransactions ();
+
+		StringBuffer b = new StringBuffer ();
+		b.append ("{");
+		b.append ("hash:\"" + hash + "\",");
+		b.append ("version:" + version + ",");
+		b.append ("previous:\"" + previous != null ? previous.getHash () : previousHash + "\",");
+		b.append ("merkleRoot:\"" + merkleRoot + "\",");
+		b.append ("createTime:\"" + createTime + "\",");
+		b.append ("difficultyTarget\"" + difficultyTarget + "\",");
+		b.append ("chainWork\"" + chainWork + "\",");
+		b.append ("height\"" + height + "\",");
+		b.append ("nonce\"" + nonce + "\",");
+		b.append ("transactions:[");
+		for ( Tx t : transactions )
+		{
+			b.append (t.toJSON ());
+		}
+		b.append ("]}");
+		return b.toString ();
+	}
+
 	public Long getId ()
 	{
 		return id;

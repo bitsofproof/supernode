@@ -651,7 +651,8 @@ public class JpaChainStore implements ChainStore
 					}
 				}
 
-				if ( blkSumOutput.subtract (blkSumInput).longValue () != ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
+				// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
+				if ( blkSumOutput.subtract (blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
 				{
 					throw new ValidationException ("Invalid block reward " + b.getHash ());
 				}
