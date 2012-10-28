@@ -28,6 +28,7 @@ public class TransactionHandler implements BitcoinMessageListener
 	public TransactionHandler (BitcoinNetwork network)
 	{
 		network.addListener ("inv", this);
+		network.addListener ("tx", this);
 	}
 
 	@Override

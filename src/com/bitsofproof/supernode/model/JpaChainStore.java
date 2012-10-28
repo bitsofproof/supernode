@@ -46,8 +46,7 @@ import com.bitsofproof.supernode.core.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpastore")
-@Transactional (propagation = Propagation.MANDATORY)
-public class JpaChainStore implements ChainStore
+class JpaChainStore implements ChainStore
 {
 	private static final Logger log = LoggerFactory.getLogger (JpaChainStore.class);
 
@@ -198,6 +197,7 @@ public class JpaChainStore implements ChainStore
 
 	}
 
+	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public void cache ()
 	{
@@ -358,6 +358,7 @@ public class JpaChainStore implements ChainStore
 		}
 	}
 
+	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public long store (Blk b) throws ValidationException
 	{
@@ -672,7 +673,31 @@ public class JpaChainStore implements ChainStore
 					throw new ValidationException ("Invalid block reward " + b.getHash ());
 				}
 
-				entityManager.persist (b);
+				// now check if transactions were already known
+				boolean seen = false;
+				List<Tx> tl = b.getTransactions ();
+				for ( int i = 0; i < tl.size (); ++i )
+				{
+					Tx t = tl.get (i);
+
+					QTx tx = QTx.tx;
+					JPAQuery query = new JPAQuery (entityManager);
+					Tx st = query.from (tx).where (tx.hash.eq (t.getHash ())).uniqueResult (tx);
+					if ( st != null )
+					{
+						tl.set (i, st);
+						seen = true;
+					}
+				}
+
+				if ( seen )
+				{
+					b = entityManager.merge (b);
+				}
+				else
+				{
+					entityManager.persist (b);
+				}
 
 				for ( Tx t : b.getTransactions () )
 				{
@@ -749,6 +774,7 @@ public class JpaChainStore implements ChainStore
 		}
 	}
 
+	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public void resetStore (Chain chain)
 	{
@@ -762,6 +788,7 @@ public class JpaChainStore implements ChainStore
 		entityManager.persist (genesis);
 	}
 
+	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public Blk get (String hash)
 	{

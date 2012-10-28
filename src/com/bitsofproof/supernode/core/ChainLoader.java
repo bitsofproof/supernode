@@ -21,9 +21,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
@@ -139,14 +136,7 @@ public class ChainLoader
 				@Override
 				public void remove (final BitcoinPeer peer)
 				{
-					new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-					{
-						@Override
-						protected void doInTransactionWithoutResult (TransactionStatus arg0)
-						{
-							store.removePeer (peer);
-						}
-					});
+					store.removePeer (peer);
 				}
 
 				@Override
