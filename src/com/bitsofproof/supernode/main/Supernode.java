@@ -31,7 +31,7 @@ public class Supernode
 			log.info ("Authorisation");
 			Setup.setup ();
 			log.info ("Spring context setup");
-			ApplicationContext context = new ClassPathXmlApplicationContext ("app-context.xml");
+			ApplicationContext context = new ClassPathXmlApplicationContext ("assembly.xml");
 			Application application = context.getBean (Application.class);
 			application.start (context, args);
 		}
