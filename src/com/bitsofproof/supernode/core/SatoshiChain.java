@@ -26,7 +26,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-@Component ("satoshiChain")
+@Component ("production")
 public class SatoshiChain extends ChainImpl
 {
 

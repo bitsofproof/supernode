@@ -45,7 +45,7 @@ import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
-@Component ("store")
+@Component ("jpastore")
 @Transactional (propagation = Propagation.MANDATORY)
 public class JpaChainStore implements ChainStore
 {

@@ -48,4 +48,11 @@
 
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
+	
+	<bean id="application" class="com.bitsofproof.supernode.main.Application">
+		<property name="chain" ref="production"/>
+		<property name="store" ref="jpastore" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+	
 </beans>

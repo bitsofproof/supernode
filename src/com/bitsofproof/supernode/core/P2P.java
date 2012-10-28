@@ -33,12 +33,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -358,6 +358,7 @@ public abstract class P2P
 	{
 		public static final int REGISTER = 1;
 		public static final int CHANGEOPS = 2;
+		public static final int STOP = 3;
 
 		public SelectableChannel socket;
 		public int type;
@@ -373,9 +374,13 @@ public abstract class P2P
 
 	private final ConcurrentLinkedQueue<ChangeRequest> selectorChanges = new ConcurrentLinkedQueue<ChangeRequest> ();
 
-	private final Selector selector = Selector.open ();
+	private final Selector selector;
 
-	private final Executor peerThreads;
+	private final ThreadPoolExecutor peerThreads;
+
+	private final Thread selectorThread;
+
+	private final Thread connector;
 
 	public P2P (int connections) throws IOException
 	{
@@ -383,8 +388,8 @@ public abstract class P2P
 		connectSlot = new Semaphore (desiredConnections);
 		// create a pool of threads
 		peerThreads =
-				Executors.newFixedThreadPool (Math.max (Math.min (desiredConnections / 4, Runtime.getRuntime ().availableProcessors () * 4), 1),
-						new ThreadFactory ()
+				(ThreadPoolExecutor) Executors.newFixedThreadPool (
+						Math.max (Math.min (desiredConnections / 4, Runtime.getRuntime ().availableProcessors () * 4), 1), new ThreadFactory ()
 						{
 							@Override
 							public Thread newThread (final Runnable r)
@@ -394,29 +399,18 @@ public abstract class P2P
 									@Override
 									public void run ()
 									{
-										r.run (); // just delegate
+										r.run ();
 									}
 								};
-								peerThread.setDaemon (true); // let VM exit if only these remain
-								peerThread.setName ("Peer"); // name it for log
+								peerThread.setDaemon (false);
+								peerThread.setName ("Peer");
 								return peerThread;
 							}
 						});
-	}
 
-	public void start () throws IOException
-	{
-		// create a server channel for the chain's port, work non-blocking and
-		// wait for accept events
-		final ServerSocketChannel serverChannel = ServerSocketChannel.open ();
-		serverChannel.socket ().bind (new InetSocketAddress (port));
-		serverChannel.configureBlocking (false);
-
-		selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT));
-		selector.wakeup ();
-
+		selector = Selector.open ();
 		// this thread waits on the selector above and acts on events
-		Thread selectorThread = new Thread (new Runnable ()
+		selectorThread = new Thread (new Runnable ()
 		{
 			@Override
 			public void run ()
@@ -429,6 +423,11 @@ public abstract class P2P
 						ChangeRequest cr;
 						while ( (cr = selectorChanges.poll ()) != null )
 						{
+							if ( cr.type == ChangeRequest.STOP )
+							{
+								return;
+							}
+
 							if ( cr.socket == null )
 							{
 								continue;
@@ -479,7 +478,6 @@ public abstract class P2P
 									try
 									{
 										client.finishConnect (); // finish
-										InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
 										final Peer peer;
 										if ( (peer = connectedPeers.get (client)) != null )
 										{
@@ -591,12 +589,11 @@ public abstract class P2P
 				}
 			}
 		});
-		selectorThread.setDaemon (true);
+		selectorThread.setDaemon (false);
 		selectorThread.setName ("Peer selector");
-		selectorThread.start ();
 
 		// this thread keeps looking for new connections
-		Thread connector = new Thread (new Runnable ()
+		connector = new Thread (new Runnable ()
 		{
 			@Override
 			public void run ()
@@ -659,7 +656,25 @@ public abstract class P2P
 		});
 		connector.setDaemon (true);
 		connector.setName ("Peer connector");
-		connector.start ();
+	}
 
+	public void stop ()
+	{
+		peerThreads.shutdown ();
+		selectorChanges.add (new ChangeRequest (null, ChangeRequest.STOP, SelectionKey.OP_ACCEPT));
+		selector.wakeup ();
+	}
+
+	public void start () throws IOException
+	{
+		final ServerSocketChannel serverChannel = ServerSocketChannel.open ();
+		serverChannel.socket ().bind (new InetSocketAddress (port));
+		serverChannel.configureBlocking (false);
+
+		selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT));
+
+		selectorThread.start ();
+
+		connector.start ();
 	}
 }

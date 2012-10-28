@@ -67,8 +67,8 @@ public class AddressSeeder implements Runnable
 					{
 					}
 				}
-				log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
 			}
+			log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
 		}
 		catch ( Exception e )
 		{

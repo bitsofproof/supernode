@@ -78,6 +78,7 @@ public class BitcoinNetwork extends P2P
 		addListener ("ping", new PingPongHandler ());
 		addListener ("addr", new AddressHandler ());
 		scheduler.scheduleWithFixedDelay (new AddressSeeder (this), 60, 60, TimeUnit.SECONDS);
+		addListener ("inv", new TransactionHandler ());
 	}
 
 	public BitcoinPeer[] getConnectPeers ()
