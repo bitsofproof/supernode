@@ -30,6 +30,16 @@ public class TxMessage extends BitcoinPeer.Message
 		bitcoinPeer.super ("tx");
 	}
 
+	public Tx getTx ()
+	{
+		return tx;
+	}
+
+	public void setTx (Tx tx)
+	{
+		this.tx = tx;
+	}
+
 	@Override
 	public void validate () throws ValidationException
 	{

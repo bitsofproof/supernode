@@ -49,6 +49,11 @@ public class ChainLoader
 	private long chainHeightSeen = 0;
 	private long chainHeightStored = 0;
 
+	public boolean isBehind ()
+	{
+		return chainHeightSeen > chainHeightStored;
+	}
+
 	private void getAnotherBatch (BitcoinPeer peer) throws Exception
 	{
 		if ( chainHeightSeen > chainHeightStored )
@@ -84,7 +89,7 @@ public class ChainLoader
 	private void processBlock (BlockMessage m, final BitcoinPeer peer) throws Exception
 	{
 		Blk block = m.getBlock ();
-		chainHeightStored = store.store (block);
+		chainHeightStored = store.storeBlock (block);
 		if ( store.getNumberOfRequests (peer) == 0 )
 		{
 			getAnotherBatch (peer);

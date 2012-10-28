@@ -34,13 +34,17 @@ public interface ChainStore
 
 	public List<String> getLocator ();
 
-	public long store (Blk b) throws ValidationException;
+	public long storeBlock (Blk b) throws ValidationException;
 
 	public String getHeadHash ();
 
 	public void resetStore (Chain chain);
 
-	public Blk get (String hash);
+	public Blk getBlock (String hash);
+
+	public Tx getTransaction (String hash);
+
+	public boolean storeTransaction (Tx tx, int aboutHeight) throws ValidationException;
 
 	public long getChainHeight ();
 

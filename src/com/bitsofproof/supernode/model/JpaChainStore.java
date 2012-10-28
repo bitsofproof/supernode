@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.model;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,6 +62,7 @@ class JpaChainStore implements ChainStore
 	private final Map<String, Member> members = new HashMap<String, Member> ();
 	private final Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
+	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
 	private final Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> ()
 	{
@@ -371,7 +373,7 @@ class JpaChainStore implements ChainStore
 
 	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
-	public long store (Blk b) throws ValidationException
+	public long storeBlock (Blk b) throws ValidationException
 	{
 		try
 		{
@@ -579,9 +581,12 @@ class JpaChainStore implements ChainStore
 				usingHead.setHeight (head.getHeight ());
 
 				log.trace ("stored block " + b.getHash ());
-			}
-			// modify transients after persistent stored
 
+				for ( Tx t : b.getTransactions () )
+				{
+					unconfirmed.remove (t.getHash ());
+				}
+			}
 			for ( TreeSet<KnownMember> k : knownByPeer.values () )
 			{
 				k.remove (cached);
@@ -726,9 +731,8 @@ class JpaChainStore implements ChainStore
 						JPAQuery query = new JPAQuery (entityManager);
 
 						transactionOutput =
-								query.from (txout).join (txout.transaction, tx)
-										.where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ()))).orderBy (tx.id.desc ()).limit (1)
-										.uniqueResult (txout);
+								query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
+										.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
 					}
 					if ( transactionOutput == null )
 					{
@@ -803,7 +807,7 @@ class JpaChainStore implements ChainStore
 
 	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
-	public Blk get (String hash)
+	public Blk getBlock (String hash)
 	{
 
 		Member cached = null;
@@ -861,6 +865,68 @@ class JpaChainStore implements ChainStore
 		finally
 		{
 			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
+	@Transactional (propagation = Propagation.MANDATORY)
+	public Tx getTransaction (String hash)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+			Tx t = unconfirmed.get (hash);
+			if ( t != null )
+			{
+				return t;
+			}
+			QTx tx = QTx.tx;
+			JPAQuery query = new JPAQuery (entityManager);
+			return query.from (tx).where (tx.hash.eq (hash)).orderBy (tx.id.desc ()).limit (1).uniqueResult (tx);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Transactional (propagation = Propagation.MANDATORY)
+	@Override
+	public boolean storeTransaction (Tx t, int aboutHeight) throws ValidationException
+	{
+		try
+		{
+			lock.writeLock ().lock ();
+
+			if ( unconfirmed.containsKey (t.getHash ()) )
+			{
+				return true;
+			}
+
+			QTx tx = QTx.tx;
+			JPAQuery query = new JPAQuery (entityManager);
+			if ( query.from (tx).where (tx.hash.eq (t.getHash ())).orderBy (tx.id.desc ()).limit (1).uniqueResult (tx) != null )
+			{
+				return true;
+			}
+
+			TransactionContext tcontext = new TransactionContext ();
+			tcontext.blockHash = "unconfirmed";
+			tcontext.blockHeight = aboutHeight;
+			tcontext.blockTransactions = unconfirmed;
+			tcontext.coinbase = false;
+			tcontext.nsigs = 0;
+			validateTransaction (tcontext, t);
+			unconfirmed.put (t.getHash (), t);
+			return true;
+		}
+		catch ( Exception e )
+		{
+			return false;
+		}
+		finally
+		{
+			lock.writeLock ().unlock ();
 		}
 	}
 

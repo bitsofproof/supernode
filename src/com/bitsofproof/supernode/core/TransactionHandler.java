@@ -19,11 +19,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
+import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
+import com.bitsofproof.supernode.messages.TxMessage;
+import com.bitsofproof.supernode.model.ChainStore;
 
 public class TransactionHandler implements BitcoinMessageListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
+
+	private ChainStore store;
 
 	public TransactionHandler (BitcoinNetwork network)
 	{
@@ -32,16 +37,52 @@ public class TransactionHandler implements BitcoinMessageListener
 	}
 
 	@Override
-	public synchronized void process (BitcoinPeer.Message m, BitcoinPeer peer)
+	public synchronized void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
 	{
 		if ( m instanceof InvMessage )
 		{
 			InvMessage im = (InvMessage) m;
+			GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
 			for ( byte[] h : im.getTransactionHashes () )
 			{
 				String hash = new Hash (h).toString ();
-				log.info ("new transaction " + hash);
+				if ( store.getTransaction (hash) == null )
+				{
+					log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
+					get.getTransactions ().add (h);
+				}
+			}
+			if ( get.getTransactions ().size () > 0 )
+			{
+				log.trace ("asking for transaction details from " + peer.getAddress ());
+				peer.send (get);
 			}
 		}
+		if ( m instanceof TxMessage )
+		{
+			log.trace ("received transaction details for " + ((TxMessage) m).getTx ().getHash () + " from " + peer.getAddress ());
+			try
+			{
+				store.storeTransaction (((TxMessage) m).getTx (), (int) peer.getNetwork ().getChainHeight ());
+			}
+			catch ( ValidationException e )
+			{
+				// do not drop peer if we are behind
+				if ( !peer.getNetwork ().isBehind () )
+				{
+					throw e;
+				}
+			}
+		}
+	}
+
+	public ChainStore getStore ()
+	{
+		return store;
+	}
+
+	public void setStore (ChainStore store)
+	{
+		this.store = store;
 	}
 }

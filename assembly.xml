@@ -65,6 +65,7 @@
 	</bean>
 	<bean id="transaction" class="com.bitsofproof.supernode.core.TransactionHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<property name="store" ref="${store}"/>
 	</bean>
 	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
@@ -75,7 +76,7 @@
 	<bean id="application" class="com.bitsofproof.supernode.main.Application">
 		<property name="chain" ref="${chain}"/>
 		<property name="network" ref="bitcoinNetwork"/>
-		<property name="store" ref="jpastore" />
+		<property name="store" ref="${store}" />
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 </beans>
