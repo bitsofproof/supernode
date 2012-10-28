@@ -27,6 +27,11 @@ public class AddressHandler implements BitcoinMessageListener
 {
 	private static final Logger log = LoggerFactory.getLogger (AddressHandler.class);
 
+	public AddressHandler (BitcoinNetwork network)
+	{
+		network.addListener ("addr", this);
+	}
+
 	@Override
 	public void process (Message m, BitcoinPeer peer) throws Exception
 	{

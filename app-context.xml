@@ -49,10 +49,33 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 	
-	<bean id="application" class="com.bitsofproof.supernode.main.Application">
-		<property name="chain" ref="production"/>
+
+	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
+		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
+		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="jpastore" />
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	
+	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
+	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
+	<bean id="transaction" class="com.bitsofproof.supernode.core.TransactionHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
+	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<property name="delay" value="60"/>
+		<property name="startDelay" value="60"/>		
+	</bean>
+	
+	<bean id="application" class="com.bitsofproof.supernode.main.Application">
+		<property name="chain" ref="${chain}"/>
+		<property name="network" ref="bitcoinNetwork"/>
+		<property name="store" ref="jpastore" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
 </beans>

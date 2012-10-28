@@ -48,6 +48,7 @@ public class ChainLoader
 	private final ChainStore store;
 	private final BitcoinNetwork network;
 	private final PlatformTransactionManager transactionManager;
+
 	private long chainHeightSeen = 0;
 	private long chainHeightStored = 0;
 

@@ -25,6 +25,11 @@ public class TransactionHandler implements BitcoinMessageListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
 
+	public TransactionHandler (BitcoinNetwork network)
+	{
+		network.addListener ("inv", this);
+	}
+
 	@Override
 	public synchronized void process (BitcoinPeer.Message m, BitcoinPeer peer)
 	{

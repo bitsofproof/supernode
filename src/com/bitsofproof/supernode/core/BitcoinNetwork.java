@@ -43,22 +43,20 @@ import com.bitsofproof.supernode.model.ChainStore;
 
 public class BitcoinNetwork extends P2P
 {
-	public BitcoinNetwork (PlatformTransactionManager transactionManager, Chain chain, ChainStore store, int connections) throws IOException
+	public BitcoinNetwork (int connections) throws IOException
 	{
 		super (connections);
-		this.chain = chain;
-		this.store = store;
-		transactionTemplate = new TransactionTemplate (transactionManager);
-		loader = new ChainLoader (transactionManager, this, store);
 	}
 
 	private static final Logger log = LoggerFactory.getLogger (BitcoinNetwork.class);
 
-	private final Chain chain;
-	private final ChainStore store;
-	private final TransactionTemplate transactionTemplate;
+	private Chain chain;
+	private ChainStore store;
+	private PlatformTransactionManager transactionManager;
+
+	private TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
-	private final ChainLoader loader;
+	private ChainLoader loader;
 
 	private final Map<BitcoinMessageListener, ArrayList<String>> listener = Collections
 			.synchronizedMap (new HashMap<BitcoinMessageListener, ArrayList<String>> ());
@@ -72,13 +70,19 @@ public class BitcoinNetwork extends P2P
 	public void start () throws IOException
 	{
 		setPort (chain.getPort ());
+
+		transactionTemplate = new TransactionTemplate (transactionManager);
+		loader = new ChainLoader (transactionManager, this, store);
+
 		super.start ();
 		loader.start ();
 
-		addListener ("ping", new PingPongHandler ());
-		addListener ("addr", new AddressHandler ());
 		scheduler.scheduleWithFixedDelay (new AddressSeeder (this), 60, 60, TimeUnit.SECONDS);
-		addListener ("inv", new TransactionHandler ());
+	}
+
+	public void scheduleWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
+	{
+		scheduler.scheduleWithFixedDelay (job, startDelay, delay, unit);
 	}
 
 	public BitcoinPeer[] getConnectPeers ()
@@ -291,6 +295,26 @@ public class BitcoinNetwork extends P2P
 	public ChainStore getStore ()
 	{
 		return store;
+	}
+
+	public PlatformTransactionManager getTransactionManager ()
+	{
+		return transactionManager;
+	}
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
+
+	public void setChain (Chain chain)
+	{
+		this.chain = chain;
+	}
+
+	public void setStore (ChainStore store)
+	{
+		this.store = store;
 	}
 
 	public long getVersionNonce ()

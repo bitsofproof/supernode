@@ -27,6 +27,11 @@ public class PingPongHandler implements BitcoinMessageListener
 {
 	private static final Logger log = LoggerFactory.getLogger (PingPongHandler.class);
 
+	public PingPongHandler (BitcoinNetwork network)
+	{
+		network.addListener ("ping", this);
+	}
+
 	@Override
 	public void process (Message m, BitcoinPeer peer) throws Exception
 	{

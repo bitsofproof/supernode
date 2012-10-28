@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +29,14 @@ public class AddressSeeder implements Runnable
 {
 	private static final Logger log = LoggerFactory.getLogger (AddressSeeder.class);
 
-	BitcoinNetwork network;
+	private final BitcoinNetwork network;
+	private int delay = 60;
+	private int startDelay = 60;
 
 	public AddressSeeder (BitcoinNetwork network)
 	{
 		this.network = network;
+		network.scheduleWithFixedDelay (this, startDelay, delay, TimeUnit.SECONDS);
 	}
 
 	@Override
@@ -76,4 +80,23 @@ public class AddressSeeder implements Runnable
 		}
 	}
 
+	public int getDelay ()
+	{
+		return delay;
+	}
+
+	public void setDelay (int delay)
+	{
+		this.delay = delay;
+	}
+
+	public int getStartDelay ()
+	{
+		return startDelay;
+	}
+
+	public void setStartDelay (int startDelay)
+	{
+		this.startDelay = startDelay;
+	}
 }

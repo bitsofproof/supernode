@@ -50,8 +50,7 @@ public class Application
 	{
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
-		gnuOptions.addOption ("h", "help", false, "I cant help you").addOption ("c", "connections", true, "Number of connections")
-				.addOption ("r", "resetdb", false, "initialize database");
+		gnuOptions.addOption ("h", "help", false, "I can't help you").addOption ("r", "resetdb", false, "initialize database");
 
 		final CommandLine cl;
 		try
@@ -62,12 +61,6 @@ public class Application
 		{
 			log.error ("Invalid options ", e1);
 			return;
-		}
-		int connections = 10;
-
-		if ( cl.hasOption ("connections") )
-		{
-			connections = Integer.valueOf (cl.getOptionValues ("connections")[0].toString ());
 		}
 
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
@@ -83,7 +76,7 @@ public class Application
 				store.cache ();
 			}
 		});
-		network = new BitcoinNetwork (transactionManager, chain, store, connections);
+
 		network.start ();
 	}
 
@@ -105,6 +98,16 @@ public class Application
 	public void setStore (ChainStore store)
 	{
 		this.store = store;
+	}
+
+	public BitcoinNetwork getNetwork ()
+	{
+		return network;
+	}
+
+	public void setNetwork (BitcoinNetwork network)
+	{
+		this.network = network;
 	}
 
 	public PlatformTransactionManager getTransactionManager ()
