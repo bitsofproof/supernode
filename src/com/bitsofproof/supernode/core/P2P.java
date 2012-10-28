@@ -1,25 +1,5 @@
-/**
- * Copyright 2012 Tamas Blummer
- * 
- * High performance Peer to Peer client and server using NIO.
- * 
- * USAGE
- * 1. Derive your YourPeer from P2P.Peer, your YourMessage from P2P.Message
- * 2. implement their abstract methods (see below)
- * 3. Derive your P2PNetwork from P2P
- * 4. implement createPeer to create your peer object for an address
- * 5. Instantiate P2PNetwork
- * 7. add some peer addresses using addPeer ()
- * 8. call P2PNetwork.start ()
- * 9. enjoy:
- * 		P2PNetwork.createPeer will be called to instantiate your Peers
- * 		YourPeer.onConnect () will be called first. send (YourMessage) what is needed to introduce your peer 
- * 						no receive will be called until this returns.
- * 		YourMessage YourPeer.parse (InputStream in) should instantiate any message from wire
- * 						do not do any other processing here
- * 		YourPeer.receive(Message) should do the message processing. 
- * 						This might call send (), addPeer () or disconnect () but nothing else from this framework 
- * 
+/*
+ * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

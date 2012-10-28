@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.core;
-/**
+
+/*
  * Copyright 2011 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +16,16 @@ package com.bitsofproof.supernode.core;
  * limitations under the License.
  */
 
-@SuppressWarnings("serial")
-public class AddressFormatException extends Exception {
-    public AddressFormatException() {
-        super();
-    }
+@SuppressWarnings ("serial")
+public class AddressFormatException extends Exception
+{
+	public AddressFormatException ()
+	{
+		super ();
+	}
 
-    public AddressFormatException(String message) {
-        super(message);
-    }
+	public AddressFormatException (String message)
+	{
+		super (message);
+	}
 }
