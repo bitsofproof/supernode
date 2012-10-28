@@ -76,8 +76,6 @@ public class BitcoinNetwork extends P2P
 
 		super.start ();
 		loader.start ();
-
-		scheduler.scheduleWithFixedDelay (new AddressSeeder (this), 60, 60, TimeUnit.SECONDS);
 	}
 
 	public void scheduleWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
