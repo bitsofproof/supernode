@@ -56,7 +56,6 @@ public class BitcoinNetwork extends P2P
 
 	private TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
-	private ChainLoader loader;
 
 	private final Map<BitcoinMessageListener, ArrayList<String>> listener = Collections
 			.synchronizedMap (new HashMap<BitcoinMessageListener, ArrayList<String>> ());
@@ -72,10 +71,8 @@ public class BitcoinNetwork extends P2P
 		setPort (chain.getPort ());
 
 		transactionTemplate = new TransactionTemplate (transactionManager);
-		loader = new ChainLoader (this, store);
 
 		super.start ();
-		loader.start ();
 	}
 
 	public void scheduleWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)

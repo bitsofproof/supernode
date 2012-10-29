@@ -34,78 +34,11 @@ public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	public ChainLoader (BitcoinNetwork network, ChainStore store)
-	{
-		this.network = network;
-		this.store = store;
-	}
-
 	private final ChainStore store;
-	private final BitcoinNetwork network;
 
-	private long chainHeightStored = 0;
-
-	private void getAnotherBatch (BitcoinPeer peer) throws Exception
+	public ChainLoader (BitcoinNetwork network, final ChainStore store)
 	{
-		if ( peer.getHeight () > chainHeightStored )
-		{
-			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
-			for ( String s : store.getLocator () )
-			{
-				gbm.getHashes ().add (new Hash (s).toByteArray ());
-			}
-			peer.send (gbm);
-			log.trace ("asking for known blocks from " + peer.getAddress ());
-		}
-	}
-
-	private void getBlocks (final BitcoinPeer peer) throws Exception
-	{
-		if ( store.getNumberOfRequests (peer) == 0 )
-		{
-			List<String> requests = store.getBlockRequests (peer);
-			if ( !requests.isEmpty () )
-			{
-				GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
-				for ( String pick : requests )
-				{
-					gdm.getBlocks ().add (new Hash (pick).toByteArray ());
-				}
-				log.trace ("asking for blocks " + gdm.getBlocks ().size () + " from " + peer.getAddress ());
-				peer.send (gdm);
-			}
-		}
-	}
-
-	private void processBlock (BlockMessage m, final BitcoinPeer peer) throws Exception
-	{
-		Blk block = m.getBlock ();
-		store.storeBlock (block);
-		chainHeightStored = store.getChainHeight ();
-		store.forgetBlockRequest (block.getHash (), peer);
-		if ( store.getNumberOfRequests (peer) == 0 )
-		{
-			getAnotherBatch (peer);
-		}
-	}
-
-	private void processInv (final InvMessage m, final BitcoinPeer peer) throws Exception
-	{
-		if ( !m.getBlockHashes ().isEmpty () )
-		{
-			log.trace ("received inventory of " + m.getBlockHashes ().size () + " from " + peer.getAddress ());
-			List<String> hashes = new ArrayList<String> ();
-			for ( byte[] h : m.getBlockHashes () )
-			{
-				hashes.add (new Hash (h).toString ());
-			}
-			store.addInventory (hashes, peer);
-			getBlocks (peer);
-		}
-	}
-
-	public void start ()
-	{
+		this.store = store;
 		try
 		{
 			network.addListener ("block", new BitcoinMessageListener ()
@@ -155,6 +88,64 @@ public class ChainLoader
 		catch ( Exception e )
 		{
 			log.error ("Could not start chain loader", e);
+		}
+	}
+
+	private void getAnotherBatch (BitcoinPeer peer) throws Exception
+	{
+		if ( peer.getHeight () > store.getChainHeight () )
+		{
+			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
+			for ( String s : store.getLocator () )
+			{
+				gbm.getHashes ().add (new Hash (s).toByteArray ());
+			}
+			peer.send (gbm);
+			log.trace ("asking for known blocks from " + peer.getAddress ());
+		}
+	}
+
+	private void getBlocks (final BitcoinPeer peer) throws Exception
+	{
+		if ( store.getNumberOfRequests (peer) == 0 )
+		{
+			List<String> requests = store.getBlockRequests (peer);
+			if ( !requests.isEmpty () )
+			{
+				GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
+				for ( String pick : requests )
+				{
+					gdm.getBlocks ().add (new Hash (pick).toByteArray ());
+				}
+				log.trace ("asking for blocks " + gdm.getBlocks ().size () + " from " + peer.getAddress ());
+				peer.send (gdm);
+			}
+		}
+	}
+
+	private void processBlock (BlockMessage m, final BitcoinPeer peer) throws Exception
+	{
+		Blk block = m.getBlock ();
+		store.storeBlock (block);
+		store.forgetBlockRequest (block.getHash (), peer);
+		if ( store.getNumberOfRequests (peer) == 0 )
+		{
+			getAnotherBatch (peer);
+		}
+	}
+
+	private void processInv (final InvMessage m, final BitcoinPeer peer) throws Exception
+	{
+		if ( !m.getBlockHashes ().isEmpty () )
+		{
+			log.trace ("received inventory of " + m.getBlockHashes ().size () + " from " + peer.getAddress ());
+			List<String> hashes = new ArrayList<String> ();
+			for ( byte[] h : m.getBlockHashes () )
+			{
+				hashes.add (new Hash (h).toString ());
+			}
+			store.addInventory (hashes, peer);
+			getBlocks (peer);
 		}
 	}
 }
