@@ -51,7 +51,7 @@
 	
 
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
-		<constructor-arg><value>20</value></constructor-arg> <!-- Number of connections desired -->
+		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
 		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="jpastore" />
 		<property name="transactionManager" ref="transactionManager" />
