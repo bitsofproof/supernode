@@ -185,7 +185,7 @@ public class TxIn implements Serializable, Cloneable
 		sequence = reader.readUint32 ();
 	}
 
-	protected TxIn flatCopy ()
+	protected TxIn flatCopy (Tx tc)
 	{
 		TxIn c = new TxIn ();
 
@@ -194,7 +194,7 @@ public class TxIn implements Serializable, Cloneable
 		c.sequence = sequence;
 		c.source = source;
 		c.sourceHash = sourceHash;
-		c.transaction = transaction;
+		c.transaction = tc;
 
 		return c;
 	}

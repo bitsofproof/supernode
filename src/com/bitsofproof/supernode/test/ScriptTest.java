@@ -194,6 +194,17 @@ public class ScriptTest
 		t2.getInputs ().get (0).setSource (t1.getOutputs ().get (0));
 		assertTrue (new Script (t2, 0).evaluate ());
 
+		t1 =
+				Tx.fromWireDump ("0100000001289eb02e8ddc1ee3486aadc1cd1335fba22a8e3e87e3f41b7c5bbe7fb4391d81010000008a47304402206b5c3b1c86748dcf328b9f3a65e10085afcf5d1af5b40970d8ce3a9355e06b5b0220cdbdc23e6d3618e47056fccc60c5f73d1a542186705197e5791e97f0e6582a32014104f25ec495fa21ad14d69f45bf277129488cfb1a339aba1fed3c5099bb6d8e9716491a14050fbc0b2fed2963dc1e56264b3adf52a81b953222a2180d48b54d1e18ffffffff0140420f00000000001976a914e6ba8cc407375ce1623ec17b2f1a59f2503afc6788ac00000000");
+		t2 =
+				Tx.fromWireDump ("01000000014213d2fe8f942dd7a72df14e656baab0e8b2b7f59571771ddf170b588379a2b6010000008b483045022037183e3e47b23634eeebe6fd155f0adbde756bf00a6843a1317b6548a03f3cfe0221009f96bec8759837f844478a35e102618918662869188f99d32dffe6ef7f81427e014104a7d3b0dda6d4d0a44b137a65105cdfed890b09ce2d283d5683029f46a00e531bff1deb3ad3862e0648dca953a4250b83610c4f20861555a2f5638bd3d7aff93dffffffff02ddfb1100000000001976a9142256ff6b9b9fea32bfa8e64aed10ee695ffe100988ac40420f00000000001976a914c62301ef02dfeec757fb8dedb8a45eda5fb5ee4d88ac00000000");
+
+		System.out.println (t1.toJSON ());
+		System.out.println (t2.toJSON ());
+
+		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
+		assertTrue (new Script (t1, 0).evaluate ());
+
 		if ( !usedb )
 		{
 			return;
@@ -256,6 +267,7 @@ public class ScriptTest
 				}
 				System.out.println (t.toJSON ());
 				assertTrue (new Script (t, 0).evaluate ());
+
 				query = new JPAQuery (entityManager);
 				t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
 				writer = new WireFormat.Writer ();

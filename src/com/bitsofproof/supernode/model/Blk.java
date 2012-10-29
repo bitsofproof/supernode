@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -30,6 +31,8 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+
+import org.bouncycastle.util.encoders.Hex;
 
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -264,6 +267,28 @@ public class Blk implements Serializable
 		{
 		}
 		return new Hash (tree.get (tree.size () - 1)).toString ();
+	}
+
+	public String toWireDump ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWire (writer);
+		try
+		{
+			return new String (Hex.encode (writer.toByteArray ()), "US-ASCII");
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+			return null;
+		}
+	}
+
+	public static Blk fromWireDump (String s)
+	{
+		WireFormat.Reader reader = new WireFormat.Reader (Hex.decode (s));
+		Blk b = new Blk ();
+		b.fromWire (reader);
+		return b;
 	}
 
 	public void toWire (WireFormat.Writer writer)

@@ -707,7 +707,7 @@ class JpaChainStore implements ChainStore
 				}
 				else
 				{
-					throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
+					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
 			}
 			else
@@ -722,11 +722,11 @@ class JpaChainStore implements ChainStore
 			}
 			if ( transactionOutput == null )
 			{
-				throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
+				throw new ValidationException ("Transaction input refers to unknown output " + t.toWireDump ());
 			}
 			if ( transactionOutput.getSink () != null )
 			{
-				throw new ValidationException ("Double spending attempt " + t.toJSON ());
+				throw new ValidationException ("Double spending attempt " + t.toWireDump ());
 			}
 			if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
 			{
@@ -734,7 +734,7 @@ class JpaChainStore implements ChainStore
 				{
 					if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()).get (0) == null )
 					{
-						throw new ValidationException ("coinbase spent in same block " + t.toJSON ());
+						throw new ValidationException ("coinbase spent in same block " + t.toWireDump ());
 					}
 				}
 				else
@@ -748,7 +748,7 @@ class JpaChainStore implements ChainStore
 									.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
 					if ( origin.getHeight () > (tcontext.blockHeight - 100) )
 					{
-						throw new ValidationException ("coinbase spent too early " + t.toJSON ());
+						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 					}
 				}
 			}
@@ -789,11 +789,11 @@ class JpaChainStore implements ChainStore
 			}
 			if ( t.getOutputs ().isEmpty () )
 			{
-				throw new ValidationException ("Transaction must have outputs " + t.toJSON ());
+				throw new ValidationException ("Transaction must have outputs " + t.toWireDump ());
 			}
 			if ( t.getInputs ().isEmpty () )
 			{
-				throw new ValidationException ("Transaction must have inputs " + t.toJSON ());
+				throw new ValidationException ("Transaction must have inputs " + t.toWireDump ());
 			}
 
 			long sumOut = 0;
@@ -807,7 +807,7 @@ class JpaChainStore implements ChainStore
 					}
 					else
 					{
-						throw new ValidationException ("script too long " + t.toJSON ());
+						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
 				tcontext.nsigs += Script.sigOpCount (o.getScript ());
@@ -817,13 +817,13 @@ class JpaChainStore implements ChainStore
 				}
 				if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
 				{
-					throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
+					throw new ValidationException ("Transaction output not in money range " + t.toWireDump ());
 				}
 				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 				sumOut += o.getValue ();
 				if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
 				{
-					throw new ValidationException ("Transaction output not in money range " + t.toJSON ());
+					throw new ValidationException ("Transaction output not in money range " + t.toWireDump ());
 				}
 			}
 
@@ -841,12 +841,12 @@ class JpaChainStore implements ChainStore
 					}
 					else
 					{
-						throw new ValidationException ("script too long " + t.toJSON ());
+						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
 				if ( tcontext.blockHeight > 140000 && !Script.isPushOnly (i.getScript ()) )
 				{
-					throw new ValidationException ("input script should be push only " + t.toJSON ());
+					throw new ValidationException ("input script should be push only " + t.toWireDump ());
 				}
 
 				i.setSource (resolved.get (inNumber));
@@ -862,8 +862,9 @@ class JpaChainStore implements ChainStore
 						{
 							if ( !new Script (t, nr).evaluate () )
 							{
-								throw new ValidationException ("The transaction script does not evaluate to true in input: " + nr + " " + t.toJSON ()
-										+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
+								throw new ValidationException ("The transaction script does not evaluate to true in input: " + nr + "-"
+										+ i.getSource ().getIx () + " " + t.toWireDump () + " source transaction: "
+										+ i.getSource ().getTransaction ().toWireDump ());
 							}
 
 							synchronized ( tcontext )
@@ -917,7 +918,7 @@ class JpaChainStore implements ChainStore
 			}
 			if ( sumOut > sumIn )
 			{
-				throw new ValidationException ("Transaction value out more than in " + t.toJSON ());
+				throw new ValidationException ("Transaction value out more than in " + t.toWireDump ());
 			}
 		}
 	}

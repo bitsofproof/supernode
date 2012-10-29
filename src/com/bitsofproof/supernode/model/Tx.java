@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+
+import org.bouncycastle.util.encoders.Hex;
 
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -163,6 +166,28 @@ public class Tx implements Serializable
 
 	}
 
+	public String toWireDump ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWire (writer);
+		try
+		{
+			return new String (Hex.encode (writer.toByteArray ()), "US-ASCII");
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+			return null;
+		}
+	}
+
+	public static Tx fromWireDump (String s)
+	{
+		WireFormat.Reader reader = new WireFormat.Reader (Hex.decode (s));
+		Tx b = new Tx ();
+		b.fromWire (reader);
+		return b;
+	}
+
 	public String toJSON ()
 	{
 		StringBuffer b = new StringBuffer ();
@@ -285,12 +310,12 @@ public class Tx implements Serializable
 		c.inputs = new ArrayList<TxIn> ();
 		for ( TxIn in : inputs )
 		{
-			c.inputs.add (in.flatCopy ());
+			c.inputs.add (in.flatCopy (c));
 		}
 		c.outputs = new ArrayList<TxOut> ();
 		for ( TxOut out : outputs )
 		{
-			c.outputs.add (out.flatCopy ());
+			c.outputs.add (out.flatCopy (c));
 		}
 
 		return c;

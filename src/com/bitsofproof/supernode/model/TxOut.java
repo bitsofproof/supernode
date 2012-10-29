@@ -193,14 +193,14 @@ public class TxOut implements Serializable
 		this.address = address;
 	}
 
-	protected TxOut flatCopy ()
+	protected TxOut flatCopy (Tx tc)
 	{
 		TxOut c = new TxOut ();
 		c.address = address;
 		c.ix = ix;
 		c.script = script;
 		c.sink = sink;
-		c.transaction = transaction;
+		c.transaction = tc;
 		c.value = value;
 
 		return c;
