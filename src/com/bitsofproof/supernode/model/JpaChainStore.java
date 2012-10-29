@@ -672,12 +672,6 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
-	private static class InputValidationResult
-	{
-		long value;
-		Exception e;
-	}
-
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
 		if ( tcontext.coinbase )
@@ -750,7 +744,7 @@ class JpaChainStore implements ChainStore
 
 			long sumIn = 0;
 			int inNumber = 0;
-			List<Callable<InputValidationResult>> callables = new ArrayList<Callable<InputValidationResult>> ();
+			List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
 			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
@@ -764,7 +758,7 @@ class JpaChainStore implements ChainStore
 						throw new ValidationException ("script too long " + t.toJSON ());
 					}
 				}
-				if ( !Script.isPushOnly (i.getScript ()) )
+				if ( tcontext.blockHeight > 140000 && !Script.isPushOnly (i.getScript ()) )
 				{
 					throw new ValidationException ("input script should be push only " + t.toJSON ());
 				}
@@ -819,29 +813,41 @@ class JpaChainStore implements ChainStore
 
 					i.setSource (transactionOutput);
 				}
+				sumIn += i.getSource ().getValue ();
 
 				final int nr = inNumber;
-				callables.add (new Callable<InputValidationResult> ()
+				callables.add (new Callable<ValidationException> ()
 				{
 					@Override
-					public InputValidationResult call () throws Exception
+					public ValidationException call () throws Exception
 					{
-						InputValidationResult r = new InputValidationResult ();
 						try
 						{
-							r.value = inputValidation (tcontext, t, nr, i);
-							r.e = null;
+							if ( !new Script (t, nr).evaluate () )
+							{
+								throw new ValidationException ("The transaction script does not evaluate to true in input: " + nr + " " + t.toJSON ()
+										+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
+							}
+
+							synchronized ( tcontext )
+							{
+								tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
+							}
+						}
+						catch ( ValidationException e )
+						{
+							return e;
 						}
 						catch ( Exception e )
 						{
-							r.e = e;
+							return new ValidationException (e);
 						}
-						return r;
+						return null;
 					}
 				});
 				++inNumber;
 			}
-			List<Future<InputValidationResult>> results;
+			List<Future<ValidationException>> results;
 			try
 			{
 				results = inputProcessor.invokeAll (callables);
@@ -850,15 +856,14 @@ class JpaChainStore implements ChainStore
 			{
 				throw new ValidationException ("interrupted", e1);
 			}
-			for ( Future<InputValidationResult> r : results )
+			for ( Future<ValidationException> r : results )
 			{
 				try
 				{
-					if ( r.get ().e != null )
+					if ( r.get () != null )
 					{
-						throw r.get ().e;
+						throw r.get ();
 					}
-					sumIn += r.get ().value;
 				}
 				catch ( InterruptedException e )
 				{
@@ -878,21 +883,6 @@ class JpaChainStore implements ChainStore
 				throw new ValidationException ("Transaction value out more than in " + t.toJSON ());
 			}
 		}
-	}
-
-	private long inputValidation (TransactionContext tcontext, Tx t, int inNumber, TxIn i) throws ValidationException
-	{
-		if ( !new Script (t, inNumber).evaluate () )
-		{
-			throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ()
-					+ " source transaction: " + i.getSource ().getTransaction ().toJSON ());
-		}
-
-		synchronized ( tcontext )
-		{
-			tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
-		}
-		return i.getSource ().getValue ();
 	}
 
 	@Override
