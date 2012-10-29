@@ -34,7 +34,7 @@ public interface ChainStore
 
 	public List<String> getLocator ();
 
-	public long storeBlock (Blk b) throws ValidationException;
+	public void storeBlock (Blk b) throws ValidationException;
 
 	public String getHeadHash ();
 

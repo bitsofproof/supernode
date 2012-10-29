@@ -148,7 +148,15 @@ public class BitcoinNetwork extends P2P
 				@Override
 				protected void doInTransactionWithoutResult (TransactionStatus arg0)
 				{
-					listener.remove (peer);
+					try
+					{
+						listener.remove (peer);
+					}
+					catch ( Exception e )
+					{
+						log.error ("exception while removing peer ", e);
+						arg0.setRollbackOnly ();
+					}
 				}
 			});
 		}
@@ -163,7 +171,15 @@ public class BitcoinNetwork extends P2P
 				@Override
 				protected void doInTransactionWithoutResult (TransactionStatus arg0)
 				{
-					listener.add (peer);
+					try
+					{
+						listener.add (peer);
+					}
+					catch ( Exception e )
+					{
+						log.error ("exception while adding peer ", e);
+						arg0.setRollbackOnly ();
+					}
 				}
 			});
 		}

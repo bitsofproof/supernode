@@ -209,23 +209,29 @@ public abstract class P2P
 
 			try
 			{
-				// note that no other reference to peer is stored here
-				// it might be garbage collected (that is probably the right thing to do)
-				connectedPeers.remove (channel);
-				channel.close ();
-			}
-			catch ( IOException e )
-			{
-			}
-			connectSlot.release ();
-			peerThreads.execute (new Runnable ()
-			{
-				@Override
-				public void run ()
+				try
 				{
-					onDisconnect ();
+					// note that no other reference to peer is stored here
+					// it might be garbage collected (that is probably the right thing to do)
+					connectedPeers.remove (channel);
+					channel.close ();
 				}
-			});
+				catch ( IOException e )
+				{
+				}
+				peerThreads.execute (new Runnable ()
+				{
+					@Override
+					public void run ()
+					{
+						onDisconnect ();
+					}
+				});
+			}
+			finally
+			{
+				connectSlot.release ();
+			}
 		}
 
 		private void listen ()

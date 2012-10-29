@@ -86,7 +86,8 @@ public class ChainLoader
 	private void processBlock (BlockMessage m, final BitcoinPeer peer) throws Exception
 	{
 		Blk block = m.getBlock ();
-		chainHeightStored = store.storeBlock (block);
+		store.storeBlock (block);
+		chainHeightStored = store.getChainHeight ();
 		if ( store.getNumberOfRequests (peer) == 0 )
 		{
 			getAnotherBatch (peer);
