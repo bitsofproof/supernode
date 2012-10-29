@@ -54,8 +54,7 @@ public class Blk implements Serializable
 	long version;
 
 	transient private String previousHash;
-	transient private WireFormat.Reader wireTransactions;
-	transient private long nWireTransactions;
+	transient private byte[] wireTransactions;
 
 	@ManyToOne (targetEntity = Blk.class, fetch = FetchType.LAZY, optional = true)
 	private Blk previous;
@@ -310,17 +309,24 @@ public class Blk implements Serializable
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
-		if ( transactions != null )
+		if ( wireTransactions != null )
 		{
-			writer.writeVarInt (transactions.size ());
-			for ( Tx t : transactions )
-			{
-				t.toWire (writer);
-			}
+			writer.writeBytes (wireTransactions);
 		}
 		else
 		{
-			writer.writeVarInt (0);
+			if ( transactions != null )
+			{
+				writer.writeVarInt (transactions.size ());
+				for ( Tx t : transactions )
+				{
+					t.toWire (writer);
+				}
+			}
+			else
+			{
+				writer.writeVarInt (0);
+			}
 		}
 	}
 
@@ -336,16 +342,9 @@ public class Blk implements Serializable
 		createTime = reader.readUint32 ();
 		difficultyTarget = reader.readUint32 ();
 		nonce = reader.readUint32 ();
-		long nt = reader.readVarInt ();
-		if ( nt > 0 )
-		{
-			wireTransactions = reader;
-			nWireTransactions = nt;
-		}
-		else
-		{
-			transactions = null;
-		}
+
+		wireTransactions = reader.readRest ();
+		transactions = null;
 
 		hash = reader.hash (cursor, 80).toString ();
 	}
@@ -357,11 +356,13 @@ public class Blk implements Serializable
 			return;
 		}
 
+		WireFormat.Reader reader = new WireFormat.Reader (wireTransactions);
+		long nt = reader.readVarInt ();
 		transactions = new ArrayList<Tx> ();
-		for ( long i = 0; i < nWireTransactions; ++i )
+		for ( long i = 0; i < nt; ++i )
 		{
 			Tx t = new Tx ();
-			t.fromWire (wireTransactions);
+			t.fromWire (reader);
 			transactions.add (t);
 		}
 		wireTransactions = null;

@@ -89,8 +89,12 @@ public class TxOut implements Serializable
 
 		// TODO: real script interpretation needed here
 		byte[] ph = new byte[20];
+		if ( script.length < 2 )
+		{
+			return;
+		}
 
-		if ( script[0] == 0x76 )
+		if ( script[0] == 0x76 && script.length >= 22 )
 		{
 			// new style
 			System.arraycopy (script, 2, ph, 0, 20);
@@ -100,6 +104,10 @@ public class TxOut implements Serializable
 		{
 			// old style
 			byte[] key = new byte[(script[0] & 0xff)];
+			if ( script.length <= script[0] + 1 )
+			{
+				return;
+			}
 			System.arraycopy (script, 1, key, 0, script[0]);
 			byte[] sha256;
 			try

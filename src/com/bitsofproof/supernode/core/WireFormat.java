@@ -54,6 +54,14 @@ public class WireFormat
 			return cursor >= bytes.length;
 		}
 
+		public byte[] readRest ()
+		{
+			byte[] rest = new byte[bytes.length - cursor];
+			System.arraycopy (bytes, cursor, rest, 0, bytes.length - cursor);
+			cursor = bytes.length;
+			return rest;
+		}
+
 		public int readByte ()
 		{
 			return bytes[cursor++] & 0xff;

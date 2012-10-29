@@ -414,6 +414,14 @@ class JpaChainStore implements ChainStore
 
 			lockedStoreBlock (b);
 		}
+		catch ( ValidationException e )
+		{
+			throw e;
+		}
+		catch ( Exception e )
+		{
+			throw new ValidationException ("OTHER exception " + b.toWireDump (), e);
+		}
 		finally
 		{
 			lock.writeLock ().unlock ();
