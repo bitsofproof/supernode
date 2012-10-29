@@ -28,7 +28,9 @@ public interface ChainStore
 
 	public void addInventory (List<String> hashes, BitcoinPeer peer);
 
-	public List<String> getRequests (BitcoinPeer peer);
+	public List<String> getBlockRequests (BitcoinPeer peer);
+
+	public void forgetBlockRequest (String hash, BitcoinPeer peer);
 
 	public void removePeer (BitcoinPeer peer);
 

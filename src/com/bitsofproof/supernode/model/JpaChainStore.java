@@ -281,7 +281,7 @@ class JpaChainStore implements ChainStore
 	}
 
 	@Override
-	public List<String> getRequests (BitcoinPeer peer)
+	public List<String> getBlockRequests (BitcoinPeer peer)
 	{
 		try
 		{
@@ -306,6 +306,29 @@ class JpaChainStore implements ChainStore
 			}
 
 			return result;
+		}
+		finally
+		{
+			lock.writeLock ().unlock ();
+		}
+	}
+
+	@Override
+	public void forgetBlockRequest (String hash, BitcoinPeer peer)
+	{
+		try
+		{
+			lock.writeLock ().lock ();
+
+			Set<String> ps = requestsByPeer.get (peer);
+			if ( ps != null )
+			{
+				ps.remove (hash);
+				if ( ps.size () == 0 )
+				{
+					requestsByPeer.remove (peer);
+				}
+			}
 		}
 		finally
 		{
@@ -385,21 +408,6 @@ class JpaChainStore implements ChainStore
 	@Override
 	public void storeBlock (Blk b) throws ValidationException
 	{
-		try
-		{
-			lock.readLock ().lock ();
-
-			Member cached = members.get (b.getHash ());
-			if ( cached instanceof StoredMember )
-			{
-				return;
-			}
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-
 		try
 		{
 			lock.writeLock ().lock ();
@@ -698,20 +706,6 @@ class JpaChainStore implements ChainStore
 		for ( TreeSet<KnownMember> k : knownByPeer.values () )
 		{
 			k.remove (cached);
-		}
-
-		List<BitcoinPeer> finishedPeer = new ArrayList<BitcoinPeer> ();
-		for ( Map.Entry<BitcoinPeer, HashSet<String>> e : requestsByPeer.entrySet () )
-		{
-			e.getValue ().remove (b.getHash ());
-			if ( e.getValue ().size () == 0 )
-			{
-				finishedPeer.add (e.getKey ());
-			}
-		}
-		for ( BitcoinPeer p : finishedPeer )
-		{
-			requestsByPeer.remove (p);
 		}
 
 		if ( stored )

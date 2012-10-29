@@ -63,7 +63,7 @@ public class ChainLoader
 	{
 		if ( store.getNumberOfRequests (peer) == 0 )
 		{
-			List<String> requests = store.getRequests (peer);
+			List<String> requests = store.getBlockRequests (peer);
 			if ( !requests.isEmpty () )
 			{
 				GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
@@ -82,6 +82,7 @@ public class ChainLoader
 		Blk block = m.getBlock ();
 		store.storeBlock (block);
 		chainHeightStored = store.getChainHeight ();
+		store.forgetBlockRequest (block.getHash (), peer);
 		if ( store.getNumberOfRequests (peer) == 0 )
 		{
 			getAnotherBatch (peer);
