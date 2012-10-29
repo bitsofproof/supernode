@@ -38,7 +38,7 @@ public class AddressHandler implements BitcoinMessageListener
 		AddrMessage am = (AddrMessage) m;
 		for ( Address a : am.getAddresses () )
 		{
-			log.trace ("received address " + a + " from " + peer.getAddress ());
+			log.trace ("received address " + a + " from " + peer.getAddress ().getAddress ());
 			peer.getNetwork ().addPeer (a.address, (int) a.port);
 		}
 	}

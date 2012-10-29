@@ -179,10 +179,10 @@ public class ECKeyPair
 		try
 		{
 			DLSequence seq = (DLSequence) asn1.readObject ();
-			DERInteger r = (DERInteger) seq.getObjectAt (0);
+			BigInteger r = ((DERInteger) seq.getObjectAt (0)).getPositiveValue ();
 			BigInteger s = ((DERInteger) seq.getObjectAt (1)).getPositiveValue ();
 			asn1.close ();
-			return signer.verifySignature (hash, r.getValue (), s);
+			return signer.verifySignature (hash, r, s);
 		}
 		catch ( IOException e )
 		{
