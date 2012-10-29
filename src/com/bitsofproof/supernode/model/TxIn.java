@@ -133,21 +133,21 @@ public class TxIn implements Serializable, Cloneable
 		b.append ("{");
 		if ( source != null )
 		{
-			b.append ("sourceHash:\"" + source.getTransaction ().getHash () + "\",");
-			b.append ("sourceIx:" + source.getIx () + ",");
+			b.append ("\"sourceHash\":\"" + source.getTransaction ().getHash () + "\",");
+			b.append ("\"sourceIx\":" + source.getIx () + ",");
 		}
 		else if ( sourceHash != null )
 		{
-			b.append ("sourceHash:\"" + sourceHash + "\",");
-			b.append ("sourceIx:" + ix + ",");
+			b.append ("\"sourceHash\":\"" + sourceHash + "\",");
+			b.append ("\"sourceIx\":" + ix + ",");
 		}
 		else
 		{
-			b.append ("sourceHash:\"" + Hash.ZERO_HASH.toString () + "\",");
-			b.append ("sourceIx:" + -1 + ",");
+			b.append ("\"sourceHash\":\"" + Hash.ZERO_HASH.toString () + "\",");
+			b.append ("\"sourceIx\":" + -1 + ",");
 		}
-		b.append ("script:\"" + new Script (script).toString () + "\"" + ",");
-		b.append ("sequence:" + String.valueOf (sequence));
+		b.append ("\"script\":\"" + new Script (script).toString () + "\"" + ",");
+		b.append ("\"sequence\":" + String.valueOf (sequence));
 		b.append ("}");
 		return b.toString ();
 	}

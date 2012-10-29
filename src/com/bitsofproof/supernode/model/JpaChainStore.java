@@ -376,7 +376,8 @@ class JpaChainStore implements ChainStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		Map<String, Tx> blockTransactions = new HashMap<String, Tx> ();
+		Map<String, Tx> transactionsCache = new HashMap<String, Tx> ();
+		Map<String, HashMap<Integer, TxOut>> resolvedInputs = new HashMap<String, HashMap<Integer, TxOut>> ();
 	}
 
 	@Transactional (propagation = Propagation.MANDATORY)
@@ -557,9 +558,22 @@ class JpaChainStore implements ChainStore
 			tcontext.blockHash = b.getHash ();
 			tcontext.blockHeight = b.getHeight ();
 
+			boolean skip = true;
 			for ( Tx t : b.getTransactions () )
 			{
-				tcontext.blockTransactions.put (t.getHash (), t);
+				tcontext.transactionsCache.put (t.getHash (), t);
+				if ( skip ) // skip coinbase
+				{
+					skip = false;
+				}
+				else
+				{
+					resolveInputs (tcontext, t);
+				}
+			}
+
+			for ( Tx t : b.getTransactions () )
+			{
 				validateTransaction (tcontext, t);
 			}
 
@@ -672,6 +686,77 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
+	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
+	{
+		HashMap<Integer, TxOut> resolved;
+		if ( (resolved = tcontext.resolvedInputs.get (t.getHash ())) == null )
+		{
+			resolved = new HashMap<Integer, TxOut> ();
+			tcontext.resolvedInputs.put (t.getHash (), resolved);
+		}
+		int nr = 0;
+		for ( final TxIn i : t.getInputs () )
+		{
+			Tx sourceTransaction;
+			TxOut transactionOutput = null;
+			if ( (sourceTransaction = tcontext.transactionsCache.get (i.getSourceHash ())) != null )
+			{
+				if ( i.getIx () < sourceTransaction.getOutputs ().size () )
+				{
+					transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
+				}
+				else
+				{
+					throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
+				}
+			}
+			else
+			{
+				QTx tx = QTx.tx;
+				QTxOut txout = QTxOut.txOut;
+				JPAQuery query = new JPAQuery (entityManager);
+
+				transactionOutput =
+						query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
+								.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
+			}
+			if ( transactionOutput == null )
+			{
+				throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
+			}
+			if ( transactionOutput.getSink () != null )
+			{
+				throw new ValidationException ("Double spending attempt " + t.toJSON ());
+			}
+			if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+			{
+				if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()) != null )
+				{
+					if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()).get (0) == null )
+					{
+						throw new ValidationException ("coinbase spent in same block " + t.toJSON ());
+					}
+				}
+				else
+				{
+					QBlk blk = QBlk.blk;
+					QTx tx = QTx.tx;
+
+					JPAQuery query = new JPAQuery (entityManager);
+					Blk origin =
+							query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
+									.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
+					if ( origin.getHeight () > (tcontext.blockHeight - 100) )
+					{
+						throw new ValidationException ("coinbase spent too early " + t.toJSON ());
+					}
+				}
+			}
+			resolved.put (nr, transactionOutput);
+			++nr;
+		}
+	}
+
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
 		if ( tcontext.coinbase )
@@ -745,6 +830,7 @@ class JpaChainStore implements ChainStore
 			long sumIn = 0;
 			int inNumber = 0;
 			List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
+			HashMap<Integer, TxOut> resolved = tcontext.resolvedInputs.get (t.getHash ());
 			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
@@ -763,56 +849,7 @@ class JpaChainStore implements ChainStore
 					throw new ValidationException ("input script should be push only " + t.toJSON ());
 				}
 
-				if ( i.getSource () == null )
-				{
-					Tx sourceTransaction;
-					TxOut transactionOutput = null;
-					if ( (sourceTransaction = tcontext.blockTransactions.get (i.getSourceHash ())) != null )
-					{
-						if ( i.getIx () < sourceTransaction.getOutputs ().size () )
-						{
-							transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
-						}
-						else
-						{
-							throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
-						}
-					}
-					else
-					{
-						QTx tx = QTx.tx;
-						QTxOut txout = QTxOut.txOut;
-						JPAQuery query = new JPAQuery (entityManager);
-
-						transactionOutput =
-								query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
-										.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
-					}
-					if ( transactionOutput == null )
-					{
-						throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
-					}
-					if ( transactionOutput.getSink () != null )
-					{
-						throw new ValidationException ("Double spending attempt " + t.toJSON ());
-					}
-					if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
-					{
-						QBlk blk = QBlk.blk;
-						QTx tx = QTx.tx;
-
-						JPAQuery query = new JPAQuery (entityManager);
-						Blk origin =
-								query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
-										.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
-						if ( origin.getHeight () > (tcontext.blockHeight - 100) )
-						{
-							throw new ValidationException ("coinbase spent too early " + t.toJSON ());
-						}
-					}
-
-					i.setSource (transactionOutput);
-				}
+				i.setSource (resolved.get (inNumber));
 				sumIn += i.getSource ().getValue ();
 
 				final int nr = inNumber;
@@ -1022,9 +1059,10 @@ class JpaChainStore implements ChainStore
 			TransactionContext tcontext = new TransactionContext ();
 			tcontext.blockHash = "unconfirmed";
 			tcontext.blockHeight = aboutHeight;
-			tcontext.blockTransactions = unconfirmed;
+			tcontext.transactionsCache = unconfirmed;
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
+			resolveInputs (tcontext, t);
 			validateTransaction (tcontext, t);
 			unconfirmed.put (t.getHash (), t);
 			return true;

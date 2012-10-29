@@ -167,9 +167,9 @@ public class Tx implements Serializable
 	{
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");
-		b.append ("hash:\"" + getHash () + "\",");
-		b.append ("version:" + String.valueOf (version) + ",");
-		b.append ("inputs:[");
+		b.append ("\"hash\":\"" + getHash () + "\",");
+		b.append ("\"version\":" + String.valueOf (version) + ",");
+		b.append ("\"inputs\":[");
 		boolean first = true;
 		for ( TxIn input : inputs )
 		{
@@ -181,7 +181,7 @@ public class Tx implements Serializable
 			b.append (input.toJSON ());
 		}
 		b.append ("],");
-		b.append ("outputs:[");
+		b.append ("\"outputs\":[");
 		first = true;
 		for ( TxOut output : outputs )
 		{
@@ -193,7 +193,7 @@ public class Tx implements Serializable
 			b.append (output.toJSON ());
 		}
 		b.append ("],");
-		b.append ("lockTime:" + String.valueOf (lockTime));
+		b.append ("\"lockTime\":" + String.valueOf (lockTime));
 		b.append ("}");
 		return b.toString ();
 	}
