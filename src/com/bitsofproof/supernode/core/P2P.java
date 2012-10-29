@@ -593,7 +593,6 @@ public abstract class P2P
 			}
 		});
 		selectorThread.setDaemon (false);
-		selectorThread.setPriority (Thread.MAX_PRIORITY);
 		selectorThread.setName ("Peer selector");
 
 		// this thread keeps looking for new connections
@@ -659,7 +658,6 @@ public abstract class P2P
 			}
 		});
 		connector.setDaemon (true);
-		connector.setPriority (Thread.MIN_PRIORITY);
 		connector.setName ("Peer connector");
 	}
 
