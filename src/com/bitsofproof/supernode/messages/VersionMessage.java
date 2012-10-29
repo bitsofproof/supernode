@@ -39,7 +39,7 @@ public class VersionMessage extends BitcoinPeer.Message
 	private InetAddress me;
 	private long myport;
 	private long nonce;
-	private String agent = "/bitsofproof:0.2/";
+	private String agent = "/bitsofproof:0.3/";
 	private long height;
 
 	@Override

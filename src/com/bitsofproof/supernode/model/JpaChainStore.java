@@ -518,6 +518,11 @@ class JpaChainStore implements ChainStore
 			// do we have a new main chain ?
 			if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )
 			{
+				throw new ValidationException ("rethink this");
+			}
+			// do we have a new main chain ?
+			if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )
+			{
 				// find where we left off the previous main and blank out sinks thereafter
 				StoredMember newMain = (StoredMember) cachedPrevious;
 				StoredMember oldMain = currentHead.getLast ();
