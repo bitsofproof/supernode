@@ -383,7 +383,7 @@ public class Script
 		script = new byte[sign.length + out.length];
 		System.arraycopy (sign, 0, script, 0, sign.length);
 		System.arraycopy (out, 0, script, sign.length, out.length);
-		this.tx = tx;
+		this.tx = tx.flatCopy (); // we mess around with...
 		this.inr = inr;
 		this.codeseparator = sign.length;
 	}

@@ -34,7 +34,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "txin")
-public class TxIn implements Serializable
+public class TxIn implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 1L;
 
@@ -184,4 +184,19 @@ public class TxIn implements Serializable
 		script = reader.readVarBytes ();
 		sequence = reader.readUint32 ();
 	}
+
+	protected TxIn flatCopy ()
+	{
+		TxIn c = new TxIn ();
+
+		c.ix = ix;
+		c.script = script;
+		c.sequence = sequence;
+		c.source = source;
+		c.sourceHash = sourceHash;
+		c.transaction = transaction;
+
+		return c;
+	}
+
 }

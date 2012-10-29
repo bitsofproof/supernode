@@ -274,4 +274,25 @@ public class Tx implements Serializable
 
 		hash = reader.hash (cursor, reader.getCursor () - cursor).toString ();
 	}
+
+	public Tx flatCopy ()
+	{
+		Tx c = new Tx ();
+
+		c.hash = hash;
+		c.lockTime = lockTime;
+		c.version = version;
+		c.inputs = new ArrayList<TxIn> ();
+		for ( TxIn in : inputs )
+		{
+			c.inputs.add (in.flatCopy ());
+		}
+		c.outputs = new ArrayList<TxOut> ();
+		for ( TxOut out : outputs )
+		{
+			c.outputs.add (out.flatCopy ());
+		}
+
+		return c;
+	}
 }

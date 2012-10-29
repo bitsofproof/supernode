@@ -25,8 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.persistence.EntityManager;
@@ -67,7 +70,7 @@ class JpaChainStore implements ChainStore
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private final Map<String, ArrayList<Blk>> pending = new HashMap<String, ArrayList<Blk>> ();
 
-	private final Executor inputProcessor = Executors.newCachedThreadPool ();
+	private final ExecutorService inputProcessor = Executors.newCachedThreadPool ();
 
 	private final Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> ()
 	{
@@ -365,7 +368,7 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
-	private class TransactionContext
+	private static class TransactionContext
 	{
 		String blockHash;
 		int blockHeight;
@@ -419,7 +422,7 @@ class JpaChainStore implements ChainStore
 
 		// find previous block
 		Member cachedPrevious = members.get (b.getPreviousHash ());
-		if ( cachedPrevious == null )
+		if ( cachedPrevious == null || !(cachedPrevious instanceof StoredMember) )
 		{
 			ArrayList<Blk> pl = pending.get (b.getPreviousHash ());
 			if ( pl == null )
@@ -669,7 +672,13 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
-	private void validateTransaction (TransactionContext tcontext, Tx t) throws ValidationException
+	private static class InputValidationResult
+	{
+		long value;
+		Exception e;
+	}
+
+	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
 		if ( tcontext.coinbase )
 		{
@@ -741,7 +750,8 @@ class JpaChainStore implements ChainStore
 
 			long sumIn = 0;
 			int inNumber = 0;
-			for ( TxIn i : t.getInputs () )
+			List<Callable<InputValidationResult>> callables = new ArrayList<Callable<InputValidationResult>> ();
+			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
 				{
@@ -759,8 +769,109 @@ class JpaChainStore implements ChainStore
 					throw new ValidationException ("input script should be push only " + t.toJSON ());
 				}
 
-				sumIn += inputValidation (tcontext, t, inNumber, i);
+				if ( i.getSource () == null )
+				{
+					Tx sourceTransaction;
+					TxOut transactionOutput = null;
+					if ( (sourceTransaction = tcontext.blockTransactions.get (i.getSourceHash ())) != null )
+					{
+						if ( i.getIx () < sourceTransaction.getOutputs ().size () )
+						{
+							transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
+						}
+						else
+						{
+							throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
+						}
+					}
+					else
+					{
+						QTx tx = QTx.tx;
+						QTxOut txout = QTxOut.txOut;
+						JPAQuery query = new JPAQuery (entityManager);
+
+						transactionOutput =
+								query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
+										.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
+					}
+					if ( transactionOutput == null )
+					{
+						throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
+					}
+					if ( transactionOutput.getSink () != null )
+					{
+						throw new ValidationException ("Double spending attempt " + t.toJSON ());
+					}
+					if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+					{
+						QBlk blk = QBlk.blk;
+						QTx tx = QTx.tx;
+
+						JPAQuery query = new JPAQuery (entityManager);
+						Blk origin =
+								query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
+										.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
+						if ( origin.getHeight () > (tcontext.blockHeight - 100) )
+						{
+							throw new ValidationException ("coinbase spent too early " + t.toJSON ());
+						}
+					}
+
+					i.setSource (transactionOutput);
+				}
+
+				final int nr = inNumber;
+				callables.add (new Callable<InputValidationResult> ()
+				{
+					@Override
+					public InputValidationResult call () throws Exception
+					{
+						InputValidationResult r = new InputValidationResult ();
+						try
+						{
+							r.value = inputValidation (tcontext, t, nr, i);
+							r.e = null;
+						}
+						catch ( Exception e )
+						{
+							r.e = e;
+						}
+						return r;
+					}
+				});
 				++inNumber;
+			}
+			List<Future<InputValidationResult>> results;
+			try
+			{
+				results = inputProcessor.invokeAll (callables);
+			}
+			catch ( InterruptedException e1 )
+			{
+				throw new ValidationException ("interrupted", e1);
+			}
+			for ( Future<InputValidationResult> r : results )
+			{
+				try
+				{
+					if ( r.get ().e != null )
+					{
+						throw r.get ().e;
+					}
+					sumIn += r.get ().value;
+				}
+				catch ( InterruptedException e )
+				{
+					throw new ValidationException ("interrupted", e);
+				}
+				catch ( ExecutionException e )
+				{
+					throw new ValidationException ("The executor is corrupt", e);
+				}
+				catch ( Exception e )
+				{
+					throw new ValidationException (e);
+				}
 			}
 			if ( sumOut > sumIn )
 			{
@@ -771,56 +882,6 @@ class JpaChainStore implements ChainStore
 
 	private long inputValidation (TransactionContext tcontext, Tx t, int inNumber, TxIn i) throws ValidationException
 	{
-		if ( i.getSource () == null )
-		{
-			Tx sourceTransaction;
-			TxOut transactionOutput = null;
-			if ( (sourceTransaction = tcontext.blockTransactions.get (i.getSourceHash ())) != null )
-			{
-				if ( i.getIx () < sourceTransaction.getOutputs ().size () )
-				{
-					transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
-				}
-				else
-				{
-					throw new ValidationException ("Transaction refers to output number not available " + t.toJSON ());
-				}
-			}
-			else
-			{
-				QTx tx = QTx.tx;
-				QTxOut txout = QTxOut.txOut;
-				JPAQuery query = new JPAQuery (entityManager);
-
-				transactionOutput =
-						query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
-								.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
-			}
-			if ( transactionOutput == null )
-			{
-				throw new ValidationException ("Transaction input refers to unknown output " + t.toJSON ());
-			}
-			if ( transactionOutput.getSink () != null )
-			{
-				throw new ValidationException ("Double spending attempt " + t.toJSON ());
-			}
-			if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
-			{
-				QBlk blk = QBlk.blk;
-				QTx tx = QTx.tx;
-
-				JPAQuery query = new JPAQuery (entityManager);
-				Blk origin =
-						query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
-								.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
-				if ( origin.getHeight () > (tcontext.blockHeight - 100) )
-				{
-					throw new ValidationException ("coinbase spent too early " + t.toJSON ());
-				}
-			}
-
-			i.setSource (transactionOutput);
-		}
 		if ( !new Script (t, inNumber).evaluate () )
 		{
 			throw new ValidationException ("The transaction script does not evaluate to true in input: " + inNumber + " " + t.toJSON ()
