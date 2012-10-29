@@ -75,6 +75,9 @@
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 	</bean>
+	<bean id="getheaders" class="com.bitsofproof.supernode.core.GetHeadersHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
 	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<property name="delay" value="60"/>

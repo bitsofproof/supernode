@@ -6,19 +6,19 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 
-public class GetBlocksHandler implements BitcoinMessageListener
+public class GetHeadersHandler implements BitcoinMessageListener
 {
-	private static final Logger log = LoggerFactory.getLogger (GetBlocksHandler.class);
+	private static final Logger log = LoggerFactory.getLogger (GetHeadersHandler.class);
 
-	public GetBlocksHandler (BitcoinNetwork network)
+	public GetHeadersHandler (BitcoinNetwork network)
 	{
-		network.addListener ("getblocks", this);
+		network.addListener ("getheader", this);
 	}
 
 	@Override
 	public void process (Message m, BitcoinPeer peer) throws Exception
 	{
-		log.trace ("received gedblocks");
+		log.trace ("received getheader");
 	}
 
 }

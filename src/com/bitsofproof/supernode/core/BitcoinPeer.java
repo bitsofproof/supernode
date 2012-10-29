@@ -45,6 +45,7 @@ import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
+import com.bitsofproof.supernode.messages.GetHeadersMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
@@ -165,6 +166,10 @@ public class BitcoinPeer extends P2P.Peer
 		else if ( command.equals ("getblocks") )
 		{
 			return new GetBlocksMessage (this);
+		}
+		else if ( command.equals ("getheaders") )
+		{
+			return new GetHeadersMessage (this);
 		}
 		else if ( command.equals ("block") )
 		{
