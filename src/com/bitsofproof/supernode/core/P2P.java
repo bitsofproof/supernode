@@ -66,7 +66,7 @@ public abstract class P2P
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
 		private ByteArrayInputStream currentRead = null;
-		private final Semaphore notYetListened = new Semaphore (1);
+		private final Semaphore notListened = new Semaphore (1);
 		private ByteBuffer pushBackBuffer = null;
 
 		private final InputStream readIn = new InputStream ()
@@ -167,7 +167,7 @@ public abstract class P2P
 				byte[] b = new byte[len];
 				System.arraycopy (buffer.array (), 0, b, 0, len);
 				reads.add (b);
-				if ( notYetListened.tryAcquire () )
+				if ( notListened.tryAcquire () )
 				{
 					listen ();
 				}
@@ -248,10 +248,7 @@ public abstract class P2P
 					{
 						m = parse (readIn);
 						receive (m);
-						if ( connectedPeers.containsKey (self.channel) )
-						{
-							peerThreads.execute (this); // listen again
-						}
+						notListened.release ();
 					}
 					catch ( Exception e )
 					{
@@ -336,7 +333,7 @@ public abstract class P2P
 	private static final int CONNECTIONTIMEOUT = 5;
 
 	// number of seconds to wait until giving up on connections
-	private static final int READTIMEOUT = 60; // seconds
+	private static final int READTIMEOUT = 10; // seconds
 
 	// keep track with number of connections we asked for here
 	private final Semaphore connectSlot;
@@ -394,8 +391,8 @@ public abstract class P2P
 		connectSlot = new Semaphore (desiredConnections);
 		// create a pool of threads
 		peerThreads =
-				(ThreadPoolExecutor) Executors.newFixedThreadPool (
-						Math.max (Math.min (desiredConnections / 4, Runtime.getRuntime ().availableProcessors () * 4), 1), new ThreadFactory ()
+				(ThreadPoolExecutor) Executors.newFixedThreadPool (Math.min (desiredConnections, Runtime.getRuntime ().availableProcessors () * 2),
+						new ThreadFactory ()
 						{
 							@Override
 							public Thread newThread (final Runnable r)

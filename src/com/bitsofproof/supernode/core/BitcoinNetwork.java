@@ -83,9 +83,9 @@ public class BitcoinNetwork extends P2P
 		scheduler.scheduleWithFixedDelay (job, startDelay, delay, unit);
 	}
 
-	public boolean isBehind ()
+	public void schedule (Runnable job, int delay, TimeUnit unit)
 	{
-		return loader.isBehind ();
+		scheduler.schedule (job, delay, unit);
 	}
 
 	public BitcoinPeer[] getConnectPeers ()

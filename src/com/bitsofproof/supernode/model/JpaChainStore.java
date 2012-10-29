@@ -70,8 +70,8 @@ class JpaChainStore implements ChainStore
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private final Map<String, ArrayList<Blk>> pending = new HashMap<String, ArrayList<Blk>> ();
 
-	private final ExecutorService inputProcessor = Executors.newCachedThreadPool ();
-	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (16);
+	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
+	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
 	private final Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> ()
 	{

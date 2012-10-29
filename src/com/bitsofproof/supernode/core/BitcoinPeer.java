@@ -46,6 +46,8 @@ import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
+import com.bitsofproof.supernode.messages.PingMessage;
+import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.messages.VersionMessage;
 
 public class BitcoinPeer extends P2P.Peer
@@ -60,6 +62,7 @@ public class BitcoinPeer extends P2P.Peer
 	private long peerVersion;
 	private long peerServices;
 	private final boolean outgoing;
+	private long lastSpoken;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -171,8 +174,21 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new AlertMessage (this, this.getNetwork ().getChain ().getAlertKey ());
 		}
+		else if ( command.equals ("ping") )
+		{
+			return new PingMessage (this);
+		}
+		else if ( command.equals ("pong") )
+		{
+			return new PongMessage (this);
+		}
 
 		return new Message (command);
+	}
+
+	public long getLastSpoken ()
+	{
+		return lastSpoken;
 	}
 
 	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener>> ());
@@ -322,6 +338,7 @@ public class BitcoinPeer extends P2P.Peer
 					}
 				}
 			}
+			lastSpoken = System.currentTimeMillis () / 1000;
 			return m;
 		}
 		catch ( ValidationException e )

@@ -43,17 +43,11 @@ public class ChainLoader
 	private final ChainStore store;
 	private final BitcoinNetwork network;
 
-	private long chainHeightSeen = 0;
 	private long chainHeightStored = 0;
-
-	public boolean isBehind ()
-	{
-		return chainHeightSeen > chainHeightStored;
-	}
 
 	private void getAnotherBatch (BitcoinPeer peer) throws Exception
 	{
-		if ( chainHeightSeen > chainHeightStored )
+		if ( peer.getHeight () > chainHeightStored )
 		{
 			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
 			for ( String s : store.getLocator () )
@@ -145,10 +139,6 @@ public class ChainLoader
 				@Override
 				public void add (BitcoinPeer peer)
 				{
-					if ( chainHeightSeen < peer.getHeight () )
-					{
-						chainHeightSeen = peer.getHeight ();
-					}
 				}
 			});
 			network.runForAll (new BitcoinNetwork.PeerTask ()
