@@ -71,6 +71,7 @@ class JpaChainStore implements ChainStore
 	private final Map<String, ArrayList<Blk>> pending = new HashMap<String, ArrayList<Blk>> ();
 
 	private final ExecutorService inputProcessor = Executors.newCachedThreadPool ();
+	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (16);
 
 	private final Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> ()
 	{
@@ -554,7 +555,7 @@ class JpaChainStore implements ChainStore
 
 			b.checkMerkleRoot ();
 
-			TransactionContext tcontext = new TransactionContext ();
+			final TransactionContext tcontext = new TransactionContext ();
 			tcontext.blockHash = b.getHash ();
 			tcontext.blockHeight = b.getHeight ();
 
@@ -572,9 +573,57 @@ class JpaChainStore implements ChainStore
 				}
 			}
 
-			for ( Tx t : b.getTransactions () )
+			List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
+			for ( final Tx t : b.getTransactions () )
 			{
-				validateTransaction (tcontext, t);
+				if ( tcontext.coinbase )
+				{
+					validateTransaction (tcontext, t);
+				}
+				else
+				{
+					callables.add (new Callable<ValidationException> ()
+					{
+						@Override
+						public ValidationException call ()
+						{
+							try
+							{
+								validateTransaction (tcontext, t);
+							}
+							catch ( ValidationException e )
+							{
+								return e;
+							}
+							catch ( Exception e )
+							{
+								return new ValidationException (e);
+							}
+							return null;
+						}
+					});
+				}
+			}
+			try
+			{
+				for ( Future<ValidationException> e : transactionsProcessor.invokeAll (callables) )
+				{
+					try
+					{
+						if ( e.get () != null )
+						{
+							throw e.get ();
+						}
+					}
+					catch ( ExecutionException e1 )
+					{
+						throw new ValidationException ("corrupted transaction processor", e1);
+					}
+				}
+			}
+			catch ( InterruptedException e1 )
+			{
+				throw new ValidationException ("interrupted", e1);
 			}
 
 			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
