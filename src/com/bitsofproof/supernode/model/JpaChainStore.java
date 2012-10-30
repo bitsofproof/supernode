@@ -68,7 +68,6 @@ class JpaChainStore implements ChainStore
 	private final Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final Map<String, ArrayList<Blk>> pending = new HashMap<String, ArrayList<Blk>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
@@ -429,8 +428,6 @@ class JpaChainStore implements ChainStore
 
 	private void lockedStoreBlock (Blk b) throws ValidationException
 	{
-		boolean stored = false;
-
 		Member cached = members.get (b.getHash ());
 		if ( cached instanceof StoredMember )
 		{
@@ -439,17 +436,7 @@ class JpaChainStore implements ChainStore
 
 		// find previous block
 		Member cachedPrevious = members.get (b.getPreviousHash ());
-		if ( cachedPrevious == null || !(cachedPrevious instanceof StoredMember) )
-		{
-			ArrayList<Blk> pl = pending.get (b.getPreviousHash ());
-			if ( pl == null )
-			{
-				pl = new ArrayList<Blk> ();
-				pending.put (b.getPreviousHash (), pl);
-			}
-			pl.add (b);
-		}
-		else
+		if ( cachedPrevious != null && cachedPrevious instanceof StoredMember )
 		{
 			Blk prev = null;
 			if ( cachedPrevious instanceof StoredMember )
@@ -612,33 +599,9 @@ class JpaChainStore implements ChainStore
 				throw new ValidationException ("Invalid block reward " + b.getHash ());
 			}
 
-			// now check if transactions were already known
-			boolean seen = false;
-			List<Tx> tl = b.getTransactions ();
-			for ( int i = 0; i < tl.size (); ++i )
-			{
-				Tx t = tl.get (i);
+			entityManager.persist (b);
 
-				QTx tx = QTx.tx;
-				JPAQuery query = new JPAQuery (entityManager);
-				Tx st = query.from (tx).where (tx.hash.eq (t.getHash ())).uniqueResult (tx);
-				if ( st != null )
-				{
-					tl.set (i, st);
-					seen = true;
-				}
-			}
-
-			if ( seen )
-			{
-				b = entityManager.merge (b);
-			}
-			else
-			{
-				entityManager.persist (b);
-			}
-			stored = true;
-
+			// modify transient caches only after persistent changes
 			StoredMember m = new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ());
 			members.put (b.getHash (), m);
 
@@ -663,29 +626,10 @@ class JpaChainStore implements ChainStore
 				unconfirmed.remove (t.getHash ());
 			}
 		}
+		// no other peer should as for this
 		for ( TreeSet<KnownMember> k : knownByPeer.values () )
 		{
 			k.remove (cached);
-		}
-
-		if ( stored )
-		{
-			List<Blk> pendingOnThis = pending.get (b.getHash ());
-			if ( pendingOnThis != null )
-			{
-				for ( Blk o : pendingOnThis )
-				{
-					try
-					{
-						lockedStoreBlock (o);
-					}
-					catch ( Exception e )
-					{
-						log.error ("Dropping invalid pending block ", e);
-					}
-				}
-				pending.remove (b.getHash ());
-			}
 		}
 	}
 
