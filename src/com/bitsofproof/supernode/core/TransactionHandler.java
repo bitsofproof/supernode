@@ -15,6 +15,9 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +26,15 @@ import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.Tx;
 
 public class TransactionHandler implements BitcoinMessageListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
 
 	private ChainStore store;
+
+	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
 
 	public TransactionHandler (BitcoinNetwork network)
 	{
@@ -50,7 +56,7 @@ public class TransactionHandler implements BitcoinMessageListener
 			for ( byte[] h : im.getTransactionHashes () )
 			{
 				String hash = new Hash (h).toString ();
-				if ( store.getTransaction (hash) == null )
+				if ( unconfirmed.get (hash) == null )
 				{
 					log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
 					get.getTransactions ().add (h);
@@ -64,8 +70,10 @@ public class TransactionHandler implements BitcoinMessageListener
 		}
 		if ( m instanceof TxMessage )
 		{
-			log.trace ("received transaction details for " + ((TxMessage) m).getTx ().getHash () + " from " + peer.getAddress ());
-			store.storeTransaction (((TxMessage) m).getTx (), (int) peer.getNetwork ().getChainHeight ());
+			TxMessage txm = (TxMessage) m;
+			log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+			store.validateTransaction (txm.getTx ());
+			unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
 		}
 	}
 

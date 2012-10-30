@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.model;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,7 +66,6 @@ class JpaChainStore implements ChainStore
 	private final Map<String, Member> members = new HashMap<String, Member> ();
 	private final Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
-	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
@@ -620,11 +618,6 @@ class JpaChainStore implements ChainStore
 			usingHead.setHeight (head.getHeight ());
 
 			log.trace ("stored block " + b.getHash ());
-
-			for ( Tx t : b.getTransactions () )
-			{
-				unconfirmed.remove (t.getHash ());
-			}
 		}
 		// no other peer should as for this
 		for ( TreeSet<KnownMember> k : knownByPeer.values () )
@@ -1030,47 +1023,13 @@ class JpaChainStore implements ChainStore
 		}
 	}
 
-	@Override
 	@Transactional (propagation = Propagation.MANDATORY)
-	public Tx getTransaction (String hash)
+	@Override
+	public boolean validateTransaction (Tx t) throws ValidationException
 	{
 		try
 		{
 			lock.readLock ().lock ();
-			Tx t = unconfirmed.get (hash);
-			if ( t != null )
-			{
-				return t;
-			}
-			QTx tx = QTx.tx;
-			JPAQuery query = new JPAQuery (entityManager);
-			return query.from (tx).where (tx.hash.eq (hash)).orderBy (tx.id.desc ()).limit (1).uniqueResult (tx);
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-	}
-
-	@Transactional (propagation = Propagation.MANDATORY)
-	@Override
-	public boolean storeTransaction (Tx t, int aboutHeight) throws ValidationException
-	{
-		try
-		{
-			lock.writeLock ().lock ();
-
-			if ( unconfirmed.containsKey (t.getHash ()) )
-			{
-				return true;
-			}
-
-			QTx tx = QTx.tx;
-			JPAQuery query = new JPAQuery (entityManager);
-			if ( query.from (tx).where (tx.hash.eq (t.getHash ())).orderBy (tx.id.desc ()).limit (1).uniqueResult (tx) != null )
-			{
-				return true;
-			}
 
 			TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = null;
@@ -1079,16 +1038,11 @@ class JpaChainStore implements ChainStore
 			tcontext.nsigs = 0;
 			resolveInputs (tcontext, t);
 			validateTransaction (tcontext, t);
-			unconfirmed.put (t.getHash (), t);
 			return true;
-		}
-		catch ( Exception e )
-		{
-			return false;
 		}
 		finally
 		{
-			lock.writeLock ().unlock ();
+			lock.readLock ().unlock ();
 		}
 	}
 

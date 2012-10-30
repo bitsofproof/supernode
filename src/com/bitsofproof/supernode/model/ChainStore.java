@@ -44,9 +44,7 @@ public interface ChainStore
 
 	public Blk getBlock (String hash);
 
-	public Tx getTransaction (String hash);
-
-	public boolean storeTransaction (Tx tx, int aboutHeight) throws ValidationException;
+	public boolean validateTransaction (Tx tx) throws ValidationException;
 
 	public long getChainHeight ();
 
