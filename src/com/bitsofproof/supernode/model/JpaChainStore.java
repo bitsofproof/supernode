@@ -394,8 +394,7 @@ class JpaChainStore implements ChainStore
 
 	private static class TransactionContext
 	{
-		String blockHash;
-		int blockHeight;
+		Blk block;
 		BigInteger blkSumInput = BigInteger.ZERO;
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
@@ -523,50 +522,6 @@ class JpaChainStore implements ChainStore
 				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash ());
 			}
 
-			// do we have a new main chain ?
-			if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )
-			{
-				throw new ValidationException ("rethink this");
-			}
-			// do we have a new main chain ?
-			if ( head.getChainWork () > currentHead.getChainWork () && currentHead.getLast () != cachedPrevious )
-			{
-				// find where we left off the previous main and blank out sinks thereafter
-				StoredMember newMain = (StoredMember) cachedPrevious;
-				StoredMember oldMain = currentHead.getLast ();
-				while ( newMain != null )
-				{
-					while ( oldMain != null && oldMain != newMain )
-					{
-						oldMain = oldMain.getPrevious ();
-					}
-					if ( oldMain != null )
-					{
-						break;
-					}
-					newMain = newMain.getPrevious ();
-					oldMain = (StoredMember) cachedPrevious;
-				}
-				if ( oldMain == null )
-				{
-					throw new ValidationException ("chain corruption " + newMain.getHash () + "is an orphan branch");
-				}
-				StoredMember top = (StoredMember) cachedPrevious;
-				while ( top != oldMain )
-				{
-					Blk nb = entityManager.find (Blk.class, top.getId ());
-					for ( Tx tx : nb.getTransactions () )
-					{
-						for ( TxOut o : tx.getOutputs () )
-						{
-							o.setSink (null);
-							entityManager.merge (o);
-						}
-					}
-					top = top.getPrevious ();
-				}
-			}
-
 			b.parseTransactions ();
 
 			if ( b.getTransactions ().isEmpty () )
@@ -577,8 +532,7 @@ class JpaChainStore implements ChainStore
 			b.checkMerkleRoot ();
 
 			final TransactionContext tcontext = new TransactionContext ();
-			tcontext.blockHash = b.getHash ();
-			tcontext.blockHeight = b.getHeight ();
+			tcontext.block = b;
 
 			boolean skip = true;
 			for ( Tx t : b.getTransactions () )
@@ -732,7 +686,7 @@ class JpaChainStore implements ChainStore
 					{
 						lockedStoreBlock (o);
 					}
-					catch ( ValidationException e )
+					catch ( Exception e )
 					{
 						log.error ("Dropping invalid pending block ", e);
 					}
@@ -750,81 +704,144 @@ class JpaChainStore implements ChainStore
 			resolved = new HashMap<Integer, TxOut> ();
 			tcontext.resolvedInputs.put (t.getHash (), resolved);
 		}
-		int nr = 0;
+
+		Set<String> inputtx = new HashSet<String> ();
 		for ( final TxIn i : t.getInputs () )
 		{
 			Tx sourceTransaction;
-			TxOut transactionOutput = null;
 			if ( (sourceTransaction = tcontext.transactionsCache.get (i.getSourceHash ())) != null )
 			{
-				if ( i.getIx () < sourceTransaction.getOutputs ().size () )
-				{
-					transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
-				}
-				else
+				if ( i.getIx () >= sourceTransaction.getOutputs ().size () )
 				{
 					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
 			}
 			else
 			{
-				QTx tx = QTx.tx;
-				QTxOut txout = QTxOut.txOut;
-				JPAQuery query = new JPAQuery (entityManager);
+				inputtx.add (i.getSourceHash ());
+			}
+		}
 
-				transactionOutput =
-						query.from (txout).join (txout.transaction, tx).where (tx.hash.eq (i.getSourceHash ()).and (txout.ix.eq (i.getIx ())))
-								.orderBy (tx.id.desc ()).limit (1).uniqueResult (txout);
-			}
-			if ( transactionOutput == null )
+		if ( !inputtx.isEmpty () )
+		{
+			QTx tx = QTx.tx;
+			QTxOut txout = QTxOut.txOut;
+			JPAQuery query = new JPAQuery (entityManager);
+
+			// find input transactions. Since tx hash is not unique ordering gets rid of older
+			for ( Tx txin : query.from (tx).where (tx.hash.in (inputtx)).orderBy (tx.id.asc ()).list (tx) )
 			{
-				throw new ValidationException ("Transaction input refers to unknown output " + t.toWireDump ());
+				tcontext.transactionsCache.put (txin.getHash (), txin);
 			}
-			if ( transactionOutput.getSink () != null )
+		}
+		// check for double spending
+		Map<Long, TxOut> outs = new HashMap<Long, TxOut> ();
+		int nr = 0;
+		for ( final TxIn i : t.getInputs () )
+		{
+			Tx sourceTransaction;
+			TxOut transactionOutput = null;
+			if ( (sourceTransaction = tcontext.transactionsCache.get (i.getSourceHash ())) == null )
 			{
-				throw new ValidationException ("Double spending attempt " + t.toWireDump ());
+				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
 			}
-			if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+			if ( i.getIx () < sourceTransaction.getOutputs ().size () )
 			{
-				if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()) != null )
+				transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
+			}
+			else
+			{
+				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
+			}
+			if ( transactionOutput.getId () != null )
+			{
+				// double spend within same block will be caught by the sum in/out
+				outs.put (transactionOutput.getId (), transactionOutput);
+			}
+			resolved.put (nr++, transactionOutput);
+		}
+
+		// find previously spending blocks
+		List<String> dsblocks = new ArrayList<String> ();
+		if ( !outs.isEmpty () )
+		{
+			QTx tx = QTx.tx;
+			QTxOut txout = QTxOut.txOut;
+			QBlk blk = QBlk.blk;
+			QTxIn txin = QTxIn.txIn;
+			JPAQuery query = new JPAQuery (entityManager);
+
+			dsblocks =
+					query.from (blk, txin).join (blk.transactions, tx).join (txin.source, txout).join (txin.transaction, tx)
+							.where (txout.id.in (outs.keySet ()).and (txin.source.isNotNull ())).list (blk.hash);
+		}
+
+		if ( tcontext.block == null )
+		{
+			if ( !dsblocks.isEmpty () )
+			{
+				throw new ValidationException ("Double spend attempt " + t.toWireDump ());
+			}
+		}
+		else
+		{
+			if ( !dsblocks.isEmpty () )
+			{
+				// check if a block with double spend is reachable from this block
+				StoredMember prev = (StoredMember) members.get (tcontext.block.getPrevious ().getHash ());
+				while ( prev != null )
 				{
-					if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()).get (0) == null )
+					if ( dsblocks.contains (prev.getHash ()) )
 					{
-						throw new ValidationException ("coinbase spent in same block " + t.toWireDump ());
+						throw new ValidationException ("Double spend attempt " + t.toWireDump ());
+					}
+					prev = prev.getPrevious ();
+				}
+			}
+
+			// check coinbase spending
+			for ( int j = 0; j < nr; ++j )
+			{
+				TxOut transactionOutput = resolved.get (j);
+				if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+				{
+					if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()) != null )
+					{
+						if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()).get (0) == null )
+						{
+							throw new ValidationException ("coinbase spent in same block " + t.toWireDump ());
+						}
+					}
+					else
+					{
+						QBlk blk = QBlk.blk;
+						QTx tx = QTx.tx;
+						JPAQuery query = new JPAQuery (entityManager);
+						Blk origin =
+								query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
+										.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
+						if ( origin.getHeight () > (tcontext.block.getHeight () - 100) )
+						{
+							throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+						}
 					}
 				}
-				else
-				{
-					QBlk blk = QBlk.blk;
-					QTx tx = QTx.tx;
-
-					JPAQuery query = new JPAQuery (entityManager);
-					Blk origin =
-							query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
-									.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
-					if ( origin.getHeight () > (tcontext.blockHeight - 100) )
-					{
-						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
-					}
-				}
 			}
-			resolved.put (nr, transactionOutput);
-			++nr;
 		}
 	}
 
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
-		if ( tcontext.coinbase )
+		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
 					|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
 			{
-				throw new ValidationException ("first transaction must be coinbase " + tcontext.blockHash);
+				throw new ValidationException ("first transaction must be coinbase " + tcontext.block.getHash ());
 			}
 			if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
 			{
-				throw new ValidationException ("coinbase scriptsig must be in 2-100 " + tcontext.blockHash);
+				throw new ValidationException ("coinbase scriptsig must be in 2-100 " + tcontext.block.getHash ());
 			}
 			tcontext.coinbase = false;
 			for ( TxOut o : t.getOutputs () )
@@ -834,7 +851,7 @@ class JpaChainStore implements ChainStore
 			}
 			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
 			{
-				throw new ValidationException ("too many signatures in this block " + tcontext.blockHash);
+				throw new ValidationException ("too many signatures in this block " + tcontext.block.getHash ());
 			}
 		}
 		else
@@ -857,19 +874,22 @@ class JpaChainStore implements ChainStore
 			{
 				if ( o.getScript ().length > 520 )
 				{
-					if ( tcontext.blockHeight < 80000 )
+					if ( tcontext.block != null && tcontext.block.getHeight () < 80000 )
 					{
-						log.trace ("Old DoD at [" + tcontext.blockHeight + "]" + tcontext.blockHash);
+						log.trace ("Old DoD at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
 					}
 					else
 					{
 						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
-				tcontext.nsigs += Script.sigOpCount (o.getScript ());
-				if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+				if ( tcontext.block != null )
 				{
-					throw new ValidationException ("too many signatures in this block " + tcontext.blockHash);
+					tcontext.nsigs += Script.sigOpCount (o.getScript ());
+					if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+					{
+						throw new ValidationException ("too many signatures in this block " + tcontext.block.getHash ());
+					}
 				}
 				if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
 				{
@@ -891,16 +911,16 @@ class JpaChainStore implements ChainStore
 			{
 				if ( i.getScript ().length > 520 )
 				{
-					if ( tcontext.blockHeight < 80000 )
+					if ( tcontext.block != null && tcontext.block.getHeight () < 80000 )
 					{
-						log.trace ("Old DoD at [" + tcontext.blockHeight + "]" + tcontext.blockHash);
+						log.trace ("Old DoD at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
 					}
 					else
 					{
 						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
-				if ( tcontext.blockHeight > 140000 && !Script.isPushOnly (i.getScript ()) )
+				if ( tcontext.block != null && tcontext.block.getHeight () > 140000 && !Script.isPushOnly (i.getScript ()) )
 				{
 					throw new ValidationException ("input script should be push only " + t.toWireDump ());
 				}
@@ -1114,8 +1134,7 @@ class JpaChainStore implements ChainStore
 			}
 
 			TransactionContext tcontext = new TransactionContext ();
-			tcontext.blockHash = "unconfirmed";
-			tcontext.blockHeight = aboutHeight;
+			tcontext.block = null;
 			tcontext.transactionsCache = unconfirmed;
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
