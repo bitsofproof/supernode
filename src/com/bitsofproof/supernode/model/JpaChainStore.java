@@ -639,18 +639,6 @@ class JpaChainStore implements ChainStore
 			}
 			stored = true;
 
-			for ( Tx t : b.getTransactions () )
-			{
-				for ( TxIn i : t.getInputs () )
-				{
-					if ( i.getSource () != null )
-					{
-						i.getSource ().setSink (i);
-						entityManager.merge (i.getSource ());
-					}
-				}
-			}
-
 			StoredMember m = new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ());
 			members.put (b.getHash (), m);
 

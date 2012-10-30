@@ -28,7 +28,6 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
@@ -58,9 +57,6 @@ public class TxOut implements Serializable
 	private Tx transaction;
 
 	private long ix;
-
-	@OneToOne (fetch = FetchType.LAZY, optional = true)
-	private TxIn sink;
 
 	@Column (length = 40, nullable = true)
 	private String address;
@@ -181,16 +177,6 @@ public class TxOut implements Serializable
 		this.ix = ix;
 	}
 
-	public TxIn getSink ()
-	{
-		return sink;
-	}
-
-	public void setSink (TxIn sink)
-	{
-		this.sink = sink;
-	}
-
 	public String getAddress ()
 	{
 		return address;
@@ -207,7 +193,6 @@ public class TxOut implements Serializable
 		c.address = address;
 		c.ix = ix;
 		c.script = script;
-		c.sink = sink;
 		c.transaction = tc;
 		c.value = value;
 
