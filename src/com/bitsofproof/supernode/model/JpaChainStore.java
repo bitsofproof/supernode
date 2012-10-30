@@ -399,7 +399,7 @@ class JpaChainStore implements ChainStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		Map<String, Tx> transactionsCache = new HashMap<String, Tx> ();
+		Map<String, ArrayList<TxOut>> transactionsOutputCache = new HashMap<String, ArrayList<TxOut>> ();
 		Map<String, HashMap<Integer, TxOut>> resolvedInputs = new HashMap<String, HashMap<Integer, TxOut>> ();
 	}
 
@@ -537,7 +537,12 @@ class JpaChainStore implements ChainStore
 			boolean skip = true;
 			for ( Tx t : b.getTransactions () )
 			{
-				tcontext.transactionsCache.put (t.getHash (), t);
+				ArrayList<TxOut> outs = new ArrayList<TxOut> ();
+				for ( int i = 0; i < t.getOutputs ().size (); ++i )
+				{
+					outs.add (t.getOutputs ().get (i));
+				}
+				tcontext.transactionsOutputCache.put (t.getHash (), outs);
 				if ( skip ) // skip coinbase
 				{
 					skip = false;
@@ -708,10 +713,10 @@ class JpaChainStore implements ChainStore
 		Set<String> inputtx = new HashSet<String> ();
 		for ( final TxIn i : t.getInputs () )
 		{
-			Tx sourceTransaction;
-			if ( (sourceTransaction = tcontext.transactionsCache.get (i.getSourceHash ())) != null )
+			ArrayList<TxOut> outs;
+			if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
 			{
-				if ( i.getIx () >= sourceTransaction.getOutputs ().size () )
+				if ( i.getIx () >= outs.size () )
 				{
 					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
@@ -729,34 +734,40 @@ class JpaChainStore implements ChainStore
 			JPAQuery query = new JPAQuery (entityManager);
 
 			// find input transactions. Since tx hash is not unique ordering gets rid of older
-			for ( Tx txin : query.from (tx).where (tx.hash.in (inputtx)).orderBy (tx.id.asc ()).list (tx) )
+			for ( TxOut out : query.from (tx).join (tx.outputs, txout).where (tx.hash.in (inputtx)).orderBy (tx.id.asc (), txout.ix.asc ()).list (txout) )
 			{
-				tcontext.transactionsCache.put (txin.getHash (), txin);
+				ArrayList<TxOut> cached = tcontext.transactionsOutputCache.get (out.getTransaction ().getHash ());
+				if ( cached == null || cached.size () > out.getIx () ) // replace if more than one tx
+				{
+					cached = new ArrayList<TxOut> ();
+					tcontext.transactionsOutputCache.put (out.getTransaction ().getHash (), cached);
+				}
+				cached.add (out);
 			}
 		}
 		// check for double spending
-		Map<Long, TxOut> outs = new HashMap<Long, TxOut> ();
+		Set<TxOut> outs = new HashSet<TxOut> ();
 		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
-			Tx sourceTransaction;
+			ArrayList<TxOut> cached;
 			TxOut transactionOutput = null;
-			if ( (sourceTransaction = tcontext.transactionsCache.get (i.getSourceHash ())) == null )
+			if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
 			{
 				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
 			}
-			if ( i.getIx () < sourceTransaction.getOutputs ().size () )
+			try
 			{
-				transactionOutput = sourceTransaction.getOutputs ().get ((int) i.getIx ());
+				transactionOutput = cached.get ((int) i.getIx ());
 			}
-			else
+			catch ( Exception e )
 			{
 				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
 			}
 			if ( transactionOutput.getId () != null )
 			{
 				// double spend within same block will be caught by the sum in/out
-				outs.put (transactionOutput.getId (), transactionOutput);
+				outs.add (transactionOutput);
 			}
 			resolved.put (nr++, transactionOutput);
 		}
@@ -766,14 +777,10 @@ class JpaChainStore implements ChainStore
 		if ( !outs.isEmpty () )
 		{
 			QTx tx = QTx.tx;
-			QTxOut txout = QTxOut.txOut;
 			QBlk blk = QBlk.blk;
 			QTxIn txin = QTxIn.txIn;
 			JPAQuery query = new JPAQuery (entityManager);
-
-			dsblocks =
-					query.from (blk, txin).join (blk.transactions, tx).join (txin.source, txout).join (txin.transaction, tx)
-							.where (txout.id.in (outs.keySet ()).and (txin.source.isNotNull ())).list (blk.hash);
+			dsblocks = query.from (blk).join (blk.transactions, tx).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);
 		}
 
 		if ( tcontext.block == null )
@@ -1135,7 +1142,7 @@ class JpaChainStore implements ChainStore
 
 			TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = null;
-			tcontext.transactionsCache = unconfirmed;
+			tcontext.transactionsOutputCache = new HashMap<String, ArrayList<TxOut>> ();
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
 			resolveInputs (tcontext, t);
