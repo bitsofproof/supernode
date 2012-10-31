@@ -39,7 +39,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
-import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.BlockStore;
 
 public class BitcoinNetwork extends P2P
 {
@@ -51,7 +51,7 @@ public class BitcoinNetwork extends P2P
 	private static final Logger log = LoggerFactory.getLogger (BitcoinNetwork.class);
 
 	private Chain chain;
-	private ChainStore store;
+	private BlockStore store;
 	private PlatformTransactionManager transactionManager;
 
 	private TransactionTemplate transactionTemplate;
@@ -308,7 +308,7 @@ public class BitcoinNetwork extends P2P
 		return chain;
 	}
 
-	public ChainStore getStore ()
+	public BlockStore getStore ()
 	{
 		return store;
 	}
@@ -328,7 +328,7 @@ public class BitcoinNetwork extends P2P
 		this.chain = chain;
 	}
 
-	public void setStore (ChainStore store)
+	public void setStore (BlockStore store)
 	{
 		this.store = store;
 	}

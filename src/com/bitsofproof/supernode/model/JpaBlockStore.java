@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -50,10 +49,10 @@ import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
-@Component ("jpastore")
-class JpaChainStore implements ChainStore
+@Component ("jpaBlockStore")
+class JpaBlockStore implements BlockStore
 {
-	private static final Logger log = LoggerFactory.getLogger (JpaChainStore.class);
+	private static final Logger log = LoggerFactory.getLogger (JpaBlockStore.class);
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
@@ -61,11 +60,10 @@ class JpaChainStore implements ChainStore
 	private EntityManager entityManager;
 
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
+
 	private CachedHead currentHead = null;
 	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
 	private final Map<String, Member> members = new HashMap<String, Member> ();
-	private final Map<BitcoinPeer, TreeSet<KnownMember>> knownByPeer = new HashMap<BitcoinPeer, TreeSet<KnownMember>> ();
-	private final Map<BitcoinPeer, HashSet<String>> requestsByPeer = new HashMap<BitcoinPeer, HashSet<String>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
@@ -243,117 +241,40 @@ class JpaChainStore implements ChainStore
 	}
 
 	@Override
-	public void addInventory (List<String> hashes, BitcoinPeer peer)
+	public boolean isStoredBlock (String hash)
 	{
 		try
 		{
-			lock.writeLock ().lock ();
+			lock.readLock ().lock ();
 
-			for ( String hash : hashes )
-			{
-				Member cached = members.get (hash);
-				if ( cached == null )
-				{
-					HashSet<BitcoinPeer> peers = new HashSet<BitcoinPeer> ();
-					members.put (hash, cached = new KnownMember (hash, members.size (), peers));
-				}
-				else if ( !(cached instanceof KnownMember) )
-				{
-					continue;
-				}
-				((KnownMember) cached).getKnownBy ().add (peer);
-				TreeSet<KnownMember> membersOfPeer = knownByPeer.get (peer);
-				if ( membersOfPeer == null )
-				{
-					membersOfPeer = new TreeSet<KnownMember> (incomingOrder);
-					knownByPeer.put (peer, membersOfPeer);
-				}
-				membersOfPeer.add ((KnownMember) cached);
-			}
+			Member cached = members.get (hash);
+			return cached != null && cached instanceof StoredMember;
 		}
 		finally
 		{
-			lock.writeLock ().unlock ();
+			lock.readLock ().unlock ();
 		}
 	}
 
 	@Override
-	public List<String> getBlockRequests (BitcoinPeer peer)
+	public long getChainHeight ()
 	{
 		try
 		{
-			lock.writeLock ().lock ();
-
-			HashSet<String> requests = requestsByPeer.get (peer);
-			if ( requests == null )
+			lock.readLock ().lock ();
+			CachedHead longest = null;
+			for ( CachedHead h : heads.values () )
 			{
-				requests = new HashSet<String> ();
-			}
-			TreeSet<KnownMember> knownbyThisPeer = knownByPeer.get (peer);
-			ArrayList<String> result = new ArrayList<String> ();
-			if ( knownbyThisPeer != null )
-			{
-				for ( KnownMember kn : knownbyThisPeer )
+				if ( longest == null || longest.getChainWork () < h.getChainWork () )
 				{
-					requests.add (kn.getHash ());
-					result.add (kn.getHash ());
+					longest = h;
 				}
-				requestsByPeer.put (peer, requests);
-				knownbyThisPeer.clear ();
 			}
-
-			return result;
+			return longest.getHeight ();
 		}
 		finally
 		{
-			lock.writeLock ().unlock ();
-		}
-	}
-
-	@Override
-	public void forgetBlockRequest (String hash, BitcoinPeer peer)
-	{
-		try
-		{
-			lock.writeLock ().lock ();
-
-			Set<String> ps = requestsByPeer.get (peer);
-			if ( ps != null )
-			{
-				ps.remove (hash);
-				if ( ps.size () == 0 )
-				{
-					requestsByPeer.remove (peer);
-				}
-			}
-		}
-		finally
-		{
-			lock.writeLock ().unlock ();
-		}
-	}
-
-	@Override
-	public void removePeer (BitcoinPeer peer)
-	{
-		try
-		{
-			lock.writeLock ().lock ();
-
-			requestsByPeer.remove (peer);
-			TreeSet<KnownMember> ms = knownByPeer.get (peer);
-			if ( ms != null )
-			{
-				for ( KnownMember m : ms )
-				{
-					m.getKnownBy ().remove (peer);
-				}
-			}
-			knownByPeer.remove (peer);
-		}
-		finally
-		{
-			lock.writeLock ().unlock ();
+			lock.readLock ().unlock ();
 		}
 	}
 
@@ -618,11 +539,6 @@ class JpaChainStore implements ChainStore
 			usingHead.setHeight (head.getHeight ());
 
 			log.trace ("stored block " + b.getHash ());
-		}
-		// no other peer should as for this
-		for ( TreeSet<KnownMember> k : knownByPeer.values () )
-		{
-			k.remove (cached);
 		}
 	}
 
@@ -980,47 +896,6 @@ class JpaChainStore implements ChainStore
 			lock.readLock ().unlock ();
 		}
 		return entityManager.find (Blk.class, ((StoredMember) cached).getId ());
-	}
-
-	@Override
-	public long getChainHeight ()
-	{
-		try
-		{
-			lock.readLock ().lock ();
-			CachedHead longest = null;
-			for ( CachedHead h : heads.values () )
-			{
-				if ( longest == null || longest.getChainWork () < h.getChainWork () )
-				{
-					longest = h;
-				}
-			}
-			return longest.getHeight ();
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-	}
-
-	@Override
-	public int getNumberOfRequests (BitcoinPeer peer)
-	{
-		try
-		{
-			lock.readLock ().lock ();
-			HashSet<String> s = requestsByPeer.get (peer);
-			if ( s == null )
-			{
-				return 0;
-			}
-			return s.size ();
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
 	}
 
 	@Transactional (propagation = Propagation.MANDATORY)

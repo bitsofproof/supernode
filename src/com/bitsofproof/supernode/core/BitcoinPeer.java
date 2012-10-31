@@ -49,6 +49,7 @@ import com.bitsofproof.supernode.messages.GetHeadersMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
+import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.messages.VersionMessage;
 
 public class BitcoinPeer extends P2P.Peer
@@ -187,6 +188,10 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new PongMessage (this);
 		}
+		else if ( command.equals ("tx") )
+		{
+			return new TxMessage (this);
+		}
 
 		return new Message (command);
 	}
@@ -196,8 +201,8 @@ public class BitcoinPeer extends P2P.Peer
 		return lastSpoken;
 	}
 
-	public Map<String, ArrayList<BitcoinMessageListener<BitcoinPeer.Message>>> listener = Collections
-			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<BitcoinPeer.Message>>> ());
+	public Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections
+			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> ());
 
 	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
 	{
@@ -389,6 +394,7 @@ public class BitcoinPeer extends P2P.Peer
 		final BitcoinPeer.Message bm = (Message) m;
 		transactionTemplate.execute (new TransactionCallbackWithoutResult ()
 		{
+			@SuppressWarnings ({ "rawtypes", "unchecked" })
 			@Override
 			protected void doInTransactionWithoutResult (TransactionStatus arg0)
 			{
@@ -396,10 +402,10 @@ public class BitcoinPeer extends P2P.Peer
 				{
 					bm.validate ();
 
-					List<BitcoinMessageListener<BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
+					List<BitcoinMessageListener<? extends BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
 					if ( classListener != null )
 					{
-						for ( BitcoinMessageListener<BitcoinPeer.Message> l : classListener )
+						for ( BitcoinMessageListener l : classListener )
 						{
 							l.process (bm, self);
 						}
@@ -416,24 +422,23 @@ public class BitcoinPeer extends P2P.Peer
 		});
 	}
 
-	@SuppressWarnings ("unchecked")
 	public void addListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
-		ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ll = listener.get (type);
+		ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll == null )
 		{
-			ll = new ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ();
+			ll = new ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>> ();
 			listener.put (type, ll);
 		}
 		if ( !ll.contains (l) )
 		{
-			ll.add ((BitcoinMessageListener<BitcoinPeer.Message>) l);
+			ll.add (l);
 		}
 	}
 
 	public void removeListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
-		ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ll = listener.get (type);
+		ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll != null )
 		{
 			ll.remove (l);

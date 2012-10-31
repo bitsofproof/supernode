@@ -16,136 +16,260 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.BlockStore;
 
 public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	private final ChainStore store;
+	private int inventoryTimeout = 30;
 
-	public ChainLoader (BitcoinNetwork network, final ChainStore store)
+	private final Map<BitcoinPeer, TreeSet<KnownBlock>> known = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
+	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
+	private final Set<BitcoinPeer> waitingForInventory = new HashSet<BitcoinPeer> ();
+
+	private class KnownBlock
 	{
-		this.store = store;
-		try
+		private int nr;
+		private String hash;
+	}
+
+	public boolean isBehind ()
+	{
+		synchronized ( known )
 		{
-			network.addListener ("block", new BitcoinMessageListener ()
-			{
-				@Override
-				public void process (Message m, BitcoinPeer peer) throws Exception
-				{
-					processBlock ((BlockMessage) m, peer);
-				}
-
-			});
-
-			network.addListener ("inv", new BitcoinMessageListener ()
-			{
-				@Override
-				public void process (Message m, BitcoinPeer peer) throws Exception
-				{
-					processInv ((InvMessage) m, peer);
-				}
-
-			});
-
-			network.addPeerListener (new BitcoinPeerListener ()
-			{
-
-				@Override
-				public void remove (final BitcoinPeer peer)
-				{
-					store.removePeer (peer);
-				}
-
-				@Override
-				public void add (BitcoinPeer peer)
-				{
-				}
-			});
-			network.runForAll (new BitcoinNetwork.PeerTask ()
-			{
-				@Override
-				public void run (final BitcoinPeer peer) throws Exception
-				{
-					getAnotherBatch (peer);
-				}
-
-			});
-		}
-		catch ( Exception e )
-		{
-			log.error ("Could not start chain loader", e);
+			return !waitingForInventory.isEmpty ();
 		}
 	}
 
-	private void getAnotherBatch (BitcoinPeer peer) throws Exception
+	public ChainLoader (final BitcoinNetwork network, final BlockStore store)
 	{
-		if ( peer.getHeight () > store.getChainHeight () )
+		Thread loader = new Thread (new Runnable ()
 		{
-			GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
-			for ( String s : store.getLocator () )
+			@Override
+			public void run ()
 			{
-				gbm.getHashes ().add (new Hash (s).toByteArray ());
+				try
+				{
+					while ( true )
+					{
+						synchronized ( known )
+						{
+							List<byte[]> locator = new ArrayList<byte[]> ();
+							for ( final BitcoinPeer peer : known.keySet () )
+							{
+								if ( requests.get (peer).size () == 0 && peer.getHeight () > store.getChainHeight () && !waitingForInventory.contains (peer) )
+								{
+									GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
+									if ( locator.isEmpty () )
+									{
+										for ( String h : store.getLocator () )
+										{
+											locator.add (new Hash (h).toByteArray ());
+										}
+									}
+									gbm.setHashes (locator);
+									gbm.setLastHash (Hash.ZERO_HASH.toByteArray ());
+									try
+									{
+										if ( !gbm.getHashes ().isEmpty () )
+										{
+											log.trace ("Sending inventory request to " + peer.getAddress ());
+											peer.send (gbm);
+											waitingForInventory.add (peer);
+											network.schedule (new Runnable ()
+											{
+												@Override
+												public void run ()
+												{
+													if ( waitingForInventory.contains (peer) )
+													{
+														log.trace ("Peer did not anser to inventory request " + peer.getAddress ());
+														peer.disconnect ();
+													}
+												}
+											}, inventoryTimeout, TimeUnit.SECONDS);
+										}
+									}
+									catch ( Exception e )
+									{
+										log.trace ("could not send to peer", e);
+										peer.disconnect ();
+										continue;
+									}
+								}
+								GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
+								for ( KnownBlock b : known.get (peer) )
+								{
+									boolean asked = false;
+									for ( Set<String> ps : requests.values () )
+									{
+										if ( ps.contains (b.hash) )
+										{
+											asked = true;
+											break;
+										}
+									}
+									if ( !asked )
+									{
+										gdm.getBlocks ().add (new Hash (b.hash).toByteArray ());
+										requests.get (peer).add (b.hash);
+									}
+								}
+								known.get (peer).clear ();
+								if ( gdm.getBlocks ().size () > 0 )
+								{
+									try
+									{
+										peer.send (gdm);
+									}
+									catch ( Exception e )
+									{
+										log.trace ("could not send to peer " + peer.getAddress (), e);
+										peer.disconnect ();
+										continue;
+									}
+								}
+							}
+							try
+							{
+								known.wait ();
+							}
+							catch ( InterruptedException e )
+							{
+							}
+						}
+					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Chainloader thread unexpectedly exists", e);
+				}
+
 			}
-			peer.send (gbm);
-			log.trace ("asking for known blocks from " + peer.getAddress ());
-		}
-	}
+		});
+		loader.setName ("Chain loader");
+		loader.setDaemon (true);
+		loader.start ();
 
-	private void getBlocks (final BitcoinPeer peer) throws Exception
-	{
-		if ( store.getNumberOfRequests (peer) == 0 )
+		network.addListener ("block", new BitcoinMessageListener<BlockMessage> ()
 		{
-			List<String> requests = store.getBlockRequests (peer);
-			if ( !requests.isEmpty () )
+			@Override
+			public void process (BlockMessage m, BitcoinPeer peer) throws Exception
 			{
-				GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
-				for ( String pick : requests )
+				Blk block = m.getBlock ();
+				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
+				synchronized ( known )
 				{
-					gdm.getBlocks ().add (new Hash (pick).toByteArray ());
+					requests.get (peer).remove (block.getHash ());
 				}
-				log.trace ("asking for blocks " + gdm.getBlocks ().size () + " from " + peer.getAddress ());
-				peer.send (gdm);
+				store.storeBlock (block);
 			}
-		}
-	}
 
-	private void processBlock (BlockMessage m, final BitcoinPeer peer) throws Exception
-	{
-		Blk block = m.getBlock ();
-		store.storeBlock (block);
-		store.forgetBlockRequest (block.getHash (), peer);
-		if ( store.getNumberOfRequests (peer) == 0 )
-		{
-			getAnotherBatch (peer);
-		}
-	}
+		});
 
-	private void processInv (final InvMessage m, final BitcoinPeer peer) throws Exception
-	{
-		if ( !m.getBlockHashes ().isEmpty () )
+		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
-			log.trace ("received inventory of " + m.getBlockHashes ().size () + " from " + peer.getAddress ());
-			List<String> hashes = new ArrayList<String> ();
-			for ( byte[] h : m.getBlockHashes () )
+			@Override
+			public void process (InvMessage m, BitcoinPeer peer) throws Exception
 			{
-				hashes.add (new Hash (h).toString ());
+				if ( !m.getBlockHashes ().isEmpty () )
+				{
+					log.trace ("received inventory of " + m.getBlockHashes ().size () + " blocks from " + peer.getAddress ());
+					synchronized ( known )
+					{
+						if ( m.getBlockHashes ().size () > 1 )
+						{
+							waitingForInventory.remove (peer);
+						}
+						Set<KnownBlock> k = known.get (peer);
+						int n = k.size ();
+						for ( byte[] h : m.getBlockHashes () )
+						{
+							String hash = new Hash (h).toString ();
+							if ( !store.isStoredBlock (hash) )
+							{
+								KnownBlock kn = new KnownBlock ();
+								kn.nr = n++;
+								kn.hash = hash;
+								k.add (kn);
+								known.notify ();
+							}
+						}
+					}
+				}
 			}
-			store.addInventory (hashes, peer);
-			getBlocks (peer);
-		}
+		});
+
+		network.addPeerListener (new BitcoinPeerListener ()
+		{
+
+			@Override
+			public void remove (final BitcoinPeer peer)
+			{
+				synchronized ( known )
+				{
+					known.remove (peer);
+					requests.remove (peer);
+					waitingForInventory.remove (peer);
+					known.notify ();
+				}
+			}
+
+			@Override
+			public void add (BitcoinPeer peer)
+			{
+				synchronized ( known )
+				{
+					known.notify ();
+					requests.put (peer, new HashSet<String> ());
+					known.put (peer, new TreeSet<KnownBlock> (new Comparator<KnownBlock> ()
+					{
+						@Override
+						public int compare (KnownBlock arg0, KnownBlock arg1)
+						{
+							int diff = arg0.nr - arg1.nr;
+							if ( diff != 0 )
+							{
+								return diff;
+							}
+							else
+							{
+								return arg0.equals (arg1) ? 0 : arg0.hashCode () - arg1.hashCode ();
+							}
+						}
+					}));
+				}
+			}
+		});
 	}
+
+	public int getInventoryTimeout ()
+	{
+		return inventoryTimeout;
+	}
+
+	public void setInventoryTimeout (int inventoryTimeout)
+	{
+		this.inventoryTimeout = inventoryTimeout;
+	}
+
 }

@@ -17,22 +17,13 @@ package com.bitsofproof.supernode.model;
 
 import java.util.List;
 
-import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.ValidationException;
 
-public interface ChainStore
+public interface BlockStore
 {
 
 	public void cache ();
-
-	public void addInventory (List<String> hashes, BitcoinPeer peer);
-
-	public List<String> getBlockRequests (BitcoinPeer peer);
-
-	public void forgetBlockRequest (String hash, BitcoinPeer peer);
-
-	public void removePeer (BitcoinPeer peer);
 
 	public List<String> getLocator ();
 
@@ -44,10 +35,9 @@ public interface ChainStore
 
 	public Blk getBlock (String hash);
 
+	public boolean isStoredBlock (String hash);
+
 	public boolean validateTransaction (Tx tx) throws ValidationException;
 
 	public long getChainHeight ();
-
-	public int getNumberOfRequests (BitcoinPeer peer);
-
 }

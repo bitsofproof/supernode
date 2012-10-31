@@ -25,14 +25,15 @@ import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
-import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.BlockStore;
 import com.bitsofproof.supernode.model.Tx;
 
 public class TransactionHandler
 {
 	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
 
-	private ChainStore store;
+	private BlockStore store;
+	private ChainLoader loader;
 
 	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
 
@@ -53,7 +54,7 @@ public class TransactionHandler
 						get.getTransactions ().add (h);
 					}
 				}
-				if ( get.getTransactions ().size () > 0 )
+				if ( !loader.isBehind () && get.getTransactions ().size () > 0 )
 				{
 					log.trace ("asking for transaction details from " + peer.getAddress ());
 					peer.send (get);
@@ -68,18 +69,30 @@ public class TransactionHandler
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
 				store.validateTransaction (txm.getTx ());
+				log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
 				unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
 			}
 		});
 	}
 
-	public ChainStore getStore ()
+	public BlockStore getStore ()
 	{
 		return store;
 	}
 
-	public void setStore (ChainStore store)
+	public void setStore (BlockStore store)
 	{
 		this.store = store;
 	}
+
+	public ChainLoader getLoader ()
+	{
+		return loader;
+	}
+
+	public void setLoader (ChainLoader loader)
+	{
+		this.loader = loader;
+	}
+
 }

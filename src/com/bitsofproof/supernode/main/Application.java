@@ -32,7 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.model.ChainStore;
+import com.bitsofproof.supernode.model.BlockStore;
 
 public class Application
 {
@@ -40,7 +40,7 @@ public class Application
 
 	private Chain chain;
 
-	private ChainStore store;
+	private BlockStore store;
 
 	private PlatformTransactionManager transactionManager;
 
@@ -90,12 +90,12 @@ public class Application
 		this.chain = chain;
 	}
 
-	public ChainStore getStore ()
+	public BlockStore getStore ()
 	{
 		return store;
 	}
 
-	public void setStore (ChainStore store)
+	public void setStore (BlockStore store)
 	{
 		this.store = store;
 	}

@@ -53,13 +53,14 @@
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
 		<property name="chain" ref="${chain}"/>
-		<property name="store" ref="jpastore" />
+		<property name="store" ref="${store}" />
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	
 	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<constructor-arg><ref bean="${store}"/></constructor-arg>
+		<property name="inventoryTimeout" value="30"/>
 	</bean>
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
@@ -75,6 +76,7 @@
 	<bean id="transaction" class="com.bitsofproof.supernode.core.TransactionHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<property name="store" ref="${store}"/>
+		<property name="loader" ref="chainloader"/>
 	</bean>
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>

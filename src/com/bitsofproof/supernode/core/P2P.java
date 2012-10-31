@@ -614,6 +614,8 @@ public abstract class P2P
 			}
 		});
 		selectorThread.setDaemon (false);
+		// prefer processing, so buffers are cleared early
+		selectorThread.setPriority (Thread.NORM_PRIORITY - 1);
 		selectorThread.setName ("Peer selector");
 
 		// this thread keeps looking for new connections
