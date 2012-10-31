@@ -73,7 +73,7 @@ public class ECKeyPair
 		return pub;
 	}
 
-	public String getAddress ()
+	public byte[] getAddress ()
 	{
 		byte[] ph = new byte[20];
 		try
@@ -86,12 +86,7 @@ public class ECKeyPair
 		catch ( NoSuchAlgorithmException e )
 		{
 		}
-		byte[] addressBytes = new byte[1 + ph.length + 4];
-		addressBytes[0] = (byte) 0; // 0 for production
-		System.arraycopy (ph, 0, addressBytes, 1, ph.length);
-		byte[] check = Hash.hash (addressBytes, 0, ph.length + 1).toByteArray ();
-		System.arraycopy (check, 0, addressBytes, ph.length + 1, 4);
-		return Base58.encode (addressBytes);
+		return ph;
 	}
 
 	public ECKeyPair (BigInteger priv)

@@ -16,8 +16,6 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -30,10 +28,6 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import org.bouncycastle.crypto.digests.RIPEMD160Digest;
-
-import com.bitsofproof.supernode.core.Base58;
-import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.WireFormat;
 
@@ -79,52 +73,8 @@ public class TxOut implements Serializable
 
 	public void fromWire (WireFormat.Reader reader)
 	{
-
 		value = reader.readUint64 ();
 		script = reader.readVarBytes ();
-
-		// TODO: real script interpretation needed here
-		byte[] ph = new byte[20];
-		if ( script.length < 2 )
-		{
-			return;
-		}
-
-		if ( script[0] == 0x76 && script.length >= 22 )
-		{
-			// new style
-			System.arraycopy (script, 2, ph, 0, 20);
-			address = Base58.encode (ph);
-		}
-		else
-		{
-			// old style
-			byte[] key = new byte[(script[0] & 0xff)];
-			if ( script.length <= script[0] + 1 )
-			{
-				return;
-			}
-			System.arraycopy (script, 1, key, 0, script[0]);
-			byte[] sha256;
-			try
-			{
-				sha256 = MessageDigest.getInstance ("SHA-256").digest (key);
-				RIPEMD160Digest digest = new RIPEMD160Digest ();
-				digest.update (sha256, 0, sha256.length);
-				digest.doFinal (ph, 0);
-
-				byte[] addressBytes = new byte[1 + ph.length + 4];
-				addressBytes[0] = (byte) 0; // 0 for production
-				System.arraycopy (ph, 0, addressBytes, 1, ph.length);
-				byte[] check = Hash.hash (addressBytes, 0, ph.length + 1).toByteArray ();
-				System.arraycopy (check, 0, addressBytes, ph.length + 1, 4);
-				address = Base58.encode (addressBytes);
-
-			}
-			catch ( NoSuchAlgorithmException e )
-			{
-			}
-		}
 	}
 
 	public Long getId ()
