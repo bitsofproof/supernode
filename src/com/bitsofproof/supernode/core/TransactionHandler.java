@@ -28,7 +28,7 @@ import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.ChainStore;
 import com.bitsofproof.supernode.model.Tx;
 
-public class TransactionHandler implements BitcoinMessageListener
+public class TransactionHandler
 {
 	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
 
@@ -38,43 +38,39 @@ public class TransactionHandler implements BitcoinMessageListener
 
 	public TransactionHandler (BitcoinNetwork network)
 	{
-		network.addListener ("inv", this);
-		network.addListener ("tx", this);
-	}
-
-	@Override
-	public synchronized void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
-	{
-		if ( store.getChainHeight () < peer.getHeight () )
+		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
-			return;
-		}
-		if ( m instanceof InvMessage )
-		{
-			InvMessage im = (InvMessage) m;
-			GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
-			for ( byte[] h : im.getTransactionHashes () )
+			@Override
+			public void process (InvMessage im, BitcoinPeer peer) throws Exception
 			{
-				String hash = new Hash (h).toString ();
-				if ( unconfirmed.get (hash) == null )
+				GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
+				for ( byte[] h : im.getTransactionHashes () )
 				{
-					log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
-					get.getTransactions ().add (h);
+					String hash = new Hash (h).toString ();
+					if ( unconfirmed.get (hash) == null )
+					{
+						log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
+						get.getTransactions ().add (h);
+					}
+				}
+				if ( get.getTransactions ().size () > 0 )
+				{
+					log.trace ("asking for transaction details from " + peer.getAddress ());
+					peer.send (get);
 				}
 			}
-			if ( get.getTransactions ().size () > 0 )
-			{
-				log.trace ("asking for transaction details from " + peer.getAddress ());
-				peer.send (get);
-			}
-		}
-		if ( m instanceof TxMessage )
+		});
+		network.addListener ("tx", new BitcoinMessageListener<TxMessage> ()
 		{
-			TxMessage txm = (TxMessage) m;
-			log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-			store.validateTransaction (txm.getTx ());
-			unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
-		}
+
+			@Override
+			public void process (TxMessage txm, BitcoinPeer peer) throws Exception
+			{
+				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+				store.validateTransaction (txm.getTx ());
+				unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
+			}
+		});
 	}
 
 	public ChainStore getStore ()

@@ -57,8 +57,8 @@ public class BitcoinNetwork extends P2P
 	private TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
 
-	private final Map<BitcoinMessageListener, ArrayList<String>> listener = Collections
-			.synchronizedMap (new HashMap<BitcoinMessageListener, ArrayList<String>> ());
+	private final Map<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> listener = Collections
+			.synchronizedMap (new HashMap<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> ());
 	private final Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet (new HashSet<BitcoinPeer> ());
 	private final List<PeerTask> registeredTasks = Collections.synchronizedList (new ArrayList<PeerTask> ());
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
@@ -97,7 +97,7 @@ public class BitcoinNetwork extends P2P
 		// add stored listener to new nodes
 		synchronized ( listener )
 		{
-			for ( BitcoinMessageListener l : listener.keySet () )
+			for ( BitcoinMessageListener<? extends BitcoinPeer.Message> l : listener.keySet () )
 			{
 				for ( String type : listener.get (l) )
 				{
@@ -262,7 +262,7 @@ public class BitcoinNetwork extends P2P
 		registeredTasks.remove (task);
 	}
 
-	public void addListener (final String type, final BitcoinMessageListener l)
+	public void addListener (final String type, final BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
 		synchronized ( connectedPeers )
 		{
@@ -284,7 +284,7 @@ public class BitcoinNetwork extends P2P
 		}
 	}
 
-	public void removeListener (final String type, final BitcoinMessageListener l)
+	public void removeListener (final String type, final BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
 		synchronized ( connectedPeers )
 		{

@@ -72,6 +72,26 @@ public abstract class P2P
 		private final InputStream readIn = new InputStream ()
 		{
 			@Override
+			public int available () throws IOException
+			{
+				int a = 0;
+				if ( currentRead != null )
+				{
+					a = currentRead.available ();
+					if ( a > 0 )
+					{
+						return a;
+					}
+				}
+				byte[] next;
+				if ( (next = reads.peek ()) != null )
+				{
+					return next.length;
+				}
+				return 0;
+			}
+
+			@Override
 			public int read (byte[] b, int off, int len) throws IOException
 			{
 				int need = len;
@@ -236,8 +256,6 @@ public abstract class P2P
 
 		private void listen ()
 		{
-			final P2P.Peer self = this;
-
 			peerThreads.execute (new Runnable ()
 			{
 				@Override
@@ -246,8 +264,11 @@ public abstract class P2P
 					Message m = null;
 					try
 					{
-						m = parse (readIn);
-						receive (m);
+						while ( readIn.available () > 0 )
+						{
+							m = parse (readIn);
+							receive (m);
+						}
 						notListened.release ();
 					}
 					catch ( Exception e )

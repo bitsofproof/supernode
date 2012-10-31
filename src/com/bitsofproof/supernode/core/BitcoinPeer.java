@@ -196,7 +196,8 @@ public class BitcoinPeer extends P2P.Peer
 		return lastSpoken;
 	}
 
-	public Map<String, ArrayList<BitcoinMessageListener>> listener = Collections.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener>> ());
+	public Map<String, ArrayList<BitcoinMessageListener<BitcoinPeer.Message>>> listener = Collections
+			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<BitcoinPeer.Message>>> ());
 
 	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
 	{
@@ -208,12 +209,11 @@ public class BitcoinPeer extends P2P.Peer
 		// this will be overwritten by the first version message we get
 		peerVersion = network.getChain ().getVersion ();
 
-		addListener ("version", new BitcoinMessageListener ()
+		addListener ("version", new BitcoinMessageListener<VersionMessage> ()
 		{
 			@Override
-			public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception
+			public void process (VersionMessage v, BitcoinPeer peer) throws Exception
 			{
-				VersionMessage v = (VersionMessage) m;
 				if ( v.getNonce () == network.getVersionNonce () )
 				{
 					disconnect (); // connect to self
@@ -233,7 +233,7 @@ public class BitcoinPeer extends P2P.Peer
 			}
 		});
 
-		addListener ("verack", new BitcoinMessageListener ()
+		addListener ("verack", new BitcoinMessageListener<BitcoinPeer.Message> ()
 		{
 			@Override
 			public void process (BitcoinPeer.Message m, BitcoinPeer peer)
@@ -386,7 +386,7 @@ public class BitcoinPeer extends P2P.Peer
 	public void receive (P2P.Message m)
 	{
 		final BitcoinPeer self = this;
-		final Message bm = (Message) m;
+		final BitcoinPeer.Message bm = (Message) m;
 		transactionTemplate.execute (new TransactionCallbackWithoutResult ()
 		{
 			@Override
@@ -396,10 +396,10 @@ public class BitcoinPeer extends P2P.Peer
 				{
 					bm.validate ();
 
-					List<BitcoinMessageListener> classListener = listener.get (bm.getCommand ());
+					List<BitcoinMessageListener<BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
 					if ( classListener != null )
 					{
-						for ( BitcoinMessageListener l : classListener )
+						for ( BitcoinMessageListener<BitcoinPeer.Message> l : classListener )
 						{
 							l.process (bm, self);
 						}
@@ -416,23 +416,24 @@ public class BitcoinPeer extends P2P.Peer
 		});
 	}
 
-	public void addListener (String type, BitcoinMessageListener l)
+	@SuppressWarnings ("unchecked")
+	public void addListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
-		ArrayList<BitcoinMessageListener> ll = listener.get (type);
+		ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll == null )
 		{
-			ll = new ArrayList<BitcoinMessageListener> ();
+			ll = new ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ();
 			listener.put (type, ll);
 		}
 		if ( !ll.contains (l) )
 		{
-			ll.add (l);
+			ll.add ((BitcoinMessageListener<BitcoinPeer.Message>) l);
 		}
 	}
 
-	public void removeListener (String type, BitcoinMessageListener l)
+	public void removeListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
-		ArrayList<BitcoinMessageListener> ll = listener.get (type);
+		ArrayList<BitcoinMessageListener<BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll != null )
 		{
 			ll.remove (l);

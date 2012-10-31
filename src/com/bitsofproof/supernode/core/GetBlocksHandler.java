@@ -3,10 +3,10 @@ package com.bitsofproof.supernode.core;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
+import com.bitsofproof.supernode.messages.GetBlocksMessage;
 
-public class GetBlocksHandler implements BitcoinMessageListener
+public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage>
 {
 	private static final Logger log = LoggerFactory.getLogger (GetBlocksHandler.class);
 
@@ -16,7 +16,7 @@ public class GetBlocksHandler implements BitcoinMessageListener
 	}
 
 	@Override
-	public void process (Message m, BitcoinPeer peer) throws Exception
+	public void process (GetBlocksMessage m, BitcoinPeer peer) throws Exception
 	{
 		log.trace ("received gedblocks");
 	}

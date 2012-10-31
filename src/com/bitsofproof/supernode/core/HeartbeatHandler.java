@@ -9,12 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork.PeerTask;
-import com.bitsofproof.supernode.core.BitcoinPeer.Message;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
 
-public class HeartbeatHandler implements BitcoinMessageListener, Runnable
+public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Runnable
 {
 	private static final Logger log = LoggerFactory.getLogger (HeartbeatHandler.class);
 	private final BitcoinNetwork network;
@@ -31,11 +30,11 @@ public class HeartbeatHandler implements BitcoinMessageListener, Runnable
 	}
 
 	@Override
-	public void process (Message m, BitcoinPeer peer) throws Exception
+	public void process (PongMessage m, BitcoinPeer peer) throws Exception
 	{
 		log.trace ("Got pong from " + peer.getAddress ().getAddress ());
 		Long n = sentNonces.get (peer);
-		if ( n != null && n.longValue () == ((PongMessage) m).getNonce () )
+		if ( n != null && n.longValue () == m.getNonce () )
 		{
 			sentNonces.remove (peer);
 		}

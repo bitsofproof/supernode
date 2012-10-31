@@ -17,7 +17,7 @@ package com.bitsofproof.supernode.messages;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
-public interface BitcoinMessageListener
+public interface BitcoinMessageListener<T extends BitcoinPeer.Message>
 {
-	public void process (BitcoinPeer.Message m, BitcoinPeer peer) throws Exception;
+	public void process (T m, BitcoinPeer peer) throws Exception;
 }
