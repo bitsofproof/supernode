@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,7 +45,8 @@ public class ChainLoader
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> known = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
-	private final Set<BitcoinPeer> waitingForInventory = new HashSet<BitcoinPeer> ();
+	private final Map<BitcoinPeer, Long> waitingForInventory = new HashMap<BitcoinPeer, Long> ();
+	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
 	private class KnownBlock
 	{
@@ -76,7 +78,7 @@ public class ChainLoader
 							List<byte[]> locator = new ArrayList<byte[]> ();
 							for ( final BitcoinPeer peer : known.keySet () )
 							{
-								if ( requests.get (peer).size () == 0 && peer.getHeight () > store.getChainHeight () && !waitingForInventory.contains (peer) )
+								if ( requests.get (peer).size () == 0 && peer.getHeight () > store.getChainHeight () && !waitingForInventory.containsKey (peer) )
 								{
 									GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
 									if ( locator.isEmpty () )
@@ -94,19 +96,15 @@ public class ChainLoader
 										{
 											log.trace ("Sending inventory request to " + peer.getAddress ());
 											peer.send (gbm);
-											waitingForInventory.add (peer);
-											network.schedule (new Runnable ()
+											waitingForInventory.put (peer, network.scheduleJob (new Runnable ()
 											{
 												@Override
 												public void run ()
 												{
-													if ( waitingForInventory.contains (peer) )
-													{
-														log.trace ("Peer did not anser to inventory request " + peer.getAddress ());
-														peer.disconnect ();
-													}
+													log.trace ("Peer did not anser to inventory request " + peer.getAddress ());
+													peer.disconnect ();
 												}
-											}, inventoryTimeout, TimeUnit.SECONDS);
+											}, inventoryTimeout, TimeUnit.SECONDS));
 										}
 									}
 									catch ( Exception e )
@@ -119,16 +117,21 @@ public class ChainLoader
 								GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
 								for ( KnownBlock b : known.get (peer) )
 								{
-									boolean asked = false;
+									boolean have = false;
 									for ( Set<String> ps : requests.values () )
 									{
 										if ( ps.contains (b.hash) )
 										{
-											asked = true;
+											have = true;
+											break;
+										}
+										if ( pending.containsKey (b.hash) )
+										{
+											have = true;
 											break;
 										}
 									}
-									if ( !asked )
+									if ( !have )
 									{
 										gdm.getBlocks ().add (new Hash (b.hash).toByteArray ());
 										requests.get (peer).add (b.hash);
@@ -179,11 +182,27 @@ public class ChainLoader
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
 				synchronized ( known )
 				{
-					requests.get (peer).remove (block.getHash ());
+					HashSet<String> peerRequests = requests.get (peer);
+					if ( peerRequests == null )
+					{
+						return;
+					}
+					peerRequests.remove (block.getHash ());
 				}
-				store.storeBlock (block);
+				if ( store.isStoredBlock (block.getPreviousHash ()) )
+				{
+					store.storeBlock (block);
+					while ( pending.containsKey (block.getHash ()) )
+					{
+						block = pending.get (block.getHash ());
+						store.storeBlock (block);
+					}
+				}
+				else
+				{
+					pending.put (block.getPreviousHash (), block);
+				}
 			}
-
 		});
 
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
@@ -198,9 +217,19 @@ public class ChainLoader
 					{
 						if ( m.getBlockHashes ().size () > 1 )
 						{
-							waitingForInventory.remove (peer);
+							Long jobid = waitingForInventory.get (peer);
+							if ( jobid != null )
+							{
+								network.cancelJob (jobid.longValue ());
+								waitingForInventory.remove (peer);
+							}
 						}
 						Set<KnownBlock> k = known.get (peer);
+						if ( k == null )
+						{
+							return;
+						}
+
 						int n = k.size ();
 						for ( byte[] h : m.getBlockHashes () )
 						{

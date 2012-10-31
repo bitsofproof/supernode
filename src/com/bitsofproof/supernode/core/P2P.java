@@ -234,6 +234,8 @@ public abstract class P2P
 					// note that no other reference to peer is stored here
 					// it might be garbage collected (that is probably the right thing to do)
 					connectedPeers.remove (channel);
+					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
+					selector.wakeup ();
 					channel.close ();
 				}
 				catch ( IOException e )
@@ -286,7 +288,7 @@ public abstract class P2P
 			{
 				if ( !connectedPeers.containsKey (this.channel) )
 				{
-					throw new IOException ("Peer disconneted");
+					throw new IOException ("Peer disconneted ");
 				}
 
 				writeable.acquireUninterruptibly ();
@@ -383,6 +385,7 @@ public abstract class P2P
 		public static final int REGISTER = 1;
 		public static final int CHANGEOPS = 2;
 		public static final int STOP = 3;
+		public static final int CANCEL = 4;
 
 		public SelectableChannel socket;
 		public int type;
@@ -451,7 +454,6 @@ public abstract class P2P
 							{
 								return;
 							}
-
 							if ( cr.socket == null )
 							{
 								continue;
@@ -468,6 +470,14 @@ public abstract class P2P
 									key.interestOps (cr.ops);
 								}
 							}
+							else if ( cr.type == ChangeRequest.CANCEL )
+							{
+								SelectionKey key = cr.socket.keyFor (selector);
+								if ( key != null )
+								{
+									key.cancel ();
+								}
+							}
 						}
 						selector.select (); // wait for events
 						Iterator<SelectionKey> keys = selector.selectedKeys ().iterator ();
@@ -481,7 +491,6 @@ public abstract class P2P
 								{
 									continue;
 								}
-
 								if ( key.isAcceptable () )
 								{
 									// unsolicited request to connect
@@ -614,8 +623,6 @@ public abstract class P2P
 			}
 		});
 		selectorThread.setDaemon (false);
-		// prefer processing, so buffers are cleared early
-		selectorThread.setPriority (Thread.NORM_PRIORITY - 1);
 		selectorThread.setName ("Peer selector");
 
 		// this thread keeps looking for new connections

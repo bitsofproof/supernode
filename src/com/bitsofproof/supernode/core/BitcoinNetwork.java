@@ -64,6 +64,7 @@ public class BitcoinNetwork extends P2P
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
+	private static final Map<Long, Runnable> jobs = new HashMap<Long, Runnable> ();
 
 	@Override
 	public void start () throws IOException
@@ -75,14 +76,44 @@ public class BitcoinNetwork extends P2P
 		super.start ();
 	}
 
-	public void scheduleWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
+	private static class WrappedRunnable implements Runnable
 	{
-		scheduler.scheduleWithFixedDelay (job, startDelay, delay, unit);
+		Long nr = new SecureRandom ().nextLong ();
+		Runnable job;
+
+		WrappedRunnable (Runnable job)
+		{
+			this.job = job;
+		}
+
+		@Override
+		public void run ()
+		{
+			if ( jobs.containsKey (nr) )
+			{
+				job.run ();
+			}
+		}
+
 	}
 
-	public void schedule (Runnable job, int delay, TimeUnit unit)
+	public long scheduleJob (final Runnable job, int delay, TimeUnit unit)
 	{
-		scheduler.schedule (job, delay, unit);
+		WrappedRunnable runnable = new WrappedRunnable (job);
+		scheduler.schedule (runnable, delay, unit);
+		return runnable.nr;
+	}
+
+	public long scheduleJobWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
+	{
+		WrappedRunnable runnable = new WrappedRunnable (job);
+		scheduler.scheduleWithFixedDelay (runnable, startDelay, delay, unit);
+		return runnable.nr;
+	}
+
+	public void cancelJob (long jobid)
+	{
+		jobs.remove (jobid);
 	}
 
 	public BitcoinPeer[] getConnectPeers ()

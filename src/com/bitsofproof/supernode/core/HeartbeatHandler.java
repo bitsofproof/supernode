@@ -24,7 +24,7 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 	public HeartbeatHandler (BitcoinNetwork network)
 	{
 		this.network = network;
-		network.scheduleWithFixedDelay (this, delay, delay, TimeUnit.SECONDS);
+		network.scheduleJobWithFixedDelay (this, delay, delay, TimeUnit.SECONDS);
 
 		network.addListener ("pong", this);
 	}
@@ -61,7 +61,7 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 					if ( peer.getVersion () > 60000 )
 					{
 						sentNonces.put (peer, pi.getNonce ());
-						network.schedule (new Runnable ()
+						network.scheduleJob (new Runnable ()
 						{
 							@Override
 							public void run ()

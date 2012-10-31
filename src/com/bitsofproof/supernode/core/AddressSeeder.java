@@ -36,7 +36,7 @@ public class AddressSeeder implements Runnable
 	public AddressSeeder (BitcoinNetwork network)
 	{
 		this.network = network;
-		network.scheduleWithFixedDelay (this, startDelay, delay, TimeUnit.SECONDS);
+		network.scheduleJobWithFixedDelay (this, startDelay, delay, TimeUnit.SECONDS);
 	}
 
 	@Override
