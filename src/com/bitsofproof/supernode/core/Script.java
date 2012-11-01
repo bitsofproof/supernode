@@ -41,7 +41,10 @@ public class Script
 	private int inr;
 	private int codeseparator;
 
+	@SuppressWarnings ("unused")
+	// unfortunatelly unused: https://bitcointalk.org/index.php?topic=120836.0
 	private static final int SIGHASH_ALL = 1;
+
 	private static final int SIGHASH_NONE = 2;
 	private static final int SIGHASH_SINGLE = 3;
 	private static final int SIGHASH_ANYONECANPAY = 0x80;
@@ -171,12 +174,12 @@ public class Script
 		}
 	};
 
-	public static class ScriptReader
+	public static class Reader
 	{
 		private final byte[] bytes;
 		private int cursor;
 
-		public ScriptReader (byte[] script)
+		public Reader (byte[] script)
 		{
 			this.bytes = script;
 			this.cursor = 0;
@@ -223,16 +226,16 @@ public class Script
 		}
 	}
 
-	public static class ScriptWriter
+	public static class Writer
 	{
 		private final ByteArrayOutputStream s;
 
-		public ScriptWriter ()
+		public Writer ()
 		{
 			s = new ByteArrayOutputStream ();
 		}
 
-		public ScriptWriter (ByteArrayOutputStream s)
+		public Writer (ByteArrayOutputStream s)
 		{
 			this.s = s;
 		}
@@ -250,6 +253,21 @@ public class Script
 			}
 			catch ( IOException e )
 			{
+			}
+		}
+
+		public void writeToken (Token token)
+		{
+			s.write (token.op.o);
+			if ( token.data != null )
+			{
+				try
+				{
+					s.write (token.data);
+				}
+				catch ( IOException e )
+				{
+				}
 			}
 		}
 
@@ -391,7 +409,7 @@ public class Script
 
 	public Script (String s)
 	{
-		ScriptWriter writer = new ScriptWriter ();
+		Writer writer = new Writer ();
 		StringTokenizer tokenizer = new StringTokenizer (s, " ");
 		while ( tokenizer.hasMoreElements () )
 		{
@@ -435,13 +453,19 @@ public class Script
 		script = writer.toByteArray ();
 	}
 
-	public class ScriptTokenizer
+	public static class Token
 	{
-		private final ScriptReader reader;
+		Opcode op;
+		byte[] data;
+	}
 
-		public ScriptTokenizer (byte[] script)
+	public static class Tokenizer
+	{
+		private final Reader reader;
+
+		public Tokenizer (byte[] script)
 		{
-			reader = new ScriptReader (script);
+			reader = new Reader (script);
 		}
 
 		boolean hashMoreElements ()
@@ -449,29 +473,47 @@ public class Script
 			return !reader.eof ();
 		}
 
-		public byte[] nextToken () throws ValidationException
+		int getCursor ()
 		{
+			return reader.cursor;
+		}
+
+		@SuppressWarnings ("incomplete-switch")
+		public Token nextToken () throws ValidationException
+		{
+			Token token = new Token ();
+
 			int ix = reader.readByte ();
 			if ( ix > 185 )
 			{
 				throw new ValidationException ("Invalid script" + ix + " opcode at " + reader.cursor);
 			}
 			Opcode op = Opcode.values ()[ix];
+			token.op = op;
 			if ( op.o <= 75 )
 			{
-				return reader.readBytes (op.o);
+				token.data = reader.readBytes (op.o);
+				return token;
 			}
 			switch ( op )
 			{
 				case OP_PUSHDATA1:
-					return reader.readBytes (reader.readByte ());
+				{
+					token.data = reader.readBytes (reader.readByte ());
+					break;
+				}
 				case OP_PUSHDATA2:
-					return reader.readBytes ((int) reader.readInt16 ());
+				{
+					token.data = reader.readBytes ((int) reader.readInt16 ());
+					break;
+				}
 				case OP_PUSHDATA4:
-					return reader.readBytes ((int) reader.readInt32 ());
-				default:
-					return reader.readBytes (1);
+				{
+					token.data = reader.readBytes ((int) reader.readInt32 ());
+					break;
+				}
 			}
+			return token;
 		}
 	}
 
@@ -481,9 +523,8 @@ public class Script
 		StringBuffer b = new StringBuffer ();
 		try
 		{
-			ScriptTokenizer tokenizer = new ScriptTokenizer (script);
+			Tokenizer tokenizer = new Tokenizer (script);
 			boolean first = true;
-			Opcode lastOp = Opcode.OP_FALSE;
 			while ( tokenizer.hashMoreElements () )
 			{
 				if ( !first )
@@ -491,25 +532,14 @@ public class Script
 					b.append (" ");
 				}
 				first = false;
-				byte[] token = tokenizer.nextToken ();
-				if ( token.length == 1 )
+				Token token = tokenizer.nextToken ();
+				if ( token.data != null )
 				{
-					switch ( lastOp )
-					{
-						case OP_1:
-						case OP_PUSHDATA1:
-						case OP_PUSHDATA2:
-						case OP_PUSHDATA4:
-							b.append (new String (Hex.encode (token), "US-ASCII"));
-							lastOp = Opcode.OP_FALSE;
-							break;
-						default:
-							b.append ((lastOp = Opcode.values ()[token[0] & 0xff]).toString ());
-					}
+					b.append (new String (Hex.encode (token.data), "US-ASCII"));
 				}
 				else
 				{
-					b.append (new String (Hex.encode (token), "US-ASCII"));
+					b.append (token.op);
 				}
 			}
 			return b.toString ();
@@ -528,63 +558,33 @@ public class Script
 		}
 	}
 
-	public static boolean isPushOnly (byte[] script)
+	public static boolean isPushOnly (byte[] script) throws ValidationException
 	{
-		ScriptReader reader = new ScriptReader (script);
-		while ( !reader.eof () )
+		Tokenizer tokenizer = new Tokenizer (script);
+		while ( tokenizer.hashMoreElements () )
 		{
-			int op = reader.readByte ();
-			if ( op <= 75 )
+			Token token = tokenizer.nextToken ();
+			if ( token.data != null )
 			{
-				reader.skipBytes (op);
-			}
-			else
-			{
-				Opcode code = Opcode.values ()[op];
-				if ( !(code == Opcode.OP_PUSHDATA1 || code == Opcode.OP_PUSHDATA2 || code == Opcode.OP_PUSHDATA4) )
-				{
-					return false;
-				}
+				return false;
 			}
 		}
 		return true;
 	}
 
 	@SuppressWarnings ("incomplete-switch")
-	public static int sigOpCount (byte[] script)
+	public static int sigOpCount (byte[] script) throws ValidationException
 	{
 		int nsig = 0;
-		ScriptReader reader = new ScriptReader (script);
-		while ( !reader.eof () )
+		Tokenizer tokenizer = new Tokenizer (script);
+		while ( tokenizer.hashMoreElements () )
 		{
-			int op = reader.readByte ();
-			if ( op <= 75 )
+			Token token = tokenizer.nextToken ();
+
+			if ( token.data == null )
 			{
-				reader.skipBytes (op);
-			}
-			else
-			{
-				Opcode code = Opcode.values ()[op];
-				switch ( code )
+				switch ( token.op )
 				{
-					case OP_PUSHDATA1:
-					{
-						int n = reader.readByte ();
-						reader.skipBytes (n);
-					}
-						break;
-					case OP_PUSHDATA2:
-					{
-						long n = reader.readInt16 ();
-						reader.skipBytes ((int) n);
-					}
-						break;
-					case OP_PUSHDATA4:
-					{
-						long n = reader.readInt32 ();
-						reader.skipBytes ((int) n);
-					}
-						break;
 					case OP_CHECKSIG:
 					case OP_CHECKSIGVERIFY:
 						++nsig;
@@ -601,8 +601,8 @@ public class Script
 
 	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
 	{
-		ScriptReader reader = new ScriptReader (script);
-		ScriptWriter writer = new ScriptWriter ();
+		Reader reader = new Reader (script);
+		Writer writer = new Writer ();
 		while ( !reader.eof () )
 		{
 			int op = reader.readByte ();
@@ -671,70 +671,26 @@ public class Script
 	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluate ()
 	{
-		ScriptReader reader = new ScriptReader (script);
+		Tokenizer tokenizer = new Tokenizer (script);
 
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
 		ignoreStack.push (false);
 
-		int offset = -1;
 		try
 		{
-			while ( !reader.eof () )
+			while ( tokenizer.hashMoreElements () )
 			{
-				++offset;
-				Opcode op = Opcode.values ()[reader.readByte ()];
-				if ( op.o <= 75 )
+				Token token = tokenizer.nextToken ();
+				if ( token.data != null )
 				{
-					if ( ignoreStack.peek () )
+					if ( !ignoreStack.peek () )
 					{
-						reader.skipBytes (op.o);
+						stack.push (token.data);
 					}
-					else
-					{
-						stack.push (reader.readBytes (op.o));
-					}
+					continue;
 				}
-				switch ( op )
+				switch ( token.op )
 				{
-					case OP_PUSHDATA1:
-					{
-						int n = reader.readByte ();
-						if ( ignoreStack.peek () )
-						{
-							reader.skipBytes (n);
-						}
-						else
-						{
-							stack.push (reader.readBytes (n));
-						}
-					}
-						break;
-					case OP_PUSHDATA2:
-					{
-						long n = reader.readInt16 ();
-						if ( ignoreStack.peek () )
-						{
-							reader.skipBytes ((int) n);
-						}
-						else
-						{
-							stack.push (reader.readBytes ((int) n));
-						}
-					}
-						break;
-					case OP_PUSHDATA4:
-					{
-						long n = reader.readInt32 ();
-						if ( ignoreStack.peek () )
-						{
-							reader.skipBytes ((int) n);
-						}
-						else
-						{
-							stack.push (reader.readBytes ((int) n));
-						}
-					}
-						break;
 					case OP_IF:
 						if ( !ignoreStack.peek () && popBoolean () )
 						{
@@ -764,7 +720,7 @@ public class Script
 				}
 				if ( !ignoreStack.peek () )
 				{
-					switch ( op )
+					switch ( token.op )
 					{
 						case OP_VERIFY:
 							if ( !isTrue (stack.peek ()) )
@@ -1020,7 +976,7 @@ public class Script
 									pushInt (1);
 								}
 							}
-							if ( op == Opcode.OP_EQUALVERIFY )
+							if ( token.op == Opcode.OP_EQUALVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
 								{
@@ -1258,7 +1214,7 @@ public class Script
 												// after the most
 												// recently-executed
 												// OP_CODESEPARATOR.
-							codeseparator = offset + 1;
+							codeseparator = tokenizer.getCursor () + 1;
 							break;
 						case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
 							// Same
@@ -1331,7 +1287,7 @@ public class Script
 								return false;
 							}
 							pushInt (ECKeyPair.verify (hash, sig, pubkey) ? 1 : 0);
-							if ( op == Opcode.OP_CHECKSIGVERIFY )
+							if ( token.op == Opcode.OP_CHECKSIGVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
 								{
@@ -1378,15 +1334,6 @@ public class Script
 													// afterward.
 							return false; // not yet implemented
 					}
-					if ( op.o >= 176 && op.o <= 185 )
-					{
-						continue;
-					}
-					if ( op.o > 185 )
-					{
-						return false;
-					}
-
 				}
 			}
 		}
