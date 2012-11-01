@@ -75,10 +75,15 @@
 	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 	</bean>
-	<bean id="transaction" class="com.bitsofproof.supernode.core.TransactionHandler">
+	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<property name="store" ref="${store}"/>
 		<property name="loader" ref="chainloader"/>
+	</bean>
+	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<property name="txHandler" ref="tx"/>
+		<property name="store" ref="${store}"/>
 	</bean>
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>

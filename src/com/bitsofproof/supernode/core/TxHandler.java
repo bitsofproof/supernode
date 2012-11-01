@@ -30,16 +30,16 @@ import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.BlockStore;
 import com.bitsofproof.supernode.model.Tx;
 
-public class TransactionHandler
+public class TxHandler
 {
-	private static final Logger log = LoggerFactory.getLogger (TransactionHandler.class);
+	private static final Logger log = LoggerFactory.getLogger (TxHandler.class);
 
 	private BlockStore store;
 	private ChainLoader loader;
 
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
-	public TransactionHandler (final BitcoinNetwork network)
+	public TxHandler (final BitcoinNetwork network)
 	{
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
@@ -93,6 +93,11 @@ public class TransactionHandler
 				}
 			}
 		});
+	}
+
+	public Tx getTransaction (String hash)
+	{
+		return unconfirmed.get (hash);
 	}
 
 	public BlockStore getStore ()
