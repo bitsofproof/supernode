@@ -34,7 +34,7 @@ import com.bitsofproof.supernode.model.TxIn;
 
 public class Script
 {
-	private final Stack<byte[]> stack = new Stack<byte[]> ();
+	private Stack<byte[]> stack = new Stack<byte[]> ();
 	private final Stack<byte[]> alt = new Stack<byte[]> ();
 	private final Tx tx;
 	private int inr;
@@ -632,17 +632,62 @@ public class Script
 		return writer.toByteArray ();
 	}
 
-	public boolean evaluate ()
+	private boolean isPayToScriptHash (byte[] script) throws ValidationException
 	{
+		Tokenizer tokenizer = new Tokenizer (script);
+		int i = 0;
+		while ( tokenizer.hashMoreElements () )
+		{
+			Token token = tokenizer.nextToken ();
+			if ( i == 0 && token.op != Opcode.OP_HASH160 )
+			{
+				return false;
+			}
+			if ( i == 1 && token.data != null || token.data.length != 20 )
+			{
+				return false;
+			}
+			if ( i == 2 && token.op != Opcode.OP_EQUAL )
+			{
+				return false;
+			}
+			++i;
+		}
+		return i == 3;
+	}
+
+	@SuppressWarnings ("unchecked")
+	public boolean evaluate () throws ValidationException
+	{
+		Stack<byte[]> copy = new Stack<byte[]> ();
+
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
 		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+
 		if ( !evaluateSingleScript (s1) )
 		{
 			return false;
 		}
+		boolean psh = isPayToScriptHash (s1);
+		if ( psh )
+		{
+			copy = (Stack<byte[]>) stack.clone ();
+		}
 		if ( !evaluateSingleScript (s2) )
 		{
 			return false;
+		}
+		if ( psh )
+		{
+			if ( !isPushOnly (s1) )
+			{
+				throw new ValidationException ("input script for PTH should be push only.");
+			}
+			stack = copy;
+			if ( !evaluateSingleScript (stack.pop ()) )
+			{
+				return false;
+			}
 		}
 		return true;
 	}

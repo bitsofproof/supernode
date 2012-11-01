@@ -38,6 +38,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 import com.bitsofproof.supernode.main.Setup;
 import com.bitsofproof.supernode.model.QTx;
@@ -147,7 +148,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void transactionTest ()
+	public void transactionTest () throws ValidationException
 	{
 		WireFormat.Reader reader =
 				new WireFormat.Reader (
@@ -240,72 +241,72 @@ public class ScriptTest
 			@Override
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				EntityManager entityManager = EntityManagerFactoryUtils.getTransactionalEntityManager (emf);
-
-				QTx tx = QTx.tx;
-
-				JPAQuery query = new JPAQuery (entityManager);
-
-				Tx t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
-				System.out.println (t.toJSON ());
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				t.toWire (writer);
 				try
 				{
-					Hex.encode (writer.toByteArray (), System.out);
-					System.out.println ("");
-				}
-				catch ( IOException e )
-				{
-					e.printStackTrace ();
-				}
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
+					EntityManager entityManager = EntityManagerFactoryUtils.getTransactionalEntityManager (emf);
 
-				query = new JPAQuery (entityManager);
-				t = query.from (tx).where (tx.hash.eq ("74c1a6dd6e88f73035143f8fc7420b5c395d28300a70bb35b943f7f2eddc656d")).singleResult (tx);
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
+					QTx tx = QTx.tx;
 
-				query = new JPAQuery (entityManager);
-				t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
+					JPAQuery query = new JPAQuery (entityManager);
 
-				query = new JPAQuery (entityManager);
-				t = query.from (tx).where (tx.hash.eq ("66ac54c1a3196e839c32c7700fbd91ee37b1ed4a53332e491bf5ddcd3901d0b1")).singleResult (tx);
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
+					Tx t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
+					System.out.println (t.toJSON ());
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					t.toWire (writer);
+					try
+					{
+						Hex.encode (writer.toByteArray (), System.out);
+						System.out.println ("");
+					}
+					catch ( IOException e )
+					{
+						e.printStackTrace ();
+					}
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
 
-				query = new JPAQuery (entityManager);
-				t = query.from (tx).where (tx.hash.eq ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73")).singleResult (tx);
-				writer = new WireFormat.Writer ();
-				t.toWire (writer);
-				try
-				{
+					query = new JPAQuery (entityManager);
+					t = query.from (tx).where (tx.hash.eq ("74c1a6dd6e88f73035143f8fc7420b5c395d28300a70bb35b943f7f2eddc656d")).singleResult (tx);
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
+
+					query = new JPAQuery (entityManager);
+					t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
+
+					query = new JPAQuery (entityManager);
+					t = query.from (tx).where (tx.hash.eq ("66ac54c1a3196e839c32c7700fbd91ee37b1ed4a53332e491bf5ddcd3901d0b1")).singleResult (tx);
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
+
+					query = new JPAQuery (entityManager);
+					t = query.from (tx).where (tx.hash.eq ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73")).singleResult (tx);
+					writer = new WireFormat.Writer ();
+					t.toWire (writer);
+					try
+					{
+						System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
+					}
+					catch ( UnsupportedEncodingException e )
+					{
+						e.printStackTrace ();
+					}
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
+
+					query = new JPAQuery (entityManager);
+					t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
+					writer = new WireFormat.Writer ();
+					t.toWire (writer);
 					System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
+					System.out.println (t.toJSON ());
+					assertTrue (new Script (t, 0).evaluate ());
 				}
-				catch ( UnsupportedEncodingException e )
+				catch ( Exception e )
 				{
 					e.printStackTrace ();
 				}
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
-
-				query = new JPAQuery (entityManager);
-				t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
-				writer = new WireFormat.Writer ();
-				t.toWire (writer);
-				try
-				{
-					System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
-				}
-				catch ( UnsupportedEncodingException e )
-				{
-					e.printStackTrace ();
-				}
-				System.out.println (t.toJSON ());
-				assertTrue (new Script (t, 0).evaluate ());
 
 			}
 		});
