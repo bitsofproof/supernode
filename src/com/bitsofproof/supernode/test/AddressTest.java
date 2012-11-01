@@ -39,8 +39,8 @@ public class AddressTest
 	public void satoshiAddressTest () throws ValidationException, UnsupportedEncodingException
 	{
 		// some real addresses
-		assertTrue (converter.toSatoshiStyle (Hex.decode ("9e969049aefe972e41aaefac385296ce18f30751")).equals ("1FTY8etSpSW3xv6s2XRrYE77rrRfza8aJJ"));
-		assertTrue (converter.toSatoshiStyle (Hex.decode ("623dbe779a29c6bc2615cd7bf5a35453f495e229")).equals ("19xTBrDcnZiJSMuzirE7SfcsjkG1ghp1RL"));
+		assertTrue (converter.toSatoshiStyle (Hex.decode ("9e969049aefe972e41aaefac385296ce18f30751"), false).equals ("1FTY8etSpSW3xv6s2XRrYE77rrRfza8aJJ"));
+		assertTrue (converter.toSatoshiStyle (Hex.decode ("623dbe779a29c6bc2615cd7bf5a35453f495e229"), false).equals ("19xTBrDcnZiJSMuzirE7SfcsjkG1ghp1RL"));
 
 		// some random
 		SecureRandom rnd = new SecureRandom ();
@@ -48,7 +48,7 @@ public class AddressTest
 		{
 			BigInteger n = new BigInteger (160, rnd);
 			byte[] keyDigest = n.toByteArray ();
-			String a = converter.toSatoshiStyle (keyDigest);
+			String a = converter.toSatoshiStyle (keyDigest, false);
 			byte[] check = converter.fromSatoshiStyle (a);
 			for ( int j = 0; j < keyDigest.length; ++j )
 			{
