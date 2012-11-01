@@ -1255,53 +1255,8 @@ public class Script
 						{
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
-							byte hashType = sig[sig.length - 1];
-							if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )
-							{
-								return false; // not supported as of now.
-							}
-							// implicit SIGHASH_ALL
-
-							byte[] signedScript = new byte[script.length - codeseparator];
-							System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
-							signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
-							Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
-							int ninr = 0;
-							for ( TxIn in : tx.getInputs () )
-							{
-								originalInputs.put (in, in.getScript ());
-								if ( ninr == inr )
-								{
-									in.setScript (signedScript);
-								}
-								else
-								{
-									in.setScript (new byte[0]);
-								}
-								++ninr;
-							}
-
-							WireFormat.Writer writer = new WireFormat.Writer ();
-							tx.toWire (writer);
-							for ( Map.Entry<TxIn, byte[]> e : originalInputs.entrySet () )
-							{
-								e.getKey ().setScript (e.getValue ());
-							}
-
-							byte[] txwire = writer.toByteArray ();
-							byte[] hash;
-							try
-							{
-								MessageDigest a = MessageDigest.getInstance ("SHA-256");
-								a.update (txwire);
-								a.update (new byte[] { hashType, 0, 0, 0 });
-								hash = a.digest (a.digest ());
-							}
-							catch ( NoSuchAlgorithmException e )
-							{
-								return false;
-							}
-							pushInt (ECKeyPair.verify (hash, sig, pubkey) ? 1 : 0);
+							boolean success = validateSignature (pubkey, sig);
+							pushInt (success ? 1 : 0);
 							if ( token.op == Opcode.OP_CHECKSIGVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
@@ -1347,7 +1302,35 @@ public class Script
 													// OP_CHECKMULTISIG, but
 													// OP_VERIFY is executed
 													// afterward.
-							return false; // not yet implemented
+						{
+							int nkeys = (int) popInt ();
+							if ( nkeys > 3 )
+							{
+								// BIP0011
+								return false;
+							}
+							byte[][] keys = new byte[nkeys][];
+							for ( int i = 0; i < nkeys; ++i )
+							{
+								keys[i] = stack.pop ();
+							}
+							int required = (int) popInt ();
+							byte[][] sigs = new byte[nkeys][];
+							for ( int i = 0; i < nkeys; ++i )
+							{
+								sigs[i] = stack.pop ();
+							}
+							stack.pop (); // reproduce Satoshi client bug
+							int successCounter = 0;
+							for ( int i = 0; successCounter < required && i < nkeys; ++i )
+							{
+								if ( validateSignature (keys[i], sigs[i]) )
+								{
+									++successCounter;
+								}
+							}
+							return successCounter == required;
+						}
 					}
 				}
 			}
@@ -1357,5 +1340,56 @@ public class Script
 			return false;
 		}
 		return popBoolean ();
+	}
+
+	private boolean validateSignature (byte[] pubkey, byte[] sig)
+	{
+		byte hashType = sig[sig.length - 1];
+		if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )
+		{
+			return false; // not supported as of now.
+		}
+		// implicit SIGHASH_ALL
+
+		byte[] signedScript = new byte[script.length - codeseparator];
+		System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
+		signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
+		Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
+		int ninr = 0;
+		for ( TxIn in : tx.getInputs () )
+		{
+			originalInputs.put (in, in.getScript ());
+			if ( ninr == inr )
+			{
+				in.setScript (signedScript);
+			}
+			else
+			{
+				in.setScript (new byte[0]);
+			}
+			++ninr;
+		}
+
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		tx.toWire (writer);
+		for ( Map.Entry<TxIn, byte[]> e : originalInputs.entrySet () )
+		{
+			e.getKey ().setScript (e.getValue ());
+		}
+
+		byte[] txwire = writer.toByteArray ();
+		byte[] hash;
+		try
+		{
+			MessageDigest a = MessageDigest.getInstance ("SHA-256");
+			a.update (txwire);
+			a.update (new byte[] { hashType, 0, 0, 0 });
+			hash = a.digest (a.digest ());
+		}
+		catch ( NoSuchAlgorithmException e )
+		{
+			return false;
+		}
+		return ECKeyPair.verify (hash, sig, pubkey);
 	}
 }
