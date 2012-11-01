@@ -55,6 +55,7 @@ public class TxIn implements Serializable, Cloneable
 
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
+	// scriptSig
 	private byte[] script;
 
 	public Long getId ()

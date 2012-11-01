@@ -45,6 +45,7 @@ public class TxOut implements Serializable
 
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
+	// scriptPubKey
 	private byte[] script;
 
 	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)

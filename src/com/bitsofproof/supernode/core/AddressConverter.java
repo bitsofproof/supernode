@@ -116,9 +116,12 @@ public class AddressConverter
 		try
 		{
 			byte[] raw = fromBase58 (s);
-			if ( raw[0] != (production ? 0 : 1) )
+			if ( production )
 			{
-				throw new ValidationException ("invalid address for this chain");
+				if ( raw[0] != 0 && raw[0] != 5 )
+				{ // 5 is multisig
+					throw new ValidationException ("invalid address for this chain");
+				}
 			}
 			byte[] check = Hash.hash (raw, 0, raw.length - 4).toByteArray ();
 			for ( int i = 0; i < 4; ++i )
@@ -138,10 +141,10 @@ public class AddressConverter
 		}
 	}
 
-	public String toSatoshiStyle (byte[] keyDigest)
+	public String toSatoshiStyle (byte[] keyDigest, boolean multisig)
 	{
 		byte[] addressBytes = new byte[1 + keyDigest.length + 4];
-		addressBytes[0] = (byte) (production ? 0 : 1);
+		addressBytes[0] = (byte) (production ? (multisig ? 5 : 0) : (multisig ? 1 : 0xc4));
 		System.arraycopy (keyDigest, 0, addressBytes, 1, keyDigest.length);
 		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1).toByteArray ();
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);

@@ -576,6 +576,7 @@ public class Script
 	public static int sigOpCount (byte[] script) throws ValidationException
 	{
 		int nsig = 0;
+		Opcode last = Opcode.OP_FALSE;
 		Tokenizer tokenizer = new Tokenizer (script);
 		while ( tokenizer.hashMoreElements () )
 		{
@@ -591,9 +592,18 @@ public class Script
 						break;
 					case OP_CHECKMULTISIG:
 					case OP_CHECKMULTISIGVERIFY:
-						nsig += 20; // not accurate
+						// https://en.bitcoin.it/wiki/BIP_0016
+						if ( last.o >= 0 && last.o <= 16 )
+						{
+							nsig += last.o;
+						}
+						else
+						{
+							nsig += 20;
+						}
 						break;
 				}
+				last = token.op;
 			}
 		}
 		return nsig;
@@ -668,8 +678,13 @@ public class Script
 		return writer.toByteArray ();
 	}
 
-	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluate ()
+	{
+		return evaluateGeneric ();
+	}
+
+	@SuppressWarnings ("incomplete-switch")
+	public boolean evaluateGeneric ()
 	{
 		Tokenizer tokenizer = new Tokenizer (script);
 
