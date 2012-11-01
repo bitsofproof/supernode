@@ -18,6 +18,7 @@
 		<dependency org="org.springframework.data" name="spring-data-jpa" rev="1.1.0.RELEASE">
 			<exclude module="org.eclipse.persistence.jpa"/>  <!-- do not know what this is -->
 			<exclude module="geronimo-jpa_3.0_spec"/> <!-- redefined javax.presistence.spi -->
+			<exclude module="com.springsource.org.hibernate.validator"/>
 		</dependency>
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
 		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>
