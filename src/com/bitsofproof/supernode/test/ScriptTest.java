@@ -75,7 +75,15 @@ public class ScriptTest
 	public void stringTest ()
 	{
 		Script s = new Script ("OP_PUSH2 abcd");
-		assertTrue (s.toString ().equals ("OP_PUSH2 abcd"));
+		assertTrue (s.toString ().equals ("abcd"));
+
+		s =
+				new Script (
+						"OP_PUSH71 3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 OP_PUSH33 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda");
+		assertTrue (s
+				.toString ()
+				.equals (
+						"3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda"));
 	}
 
 	@Test

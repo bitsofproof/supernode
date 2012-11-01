@@ -435,95 +435,92 @@ public class Script
 		script = writer.toByteArray ();
 	}
 
+	public class ScriptTokenizer
+	{
+		private final ScriptReader reader;
+
+		public ScriptTokenizer (byte[] script)
+		{
+			reader = new ScriptReader (script);
+		}
+
+		boolean hashMoreElements ()
+		{
+			return !reader.eof ();
+		}
+
+		public byte[] nextToken () throws ValidationException
+		{
+			int ix = reader.readByte ();
+			if ( ix > 185 )
+			{
+				throw new ValidationException ("Invalid script" + ix + " opcode at " + reader.cursor);
+			}
+			Opcode op = Opcode.values ()[ix];
+			if ( op.o <= 75 )
+			{
+				return reader.readBytes (op.o);
+			}
+			switch ( op )
+			{
+				case OP_PUSHDATA1:
+					return reader.readBytes (reader.readByte ());
+				case OP_PUSHDATA2:
+					return reader.readBytes ((int) reader.readInt16 ());
+				case OP_PUSHDATA4:
+					return reader.readBytes ((int) reader.readInt32 ());
+				default:
+					return reader.readBytes (1);
+			}
+		}
+	}
+
 	@Override
 	public String toString ()
 	{
 		StringBuffer b = new StringBuffer ();
 		try
 		{
-			ScriptReader reader = new ScriptReader (script);
+			ScriptTokenizer tokenizer = new ScriptTokenizer (script);
 			boolean first = true;
-			while ( !reader.eof () )
+			Opcode lastOp = Opcode.OP_FALSE;
+			while ( tokenizer.hashMoreElements () )
 			{
 				if ( !first )
 				{
 					b.append (" ");
 				}
 				first = false;
-				int ix = reader.readByte ();
-				if ( ix > 185 )
+				byte[] token = tokenizer.nextToken ();
+				if ( token.length == 1 )
 				{
-					b.append ("OP_INVALID");
-					continue;
-				}
-				Opcode op = Opcode.values ()[ix];
-				if ( op.o <= 75 )
-				{
-					b.append ("OP_PUSH" + op.o);
-					if ( op.o > 0 )
+					switch ( lastOp )
 					{
-						b.append (" ");
-						try
-						{
-							b.append (new String (Hex.encode (reader.readBytes (op.o)), "US-ASCII"));
-						}
-						catch ( UnsupportedEncodingException e )
-						{
-						}
+						case OP_1:
+						case OP_PUSHDATA1:
+						case OP_PUSHDATA2:
+						case OP_PUSHDATA4:
+							b.append (new String (Hex.encode (token), "US-ASCII"));
+							lastOp = Opcode.OP_FALSE;
+							break;
+						default:
+							b.append ((lastOp = Opcode.values ()[token[0] & 0xff]).toString ());
 					}
 				}
 				else
 				{
-					switch ( op )
-					{
-						case OP_PUSHDATA1:
-						{
-							int n = reader.readByte ();
-							b.append ("OP_PUSHDATA1 ");
-							b.append (" ");
-							try
-							{
-								b.append (new String (Hex.encode (reader.readBytes (n)), "US-ASCII"));
-							}
-							catch ( UnsupportedEncodingException e )
-							{
-							}
-						}
-							break;
-						case OP_PUSHDATA2:
-						{
-							b.append ("OP_PUSHDATA2 ");
-							b.append (" ");
-							long n = reader.readInt16 ();
-							try
-							{
-								b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
-							}
-							catch ( UnsupportedEncodingException e )
-							{
-							}
-						}
-							break;
-						case OP_PUSHDATA4:
-						{
-							b.append ("OP_PUSHDATA4 ");
-							b.append (" ");
-							long n = reader.readInt32 ();
-							try
-							{
-								b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
-							}
-							catch ( UnsupportedEncodingException e )
-							{
-							}
-						}
-							break;
-						default:
-							b.append (op.toString ());
-					}
+					b.append (new String (Hex.encode (token), "US-ASCII"));
 				}
 			}
 			return b.toString ();
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+			throw new RuntimeException (e);
+		}
+		catch ( ValidationException e )
+		{
+			throw new RuntimeException (e);
 		}
 		catch ( Exception e )
 		{
