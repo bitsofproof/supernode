@@ -1327,7 +1327,7 @@ public class Script
 													// afterward.
 						{
 							int nkeys = (int) popInt ();
-							if ( nkeys < 0 || nkeys > 20 )
+							if ( nkeys <= 0 || nkeys > 20 )
 							{
 								return false;
 							}
@@ -1337,22 +1337,31 @@ public class Script
 								keys[i] = stack.pop ();
 							}
 							int required = (int) popInt ();
+							if ( required <= 0 )
+							{
+								return false;
+							}
 
 							byte[] sts = scriptToSign (script, codeseparator);
 
+							int havesig = 0;
 							byte[][] sigs = new byte[nkeys][];
-							for ( int i = 0; i < nkeys; ++i )
+							for ( int i = 0; i < nkeys && stack.size () > 1; ++i )
 							{
 								sigs[i] = stack.pop ();
+								++havesig;
 								sts = deleteSignaturFromScript (sts, sigs[i]);
 							}
 							stack.pop (); // reproduce Satoshi client bug
 							int successCounter = 0;
-							for ( int i = 0; successCounter < required && i < (nkeys - successCounter + 1); ++i )
+							for ( int i = 0; (required - successCounter) <= (nkeys - i) && i < nkeys; ++i )
 							{
-								if ( validateSignature (keys[i], sigs[i], sts) )
+								for ( int j = 0; successCounter < required && j < havesig; ++j )
 								{
-									++successCounter;
+									if ( validateSignature (keys[i], sigs[j], sts) )
+									{
+										++successCounter;
+									}
 								}
 							}
 							pushInt (successCounter == required ? 1 : 0);
