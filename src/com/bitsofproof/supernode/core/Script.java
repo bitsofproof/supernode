@@ -21,8 +21,10 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -458,8 +460,8 @@ public class Script
 
 	public static class Token
 	{
-		Opcode op;
-		byte[] data;
+		public Opcode op;
+		public byte[] data;
 	}
 
 	public static class Tokenizer
@@ -471,7 +473,7 @@ public class Script
 			reader = new Reader (script);
 		}
 
-		boolean hashMoreElements ()
+		public boolean hashMoreElements ()
 		{
 			return !reader.eof ();
 		}
@@ -520,6 +522,17 @@ public class Script
 		}
 	}
 
+	public static List<Token> parse (byte[] script) throws ValidationException
+	{
+		List<Token> p = new ArrayList<Token> ();
+		Tokenizer tokenizer = new Tokenizer (script);
+		while ( tokenizer.hashMoreElements () )
+		{
+			p.add (tokenizer.nextToken ());
+		}
+		return p;
+	}
+
 	public static String toReadable (byte[] script)
 	{
 		StringBuffer b = new StringBuffer ();
@@ -562,11 +575,9 @@ public class Script
 
 	public static boolean isPushOnly (byte[] script) throws ValidationException
 	{
-		Tokenizer tokenizer = new Tokenizer (script);
-		while ( tokenizer.hashMoreElements () )
+		for ( Token t : parse (script) )
 		{
-			Token token = tokenizer.nextToken ();
-			if ( token.data != null )
+			if ( t.data != null )
 			{
 				return false;
 			}
@@ -642,28 +653,11 @@ public class Script
 		return writer.toByteArray ();
 	}
 
-	private boolean isPayToScriptHash (byte[] script) throws ValidationException
+	public boolean isPayToScriptHash (byte[] script) throws ValidationException
 	{
-		Tokenizer tokenizer = new Tokenizer (script);
-		int i = 0;
-		while ( tokenizer.hashMoreElements () )
-		{
-			Token token = tokenizer.nextToken ();
-			if ( i == 0 && token.op != Opcode.OP_HASH160 )
-			{
-				return false;
-			}
-			if ( i == 1 && token.data != null || token.data.length != 20 )
-			{
-				return false;
-			}
-			if ( i == 2 && token.op != Opcode.OP_EQUAL )
-			{
-				return false;
-			}
-			++i;
-		}
-		return i == 3;
+		List<Token> parsed = parse (script);
+		return parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+				&& parsed.get (2).op == Opcode.OP_EQUAL;
 	}
 
 	@SuppressWarnings ("unchecked")

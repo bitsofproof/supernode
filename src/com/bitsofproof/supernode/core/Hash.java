@@ -19,8 +19,6 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.bouncycastle.util.encoders.Hex;
-
 public class Hash
 {
 	private byte[] bytes;
@@ -46,7 +44,7 @@ public class Hash
 			throw new IllegalArgumentException ("Digest length must be 64 hex characters for Hash");
 		}
 
-		this.bytes = reverse (Hex.decode (hex));
+		this.bytes = ByteUtils.reverse (ByteUtils.fromHex (hex));
 	}
 
 	public static Hash digest (byte[] data)
@@ -87,7 +85,7 @@ public class Hash
 	{
 		byte[] hashAsNumber = new byte[32];
 		System.arraycopy (bytes, 0, hashAsNumber, 0, 32);
-		reverse (hashAsNumber);
+		ByteUtils.reverse (hashAsNumber);
 		return new BigInteger (hashAsNumber);
 	}
 
@@ -106,17 +104,5 @@ public class Hash
 			buf.append (s);
 		}
 		return buf.toString ();
-	}
-
-	// in place reverse using XOR
-	private static byte[] reverse (byte[] data)
-	{
-		for ( int i = 0, j = data.length - 1; i < data.length / 2; i++, j-- )
-		{
-			data[i] ^= data[j];
-			data[j] ^= data[i];
-			data[i] ^= data[j];
-		}
-		return data;
 	}
 }

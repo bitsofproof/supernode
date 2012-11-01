@@ -19,7 +19,6 @@ import java.io.Serializable;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -43,6 +42,9 @@ public class TxOut implements Serializable
 
 	private long value;
 
+	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = true)
+	private Account account;
+
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
 	// scriptPubKey
@@ -52,9 +54,6 @@ public class TxOut implements Serializable
 	private Tx transaction;
 
 	private long ix;
-
-	@Column (length = 40, nullable = true)
-	private String address;
 
 	public String toJSON ()
 	{
@@ -128,20 +127,9 @@ public class TxOut implements Serializable
 		this.ix = ix;
 	}
 
-	public String getAddress ()
-	{
-		return address;
-	}
-
-	public void setAddress (String address)
-	{
-		this.address = address;
-	}
-
 	protected TxOut flatCopy (Tx tc)
 	{
 		TxOut c = new TxOut ();
-		c.address = address;
 		c.ix = ix;
 		c.script = script;
 		c.transaction = tc;
