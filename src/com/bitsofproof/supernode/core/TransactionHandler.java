@@ -15,12 +15,14 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.core.BitcoinNetwork.PeerTask;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
@@ -35,9 +37,9 @@ public class TransactionHandler
 	private BlockStore store;
 	private ChainLoader loader;
 
-	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
+	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
-	public TransactionHandler (BitcoinNetwork network)
+	public TransactionHandler (final BitcoinNetwork network)
 	{
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
@@ -65,12 +67,30 @@ public class TransactionHandler
 		{
 
 			@Override
-			public void process (TxMessage txm, BitcoinPeer peer) throws Exception
+			public void process (final TxMessage txm, final BitcoinPeer peer) throws Exception
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				store.validateTransaction (txm.getTx ());
-				log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
-				unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
+				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
+				{
+					store.validateTransaction (txm.getTx ());
+					log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
+					unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
+					network.runForConnected (new PeerTask ()
+					{
+						@Override
+						public void run (BitcoinPeer p) throws Exception
+						{
+							// tell others
+							if ( p != peer )
+							{
+								TxMessage tm = (TxMessage) p.createMessage ("tx");
+								tm.setTx (txm.getTx ());
+								p.send (tm);
+								log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
+							}
+						}
+					});
+				}
 			}
 		});
 	}
