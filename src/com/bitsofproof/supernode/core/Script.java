@@ -22,7 +22,9 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -36,6 +38,7 @@ public class Script
 {
 	private Stack<byte[]> stack = new Stack<byte[]> ();
 	private final Stack<byte[]> alt = new Stack<byte[]> ();
+	private Set<String> validSignatureCache = new HashSet<String> ();
 	private final Tx tx;
 	private int inr;
 
@@ -398,6 +401,13 @@ public class Script
 	{
 		this.tx = tx.flatCopy (); // we mess around with...
 		this.inr = inr;
+	}
+
+	public Script (Tx tx, int inr, Set<String> sigCache)
+	{
+		this.tx = tx.flatCopy (); // we mess around with...
+		this.inr = inr;
+		this.validSignatureCache = sigCache;
 	}
 
 	public static byte[] fromReadable (String s)
@@ -1411,6 +1421,25 @@ public class Script
 		{
 			return false;
 		}
-		return ECKeyPair.verify (hash, sig, pubkey);
+		String cacheKey = null;
+		try
+		{
+			StringBuffer c = new StringBuffer ();
+			c.append (new String (Hex.encode (sig), "US-ASCII"));
+			c.append (new String (Hex.encode (pubkey), "US-ASCII"));
+			c.append (new String (Hex.encode (hash), "US-ASCII"));
+			cacheKey = c.toString ();
+			if ( validSignatureCache.contains (cacheKey) )
+			{
+				return true;
+			}
+		}
+		catch ( UnsupportedEncodingException e1 )
+		{
+		}
+		synchronized ( validSignatureCache )
+		{
+			return validSignatureCache.contains (cacheKey) || ECKeyPair.verify (hash, sig, pubkey) && validSignatureCache.add (cacheKey);
+		}
 	}
 }
