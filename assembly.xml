@@ -49,9 +49,11 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 	
-
+	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery"/>
+	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
+		<property name="discovery" ref="dnsDiscovery"/>
 		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="${store}" />
 		<property name="transactionManager" ref="transactionManager" />
@@ -89,7 +91,6 @@
 		<property name="delay" value="60"/>
 		<property name="startDelay" value="60"/>		
 	</bean>
-	
 	<bean id="application" class="com.bitsofproof.supernode.main.Application">
 		<property name="chain" ref="${chain}"/>
 		<property name="network" ref="bitcoinNetwork"/>

@@ -53,6 +53,7 @@ public class BitcoinNetwork extends P2P
 	private Chain chain;
 	private BlockStore store;
 	private PlatformTransactionManager transactionManager;
+	private Discovery discovery;
 
 	private TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
@@ -381,53 +382,27 @@ public class BitcoinNetwork extends P2P
 		});
 	}
 
-	private boolean testPeer = false;
-
 	@Override
 	public boolean discover ()
 	{
-		if ( testPeer )
-		{
-			return false;
-		}
-
-		log.info ("Discovering network");
-		int n = 0;
-		List<InetAddress> al = new ArrayList<InetAddress> ();
-		for ( String hostName : chain.getSeedHosts () )
-		{
-			try
-			{
-				InetAddress[] hostAddresses = InetAddress.getAllByName (hostName);
-
-				for ( InetAddress inetAddress : hostAddresses )
-				{
-					al.add (inetAddress);
-					++n;
-				}
-			}
-			catch ( Exception e )
-			{
-				log.trace ("DNS lookup for " + hostName + " failed.");
-			}
-		}
-
+		List<InetAddress> al = discovery.discover ();
 		Collections.shuffle (al);
 		for ( InetAddress a : al )
 		{
 			addPeer (a, chain.getPort ());
 		}
 
-		log.info ("Found " + n + " addresses of seed hosts");
-		return true;
+		return !al.isEmpty ();
 	}
 
-	// for tests
-	public void start (InetAddress address, int port) throws IOException
+	public Discovery getDiscovery ()
 	{
-		testPeer = true;
-		setPort (port);
-		super.start ();
+		return discovery;
+	}
+
+	public void setDiscovery (Discovery discovery)
+	{
+		this.discovery = discovery;
 	}
 
 }

@@ -30,7 +30,6 @@ public abstract class ChainImpl implements Chain
 	private final int difficultyReviewBlocks;
 	private final int targetBlockTime;
 	private final byte[] alertKey;
-	private final String[] seedHosts;
 
 	public static BigInteger difficultyToNumber (long difficulty)
 	{
@@ -56,8 +55,7 @@ public abstract class ChainImpl implements Chain
 		return new BigInteger (buf);
 	}
 
-	public ChainImpl (long version, long magic, int port, int addressType, int privateKeyType, int difficultyReviewBlocks, int targetBlockTime,
-			byte[] alertKey, String[] seedHosts)
+	public ChainImpl (long version, long magic, int port, int addressType, int privateKeyType, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
 	{
 		this.version = version;
 		this.magic = magic;
@@ -67,7 +65,6 @@ public abstract class ChainImpl implements Chain
 		this.difficultyReviewBlocks = difficultyReviewBlocks;
 		this.targetBlockTime = targetBlockTime;
 		this.alertKey = alertKey;
-		this.seedHosts = seedHosts;
 	}
 
 	@Override
@@ -113,12 +110,6 @@ public abstract class ChainImpl implements Chain
 	public byte[] getAlertKey ()
 	{
 		return alertKey;
-	}
-
-	@Override
-	public String[] getSeedHosts ()
-	{
-		return seedHosts;
 	}
 
 	@Override

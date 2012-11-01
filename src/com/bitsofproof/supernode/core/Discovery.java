@@ -15,26 +15,10 @@
  */
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.model.Blk;
+import java.net.InetAddress;
+import java.util.List;
 
-public interface Chain
+public interface Discovery
 {
-	public Blk getGenesis ();
-
-	public long getMagic ();
-
-	public int getPort ();
-
-	public int getAddressType ();
-
-	public int getPrivateKeyType ();
-
-	public int getDifficultyReviewBlocks ();
-
-	public int getTargetBlockTime ();
-
-	public byte[] getAlertKey ();
-
-	public long getVersion ();
-
+	public List<InetAddress> discover ();
 }

@@ -35,11 +35,7 @@ public class SatoshiChain extends ChainImpl
 
 	public SatoshiChain ()
 	{
-		super (60001, 0xD9B4BEF9L, 8333, 0, 128, 2015, 1209600, SATOSHI_KEY, new String[] { "dnsseed.bluematt.me", // Matt Corallo
-				"bitseed.xf2.org", // Jeff Garzik
-				"seed.bitcoin.sipa.be", // Pieter Wuille
-				"dnsseed.bitcoin.dashjr.org", // Luke Dashjr
-		});
+		super (60001, 0xD9B4BEF9L, 8333, 0, 128, 2015, 1209600, SATOSHI_KEY);
 	}
 
 	@Override
