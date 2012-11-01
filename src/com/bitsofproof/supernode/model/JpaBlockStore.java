@@ -490,7 +490,10 @@ class JpaBlockStore implements BlockStore
 				{
 					try
 					{
-						throw e.get ();
+						if ( e != null )
+						{
+							throw e.get ();
+						}
 					}
 					catch ( ExecutionException e1 )
 					{
