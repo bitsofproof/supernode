@@ -762,7 +762,7 @@ class JpaBlockStore implements BlockStore
 						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
-				if ( tcontext.block != null && tcontext.block.getHeight () > 140000 && !Script.isPushOnly (i.getScript ()) )
+				if ( tcontext.block != null && tcontext.block.getHeight () > 200000 && !Script.isPushOnly (i.getScript ()) )
 				{
 					throw new ValidationException ("input script should be push only " + t.toWireDump ());
 				}

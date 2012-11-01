@@ -147,7 +147,7 @@ public class TxIn implements Serializable, Cloneable
 			b.append ("\"sourceHash\":\"" + Hash.ZERO_HASH.toString () + "\",");
 			b.append ("\"sourceIx\":" + -1 + ",");
 		}
-		b.append ("\"script\":\"" + new Script (script).toString () + "\"" + ",");
+		b.append ("\"script\":\"" + Script.toReadable (script) + "\"" + ",");
 		b.append ("\"sequence\":" + String.valueOf (sequence));
 		b.append ("}");
 		return b.toString ();

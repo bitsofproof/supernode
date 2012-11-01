@@ -36,10 +36,8 @@ public class Script
 {
 	private final Stack<byte[]> stack = new Stack<byte[]> ();
 	private final Stack<byte[]> alt = new Stack<byte[]> ();
-	private final byte[] script;
-	private Tx tx;
+	private final Tx tx;
 	private int inr;
-	private int codeseparator;
 
 	@SuppressWarnings ("unused")
 	// unfortunatelly unused: https://bitcointalk.org/index.php?topic=120836.0
@@ -311,13 +309,16 @@ public class Script
 
 	private BigInteger toNumber (byte[] b)
 	{
+		// reverse...
+		byte[] n = new byte[b.length];
+		System.arraycopy (b, 0, n, 0, b.length);
 		boolean negative = false;
-		reverse (b);
-		if ( (b[0] & 0x80) != 0 )
+		reverse (n);
+		if ( (n[0] & 0x80) != 0 )
 		{
-			b[0] &= (byte) 0x7f;
+			n[0] &= (byte) 0x7f;
 		}
-		BigInteger bi = new BigInteger (b);
+		BigInteger bi = new BigInteger (n);
 		if ( negative )
 		{
 			bi = bi.negate ();
@@ -388,26 +389,18 @@ public class Script
 		return data;
 	}
 
-	public Script (byte[] script)
+	public Script ()
 	{
-		this.script = script;
 		this.tx = null;
-		this.codeseparator = 0;
 	}
 
 	public Script (Tx tx, int inr)
 	{
-		byte[] sign = tx.getInputs ().get (inr).getScript ();
-		byte[] out = tx.getInputs ().get (inr).getSource ().getScript ();
-		script = new byte[sign.length + out.length];
-		System.arraycopy (sign, 0, script, 0, sign.length);
-		System.arraycopy (out, 0, script, sign.length, out.length);
 		this.tx = tx.flatCopy (); // we mess around with...
 		this.inr = inr;
-		this.codeseparator = sign.length;
 	}
 
-	public Script (String s)
+	public static byte[] fromReadable (String s)
 	{
 		Writer writer = new Writer ();
 		StringTokenizer tokenizer = new StringTokenizer (s, " ");
@@ -450,7 +443,7 @@ public class Script
 				}
 			}
 		}
-		script = writer.toByteArray ();
+		return writer.toByteArray ();
 	}
 
 	public static class Token
@@ -517,8 +510,7 @@ public class Script
 		}
 	}
 
-	@Override
-	public String toString ()
+	public static String toReadable (byte[] script)
 	{
 		StringBuffer b = new StringBuffer ();
 		try
@@ -680,13 +672,24 @@ public class Script
 
 	public boolean evaluate ()
 	{
-		return evaluateGeneric ();
+		byte[] s1 = tx.getInputs ().get (inr).getScript ();
+		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+		if ( !evaluateSingleScript (s1) )
+		{
+			return false;
+		}
+		if ( !evaluateSingleScript (s2) )
+		{
+			return false;
+		}
+		return true;
 	}
 
 	@SuppressWarnings ("incomplete-switch")
-	public boolean evaluateGeneric ()
+	public boolean evaluateSingleScript (byte[] script)
 	{
 		Tokenizer tokenizer = new Tokenizer (script);
+		int codeseparator = 0;
 
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
 		ignoreStack.push (false);
@@ -1229,7 +1232,7 @@ public class Script
 												// after the most
 												// recently-executed
 												// OP_CODESEPARATOR.
-							codeseparator = tokenizer.getCursor () + 1;
+							codeseparator = tokenizer.getCursor ();
 							break;
 						case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
 							// Same
@@ -1255,7 +1258,7 @@ public class Script
 						{
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
-							boolean success = validateSignature (pubkey, sig);
+							boolean success = validateSignature (pubkey, sig, codeseparator, script);
 							pushInt (success ? 1 : 0);
 							if ( token.op == Opcode.OP_CHECKSIGVERIFY )
 							{
@@ -1324,7 +1327,7 @@ public class Script
 							int successCounter = 0;
 							for ( int i = 0; successCounter < required && i < nkeys; ++i )
 							{
-								if ( validateSignature (keys[i], sigs[i]) )
+								if ( validateSignature (keys[i], sigs[i], codeseparator, script) )
 								{
 									++successCounter;
 								}
@@ -1339,10 +1342,10 @@ public class Script
 		{
 			return false;
 		}
-		return popBoolean ();
+		return peekBoolean ();
 	}
 
-	private boolean validateSignature (byte[] pubkey, byte[] sig)
+	private boolean validateSignature (byte[] pubkey, byte[] sig, int codeseparator, byte[] script)
 	{
 		byte hashType = sig[sig.length - 1];
 		if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )

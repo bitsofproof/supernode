@@ -61,7 +61,7 @@ public class TxOut implements Serializable
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");
 		b.append ("\"value\":" + getValue () + ",");
-		b.append ("\"script\":\"" + new Script (script).toString () + "\"");
+		b.append ("\"script\":\"" + Script.toReadable (script) + "\"");
 		b.append ("}");
 		return b.toString ();
 	}

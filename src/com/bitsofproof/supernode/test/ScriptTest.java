@@ -74,14 +74,11 @@ public class ScriptTest
 	@Test
 	public void stringTest ()
 	{
-		Script s = new Script ("OP_PUSH2 abcd");
-		assertTrue (s.toString ().equals ("abcd"));
+		assertTrue (Script.toReadable (Script.fromReadable ("OP_PUSH2 abcd")).equals ("abcd"));
 
-		s =
-				new Script (
-						"OP_PUSH71 3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 OP_PUSH33 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda");
-		assertTrue (s
-				.toString ()
+		assertTrue (Script
+				.toReadable (
+						Script.fromReadable ("OP_PUSH71 3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 OP_PUSH33 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda"))
 				.equals (
 						"3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda"));
 	}
@@ -89,35 +86,35 @@ public class ScriptTest
 	@Test
 	public void dataPushTest ()
 	{
-		Script s = new Script ("OP_PUSH3 0a0b0c OP_PUSHDATA1 03 0a0b0c OP_EQUAL");
-		assertTrue (s.evaluate ());
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSH3 0a0b0c OP_PUSHDATA1 03 0a0b0c OP_EQUAL")));
 	}
 
 	@Test
 	public void ifTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_1 OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_IF OP_1 OP_ELSE OP_1 OP_ENDIF").evaluate ());
-		assertFalse (new Script ("OP_1 OP_IF OP_FALSE OP_ELSE OP_1 OP_ENDIF OP_EQUAL").evaluate ());
-		assertFalse (new Script ("OP_1 OP_IF OP_1 OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_NOTIF OP_FALSE OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_1 OP_EQUAL").evaluate ());
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_1 OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_IF OP_1 OP_ELSE OP_1 OP_ENDIF")));
+		assertFalse (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_IF OP_FALSE OP_ELSE OP_1 OP_ENDIF OP_EQUAL")));
+		assertFalse (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_IF OP_1 OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script
+				.fromReadable ("OP_1 OP_NOTIF OP_FALSE OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_1 OP_EQUAL")));
 	}
 
 	@Test
 	public void stackTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUAL").evaluate ());
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUAL")));
 	}
 
 	@Test
 	public void mathTest ()
 	{
-		assertTrue (new Script ("OP_1 OP_2 OP_ADD OP_3 OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_3 OP_DUP OP_SUB OP_FALSE OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_5 OP_SUB OP_ABS OP_4 OP_EQUAL").evaluate ());
-		assertTrue (new Script ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUAL").evaluate ());
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_2 OP_ADD OP_3 OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_3 OP_DUP OP_SUB OP_FALSE OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_5 OP_SUB OP_ABS OP_4 OP_EQUAL")));
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUAL")));
 	}
 
 	private static String toHex (byte[] b)
@@ -141,8 +138,8 @@ public class ScriptTest
 			MessageDigest a = MessageDigest.getInstance ("SHA-256");
 			byte[] h = a.digest (b);
 
-			assertTrue (new Script ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + toHex (b) + " OP_SHA256 OP_PUSHDATA1 20 " + toHex (h)
-					+ " OP_EQUAL").evaluate ());
+			assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + toHex (b)
+					+ " OP_SHA256 OP_PUSHDATA1 20 " + toHex (h) + " OP_EQUAL")));
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
@@ -166,7 +163,7 @@ public class ScriptTest
 		t2.fromWire (reader);
 		assertTrue (t2.getHash ().equals ("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16"));
 		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
-		// assertTrue (new Script (t1, 0).evaluate ());
+		assertTrue (new Script (t1, 0).evaluate ());
 
 		reader =
 				new WireFormat.Reader (
@@ -183,7 +180,8 @@ public class ScriptTest
 		assertTrue (t2.getHash ().equals ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25"));
 
 		t2.getInputs ().get (0).setSource (t1.getOutputs ().get (0));
-		// assertTrue (new Script (t2, 0).evaluate ());
+		System.out.println (t2.toJSON ());
+		assertTrue (new Script (t2, 0).evaluate ());
 
 		reader =
 				new WireFormat.Reader (
@@ -217,11 +215,20 @@ public class ScriptTest
 		t2 =
 				Tx.fromWireDump ("010000000104cc410a858127cad099f4ea6e1942a9a9002c14acc6d1bbbc223c8ec97e482a010000008a47304402207547807093f864090cb68a5913499ce75554404e8f47699bea33a78f2d63dabd0220706d44bfdf2c6e10a11b8c0b800eef5fb06ecaae60e2653a742c4b4d58436182014104e9469f3c23309dd1eb3557ba2536ae7b58743425739c00c4af436998a0974d20edcb3c5a4cb621f103915df1271fdb56e58bd8161fbe24a726906328f48f9700ffffffff02a0860100000000001976a9149e969049aefe972e41aaefac385296ce18f3075188ac904c9600000000001976a9149e969049aefe972e41aaefac385296ce18f3075188ac00000000");
 
+		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (0));
+		assertTrue (new Script (t1, 0).evaluate ());
+
+		// Multisig
+		t1 =
+				Tx.fromWireDump ("01000000024de8b0c4c2582db95fa6b3567a989b664484c7ad6672c85a3da413773e63fdb8000000006b48304502205b282fbc9b064f3bc823a23edcc0048cbb174754e7aa742e3c9f483ebe02911c022100e4b0b3a117d36cab5a67404dddbf43db7bea3c1530e0fe128ebc15621bd69a3b0121035aa98d5f77cd9a2d88710e6fc66212aff820026f0dad8f32d1f7ce87457dde50ffffffff4de8b0c4c2582db95fa6b3567a989b664484c7ad6672c85a3da413773e63fdb8010000006f004730440220276d6dad3defa37b5f81add3992d510d2f44a317fd85e04f93a1e2daea64660202200f862a0da684249322ceb8ed842fb8c859c0cb94c81e1c5308b4868157a428ee01ab51210232abdc893e7f0631364d7fd01cb33d24da45329a00357b3a7886211ab414d55a51aeffffffff02e0fd1c00000000001976a914380cb3c594de4e7e9b8e18db182987bebb5a4f7088acc0c62d000000000017142a9bc5447d664c1d0141392a842d23dba45c4f13b17500000000");
+		t2 =
+				Tx.fromWireDump ("01000000017ea56cd68c74b4cd1a2f478f361b8a67c15a6629d73d95ef21d96ae213eb5b2d010000006a4730440220228e4deb3bc5b47fc526e2a7f5e9434a52616f8353b55dbc820ccb69d5fbded502206a2874f7f84b20015614694fe25c4d76f10e31571f03c240e3e4bbf1f9985be201210232abdc893e7f0631364d7fd01cb33d24da45329a00357b3a7886211ab414d55affffffff0230c11d00000000001976a914709dcb44da534c550dacf4296f75cba1ba3b317788acc0c62d000000000017142a9bc5447d664c1d0141392a842d23dba45c4f13b17500000000");
+
 		System.out.println (t1.toJSON ());
 		System.out.println (t2.toJSON ());
 
-		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (0));
-		assertTrue (new Script (t1, 0).evaluate ());
+		t1.getInputs ().get (1).setSource (t2.getOutputs ().get (0));
+		assertTrue (new Script (t1, 1).evaluate ());
 
 		if ( !usedb )
 		{
