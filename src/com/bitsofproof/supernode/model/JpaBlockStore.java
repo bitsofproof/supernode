@@ -490,7 +490,7 @@ class JpaBlockStore implements BlockStore
 				{
 					try
 					{
-						if ( e != null )
+						if ( e.get () != null )
 						{
 							throw e.get ();
 						}
