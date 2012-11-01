@@ -154,7 +154,7 @@ public class PooledDatasource implements DataSource
 		{
 			if ( pool.isEmpty () )
 			{
-				log.info ("creating new connection ");
+				log.trace ("creating new connection ");
 				c = new MyPooledConnection (dataSource.getPooledConnection ());
 			}
 			else

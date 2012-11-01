@@ -34,11 +34,12 @@ public class DNSDiscovery implements Discovery
 	@Override
 	public List<InetAddress> discover ()
 	{
-		log.trace ("Discovering network");
+		log.trace ("Discovering network using DNS seed");
 		int n = 0;
 		List<InetAddress> al = new ArrayList<InetAddress> ();
 		for ( String hostName : seedHosts )
 		{
+			log.trace ("Obtain addresses from " + hostName);
 			try
 			{
 				InetAddress[] hostAddresses = InetAddress.getAllByName (hostName);

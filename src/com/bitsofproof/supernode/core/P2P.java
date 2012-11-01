@@ -667,7 +667,7 @@ public abstract class P2P
 						{
 							if ( connectedPeers.size () < desiredConnections )
 							{
-								log.info ("Need to discover new adresses.");
+								log.trace ("Need to discover new adresses.");
 								if ( !discover () )
 								{
 									break; // testing
