@@ -1,0 +1,18 @@
+INTRODUCTION
+
+Welcome to the Bitcoin supernode.
+
+I created this implementation of Satoshi Nakamoto's Bitcoin protocol for a server.
+This implementation will scale and is configurable to perform selected tasks. 
+
+LICENCE
+
+Apache Licence, Version 2.0. See LICENSE file.
+
+AUTHOR
+
+Tamas Blummer tamas@bitsofproof.com
+
+DONATIONS
+
+
