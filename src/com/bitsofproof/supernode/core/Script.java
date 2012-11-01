@@ -601,70 +601,32 @@ public class Script
 		return nsig;
 	}
 
-	private static byte[] findAndDeleteSignatureAndSeparator (byte[] script, byte[] data)
+	private static byte[] deleteSignaturFromScript (byte[] script, byte[] sig) throws ValidationException
 	{
-		Reader reader = new Reader (script);
+		Tokenizer tokenizer = new Tokenizer (script);
 		Writer writer = new Writer ();
-		while ( !reader.eof () )
+		while ( tokenizer.hashMoreElements () )
 		{
-			int op = reader.readByte ();
-			if ( op <= 75 )
+			Token token = tokenizer.nextToken ();
+			if ( token.data != null && token.data.length == sig.length )
 			{
-				boolean found = false;
-				byte[] b = reader.readBytes (op);
-				if ( op == data.length )
+				boolean found = true;
+				for ( int i = 0; i < sig.length; ++i )
 				{
-					int i = 0;
-					for ( ; i < b.length; ++i )
+					if ( sig[i] != token.data[i] )
 					{
-						if ( b[i] != data[i] )
-						{
-							break;
-						}
-					}
-					if ( i == b.length )
-					{
-						found = true;
+						found = false;
+						break;
 					}
 				}
 				if ( !found )
 				{
-					writer.writeByte (op);
-					writer.writeBytes (b);
+					writer.writeToken (token);
 				}
 			}
 			else
 			{
-				Opcode code = Opcode.values ()[op];
-				switch ( code )
-				{
-					case OP_PUSHDATA1:
-					{
-						int n = reader.readByte ();
-						writer.writeByte (op);
-						writer.writeBytes (reader.readBytes (n));
-					}
-						break;
-					case OP_PUSHDATA2:
-					{
-						long n = reader.readInt16 ();
-						writer.writeByte (op);
-						writer.writeBytes (reader.readBytes ((int) n));
-					}
-						break;
-					case OP_PUSHDATA4:
-					{
-						long n = reader.readInt32 ();
-						writer.writeByte (op);
-						writer.writeBytes (reader.readBytes ((int) n));
-					}
-						break;
-					case OP_CODESEPARATOR:
-						break;
-					default:
-						writer.writeByte (op);
-						break;
-				}
+				writer.writeToken (token);
 			}
 		}
 		return writer.toByteArray ();
@@ -1258,8 +1220,11 @@ public class Script
 						{
 							byte[] pubkey = stack.pop ();
 							byte[] sig = stack.pop ();
-							boolean success = validateSignature (pubkey, sig, codeseparator, script);
-							pushInt (success ? 1 : 0);
+
+							byte[] sts = scriptToSign (script, codeseparator);
+							sts = deleteSignaturFromScript (sts, sig);
+
+							pushInt (validateSignature (pubkey, sig, sts) ? 1 : 0);
 							if ( token.op == Opcode.OP_CHECKSIGVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
@@ -1307,9 +1272,8 @@ public class Script
 													// afterward.
 						{
 							int nkeys = (int) popInt ();
-							if ( nkeys > 3 )
+							if ( nkeys < 0 || nkeys > 20 )
 							{
-								// BIP0011
 								return false;
 							}
 							byte[][] keys = new byte[nkeys][];
@@ -1318,22 +1282,27 @@ public class Script
 								keys[i] = stack.pop ();
 							}
 							int required = (int) popInt ();
+
+							byte[] sts = scriptToSign (script, codeseparator);
+
 							byte[][] sigs = new byte[nkeys][];
 							for ( int i = 0; i < nkeys; ++i )
 							{
 								sigs[i] = stack.pop ();
+								sts = deleteSignaturFromScript (sts, sigs[i]);
 							}
 							stack.pop (); // reproduce Satoshi client bug
 							int successCounter = 0;
-							for ( int i = 0; successCounter < required && i < nkeys; ++i )
+							for ( int i = 0; successCounter < required && i < (nkeys - successCounter + 1); ++i )
 							{
-								if ( validateSignature (keys[i], sigs[i], codeseparator, script) )
+								if ( validateSignature (keys[i], sigs[i], sts) )
 								{
 									++successCounter;
 								}
 							}
-							return successCounter == required;
+							pushInt (successCounter == required ? 1 : 0);
 						}
+							break;
 					}
 				}
 			}
@@ -1345,7 +1314,14 @@ public class Script
 		return peekBoolean ();
 	}
 
-	private boolean validateSignature (byte[] pubkey, byte[] sig, int codeseparator, byte[] script)
+	private byte[] scriptToSign (byte[] script, int codeseparator) throws ValidationException
+	{
+		byte[] signedScript = new byte[script.length - codeseparator];
+		System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
+		return signedScript;
+	}
+
+	private boolean validateSignature (byte[] pubkey, byte[] sig, byte[] script)
 	{
 		byte hashType = sig[sig.length - 1];
 		if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )
@@ -1354,9 +1330,6 @@ public class Script
 		}
 		// implicit SIGHASH_ALL
 
-		byte[] signedScript = new byte[script.length - codeseparator];
-		System.arraycopy (script, codeseparator, signedScript, 0, script.length - codeseparator);
-		signedScript = findAndDeleteSignatureAndSeparator (signedScript, sig);
 		Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
 		int ninr = 0;
 		for ( TxIn in : tx.getInputs () )
@@ -1364,7 +1337,7 @@ public class Script
 			originalInputs.put (in, in.getScript ());
 			if ( ninr == inr )
 			{
-				in.setScript (signedScript);
+				in.setScript (script);
 			}
 			else
 			{

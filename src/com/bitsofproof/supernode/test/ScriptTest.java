@@ -180,7 +180,6 @@ public class ScriptTest
 		assertTrue (t2.getHash ().equals ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25"));
 
 		t2.getInputs ().get (0).setSource (t1.getOutputs ().get (0));
-		System.out.println (t2.toJSON ());
 		assertTrue (new Script (t2, 0).evaluate ());
 
 		reader =
@@ -227,7 +226,7 @@ public class ScriptTest
 		System.out.println (t1.toJSON ());
 		System.out.println (t2.toJSON ());
 
-		t1.getInputs ().get (1).setSource (t2.getOutputs ().get (0));
+		t1.getInputs ().get (1).setSource (t2.getOutputs ().get (1));
 		assertTrue (new Script (t1, 1).evaluate ());
 
 		if ( !usedb )
