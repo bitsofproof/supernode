@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.model;
 
 import java.util.List;
 
+import org.springframework.transaction.PlatformTransactionManager;
+
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.ValidationException;
 
@@ -40,4 +42,9 @@ public interface BlockStore
 	public boolean validateTransaction (Tx tx) throws ValidationException;
 
 	public long getChainHeight ();
+
+	public PlatformTransactionManager getTransactionManager ();
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager);
+
 }

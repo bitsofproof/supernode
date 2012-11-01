@@ -82,7 +82,7 @@ public class Blk implements Serializable
 		b.append ("{");
 		b.append ("\"hash\":\"" + hash + "\",");
 		b.append ("\"version\":" + version + ",");
-		b.append ("\"previous\":\"" + previous != null ? previous.getHash () : previousHash + "\",");
+		b.append ("\"previous\":\"" + (previous != null ? previous.getHash () : previousHash) + "\",");
 		b.append ("\"merkleRoot\":\"" + merkleRoot + "\",");
 		b.append ("\"createTime\":" + createTime + ",");
 		b.append ("\"difficultyTarget\":" + difficultyTarget + ",");
@@ -90,9 +90,20 @@ public class Blk implements Serializable
 		b.append ("\"height\":" + height + ",");
 		b.append ("\"nonce\":" + nonce + ",");
 		b.append ("\"transactions\":[");
+		boolean first = true;
 		for ( Tx t : transactions )
 		{
-			b.append (t.toJSON ());
+			if ( first )
+			{
+				b.append (t.toJSON ());
+				first = false;
+			}
+			else
+			{
+				b.append (",");
+				b.append (t.toJSON ());
+			}
+
 		}
 		b.append ("]}");
 		return b.toString ();

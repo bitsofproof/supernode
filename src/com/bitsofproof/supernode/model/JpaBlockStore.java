@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.model;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -59,6 +58,9 @@ class JpaBlockStore implements BlockStore
 	@PersistenceContext
 	private EntityManager entityManager;
 
+	@Autowired
+	PlatformTransactionManager transactionManager;
+
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private CachedHead currentHead = null;
@@ -68,25 +70,17 @@ class JpaBlockStore implements BlockStore
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
-	private final Comparator<KnownMember> incomingOrder = new Comparator<KnownMember> ()
+	@Override
+	public PlatformTransactionManager getTransactionManager ()
 	{
-		@Override
-		public int compare (KnownMember arg0, KnownMember arg1)
-		{
-			int diff = arg0.nr - arg1.nr;
-			if ( diff != 0 )
-			{
-				return diff;
-			}
-			else
-			{
-				return arg0.equals (arg1) ? 0 : arg0.hashCode () - arg1.hashCode ();
-			}
-		}
-	};
+		return transactionManager;
+	}
 
-	@Autowired
-	PlatformTransactionManager transactionManager;
+	@Override
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
 
 	public class CachedHead
 	{
@@ -413,7 +407,7 @@ class JpaBlockStore implements BlockStore
 				long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
 				if ( next != b.getDifficultyTarget () )
 				{
-					throw new ValidationException ("Difficulty does not match expectation " + b.getHash ());
+					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
 				}
 			}
 			else
@@ -425,14 +419,14 @@ class JpaBlockStore implements BlockStore
 			}
 			if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
 			{
-				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash ());
+				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
 			}
 
 			b.parseTransactions ();
 
 			if ( b.getTransactions ().isEmpty () )
 			{
-				throw new ValidationException ("Block must have transactions " + b.getHash ());
+				throw new ValidationException ("Block must have transactions " + b.getHash () + " " + b.toWireDump ());
 			}
 
 			b.checkMerkleRoot ();
@@ -483,7 +477,7 @@ class JpaBlockStore implements BlockStore
 							}
 							catch ( Exception e )
 							{
-								return new ValidationException (e);
+								return new ValidationException ("Transaction validation faled " + t.toWireDump (), e);
 							}
 							return null;
 						}
@@ -496,10 +490,7 @@ class JpaBlockStore implements BlockStore
 				{
 					try
 					{
-						if ( e.get () != null )
-						{
-							throw e.get ();
-						}
+						throw e.get ();
 					}
 					catch ( ExecutionException e1 )
 					{
@@ -515,7 +506,7 @@ class JpaBlockStore implements BlockStore
 			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
 			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
 			{
-				throw new ValidationException ("Invalid block reward " + b.getHash ());
+				throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
 			}
 
 			entityManager.persist (b);

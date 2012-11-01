@@ -156,11 +156,12 @@ public class Script
 								// a public key. If all signatures are valid, 1
 								// is returned, 0 otherwise. Due to a bug, one
 								// extra unused value is removed from the stack.
-		OP_CHECKMULTISIGVERIFY (175);// 0xaf x sig1 sig2 ... <number of
+		OP_CHECKMULTISIGVERIFY (175), // 0xaf x sig1 sig2 ... <number of
 										// signatures> pub1 pub2 ... <number of
 										// public keys> True / False Same as
 										// OP_CHECKMULTISIG, but OP_VERIFY is
 										// executed afterward.
+		OP_NOP1 (176), OP_NOP2 (177), OP_NOP3 (178), OP_NOP4 (179), OP_NOP5 (180), OP_NOP6 (181), OP_NOP7 (182), OP_NOP8 (183), OP_NOP9 (184), OP_NOP10 (185);
 
 		private final int o;
 
@@ -438,83 +439,96 @@ public class Script
 	public String toString ()
 	{
 		StringBuffer b = new StringBuffer ();
-		ScriptReader reader = new ScriptReader (script);
-		boolean first = true;
-		while ( !reader.eof () )
+		try
 		{
-			if ( !first )
+			ScriptReader reader = new ScriptReader (script);
+			boolean first = true;
+			while ( !reader.eof () )
 			{
-				b.append (" ");
-			}
-			first = false;
-			Opcode op = Opcode.values ()[reader.readByte ()];
-			if ( op.o <= 75 )
-			{
-				b.append ("OP_PUSH" + op.o);
-				if ( op.o > 0 )
+				if ( !first )
 				{
 					b.append (" ");
-					try
-					{
-						b.append (new String (Hex.encode (reader.readBytes (op.o)), "US-ASCII"));
-					}
-					catch ( UnsupportedEncodingException e )
-					{
-					}
 				}
-			}
-			else
-			{
-				switch ( op )
+				first = false;
+				int ix = reader.readByte ();
+				if ( ix > 185 )
 				{
-					case OP_PUSHDATA1:
+					b.append ("OP_INVALID");
+					continue;
+				}
+				Opcode op = Opcode.values ()[ix];
+				if ( op.o <= 75 )
+				{
+					b.append ("OP_PUSH" + op.o);
+					if ( op.o > 0 )
 					{
-						int n = reader.readByte ();
-						b.append ("OP_PUSHDATA1 ");
 						b.append (" ");
 						try
 						{
-							b.append (new String (Hex.encode (reader.readBytes (n)), "US-ASCII"));
+							b.append (new String (Hex.encode (reader.readBytes (op.o)), "US-ASCII"));
 						}
 						catch ( UnsupportedEncodingException e )
 						{
 						}
 					}
-						break;
-					case OP_PUSHDATA2:
+				}
+				else
+				{
+					switch ( op )
 					{
-						b.append ("OP_PUSHDATA2 ");
-						b.append (" ");
-						long n = reader.readInt16 ();
-						try
+						case OP_PUSHDATA1:
 						{
-							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
+							int n = reader.readByte ();
+							b.append ("OP_PUSHDATA1 ");
+							b.append (" ");
+							try
+							{
+								b.append (new String (Hex.encode (reader.readBytes (n)), "US-ASCII"));
+							}
+							catch ( UnsupportedEncodingException e )
+							{
+							}
 						}
-						catch ( UnsupportedEncodingException e )
+							break;
+						case OP_PUSHDATA2:
 						{
+							b.append ("OP_PUSHDATA2 ");
+							b.append (" ");
+							long n = reader.readInt16 ();
+							try
+							{
+								b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
+							}
+							catch ( UnsupportedEncodingException e )
+							{
+							}
 						}
+							break;
+						case OP_PUSHDATA4:
+						{
+							b.append ("OP_PUSHDATA4 ");
+							b.append (" ");
+							long n = reader.readInt32 ();
+							try
+							{
+								b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
+							}
+							catch ( UnsupportedEncodingException e )
+							{
+							}
+						}
+							break;
+						default:
+							b.append (op.toString ());
 					}
-						break;
-					case OP_PUSHDATA4:
-					{
-						b.append ("OP_PUSHDATA4 ");
-						b.append (" ");
-						long n = reader.readInt32 ();
-						try
-						{
-							b.append (new String (Hex.encode (reader.readBytes ((int) n)), "US-ASCII"));
-						}
-						catch ( UnsupportedEncodingException e )
-						{
-						}
-					}
-						break;
-					default:
-						b.append (op.toString ());
 				}
 			}
+			return b.toString ();
 		}
-		return b.toString ();
+		catch ( Exception e )
+		{
+			throw new RuntimeException (b.toString (), e);
+		}
 	}
 
 	public static boolean isPushOnly (byte[] script)
