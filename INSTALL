@@ -1,0 +1,7 @@
+INSTALL
+
+This is a modular system assembled using Spring.
+
+Use ivy to resolve dependencies and modify assembly.xml
+to comply your needs.
+

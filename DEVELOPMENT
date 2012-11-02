@@ -1,0 +1,22 @@
+DEVELOPMENT NOTES
+
+Please respect the code style that is aimed toward modularity and clarity.
+This code deals with money where comprehensible code is a must. No room 
+for ambiguity, side effects and art. Speed is achived by intelligence.
+
+Should you see me violating the above, please remind me to correct.
+
+It would ease merging if you'd use eclipse with the codestyle.xml imported
+under Preferences->Java->Code Style->Formatter, enable auto formatting 
+on save using Preferences->Java->Editor->Save Actions and have set up 
+Additional actions:
+	Convert control statement bodies to block
+	Add final modifier to private fields
+	Remove unused imports
+	Add missing '@Override' annotations
+	Add missing '@Override' annotations to implementations of interface methods
+	Add missing '@Deprecated' annotations
+	Remove unnecessary casts
+	Remove trailing white spaces on all lines
+	Correct indentation
+	
