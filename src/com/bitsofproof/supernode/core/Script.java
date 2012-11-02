@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.core;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -31,7 +30,6 @@ import java.util.Stack;
 import java.util.StringTokenizer;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
-import org.bouncycastle.util.encoders.Hex;
 
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
@@ -411,7 +409,7 @@ public class Script
 			if ( op.o <= 75 && op.o > 0 )
 			{
 				writer.writeByte (op.o);
-				writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
+				writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
 			}
 			else
 			{
@@ -419,23 +417,23 @@ public class Script
 				{
 					case OP_PUSHDATA1:
 					{
-						byte[] b = Hex.decode (tokenizer.nextToken ());
+						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
 						writer.writeByte (b[0]);
-						writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
+						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
 					}
 						break;
 					case OP_PUSHDATA2:
 					{
-						byte[] b = Hex.decode (tokenizer.nextToken ());
+						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
 						writer.writeInt16 (b[0] << 8 | b[1]);
-						writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
+						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
 					}
 						break;
 					case OP_PUSHDATA4:
 					{
-						byte[] b = Hex.decode (tokenizer.nextToken ());
+						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
 						writer.writeInt32 (b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
-						writer.writeBytes (Hex.decode (tokenizer.nextToken ()));
+						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
 					}
 						break;
 					default:
@@ -538,7 +536,7 @@ public class Script
 				Token token = tokenizer.nextToken ();
 				if ( token.data != null )
 				{
-					b.append (new String (Hex.encode (token.data), "US-ASCII"));
+					b.append (ByteUtils.toHex (token.data));
 				}
 				else
 				{
@@ -546,10 +544,6 @@ public class Script
 				}
 			}
 			return b.toString ();
-		}
-		catch ( UnsupportedEncodingException e )
-		{
-			throw new RuntimeException (e);
 		}
 		catch ( ValidationException e )
 		{
@@ -1413,20 +1407,14 @@ public class Script
 			return false;
 		}
 		String cacheKey = null;
-		try
+		StringBuffer c = new StringBuffer ();
+		c.append (ByteUtils.toHex (sig));
+		c.append (ByteUtils.toHex (pubkey));
+		c.append (ByteUtils.toHex (hash));
+		cacheKey = c.toString ();
+		if ( validSignatureCache.contains (cacheKey) )
 		{
-			StringBuffer c = new StringBuffer ();
-			c.append (new String (Hex.encode (sig), "US-ASCII"));
-			c.append (new String (Hex.encode (pubkey), "US-ASCII"));
-			c.append (new String (Hex.encode (hash), "US-ASCII"));
-			cacheKey = c.toString ();
-			if ( validSignatureCache.contains (cacheKey) )
-			{
-				return true;
-			}
-		}
-		catch ( UnsupportedEncodingException e1 )
-		{
+			return true;
 		}
 		synchronized ( validSignatureCache )
 		{

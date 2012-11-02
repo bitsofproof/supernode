@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,8 +28,7 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
-import org.bouncycastle.util.encoders.Hex;
-
+import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -170,19 +168,12 @@ public class Tx implements Serializable
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		toWire (writer);
-		try
-		{
-			return new String (Hex.encode (writer.toByteArray ()), "US-ASCII");
-		}
-		catch ( UnsupportedEncodingException e )
-		{
-			return null;
-		}
+		return ByteUtils.toHex (writer.toByteArray ());
 	}
 
 	public static Tx fromWireDump (String s)
 	{
-		WireFormat.Reader reader = new WireFormat.Reader (Hex.decode (s));
+		WireFormat.Reader reader = new WireFormat.Reader (ByteUtils.fromHex (s));
 		Tx b = new Tx ();
 		b.fromWire (reader);
 		return b;

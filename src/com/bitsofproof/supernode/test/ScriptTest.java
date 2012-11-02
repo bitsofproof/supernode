@@ -19,14 +19,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
-import org.bouncycastle.util.encoders.Hex;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
@@ -37,6 +35,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -61,7 +60,7 @@ public class ScriptTest
 			if ( usedb )
 			{
 				Setup.setup ();
-				context = new ClassPathXmlApplicationContext ("app-context.xml");
+				context = new ClassPathXmlApplicationContext ("assembly.xml");
 				transactionManager = context.getBean (PlatformTransactionManager.class);
 				emf = context.getBean (EntityManagerFactory.class);
 			}
@@ -118,18 +117,6 @@ public class ScriptTest
 		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUAL")));
 	}
 
-	private static String toHex (byte[] b)
-	{
-		try
-		{
-			return new String (Hex.encode (b), "US-ASCII");
-		}
-		catch ( UnsupportedEncodingException e )
-		{
-			return null;
-		}
-	}
-
 	@Test
 	public void digestTest ()
 	{
@@ -139,8 +126,8 @@ public class ScriptTest
 			MessageDigest a = MessageDigest.getInstance ("SHA-256");
 			byte[] h = a.digest (b);
 
-			assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + toHex (b)
-					+ " OP_SHA256 OP_PUSHDATA1 20 " + toHex (h) + " OP_EQUAL")));
+			assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + ByteUtils.toHex (b)
+					+ " OP_SHA256 OP_PUSHDATA1 20 " + ByteUtils.toHex (h) + " OP_EQUAL")));
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
@@ -152,14 +139,16 @@ public class ScriptTest
 	{
 		WireFormat.Reader reader =
 				new WireFormat.Reader (
-						Hex.decode ("0100000001169e1e83e930853391bc6f35f605c6754cfead57cf8387639d3b4096c54f18f40100000048473044022027542a94d6646c51240f23a76d33088d3dd8815b25e9ea18cac67d1171a3212e02203baf203c6e7b80ebd3e588628466ea28be572fe1aaa3f30947da4763dd3b3d2b01ffffffff0200ca9a3b00000000434104b5abd412d4341b45056d3e376cd446eca43fa871b51961330deebd84423e740daa520690e1d9e074654c59ff87b408db903649623e86f1ca5412786f61ade2bfac005ed0b20000000043410411db93e1dcdb8a016b49840f8c53bc1eb68a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf9744464f82e160bfa9b8b64f9d4c03f999b8643f656b412a3ac00000000"));
+						ByteUtils
+								.fromHex ("0100000001169e1e83e930853391bc6f35f605c6754cfead57cf8387639d3b4096c54f18f40100000048473044022027542a94d6646c51240f23a76d33088d3dd8815b25e9ea18cac67d1171a3212e02203baf203c6e7b80ebd3e588628466ea28be572fe1aaa3f30947da4763dd3b3d2b01ffffffff0200ca9a3b00000000434104b5abd412d4341b45056d3e376cd446eca43fa871b51961330deebd84423e740daa520690e1d9e074654c59ff87b408db903649623e86f1ca5412786f61ade2bfac005ed0b20000000043410411db93e1dcdb8a016b49840f8c53bc1eb68a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf9744464f82e160bfa9b8b64f9d4c03f999b8643f656b412a3ac00000000"));
 		Tx t1 = new Tx ();
 		t1.fromWire (reader);
 		assertTrue (t1.getHash ().equals ("a16f3ce4dd5deb92d98ef5cf8afeaf0775ebca408f708b2146c4fb42b41e14be"));
 
 		reader =
 				new WireFormat.Reader (
-						Hex.decode ("0100000001c997a5e56e104102fa209c6a852dd90660a20b2d9c352423edce25857fcd3704000000004847304402204e45e16932b8af514961a1d3a1a25fdf3f4f7732e9d624c6c61548ab5fb8cd410220181522ec8eca07de4860a4acdd12909d831cc56cbbac4622082221a8768d1d0901ffffffff0200ca9a3b00000000434104ae1a62fe09c5f51b13905f07f06b99a2f7159b2225f374cd378d71302fa28414e7aab37397f554a7df5f142c21c1b7303b8a0626f1baded5c72a704f7e6cd84cac00286bee0000000043410411db93e1dcdb8a016b49840f8c53bc1eb68a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf9744464f82e160bfa9b8b64f9d4c03f999b8643f656b412a3ac00000000"));
+						ByteUtils
+								.fromHex ("0100000001c997a5e56e104102fa209c6a852dd90660a20b2d9c352423edce25857fcd3704000000004847304402204e45e16932b8af514961a1d3a1a25fdf3f4f7732e9d624c6c61548ab5fb8cd410220181522ec8eca07de4860a4acdd12909d831cc56cbbac4622082221a8768d1d0901ffffffff0200ca9a3b00000000434104ae1a62fe09c5f51b13905f07f06b99a2f7159b2225f374cd378d71302fa28414e7aab37397f554a7df5f142c21c1b7303b8a0626f1baded5c72a704f7e6cd84cac00286bee0000000043410411db93e1dcdb8a016b49840f8c53bc1eb68a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf9744464f82e160bfa9b8b64f9d4c03f999b8643f656b412a3ac00000000"));
 		Tx t2 = new Tx ();
 		t2.fromWire (reader);
 		assertTrue (t2.getHash ().equals ("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16"));
@@ -168,14 +157,16 @@ public class ScriptTest
 
 		reader =
 				new WireFormat.Reader (
-						Hex.decode ("0100000001944badc33f9a723eb1c85dde24374e6dee9259ef4cfa6a10b2fd05b6e55be400000000008c4930460221009f8aef83489d5c3524b68ddf77e8af8ceb5cba89790d31d2d2db0c80b9cbfd26022100bb2c13e15bb356a4accdd55288e8b2fd39e204a93d849ccf749eaef9d8162787014104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcffffffff0100f2052a010000001976a9146934efcef36903b5b45ebd1e5f862d1b63a99fa588ac00000000"));
+						ByteUtils
+								.fromHex ("0100000001944badc33f9a723eb1c85dde24374e6dee9259ef4cfa6a10b2fd05b6e55be400000000008c4930460221009f8aef83489d5c3524b68ddf77e8af8ceb5cba89790d31d2d2db0c80b9cbfd26022100bb2c13e15bb356a4accdd55288e8b2fd39e204a93d849ccf749eaef9d8162787014104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcffffffff0100f2052a010000001976a9146934efcef36903b5b45ebd1e5f862d1b63a99fa588ac00000000"));
 		t1 = new Tx ();
 		t1.fromWire (reader);
 		assertTrue (t1.getHash ().equals ("74c1a6dd6e88f73035143f8fc7420b5c395d28300a70bb35b943f7f2eddc656d"));
 
 		reader =
 				new WireFormat.Reader (
-						Hex.decode ("01000000016d65dcedf2f743b935bb700a30285d395c0b42c78f3f143530f7886edda6c174000000008c493046022100b687c4436277190953466b3e4406484e89a4a4b9dbefea68cf5979f74a8ef5b1022100d32539ffb88736f3f9445fa6dd484b443ebb31af1471ee65071c7414e3ec007b014104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcffffffff0240420f000000000043410403c344438944b1ec413f7530aaa6130dd13562249d07d53ba96d8ac4f59832d05c837e36efd9533a6adf1920465fed2a4553fb357844f2e41329603c320753f4acc0aff62901000000434104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcac00000000"));
+						ByteUtils
+								.fromHex ("01000000016d65dcedf2f743b935bb700a30285d395c0b42c78f3f143530f7886edda6c174000000008c493046022100b687c4436277190953466b3e4406484e89a4a4b9dbefea68cf5979f74a8ef5b1022100d32539ffb88736f3f9445fa6dd484b443ebb31af1471ee65071c7414e3ec007b014104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcffffffff0240420f000000000043410403c344438944b1ec413f7530aaa6130dd13562249d07d53ba96d8ac4f59832d05c837e36efd9533a6adf1920465fed2a4553fb357844f2e41329603c320753f4acc0aff62901000000434104f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dcac00000000"));
 		t2 = new Tx ();
 		t2.fromWire (reader);
 		assertTrue (t2.getHash ().equals ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25"));
@@ -185,14 +176,16 @@ public class ScriptTest
 
 		reader =
 				new WireFormat.Reader (
-						Hex.decode ("01000000017fd8dfdb54b5212c4e3151a39f4ffe279fd7f238d516a2ca731529c095d97449010000008b483045022100b6a7fe5eea81894bbdd0df61043e42780543457fa5581ac1af023761a098e92202201d4752785be5f9d1b9f8d362b8cf3b05e298a78c4abff874b838bb500dcf2a120141042e3c4aeac1ffb1c86ce3621afb1ca92773e02badf0d4b1c836eb26bd27d0c2e59ffec3d6ab6b8bbeca81b0990ab5224ebdd73696c4255d1d0c6b3c518a1a053effffffff01404b4c00000000001976a914dc44b1164188067c3a32d4780f5996fa14a4f2d988ac00000000"));
+						ByteUtils
+								.fromHex ("01000000017fd8dfdb54b5212c4e3151a39f4ffe279fd7f238d516a2ca731529c095d97449010000008b483045022100b6a7fe5eea81894bbdd0df61043e42780543457fa5581ac1af023761a098e92202201d4752785be5f9d1b9f8d362b8cf3b05e298a78c4abff874b838bb500dcf2a120141042e3c4aeac1ffb1c86ce3621afb1ca92773e02badf0d4b1c836eb26bd27d0c2e59ffec3d6ab6b8bbeca81b0990ab5224ebdd73696c4255d1d0c6b3c518a1a053effffffff01404b4c00000000001976a914dc44b1164188067c3a32d4780f5996fa14a4f2d988ac00000000"));
 		t1 = new Tx ();
 		t1.fromWire (reader);
 		assertTrue (t1.getHash ().equals ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602"));
 
 		reader =
 				new WireFormat.Reader (
-						Hex.decode ("01000000010276b76b07f4935c70acf54fbf1f438a4c397a9fb7e633873c4dd3bc062b6b40000000008c493046022100d23459d03ed7e9511a47d13292d3430a04627de6235b6e51a40f9cd386f2abe3022100e7d25b080f0bb8d8d5f878bba7d54ad2fda650ea8d158a33ee3cbd11768191fd004104b0e2c879e4daf7b9ab68350228c159766676a14f5815084ba166432aab46198d4cca98fa3e9981d0a90b2effc514b76279476550ba3663fdcaff94c38420e9d5000000000100093d00000000001976a9149a7b0f3b80c6baaeedce0a0842553800f832ba1f88ac00000000"));
+						ByteUtils
+								.fromHex ("01000000010276b76b07f4935c70acf54fbf1f438a4c397a9fb7e633873c4dd3bc062b6b40000000008c493046022100d23459d03ed7e9511a47d13292d3430a04627de6235b6e51a40f9cd386f2abe3022100e7d25b080f0bb8d8d5f878bba7d54ad2fda650ea8d158a33ee3cbd11768191fd004104b0e2c879e4daf7b9ab68350228c159766676a14f5815084ba166432aab46198d4cca98fa3e9981d0a90b2effc514b76279476550ba3663fdcaff94c38420e9d5000000000100093d00000000001976a9149a7b0f3b80c6baaeedce0a0842553800f832ba1f88ac00000000"));
 		t2 = new Tx ();
 		t2.fromWire (reader); // this is the transaction with the wrong SIGHASH_ALL
 		assertTrue (t2.getHash ().equals ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73"));
@@ -233,9 +226,6 @@ public class ScriptTest
 		t2 =
 				Tx.fromWireDump ("0100000001eae7c33c5a3ad25316a4a1a0220343693077d7a35c6d242ed731d9f26c9f8b45010000006b48304502205b910ff27919bb4b81847e17e19848a8148373b5d84856e8a0798395c1a4df6e022100a9300a11b37b52997726dab17851914151bd647ca053d60a013b8e0ad42d1c6e012102b2e1e38d1b15170212a852f68045979d790814a139ed57bffba3763f75e18808ffffffff02b0453c00000000001976a914c39c8d989dfdd7fde0ee80be36113c5abcefcb9c88ac40420f0000000000171464d63d835705618da2111ca3194f22d067187cf2b17500000000");
 
-		System.out.println (t1.toJSON ());
-		System.out.println (t2.toJSON ());
-
 		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
 		assertTrue (new Script (t1, 0).evaluate ());
 
@@ -262,16 +252,6 @@ public class ScriptTest
 					System.out.println (t.toJSON ());
 					WireFormat.Writer writer = new WireFormat.Writer ();
 					t.toWire (writer);
-					try
-					{
-						Hex.encode (writer.toByteArray (), System.out);
-						System.out.println ("");
-					}
-					catch ( IOException e )
-					{
-						e.printStackTrace ();
-					}
-					System.out.println (t.toJSON ());
 					assertTrue (new Script (t, 0).evaluate ());
 
 					query = new JPAQuery (entityManager);
@@ -293,23 +273,12 @@ public class ScriptTest
 					t = query.from (tx).where (tx.hash.eq ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73")).singleResult (tx);
 					writer = new WireFormat.Writer ();
 					t.toWire (writer);
-					try
-					{
-						System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
-					}
-					catch ( UnsupportedEncodingException e )
-					{
-						e.printStackTrace ();
-					}
-					System.out.println (t.toJSON ());
 					assertTrue (new Script (t, 0).evaluate ());
 
 					query = new JPAQuery (entityManager);
 					t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
 					writer = new WireFormat.Writer ();
 					t.toWire (writer);
-					System.out.println (new String (Hex.encode (writer.toByteArray ()), "US-ASCII"));
-					System.out.println (t.toJSON ());
 					assertTrue (new Script (t, 0).evaluate ());
 				}
 				catch ( Exception e )

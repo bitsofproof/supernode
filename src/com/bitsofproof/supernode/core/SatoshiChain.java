@@ -65,7 +65,7 @@ public class SatoshiChain extends ChainImpl
 		inputs.add (input);
 		input.setSource (null);
 		input.setSequence (0xFFFFFFFFL);
-		input.setScript (Hex.decode ("04" + // mimic public key structure
+		input.setScript (ByteUtils.fromHex ("04" + // mimic public key structure
 				"ffff001d" + // difficulty target
 				"010445" + // ??
 				// text: "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
