@@ -34,6 +34,8 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
+
 public class Script
 {
 	private Stack<byte[]> stack = new Stack<byte[]> ();
@@ -965,28 +967,7 @@ public class Script
 						case OP_EQUAL:
 						case OP_EQUALVERIFY:
 						{
-							byte[] a = stack.pop ();
-							byte[] b = stack.pop ();
-							if ( a.length != b.length )
-							{
-								pushInt (0);
-							}
-							else
-							{
-								int i;
-								for ( i = 0; i < a.length; ++i )
-								{
-									if ( a[i] != b[i] )
-									{
-										pushInt (0);
-										break;
-									}
-								}
-								if ( i == a.length )
-								{
-									pushInt (1);
-								}
-							}
+							pushInt (Arrays.equals (stack.pop (), stack.pop ()) == true ? 1 : 0);
 							if ( token.op == Opcode.OP_EQUALVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )
