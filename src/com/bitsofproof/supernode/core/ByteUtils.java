@@ -37,6 +37,10 @@ public class ByteUtils
 				}
 			}
 		}
+		else
+		{
+			return false;
+		}
 		return true;
 	}
 
