@@ -52,7 +52,7 @@ public abstract class P2P
 
 	public interface Message
 	{
-		public byte[] toByteArray () throws Exception;
+		public byte[] toByteArray ();
 
 		public String dump ();
 	}

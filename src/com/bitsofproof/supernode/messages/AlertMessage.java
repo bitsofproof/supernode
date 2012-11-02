@@ -51,7 +51,7 @@ public class AlertMessage extends BitcoinPeer.Message
 	@Override
 	public void validate () throws ValidationException
 	{
-		if ( !ECKeyPair.verify (Hash.hash (payload, 0, payload.length).toByteArray (), signature, alertKey) )
+		if ( !ECKeyPair.verify (Hash.hash (payload, 0, payload.length), signature, alertKey) )
 		{
 			throw new ValidationException ("Unauthorized alert");
 		}

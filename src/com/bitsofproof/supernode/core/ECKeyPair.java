@@ -18,8 +18,6 @@ package com.bitsofproof.supernode.core;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -33,7 +31,6 @@ import org.bouncycastle.asn1.DLSequence;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
-import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import org.bouncycastle.crypto.generators.ECKeyPairGenerator;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.bouncycastle.crypto.params.ECKeyGenerationParameters;
@@ -75,18 +72,7 @@ public class ECKeyPair
 
 	public byte[] getAddress ()
 	{
-		byte[] ph = new byte[20];
-		try
-		{
-			byte[] sha256 = MessageDigest.getInstance ("SHA-256").digest (pub);
-			RIPEMD160Digest digest = new RIPEMD160Digest ();
-			digest.update (sha256, 0, sha256.length);
-			digest.doFinal (ph, 0);
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-		}
-		return ph;
+		return Hash.keyHash (pub);
 	}
 
 	public ECKeyPair (BigInteger priv)

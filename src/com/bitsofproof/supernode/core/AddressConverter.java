@@ -123,7 +123,7 @@ public class AddressConverter
 					throw new ValidationException ("invalid address for this chain");
 				}
 			}
-			byte[] check = Hash.hash (raw, 0, raw.length - 4).toByteArray ();
+			byte[] check = Hash.hash (raw, 0, raw.length - 4);
 			for ( int i = 0; i < 4; ++i )
 			{
 				if ( check[i] != raw[raw.length - 4 + i] )
@@ -146,7 +146,7 @@ public class AddressConverter
 		byte[] addressBytes = new byte[1 + keyDigest.length + 4];
 		addressBytes[0] = (byte) (production ? (multisig ? 5 : 0) : (multisig ? 1 : 0xc4));
 		System.arraycopy (keyDigest, 0, addressBytes, 1, keyDigest.length);
-		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1).toByteArray ();
+		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1);
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);
 		return toBase58 (addressBytes);
 	}

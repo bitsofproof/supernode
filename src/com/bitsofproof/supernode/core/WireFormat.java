@@ -177,7 +177,7 @@ public class WireFormat
 
 		public Hash hash (int offset, int length)
 		{
-			return Hash.hash (bytes, offset, length);
+			return new Hash (Hash.hash (bytes, offset, length));
 		}
 
 		public Hash hash ()

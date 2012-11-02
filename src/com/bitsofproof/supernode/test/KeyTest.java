@@ -75,7 +75,7 @@ public class KeyTest
 	public void signTest () throws ValidationException
 	{
 		ECKeyPair k = ECKeyPair.createNew ();
-		byte[] hash = Hash.digest ("Hello world".getBytes ()).toByteArray ();
+		byte[] hash = Hash.sha256 ("Hello world".getBytes ());
 		byte[] signature = k.sign (hash);
 		assertTrue (ECKeyPair.verify (hash, signature, k.getPublic ()));
 	}
@@ -84,7 +84,7 @@ public class KeyTest
 	public void asn1Test () throws ValidationException
 	{
 		ECKeyPair k = ECKeyPair.createNew ();
-		byte[] hash = Hash.digest ("Hello world".getBytes ()).toByteArray ();
+		byte[] hash = Hash.sha256 ("Hello world".getBytes ());
 		byte[] signature = k.sign (hash);
 
 		byte[] storedKey = k.toByteArray ();

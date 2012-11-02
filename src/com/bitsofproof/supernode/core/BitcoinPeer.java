@@ -19,8 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -94,7 +92,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 
 		@Override
-		public byte[] toByteArray () throws NoSuchAlgorithmException
+		public byte[] toByteArray ()
 		{
 			ByteArrayOutputStream out = new ByteArrayOutputStream ();
 			WireFormat.Writer writer = new WireFormat.Writer (out);
@@ -106,9 +104,7 @@ public class BitcoinPeer extends P2P.Peer
 			writer.writeUint32 (data.length);
 
 			byte[] checksum = new byte[4];
-			MessageDigest sha;
-			sha = MessageDigest.getInstance ("SHA-256");
-			System.arraycopy (sha.digest (sha.digest (data)), 0, checksum, 0, 4);
+			System.arraycopy (Hash.hash (data), 0, checksum, 0, 4);
 			writer.writeBytes (checksum);
 
 			writer.writeBytes (data);
@@ -118,14 +114,7 @@ public class BitcoinPeer extends P2P.Peer
 		@Override
 		public String dump ()
 		{
-			try
-			{
-				return ByteUtils.toHex (toByteArray ());
-			}
-			catch ( NoSuchAlgorithmException e )
-			{
-			}
-			return null;
+			return ByteUtils.toHex (toByteArray ());
 		}
 
 		public void validate () throws ValidationException
@@ -318,16 +307,7 @@ public class BitcoinPeer extends P2P.Peer
 					throw new ValidationException ("Package length mismatch " + getAddress ());
 				}
 				byte[] cs = new byte[4];
-				MessageDigest sha;
-				try
-				{
-					sha = MessageDigest.getInstance ("SHA-256");
-					System.arraycopy (sha.digest (sha.digest (buf)), 0, cs, 0, 4);
-				}
-				catch ( NoSuchAlgorithmException e )
-				{
-					throw new ValidationException ("SHA-256 implementation missing " + getAddress ());
-				}
+				System.arraycopy (Hash.hash (buf), 0, cs, 0, 4);
 				if ( !Arrays.equals (cs, checksum) )
 				{
 					throw new ValidationException ("Checksum mismatch " + getAddress ());

@@ -19,8 +19,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -36,6 +34,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -121,17 +120,10 @@ public class ScriptTest
 	public void digestTest ()
 	{
 		byte[] b = { 'H', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!' };
-		try
-		{
-			MessageDigest a = MessageDigest.getInstance ("SHA-256");
-			byte[] h = a.digest (b);
+		byte[] h = Hash.sha256 (b);
 
-			assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + ByteUtils.toHex (b)
-					+ " OP_SHA256 OP_PUSHDATA1 20 " + ByteUtils.toHex (h) + " OP_EQUAL")));
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-		}
+		assertTrue (new Script ().evaluateSingleScript (Script.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " " + ByteUtils.toHex (b)
+				+ " OP_SHA256 OP_PUSHDATA1 20 " + ByteUtils.toHex (h) + " OP_EQUAL")));
 	}
 
 	@Test

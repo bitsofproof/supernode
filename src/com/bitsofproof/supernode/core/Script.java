@@ -1172,15 +1172,7 @@ public class Script
 										// using
 										// SHA-256.
 						{
-							try
-							{
-								MessageDigest a = MessageDigest.getInstance ("SHA-256");
-								stack.push (a.digest (stack.pop ()));
-							}
-							catch ( NoSuchAlgorithmException e )
-							{
-								return false;
-							}
+							stack.push (Hash.sha256 (stack.pop ()));
 						}
 							break;
 						case OP_HASH160: // 0xa9 in hash The input is hashed
@@ -1188,33 +1180,13 @@ public class Script
 											// first with SHA-256 and then with
 											// RIPEMD-160.
 						{
-							try
-							{
-								MessageDigest a = MessageDigest.getInstance ("SHA-256");
-								RIPEMD160Digest digest = new RIPEMD160Digest ();
-								digest.update (a.digest (stack.pop ()), 0, 32);
-								byte[] hash = new byte[20];
-								digest.doFinal (hash, 0);
-								stack.push (hash);
-							}
-							catch ( NoSuchAlgorithmException e )
-							{
-								return false;
-							}
+							stack.push (Hash.keyHash (stack.pop ()));
 						}
 							break;
 						case OP_HASH256: // 0xaa in hash The input is hashed two
 											// times with SHA-256.
 						{
-							try
-							{
-								MessageDigest a = MessageDigest.getInstance ("SHA-256");
-								stack.push (a.digest (a.digest (stack.pop ())));
-							}
-							catch ( NoSuchAlgorithmException e )
-							{
-								return false;
-							}
+							stack.push (Hash.hash (stack.pop ()));
 						}
 							break;
 						case OP_CODESEPARATOR: // 0xab Nothing Nothing All of
@@ -1406,16 +1378,11 @@ public class Script
 		{
 			return false;
 		}
-		String cacheKey = null;
 		StringBuffer c = new StringBuffer ();
 		c.append (ByteUtils.toHex (sig));
 		c.append (ByteUtils.toHex (pubkey));
 		c.append (ByteUtils.toHex (hash));
-		cacheKey = c.toString ();
-		if ( validSignatureCache.contains (cacheKey) )
-		{
-			return true;
-		}
+		String cacheKey = c.toString ();
 		synchronized ( validSignatureCache )
 		{
 			return validSignatureCache.contains (cacheKey) || ECKeyPair.verify (hash, sig, pubkey) && validSignatureCache.add (cacheKey);

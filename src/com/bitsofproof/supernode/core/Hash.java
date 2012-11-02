@@ -49,12 +49,12 @@ public class Hash
 		this.bytes = ByteUtils.reverse (ByteUtils.fromHex (hex));
 	}
 
-	public static Hash digest (byte[] data)
+	public static byte[] sha256 (byte[] data)
 	{
 		try
 		{
 			MessageDigest a = MessageDigest.getInstance ("SHA-256");
-			return new Hash (a.digest (data));
+			return a.digest (data);
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
@@ -74,22 +74,28 @@ public class Hash
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
+			throw new RuntimeException (e);
 		}
 		return ph;
 	}
 
-	public static Hash hash (byte[] data, int offset, int len)
+	public static byte[] hash (byte[] data, int offset, int len)
 	{
 		try
 		{
 			MessageDigest a = MessageDigest.getInstance ("SHA-256");
 			a.update (data, offset, len);
-			return new Hash (a.digest (a.digest ()));
+			return a.digest (a.digest ());
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
 			throw new RuntimeException (e);
 		}
+	}
+
+	public static byte[] hash (byte[] data)
+	{
+		return hash (data, 0, data.length);
 	}
 
 	public byte[] toByteArray ()
