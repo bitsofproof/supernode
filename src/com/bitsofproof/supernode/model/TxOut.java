@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
+import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -25,6 +26,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.Script;
@@ -42,9 +44,6 @@ public class TxOut implements Serializable
 
 	private long value;
 
-	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = true)
-	private Account account;
-
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
 	// scriptPubKey
@@ -54,6 +53,11 @@ public class TxOut implements Serializable
 	private Tx transaction;
 
 	private long ix;
+
+	private Long votes;
+
+	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	List<Owner> owners;
 
 	public String toJSON ()
 	{
@@ -125,6 +129,26 @@ public class TxOut implements Serializable
 	public void setIx (long ix)
 	{
 		this.ix = ix;
+	}
+
+	public Long getVotes ()
+	{
+		return votes;
+	}
+
+	public void setVotes (Long votes)
+	{
+		this.votes = votes;
+	}
+
+	public List<Owner> getOwners ()
+	{
+		return owners;
+	}
+
+	public void setOwners (List<Owner> owners)
+	{
+		this.owners = owners;
 	}
 
 	protected TxOut flatCopy (Tx tc)

@@ -6,6 +6,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
@@ -18,8 +19,11 @@ public class Owner implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	@Column (length = 20, nullable = false)
+	@Column (length = 40, nullable = false)
 	private String hash;
+
+	@ManyToOne
+	private TxOut outpoint;
 
 	public Long getId ()
 	{
@@ -29,6 +33,16 @@ public class Owner implements Serializable
 	public void setId (Long id)
 	{
 		this.id = id;
+	}
+
+	public TxOut getOutpoint ()
+	{
+		return outpoint;
+	}
+
+	public void setOutpoint (TxOut outpoint)
+	{
+		this.outpoint = outpoint;
 	}
 
 	public String getHash ()

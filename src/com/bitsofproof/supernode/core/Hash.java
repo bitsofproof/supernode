@@ -19,6 +19,8 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.bouncycastle.crypto.digests.RIPEMD160Digest;
+
 public class Hash
 {
 	private byte[] bytes;
@@ -58,6 +60,22 @@ public class Hash
 		{
 			throw new RuntimeException (e);
 		}
+	}
+
+	public static byte[] keyHash (byte[] key)
+	{
+		byte[] ph = new byte[20];
+		try
+		{
+			byte[] sha256 = MessageDigest.getInstance ("SHA-256").digest (key);
+			RIPEMD160Digest digest = new RIPEMD160Digest ();
+			digest.update (sha256, 0, sha256.length);
+			digest.doFinal (ph, 0);
+		}
+		catch ( NoSuchAlgorithmException e )
+		{
+		}
+		return ph;
 	}
 
 	public static Hash hash (byte[] data, int offset, int len)

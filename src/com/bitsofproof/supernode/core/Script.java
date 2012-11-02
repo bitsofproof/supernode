@@ -312,7 +312,7 @@ public class Script
 		return popNumber ().longValue ();
 	}
 
-	private BigInteger toNumber (byte[] b)
+	public static BigInteger toNumber (byte[] b)
 	{
 		// reverse...
 		byte[] n = new byte[b.length];

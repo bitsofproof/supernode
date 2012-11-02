@@ -41,10 +41,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
+import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
@@ -674,6 +676,13 @@ class JpaBlockStore implements BlockStore
 
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
+		if ( tcontext.block != null )
+		{
+			for ( TxOut out : t.getOutputs () )
+			{
+				addOwners (out);
+			}
+		}
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
@@ -700,7 +709,7 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
 			{
-				throw new ValidationException ("only the first transaction can be coinbase");
+				throw new ValidationException ("coinbase only first in a block");
 			}
 			if ( t.getOutputs ().isEmpty () )
 			{
@@ -834,6 +843,59 @@ class JpaBlockStore implements BlockStore
 			if ( sumOut > sumIn )
 			{
 				throw new ValidationException ("Transaction value out more than in " + t.toWireDump ());
+			}
+		}
+	}
+
+	private void addOwners (TxOut out) throws ValidationException
+	{
+		List<Owner> owners = new ArrayList<Owner> ();
+		parseOwners (out.getScript (), out, owners);
+		out.setOwners (owners);
+	}
+
+	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws ValidationException
+	{
+		List<Script.Token> parsed = Script.parse (out.getScript ());
+		if ( parsed.size () == 3 && parsed.get (0).data != null && parsed.get (1).data != null && parsed.get (2).op == Opcode.OP_CHECKSIG )
+		{
+			// pay to key
+			Owner o = new Owner ();
+			o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (1).data)));
+			o.setOutpoint (out);
+			owners.add (o);
+			out.setVotes (1L);
+		}
+		if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
+				&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
+		{
+			// pay to key
+			Owner o = new Owner ();
+			o.setHash (ByteUtils.toHex (parsed.get (2).data));
+			o.setOutpoint (out);
+			owners.add (o);
+			out.setVotes (1L);
+		}
+		if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+				&& parsed.get (2).op == Opcode.OP_EQUAL )
+		{
+			// pay to script
+			parseOwners (parsed.get (1).data, out, owners);
+		}
+		for ( int i = 0; i < parsed.size (); ++i )
+		{
+			if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+			{
+				int nkeys = Script.toNumber (parsed.get (i - 1).data).intValue ();
+				for ( int j = 0; j < nkeys; ++j )
+				{
+					Owner o = new Owner ();
+					o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
+					o.setOutpoint (out);
+					owners.add (o);
+				}
+				out.setVotes (Script.toNumber (parsed.get (i - nkeys - 2).data).longValue ());
+				return;
 			}
 		}
 	}
