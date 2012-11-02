@@ -318,7 +318,7 @@ public class Script
 		byte[] n = new byte[b.length];
 		System.arraycopy (b, 0, n, 0, b.length);
 		boolean negative = false;
-		reverse (n);
+		ByteUtils.reverse (n);
 		if ( (n[0] & 0x80) != 0 )
 		{
 			n[0] &= (byte) 0x7f;
@@ -352,7 +352,7 @@ public class Script
 		else
 		{
 			byte[] b = n.toByteArray ();
-			reverse (b);
+			ByteUtils.reverse (b);
 			if ( negative )
 			{
 				if ( (b[b.length - 1] & 0x80) != 0 )
@@ -380,18 +380,6 @@ public class Script
 	public boolean peekBoolean ()
 	{
 		return isTrue (stack.peek ());
-	}
-
-	// in place reverse using XOR
-	private static byte[] reverse (byte[] data)
-	{
-		for ( int i = 0, j = data.length - 1; i < data.length / 2; i++, j-- )
-		{
-			data[i] ^= data[j];
-			data[j] ^= data[i];
-			data[i] ^= data[j];
-		}
-		return data;
 	}
 
 	public Script ()

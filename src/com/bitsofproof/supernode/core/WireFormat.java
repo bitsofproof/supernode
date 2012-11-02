@@ -85,7 +85,7 @@ public class WireFormat
 
 		public long readUint64 ()
 		{
-			return new BigInteger (reverse (readBytes (8))).longValue ();
+			return new BigInteger (ByteUtils.reverse (readBytes (8))).longValue ();
 		}
 
 		public long readVarInt ()
@@ -271,7 +271,7 @@ public class WireFormat
 			try
 			{
 				BigInteger bi = BigInteger.valueOf (n);
-				byte[] b = reverse (bi.toByteArray ());
+				byte[] b = ByteUtils.reverse (bi.toByteArray ());
 				bs.write (b);
 				if ( b.length < 8 )
 				{
@@ -398,17 +398,5 @@ public class WireFormat
 	private static boolean isLessThanUnsigned (long n1, long n2)
 	{
 		return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
-	}
-
-	// in place reverse using XOR
-	private static byte[] reverse (byte[] data)
-	{
-		for ( int i = 0, j = data.length - 1; i < data.length / 2; i++, j-- )
-		{
-			data[i] ^= data[j];
-			data[j] ^= data[i];
-			data[i] ^= data[j];
-		}
-		return data;
 	}
 }
