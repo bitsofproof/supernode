@@ -17,47 +17,6 @@ public class ByteUtils
 		return data;
 	}
 
-	public boolean equals (byte[] a, byte[] b)
-	{
-		if ( a == null && b == null )
-		{
-			return true;
-		}
-		if ( a == null || b == null )
-		{
-			return false;
-		}
-		if ( a.length == b.length )
-		{
-			for ( int i = 0; i < a.length; ++i )
-			{
-				if ( a[i] != b[i] )
-				{
-					return false;
-				}
-			}
-		}
-		else
-		{
-			return false;
-		}
-		return true;
-	}
-
-	public byte[] dup (byte[] b)
-	{
-		byte[] a = new byte[b.length];
-		System.arraycopy (b, 0, a, 0, b.length);
-		return a;
-	}
-
-	public byte[] dup (byte[] b, int offset, int length)
-	{
-		byte[] a = new byte[length - offset];
-		System.arraycopy (b, offset, a, 0, length);
-		return a;
-	}
-
 	public static String toHex (byte[] data)
 	{
 		try

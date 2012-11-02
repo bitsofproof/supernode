@@ -23,7 +23,7 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
 public class Hash
 {
-	private byte[] bytes;
+	private final byte[] bytes;
 	public static final Hash ZERO_HASH = new Hash (new byte[32]);
 
 	public Hash (byte[] bytes)
@@ -33,10 +33,6 @@ public class Hash
 			throw new IllegalArgumentException ("Digest length must be 32 bytes for Hash");
 		}
 		this.bytes = bytes;
-	}
-
-	public Hash ()
-	{
 	}
 
 	public Hash (String hex)

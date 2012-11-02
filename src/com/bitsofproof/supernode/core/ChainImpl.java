@@ -15,8 +15,6 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.math.BigInteger;
-
 import com.bitsofproof.supernode.model.Blk;
 
 public abstract class ChainImpl implements Chain
@@ -30,30 +28,6 @@ public abstract class ChainImpl implements Chain
 	private final int difficultyReviewBlocks;
 	private final int targetBlockTime;
 	private final byte[] alertKey;
-
-	public static BigInteger difficultyToNumber (long difficulty)
-	{
-		int size = ((int) (difficulty >> 24)) & 0xFF;
-		byte[] b = new byte[size + 4];
-		b[3] = (byte) size;
-		if ( size >= 1 )
-		{
-			b[4] = (byte) ((difficulty >> 16) & 0xFF);
-		}
-		if ( size >= 2 )
-		{
-			b[5] = (byte) ((difficulty >> 8) & 0xFF);
-		}
-		if ( size >= 3 )
-		{
-			b[6] = (byte) ((difficulty >> 0) & 0xFF);
-		}
-		WireFormat.Reader reader = new WireFormat.Reader (b);
-		int length = (int) reader.readUint32 ();
-		byte[] buf = new byte[length];
-		System.arraycopy (b, 4, buf, 0, length);
-		return new BigInteger (buf);
-	}
 
 	public ChainImpl (long version, long magic, int port, int addressType, int privateKeyType, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
 	{
