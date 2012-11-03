@@ -19,7 +19,7 @@ import com.bitsofproof.supernode.model.Blk;
 
 public abstract class ChainImpl implements Chain
 {
-
+	private final boolean production;
 	private final long version;
 	private final long magic;
 	private final int port;
@@ -27,8 +27,9 @@ public abstract class ChainImpl implements Chain
 	private final int targetBlockTime;
 	private final byte[] alertKey;
 
-	public ChainImpl (long version, long magic, int port, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
+	public ChainImpl (boolean production, long version, long magic, int port, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
 	{
+		this.production = true;
 		this.version = version;
 		this.magic = magic;
 		this.port = port;
@@ -74,6 +75,11 @@ public abstract class ChainImpl implements Chain
 	public long getVersion ()
 	{
 		return version;
+	}
+
+	public boolean isProduction ()
+	{
+		return production;
 	}
 
 }

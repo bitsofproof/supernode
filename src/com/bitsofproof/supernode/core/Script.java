@@ -637,27 +637,31 @@ public class Script
 		return writer.toByteArray ();
 	}
 
-	public boolean isPayToScriptHash (byte[] script) throws ValidationException
+	public static boolean isPayToScriptHash (byte[] script) throws ValidationException
 	{
 		List<Token> parsed = parse (script);
-		return parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
-				&& parsed.get (2).op == Opcode.OP_EQUAL;
+		if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+				&& parsed.get (2).op == Opcode.OP_EQUAL )
+		{
+			return isStandard (parsed.get (1).data);
+		}
+		return false;
 	}
 
-	public boolean isPayToKey (byte[] script) throws ValidationException
+	public static boolean isPayToKey (byte[] script) throws ValidationException
 	{
 		List<Token> parsed = parse (script);
 		return parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG;
 	}
 
-	public boolean isPayToAddress (byte[] script) throws ValidationException
+	public static boolean isPayToAddress (byte[] script) throws ValidationException
 	{
 		List<Token> parsed = parse (script);
 		return parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
 				&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG;
 	}
 
-	public boolean isStandard (byte[] script) throws ValidationException
+	public static boolean isStandard (byte[] script) throws ValidationException
 	{
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script);
 	}

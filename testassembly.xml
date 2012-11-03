@@ -51,6 +51,9 @@
 		<property name="connectTo" value="localhost"/>
 	</bean>
 	
+	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
+	</bean>
+	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
 		<property name="discovery" ref="resultlessDiscovery"/>

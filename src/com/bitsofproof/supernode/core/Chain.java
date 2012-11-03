@@ -33,4 +33,5 @@ public interface Chain
 
 	public long getVersion ();
 
+	public boolean isProduction ();
 }

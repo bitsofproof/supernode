@@ -667,13 +667,6 @@ class JpaBlockStore implements BlockStore
 
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
 	{
-		if ( tcontext.block != null )
-		{
-			for ( TxOut out : t.getOutputs () )
-			{
-				addOwners (out);
-			}
-		}
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
@@ -688,12 +681,23 @@ class JpaBlockStore implements BlockStore
 			tcontext.coinbase = false;
 			for ( TxOut o : t.getOutputs () )
 			{
+				if ( chain.isProduction () )
+				{
+					if ( !Script.isStandard (o.getScript ()) )
+					{
+						throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
+					}
+				}
 				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 				tcontext.nsigs += Script.sigOpCount (o.getScript ());
 			}
 			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
 			{
 				throw new ValidationException ("too many signatures in this block " + tcontext.block.getHash ());
+			}
+			for ( TxOut out : t.getOutputs () )
+			{
+				addOwners (out);
 			}
 		}
 		else
@@ -725,6 +729,13 @@ class JpaBlockStore implements BlockStore
 						throw new ValidationException ("script too long " + t.toWireDump ());
 					}
 				}
+				if ( chain.isProduction () )
+				{
+					if ( !Script.isStandard (o.getScript ()) )
+					{
+						throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
+					}
+				}
 				if ( tcontext.block != null )
 				{
 					tcontext.nsigs += Script.sigOpCount (o.getScript ());
@@ -742,6 +753,10 @@ class JpaBlockStore implements BlockStore
 				if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
 				{
 					throw new ValidationException ("Transaction output not in money range " + t.toWireDump ());
+				}
+				if ( tcontext.block != null )
+				{
+					addOwners (o);
 				}
 			}
 
@@ -834,6 +849,13 @@ class JpaBlockStore implements BlockStore
 			if ( sumOut > sumIn )
 			{
 				throw new ValidationException ("Transaction value out more than in " + t.toWireDump ());
+			}
+		}
+		for ( TxOut out : t.getOutputs () )
+		{
+			if ( tcontext.block != null )
+			{
+				addOwners (out);
 			}
 		}
 	}

@@ -35,7 +35,7 @@ public class SatoshiChain extends ChainImpl
 
 	public SatoshiChain ()
 	{
-		super (60001, 0xD9B4BEF9L, 8333, 2016, 1209600, SATOSHI_KEY);
+		super (true, 60001, 0xD9B4BEF9L, 8333, 2016, 1209600, SATOSHI_KEY);
 	}
 
 	@Override

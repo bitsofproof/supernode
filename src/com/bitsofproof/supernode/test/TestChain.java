@@ -22,7 +22,7 @@ public class TestChain extends ChainImpl
 
 	public TestChain ()
 	{
-		super (60001, 0x0709110bL, 18333, 2016, 1209600, SATOSHI_KEY);
+		super (false, 60001, 0x0709110bL, 18333, 2016, 1209600, SATOSHI_KEY);
 	}
 
 	@Override
