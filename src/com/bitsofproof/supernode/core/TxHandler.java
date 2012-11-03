@@ -23,7 +23,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.BitcoinNetwork.PeerTask;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
@@ -76,28 +75,24 @@ public class TxHandler
 					store.validateTransaction (txm.getTx ());
 					log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
 					unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
-					network.runForConnected (new PeerTask ()
+					for ( BitcoinPeer p : network.getConnectPeers () )
 					{
-						@Override
-						public void run (BitcoinPeer p)
+						if ( p != peer )
 						{
-							// tell others
-							if ( p != peer )
+							TxMessage tm = (TxMessage) p.createMessage ("tx");
+							tm.setTx (txm.getTx ());
+							try
 							{
-								TxMessage tm = (TxMessage) p.createMessage ("tx");
-								tm.setTx (txm.getTx ());
-								try
-								{
-									p.send (tm);
-									log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
-								}
-								catch ( IOException e )
-								{
-									log.trace ("Can not send to transaction, likely disconnected ", p.getAddress ());
-								}
+								p.send (tm);
+								log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
+							}
+							catch ( IOException e )
+							{
+								log.trace ("Can not send to transaction, likely disconnected ", p.getAddress ());
 							}
 						}
-					});
+
+					}
 				}
 			}
 		});

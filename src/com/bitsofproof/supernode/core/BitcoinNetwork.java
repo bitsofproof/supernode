@@ -26,8 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -60,7 +58,6 @@ public class BitcoinNetwork extends P2P
 	private final Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet (new HashSet<BitcoinPeer> ());
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
-	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final Map<Long, Runnable> jobs = new HashMap<Long, Runnable> ();
 
 	@Override
@@ -98,14 +95,14 @@ public class BitcoinNetwork extends P2P
 	public long scheduleJob (final Runnable job, int delay, TimeUnit unit)
 	{
 		WrappedRunnable runnable = new WrappedRunnable (job);
-		scheduler.schedule (runnable, delay, unit);
+		getScheduler ().schedule (runnable, delay, unit);
 		return runnable.nr;
 	}
 
 	public long scheduleJobWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
 	{
 		WrappedRunnable runnable = new WrappedRunnable (job);
-		scheduler.scheduleWithFixedDelay (runnable, startDelay, delay, unit);
+		getScheduler ().scheduleWithFixedDelay (runnable, startDelay, delay, unit);
 		return runnable.nr;
 	}
 
@@ -167,22 +164,6 @@ public class BitcoinNetwork extends P2P
 	public boolean isConnected (Peer peer)
 	{
 		return connectedPeers.contains (peer);
-	}
-
-	public interface PeerTask
-	{
-		public void run (BitcoinPeer peer);
-	}
-
-	public void runForConnected (final PeerTask task)
-	{
-		synchronized ( connectedPeers )
-		{
-			for ( final BitcoinPeer peer : connectedPeers )
-			{
-				task.run (peer);
-			}
-		}
 	}
 
 	public void addListener (final String type, final BitcoinMessageListener<? extends BitcoinPeer.Message> l)
@@ -267,7 +248,7 @@ public class BitcoinNetwork extends P2P
 	}
 
 	@Override
-	public boolean discover ()
+	protected boolean discover ()
 	{
 		List<InetAddress> al = discovery.discover ();
 

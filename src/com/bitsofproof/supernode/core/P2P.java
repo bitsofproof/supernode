@@ -53,11 +53,9 @@ public abstract class P2P
 	public interface Message
 	{
 		public byte[] toByteArray ();
-
-		public String dump ();
 	}
 
-	public abstract class Peer
+	protected abstract class Peer
 	{
 		private final InetSocketAddress address;
 		private SocketChannel channel;
@@ -146,7 +144,7 @@ public abstract class P2P
 			}
 		};
 
-		public Peer (InetSocketAddress address)
+		protected Peer (InetSocketAddress address)
 		{
 			this.address = address;
 		}
@@ -314,21 +312,21 @@ public abstract class P2P
 			}
 		}
 
-		public abstract Message parse (InputStream readIn) throws IOException;
+		protected abstract Message parse (InputStream readIn) throws IOException;
 
-		public abstract void receive (Message m);
+		protected abstract void receive (Message m);
 
-		public abstract void onConnect ();
+		protected abstract void onConnect ();
 
-		public abstract void onDisconnect ();
+		protected abstract void onDisconnect ();
 
 	}
 
-	public abstract Peer createPeer (InetSocketAddress address, boolean active);
+	protected abstract Peer createPeer (InetSocketAddress address, boolean active);
 
-	public abstract boolean discover ();
+	protected abstract boolean discover ();
 
-	public void addPeer (InetAddress addr, int port)
+	protected void addPeer (InetAddress addr, int port)
 	{
 		InetSocketAddress address = new InetSocketAddress (addr, port);
 		if ( !runqueue.contains (address) )
@@ -375,7 +373,7 @@ public abstract class P2P
 		return port;
 	}
 
-	public ScheduledExecutorService getScheduler ()
+	protected ScheduledExecutorService getScheduler ()
 	{
 		return scheduler;
 	}

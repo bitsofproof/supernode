@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.BitcoinNetwork.PeerTask;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
@@ -46,45 +45,40 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 	{
 		try
 		{
-			network.runForConnected (new PeerTask ()
+			for ( final BitcoinPeer peer : network.getConnectPeers () )
 			{
-
-				@Override
-				public void run (final BitcoinPeer peer)
+				if ( peer.getLastSpoken () > (System.currentTimeMillis () / 1000 - delay) )
 				{
-					if ( peer.getLastSpoken () > (System.currentTimeMillis () / 1000 - delay) )
+					return;
+				}
+				PingMessage pi = (PingMessage) peer.createMessage ("ping");
+				try
+				{
+					peer.send (pi);
+					log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
+					if ( peer.getVersion () > 60000 )
 					{
-						return;
-					}
-					PingMessage pi = (PingMessage) peer.createMessage ("ping");
-					try
-					{
-						peer.send (pi);
-						log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
-						if ( peer.getVersion () > 60000 )
+						sentNonces.put (peer, pi.getNonce ());
+						network.scheduleJob (new Runnable ()
 						{
-							sentNonces.put (peer, pi.getNonce ());
-							network.scheduleJob (new Runnable ()
+							@Override
+							public void run ()
 							{
-								@Override
-								public void run ()
+								if ( sentNonces.containsKey (peer) )
 								{
-									if ( sentNonces.containsKey (peer) )
-									{
-										log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
-										sentNonces.remove (peer);
-										peer.disconnect ();
-									}
+									log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
+									sentNonces.remove (peer);
+									peer.disconnect ();
 								}
-							}, timeout, TimeUnit.SECONDS);
-						}
-					}
-					catch ( IOException e )
-					{
-						log.trace ("Can not send png to peer. Likely disconnected " + peer.getAddress ().getAddress ());
+							}
+						}, timeout, TimeUnit.SECONDS);
 					}
 				}
-			});
+				catch ( IOException e )
+				{
+					log.trace ("Can not send png to peer. Likely disconnected " + peer.getAddress ().getAddress ());
+				}
+			}
 		}
 		catch ( Exception e )
 		{

@@ -53,7 +53,7 @@ public class BitcoinPeer extends P2P.Peer
 	private static final Logger log = LoggerFactory.getLogger (BitcoinPeer.class);
 
 	private final TransactionTemplate transactionTemplate;
-	private BitcoinNetwork network;
+	private final BitcoinNetwork network;
 
 	private String agent;
 	private long height;
@@ -109,12 +109,6 @@ public class BitcoinPeer extends P2P.Peer
 
 			writer.writeBytes (data);
 			return writer.toByteArray ();
-		}
-
-		@Override
-		public String dump ()
-		{
-			return ByteUtils.toHex (toByteArray ());
 		}
 
 		public void toWire (WireFormat.Writer writer)
@@ -181,10 +175,10 @@ public class BitcoinPeer extends P2P.Peer
 		return lastSpoken;
 	}
 
-	public Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections
+	private final Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections
 			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> ());
 
-	public BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
+	protected BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
 	{
 		p2p.super (address);
 		network = (BitcoinNetwork) p2p;
@@ -236,11 +230,6 @@ public class BitcoinPeer extends P2P.Peer
 		return network;
 	}
 
-	public void setNetwork (BitcoinNetwork network)
-	{
-		this.network = network;
-	}
-
 	public long getVersion ()
 	{
 		return peerVersion;
@@ -262,16 +251,16 @@ public class BitcoinPeer extends P2P.Peer
 	}
 
 	@Override
-	public void onDisconnect ()
+	protected void onDisconnect ()
 	{
 		network.notifyPeerRemoved (this);
 		log.info ("Disconnected '" + getAgent () + "' at " + getAddress () + ". Open connections: " + getNetwork ().getNumberOfConnections ());
 	}
 
-	public static final int MAX_BLOCK_SIZE = 1000000;
+	private static final int MAX_BLOCK_SIZE = 1000000;
 
 	@Override
-	public Message parse (InputStream readIn) throws IOException
+	protected Message parse (InputStream readIn) throws IOException
 	{
 		try
 		{
@@ -321,7 +310,7 @@ public class BitcoinPeer extends P2P.Peer
 	}
 
 	@Override
-	public void onConnect ()
+	protected void onConnect ()
 	{
 		try
 		{
@@ -351,7 +340,7 @@ public class BitcoinPeer extends P2P.Peer
 	}
 
 	@Override
-	public void receive (P2P.Message m)
+	protected void receive (P2P.Message m)
 	{
 		final BitcoinPeer self = this;
 		final BitcoinPeer.Message bm = (Message) m;
@@ -383,7 +372,7 @@ public class BitcoinPeer extends P2P.Peer
 		});
 	}
 
-	public void addListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
+	protected void addListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
 		ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll == null )
@@ -397,7 +386,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 	}
 
-	public void removeListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
+	protected void removeListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)
 	{
 		ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>> ll = listener.get (type);
 		if ( ll != null )
