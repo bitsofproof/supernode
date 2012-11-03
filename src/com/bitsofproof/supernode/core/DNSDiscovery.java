@@ -22,14 +22,12 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.emory.mathcs.backport.java.util.Collections;
+
 public class DNSDiscovery implements Discovery
 {
 	private static final Logger log = LoggerFactory.getLogger (BitcoinNetwork.class);
-	private static final String[] seedHosts = new String[] { "dnsseed.bluematt.me", // Matt Corallo
-			"bitseed.xf2.org", // Jeff Garzik
-			"seed.bitcoin.sipa.be", // Pieter Wuille
-			"dnsseed.bitcoin.dashjr.org", // Luke Dashjr
-	};
+	private String[] seedHosts;
 
 	@Override
 	public List<InetAddress> discover ()
@@ -55,8 +53,19 @@ public class DNSDiscovery implements Discovery
 				log.trace ("DNS lookup for " + hostName + " failed.");
 			}
 		}
-
+		Collections.shuffle (al);
 		log.trace ("Found " + n + " addresses of seed hosts");
 		return al;
 	}
+
+	public String[] getSeedHosts ()
+	{
+		return seedHosts;
+	}
+
+	public void setSeedHosts (String[] seedHosts)
+	{
+		this.seedHosts = seedHosts;
+	}
+
 }

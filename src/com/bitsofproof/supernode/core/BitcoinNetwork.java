@@ -270,7 +270,7 @@ public class BitcoinNetwork extends P2P
 	public boolean discover ()
 	{
 		List<InetAddress> al = discovery.discover ();
-		Collections.shuffle (al);
+
 		for ( InetAddress a : al )
 		{
 			addPeer (a, chain.getPort ());
