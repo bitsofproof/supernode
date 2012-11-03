@@ -40,7 +40,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
@@ -70,18 +69,18 @@ class JpaBlockStore implements BlockStore
 
 	private CachedHead currentHead = null;
 	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
-	private final Map<String, Member> members = new HashMap<String, Member> ();
+	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
-	public class CachedHead
+	private static class CachedHead
 	{
-		private StoredMember last;
+		private CachedBlock last;
 		private double chainWork;
 		private long height;
 
-		public StoredMember getLast ()
+		public CachedBlock getLast ()
 		{
 			return last;
 		}
@@ -96,7 +95,7 @@ class JpaBlockStore implements BlockStore
 			return height;
 		}
 
-		public void setLast (StoredMember last)
+		public void setLast (CachedBlock last)
 		{
 			this.last = last;
 		}
@@ -113,14 +112,34 @@ class JpaBlockStore implements BlockStore
 
 	}
 
-	public class Member
+	private static class CachedBlock
 	{
-		protected String hash;
-
-		public Member (String hash)
+		public CachedBlock (String hash, Long id, CachedBlock previous, long time)
 		{
-			super ();
 			this.hash = hash;
+			this.id = id;
+			this.previous = previous;
+			this.time = time;
+		}
+
+		private final String hash;
+		private final Long id;
+		private final CachedBlock previous;
+		private final long time;
+
+		public Long getId ()
+		{
+			return id;
+		}
+
+		public CachedBlock getPrevious ()
+		{
+			return previous;
+		}
+
+		public long getTime ()
+		{
+			return time;
 		}
 
 		public String getHash ()
@@ -135,61 +154,6 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	public class StoredMember extends Member
-	{
-		public StoredMember (String hash, Long id, StoredMember previous, long time)
-		{
-			super (hash);
-			this.id = id;
-			this.previous = previous;
-			this.time = time;
-		}
-
-		protected Long id;
-		protected StoredMember previous;
-		protected long time;
-
-		public Long getId ()
-		{
-			return id;
-		}
-
-		public StoredMember getPrevious ()
-		{
-			return previous;
-		}
-
-		public long getTime ()
-		{
-			return time;
-		}
-
-	}
-
-	public class KnownMember extends Member
-	{
-		protected Set<BitcoinPeer> knownBy;
-		protected int nr;
-
-		public KnownMember (String hash, int nr, Set<BitcoinPeer> knownBy)
-		{
-			super (hash);
-			this.knownBy = knownBy;
-			this.nr = nr;
-		}
-
-		public Set<BitcoinPeer> getKnownBy ()
-		{
-			return knownBy;
-		}
-
-		public int getNr ()
-		{
-			return nr;
-		}
-
-	}
-
 	@Transactional (propagation = Propagation.MANDATORY)
 	@Override
 	public void cache ()
@@ -201,12 +165,11 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( b.getPrevious () != null )
 			{
-				members.put (b.getHash (),
-						new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ()));
+				cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ()));
 			}
 			else
 			{
-				members.put (b.getHash (), new StoredMember (b.getHash (), b.getId (), null, b.getCreateTime ()));
+				cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ()));
 			}
 		}
 
@@ -218,7 +181,7 @@ class JpaBlockStore implements BlockStore
 			CachedHead sh = new CachedHead ();
 			sh.setChainWork (h.getChainWork ());
 			sh.setHeight (h.getHeight ());
-			sh.setLast ((StoredMember) members.get (h.getLeaf ()));
+			sh.setLast (cachedBlocks.get (h.getLeaf ()));
 			heads.put (h.getLeaf (), sh);
 			if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
 			{
@@ -234,8 +197,7 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
-			Member cached = members.get (hash);
-			return cached != null && cached instanceof StoredMember;
+			return cachedBlocks.get (hash) != null;
 		}
 		finally
 		{
@@ -273,9 +235,9 @@ class JpaBlockStore implements BlockStore
 			lock.readLock ().lock ();
 
 			List<String> locator = new ArrayList<String> ();
-			StoredMember curr = currentHead.getLast ();
+			CachedBlock curr = currentHead.getLast ();
 			locator.add (curr.getHash ());
-			StoredMember prev = curr.getPrevious ();
+			CachedBlock prev = curr.getPrevious ();
 			for ( int i = 0, step = 1; prev != null; ++i )
 			{
 				for ( int j = 0; prev != null && j < step; ++j )
@@ -334,21 +296,18 @@ class JpaBlockStore implements BlockStore
 
 	private void lockedStoreBlock (Blk b) throws ValidationException
 	{
-		Member cached = members.get (b.getHash ());
-		if ( cached instanceof StoredMember )
+		CachedBlock cached = cachedBlocks.get (b.getHash ());
+		if ( cached != null )
 		{
 			return;
 		}
 
 		// find previous block
-		Member cachedPrevious = members.get (b.getPreviousHash ());
-		if ( cachedPrevious != null && cachedPrevious instanceof StoredMember )
+		CachedBlock cachedPrevious = cachedBlocks.get (b.getPreviousHash ());
+		if ( cachedPrevious != null )
 		{
 			Blk prev = null;
-			if ( cachedPrevious instanceof StoredMember )
-			{
-				prev = entityManager.find (Blk.class, ((StoredMember) cachedPrevious).getId ());
-			}
+			prev = entityManager.find (Blk.class, (cachedPrevious).getId ());
 			b.setPrevious (prev);
 
 			if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
@@ -389,8 +348,8 @@ class JpaBlockStore implements BlockStore
 
 			if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
 			{
-				StoredMember c = null;
-				StoredMember p = (StoredMember) cachedPrevious;
+				CachedBlock c = null;
+				CachedBlock p = cachedPrevious;
 				for ( int i = 0; i < chain.getDifficultyReviewBlocks () - 1; ++i )
 				{
 					c = p;
@@ -508,8 +467,8 @@ class JpaBlockStore implements BlockStore
 			entityManager.persist (b);
 
 			// modify transient caches only after persistent changes
-			StoredMember m = new StoredMember (b.getHash (), b.getId (), (StoredMember) members.get (b.getPrevious ().getHash ()), b.getCreateTime ());
-			members.put (b.getHash (), m);
+			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
+			cachedBlocks.put (b.getHash (), m);
 
 			CachedHead usingHead = currentHead;
 			if ( branching )
@@ -623,7 +582,7 @@ class JpaBlockStore implements BlockStore
 			if ( !dsblocks.isEmpty () )
 			{
 				// check if a block with double spend is reachable from this block
-				StoredMember prev = (StoredMember) members.get (tcontext.block.getPrevious ().getHash ());
+				CachedBlock prev = cachedBlocks.get (tcontext.block.getPrevious ().getHash ());
 				while ( prev != null )
 				{
 					if ( dsblocks.contains (prev.getHash ()) )
@@ -947,12 +906,12 @@ class JpaBlockStore implements BlockStore
 	public Blk getBlock (String hash)
 	{
 
-		Member cached = null;
+		CachedBlock cached = null;
 		try
 		{
 			lock.readLock ().lock ();
-			cached = members.get (hash);
-			if ( cached == null || !(cached instanceof StoredMember) )
+			cached = cachedBlocks.get (hash);
+			if ( cached == null )
 			{
 				return null;
 			}
@@ -961,7 +920,7 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().unlock ();
 		}
-		return entityManager.find (Blk.class, ((StoredMember) cached).getId ());
+		return entityManager.find (Blk.class, cached.getId ());
 	}
 
 	@Transactional (propagation = Propagation.MANDATORY)
