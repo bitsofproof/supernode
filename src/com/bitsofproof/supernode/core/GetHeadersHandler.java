@@ -31,7 +31,7 @@ public class GetHeadersHandler implements BitcoinMessageListener<GetHeadersMessa
 	}
 
 	@Override
-	public void process (GetHeadersMessage m, BitcoinPeer peer) throws Exception
+	public void process (GetHeadersMessage m, BitcoinPeer peer)
 	{
 		log.trace ("received getheader");
 	}

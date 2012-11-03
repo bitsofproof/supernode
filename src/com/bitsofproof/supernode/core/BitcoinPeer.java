@@ -31,9 +31,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.AlertMessage;
@@ -52,7 +49,6 @@ public class BitcoinPeer extends P2P.Peer
 {
 	private static final Logger log = LoggerFactory.getLogger (BitcoinPeer.class);
 
-	private final TransactionTemplate transactionTemplate;
 	private final BitcoinNetwork network;
 
 	private String agent;
@@ -178,11 +174,10 @@ public class BitcoinPeer extends P2P.Peer
 	private final Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections
 			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> ());
 
-	protected BitcoinPeer (P2P p2p, TransactionTemplate transactionTemplate, InetSocketAddress address, boolean out)
+	protected BitcoinPeer (P2P p2p, InetSocketAddress address, boolean out)
 	{
 		p2p.super (address);
 		network = (BitcoinNetwork) p2p;
-		this.transactionTemplate = transactionTemplate;
 		this.outgoing = out;
 
 		// this will be overwritten by the first version message we get
@@ -191,7 +186,7 @@ public class BitcoinPeer extends P2P.Peer
 		addListener ("version", new BitcoinMessageListener<VersionMessage> ()
 		{
 			@Override
-			public void process (VersionMessage v, BitcoinPeer peer) throws Exception
+			public void process (VersionMessage v, BitcoinPeer peer)
 			{
 				if ( v.getNonce () == network.getVersionNonce () )
 				{
@@ -340,36 +335,19 @@ public class BitcoinPeer extends P2P.Peer
 	}
 
 	@Override
+	@SuppressWarnings ({ "rawtypes", "unchecked" })
 	protected void receive (P2P.Message m)
 	{
 		final BitcoinPeer self = this;
 		final BitcoinPeer.Message bm = (Message) m;
-		transactionTemplate.execute (new TransactionCallbackWithoutResult ()
+		List<BitcoinMessageListener<? extends BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
+		if ( classListener != null )
 		{
-			@SuppressWarnings ({ "rawtypes", "unchecked" })
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus arg0)
+			for ( BitcoinMessageListener l : classListener )
 			{
-				try
-				{
-					List<BitcoinMessageListener<? extends BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
-					if ( classListener != null )
-					{
-						for ( BitcoinMessageListener l : classListener )
-						{
-							l.process (bm, self);
-						}
-					}
-
-				}
-				catch ( Exception e )
-				{
-					arg0.setRollbackOnly ();
-					log.error ("Failed to process " + bm.getCommand (), e);
-					disconnect ();
-				}
+				l.process (bm, self);
 			}
-		});
+		}
 	}
 
 	protected void addListener (String type, BitcoinMessageListener<? extends BitcoinPeer.Message> l)

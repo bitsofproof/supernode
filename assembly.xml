@@ -64,7 +64,6 @@
 		<property name="discovery" ref="dnsDiscovery"/>
 		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="${store}" />
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	
 	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
@@ -108,6 +107,5 @@
 		<property name="chain" ref="${chain}"/>
 		<property name="network" ref="bitcoinNetwork"/>
 		<property name="store" ref="${store}" />
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 </beans>

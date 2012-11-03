@@ -25,10 +25,6 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
@@ -41,8 +37,6 @@ public class Application
 	private Chain chain;
 
 	private BlockStore store;
-
-	private PlatformTransactionManager transactionManager;
 
 	private BitcoinNetwork network;
 
@@ -63,26 +57,12 @@ public class Application
 			return;
 		}
 
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		if ( cl.hasOption ("resetdb") )
 		{
-
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				if ( cl.hasOption ("resetdb") )
-				{
-					store.resetStore (chain);
-				}
-				store.cache ();
-			}
-		});
-
+			store.resetStore (chain);
+		}
+		store.cache ();
 		network.start ();
-	}
-
-	public Chain getChain ()
-	{
-		return chain;
 	}
 
 	public void setChain (Chain chain)
@@ -90,34 +70,14 @@ public class Application
 		this.chain = chain;
 	}
 
-	public BlockStore getStore ()
-	{
-		return store;
-	}
-
 	public void setStore (BlockStore store)
 	{
 		this.store = store;
 	}
 
-	public BitcoinNetwork getNetwork ()
-	{
-		return network;
-	}
-
 	public void setNetwork (BitcoinNetwork network)
 	{
 		this.network = network;
-	}
-
-	public PlatformTransactionManager getTransactionManager ()
-	{
-		return transactionManager;
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
 	}
 
 }

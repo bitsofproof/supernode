@@ -176,7 +176,7 @@ public class ChainLoader
 		network.addListener ("block", new BitcoinMessageListener<BlockMessage> ()
 		{
 			@Override
-			public void process (BlockMessage m, BitcoinPeer peer) throws Exception
+			public void process (BlockMessage m, BitcoinPeer peer)
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
@@ -191,11 +191,18 @@ public class ChainLoader
 				}
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
-					store.storeBlock (block);
-					while ( pending.containsKey (block.getHash ()) )
+					try
 					{
-						block = pending.get (block.getHash ());
 						store.storeBlock (block);
+						while ( pending.containsKey (block.getHash ()) )
+						{
+							block = pending.get (block.getHash ());
+							store.storeBlock (block);
+						}
+					}
+					catch ( ValidationException e )
+					{
+						log.trace ("Rejecting block ", block.getHash () + " from " + peer.getAddress ());
 					}
 				}
 				else
@@ -208,7 +215,7 @@ public class ChainLoader
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
 			@Override
-			public void process (InvMessage m, BitcoinPeer peer) throws Exception
+			public void process (InvMessage m, BitcoinPeer peer)
 			{
 				if ( !m.getBlockHashes ().isEmpty () )
 				{

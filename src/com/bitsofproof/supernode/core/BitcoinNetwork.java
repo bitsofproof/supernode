@@ -30,8 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.model.BlockStore;
@@ -47,10 +45,8 @@ public class BitcoinNetwork extends P2P
 
 	private Chain chain;
 	private BlockStore store;
-	private PlatformTransactionManager transactionManager;
 	private Discovery discovery;
 
-	private TransactionTemplate transactionTemplate;
 	private final long versionNonce = new SecureRandom ().nextLong ();
 
 	private final Map<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> listener = Collections
@@ -64,8 +60,6 @@ public class BitcoinNetwork extends P2P
 	public void start () throws IOException
 	{
 		setPort (chain.getPort ());
-
-		transactionTemplate = new TransactionTemplate (transactionManager);
 
 		log.trace ("Starting network on port " + chain.getPort ());
 		super.start ();
@@ -203,7 +197,7 @@ public class BitcoinNetwork extends P2P
 	@Override
 	public Peer createPeer (InetSocketAddress address, boolean outgoing)
 	{
-		BitcoinPeer peer = new BitcoinPeer (this, transactionTemplate, address, outgoing);
+		BitcoinPeer peer = new BitcoinPeer (this, address, outgoing);
 		return peer;
 	}
 
@@ -215,16 +209,6 @@ public class BitcoinNetwork extends P2P
 	public BlockStore getStore ()
 	{
 		return store;
-	}
-
-	public PlatformTransactionManager getTransactionManager ()
-	{
-		return transactionManager;
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
 	}
 
 	public void setChain (Chain chain)
@@ -258,11 +242,6 @@ public class BitcoinNetwork extends P2P
 		}
 
 		return !al.isEmpty ();
-	}
-
-	public Discovery getDiscovery ()
-	{
-		return discovery;
 	}
 
 	public void setDiscovery (Discovery discovery)

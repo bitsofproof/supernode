@@ -1,6 +1,5 @@
 package com.bitsofproof.supernode.core;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +29,7 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 	}
 
 	@Override
-	public void process (PongMessage m, BitcoinPeer peer) throws Exception
+	public void process (PongMessage m, BitcoinPeer peer)
 	{
 		log.trace ("Got pong from " + peer.getAddress ().getAddress ());
 		Long n = sentNonces.get (peer);
@@ -52,9 +51,8 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 					return;
 				}
 				PingMessage pi = (PingMessage) peer.createMessage ("ping");
-				try
+				if ( peer.send (pi) )
 				{
-					peer.send (pi);
 					log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
 					if ( peer.getVersion () > 60000 )
 					{
@@ -73,10 +71,6 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 							}
 						}, timeout, TimeUnit.SECONDS);
 					}
-				}
-				catch ( IOException e )
-				{
-					log.trace ("Can not send png to peer. Likely disconnected " + peer.getAddress ().getAddress ());
 				}
 			}
 		}

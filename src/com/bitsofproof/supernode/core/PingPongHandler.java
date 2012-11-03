@@ -32,7 +32,7 @@ public class PingPongHandler implements BitcoinMessageListener<PingMessage>
 	}
 
 	@Override
-	public void process (PingMessage pi, BitcoinPeer peer) throws Exception
+	public void process (PingMessage pi, BitcoinPeer peer)
 	{
 		if ( peer.getVersion () > 60000 )
 		{

@@ -154,7 +154,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
 	public void cache ()
 	{
@@ -263,7 +263,7 @@ class JpaBlockStore implements BlockStore
 		Map<String, HashMap<Integer, TxOut>> resolvedInputs = new HashMap<String, HashMap<Integer, TxOut>> ();
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
 	public void storeBlock (Blk b) throws ValidationException
 	{
@@ -873,7 +873,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
 	public void resetStore (Chain chain)
 	{
@@ -909,9 +909,9 @@ class JpaBlockStore implements BlockStore
 		return entityManager.find (Blk.class, cached.getId ());
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
-	public boolean validateTransaction (Tx t) throws ValidationException
+	public void validateTransaction (Tx t) throws ValidationException
 	{
 		try
 		{
@@ -924,7 +924,6 @@ class JpaBlockStore implements BlockStore
 			tcontext.nsigs = 0;
 			resolveInputs (tcontext, t);
 			validateTransaction (tcontext, t);
-			return true;
 		}
 		finally
 		{

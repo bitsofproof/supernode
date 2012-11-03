@@ -31,7 +31,7 @@ public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage
 	}
 
 	@Override
-	public void process (GetBlocksMessage m, BitcoinPeer peer) throws Exception
+	public void process (GetBlocksMessage m, BitcoinPeer peer)
 	{
 		log.trace ("received gedblocks");
 	}

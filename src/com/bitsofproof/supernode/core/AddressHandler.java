@@ -32,7 +32,7 @@ public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 	}
 
 	@Override
-	public void process (AddrMessage am, BitcoinPeer peer) throws Exception
+	public void process (AddrMessage am, BitcoinPeer peer)
 	{
 		for ( Address a : am.getAddresses () )
 		{

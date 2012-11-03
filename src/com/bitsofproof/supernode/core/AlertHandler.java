@@ -33,7 +33,7 @@ public class AlertHandler implements BitcoinMessageListener<AlertMessage>
 	}
 
 	@Override
-	public void process (AlertMessage am, BitcoinPeer peer) throws Exception
+	public void process (AlertMessage am, BitcoinPeer peer)
 	{
 		if ( am.isValidWithKey (chain.getAlertKey ()) )
 		{

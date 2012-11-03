@@ -15,7 +15,6 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class TxHandler
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
 			@Override
-			public void process (InvMessage im, BitcoinPeer peer) throws Exception
+			public void process (InvMessage im, BitcoinPeer peer)
 			{
 				GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
 				for ( byte[] h : im.getTransactionHashes () )
@@ -67,31 +66,32 @@ public class TxHandler
 		{
 
 			@Override
-			public void process (final TxMessage txm, final BitcoinPeer peer) throws Exception
+			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
 				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
 				{
-					store.validateTransaction (txm.getTx ());
-					log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
-					unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
-					for ( BitcoinPeer p : network.getConnectPeers () )
+					try
 					{
-						if ( p != peer )
+						store.validateTransaction (txm.getTx ());
+						log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
+						unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
+						for ( BitcoinPeer p : network.getConnectPeers () )
 						{
-							TxMessage tm = (TxMessage) p.createMessage ("tx");
-							tm.setTx (txm.getTx ());
-							try
+							if ( p != peer )
 							{
-								p.send (tm);
-								log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
-							}
-							catch ( IOException e )
-							{
-								log.trace ("Can not send to transaction, likely disconnected ", p.getAddress ());
+								TxMessage tm = (TxMessage) p.createMessage ("tx");
+								tm.setTx (txm.getTx ());
+								if ( p.send (tm) )
+								{
+									log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
+								}
 							}
 						}
-
+					}
+					catch ( ValidationException e )
+					{
+						log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress (), e);
 					}
 				}
 			}

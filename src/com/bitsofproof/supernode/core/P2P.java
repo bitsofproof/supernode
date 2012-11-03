@@ -280,15 +280,14 @@ public abstract class P2P
 			});
 		}
 
-		public void send (Message m) throws IOException
+		public boolean send (Message m)
 		{
+			if ( !connectedPeers.containsKey (channel) )
+			{
+				return false;
+			}
 			try
 			{
-				if ( !connectedPeers.containsKey (this.channel) )
-				{
-					throw new IOException ("Peer disconneted ");
-				}
-
 				writeable.acquireUninterruptibly ();
 
 				byte[] wiremsg = m.toByteArray ();
@@ -310,6 +309,7 @@ public abstract class P2P
 			{
 				writeable.release ();
 			}
+			return true;
 		}
 
 		protected abstract Message parse (InputStream readIn) throws IOException;

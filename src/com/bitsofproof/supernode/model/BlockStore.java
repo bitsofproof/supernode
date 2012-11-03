@@ -36,7 +36,7 @@ public interface BlockStore
 
 	public boolean isStoredBlock (String hash);
 
-	public boolean validateTransaction (Tx tx) throws ValidationException;
+	public void validateTransaction (Tx tx) throws ValidationException;
 
 	public long getChainHeight ();
 }
