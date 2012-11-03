@@ -29,7 +29,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -40,14 +39,6 @@ public class Tx implements Serializable
 
 	public static final long COIN = 100000000;
 	public static final long MAX_MONEY = 2099999997690000L;
-
-	private void checkMoneyRange (long n) throws ValidationException
-	{
-		if ( n < 0 || n > MAX_MONEY )
-		{
-			throw new ValidationException ("outside money range");
-		}
-	}
 
 	@Id
 	@GeneratedValue
