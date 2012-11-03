@@ -860,7 +860,7 @@ class JpaBlockStore implements BlockStore
 		if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
 				&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
 		{
-			// pay to key
+			// pay to address
 			Owner o = new Owner ();
 			o.setHash (ByteUtils.toHex (parsed.get (2).data));
 			o.setOutpoint (out);
