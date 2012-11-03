@@ -803,13 +803,6 @@ class JpaBlockStore implements BlockStore
 				throw new ValidationException ("Transaction value out more than in " + t.toWireDump ());
 			}
 		}
-		for ( TxOut out : t.getOutputs () )
-		{
-			if ( tcontext.block != null )
-			{
-				addOwners (out);
-			}
-		}
 	}
 
 	private void addOwners (TxOut out) throws ValidationException
