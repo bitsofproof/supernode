@@ -112,17 +112,6 @@ public class Hash
 	@Override
 	public String toString ()
 	{
-		StringBuffer buf = new StringBuffer (bytes.length * 2);
-		for ( int i = bytes.length - 1; i >= 0; --i )
-		{
-			byte b = bytes[i];
-			String s = Integer.toString (0xFF & b, 16);
-			if ( s.length () < 2 )
-			{
-				buf.append ('0');
-			}
-			buf.append (s);
-		}
-		return buf.toString ();
+		return ByteUtils.toHex (ByteUtils.reverse (toByteArray ()));
 	}
 }
