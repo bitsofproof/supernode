@@ -30,12 +30,13 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 {
 	private static final Logger log = LoggerFactory.getLogger (GetDataHandler.class);
 
-	private BlockStore store;
+	private final BlockStore store;
 	private TxHandler txHandler;
 
 	public GetDataHandler (BitcoinNetwork network)
 	{
 		network.addListener ("getdata", this);
+		store = network.getStore ();
 	}
 
 	@Override
@@ -65,21 +66,6 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 				log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 			}
 		}
-	}
-
-	public BlockStore getStore ()
-	{
-		return store;
-	}
-
-	public void setStore (BlockStore store)
-	{
-		this.store = store;
-	}
-
-	public TxHandler getTxHandler ()
-	{
-		return txHandler;
 	}
 
 	public void setTxHandler (TxHandler txHandler)

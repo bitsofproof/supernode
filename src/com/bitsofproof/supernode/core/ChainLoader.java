@@ -62,8 +62,10 @@ public class ChainLoader
 		}
 	}
 
-	public ChainLoader (final BitcoinNetwork network, final BlockStore store)
+	public ChainLoader (final BitcoinNetwork network)
 	{
+		final BlockStore store = network.getStore ();
+
 		Thread loader = new Thread (new Runnable ()
 		{
 			@Override

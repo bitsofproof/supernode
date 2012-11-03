@@ -27,16 +27,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
-import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.model.BlockStore;
 
 public class Application
 {
 	private static final Logger log = LoggerFactory.getLogger (Application.class);
-
-	private Chain chain;
-
-	private BlockStore store;
 
 	private BitcoinNetwork network;
 
@@ -59,25 +53,14 @@ public class Application
 
 		if ( cl.hasOption ("resetdb") )
 		{
-			store.resetStore (chain);
+			network.getStore ().resetStore (network.getChain ());
 		}
-		store.cache ();
+		network.getStore ().cache ();
 		network.start ();
-	}
-
-	public void setChain (Chain chain)
-	{
-		this.chain = chain;
-	}
-
-	public void setStore (BlockStore store)
-	{
-		this.store = store;
 	}
 
 	public void setNetwork (BitcoinNetwork network)
 	{
 		this.network = network;
 	}
-
 }

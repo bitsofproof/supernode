@@ -68,7 +68,6 @@
 	
 	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<constructor-arg><ref bean="${store}"/></constructor-arg>
 		<property name="inventoryTimeout" value="30"/>
 	</bean>
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
@@ -84,13 +83,11 @@
 	</bean>
 	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="store" ref="${store}"/>
 		<property name="loader" ref="chainloader"/>
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<property name="txHandler" ref="tx"/>
-		<property name="store" ref="${store}"/>
 	</bean>
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
@@ -104,8 +101,6 @@
 		<property name="startDelay" value="60"/>		
 	</bean>
 	<bean id="application" class="com.bitsofproof.supernode.main.Application">
-		<property name="chain" ref="${chain}"/>
 		<property name="network" ref="bitcoinNetwork"/>
-		<property name="store" ref="${store}" />
 	</bean>
 </beans>

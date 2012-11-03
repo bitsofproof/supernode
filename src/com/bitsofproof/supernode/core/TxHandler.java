@@ -33,13 +33,14 @@ public class TxHandler
 {
 	private static final Logger log = LoggerFactory.getLogger (TxHandler.class);
 
-	private BlockStore store;
 	private ChainLoader loader;
 
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
 	public TxHandler (final BitcoinNetwork network)
 	{
+		final BlockStore store = network.getStore ();
+
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
 			@Override
@@ -101,21 +102,6 @@ public class TxHandler
 	public Tx getTransaction (String hash)
 	{
 		return unconfirmed.get (hash);
-	}
-
-	public BlockStore getStore ()
-	{
-		return store;
-	}
-
-	public void setStore (BlockStore store)
-	{
-		this.store = store;
-	}
-
-	public ChainLoader getLoader ()
-	{
-		return loader;
 	}
 
 	public void setLoader (ChainLoader loader)
