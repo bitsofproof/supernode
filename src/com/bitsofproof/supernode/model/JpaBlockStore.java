@@ -848,11 +848,11 @@ class JpaBlockStore implements BlockStore
 	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws ValidationException
 	{
 		List<Script.Token> parsed = Script.parse (out.getScript ());
-		if ( parsed.size () == 3 && parsed.get (0).data != null && parsed.get (1).data != null && parsed.get (2).op == Opcode.OP_CHECKSIG )
+		if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG )
 		{
 			// pay to key
 			Owner o = new Owner ();
-			o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (1).data)));
+			o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (0).data)));
 			o.setOutpoint (out);
 			owners.add (o);
 			out.setVotes (1L);
