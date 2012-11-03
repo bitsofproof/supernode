@@ -20,7 +20,6 @@ import java.io.UnsupportedEncodingException;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 
@@ -28,12 +27,10 @@ public class AlertMessage extends BitcoinPeer.Message
 {
 	private byte[] payload;
 	private byte[] signature;
-	private final byte[] alertKey;
 
-	public AlertMessage (BitcoinPeer bitcoinPeer, byte[] alertKey)
+	public AlertMessage (BitcoinPeer bitcoinPeer)
 	{
 		bitcoinPeer.super ("alert");
-		this.alertKey = alertKey;
 	}
 
 	@Override
@@ -48,13 +45,9 @@ public class AlertMessage extends BitcoinPeer.Message
 		signature = reader.readVarBytes ();
 	}
 
-	@Override
-	public void validate () throws ValidationException
+	public boolean isValidWithKey (byte[] alertKey)
 	{
-		if ( !ECKeyPair.verify (Hash.hash (payload, 0, payload.length), signature, alertKey) )
-		{
-			throw new ValidationException ("Unauthorized alert");
-		}
+		return ECKeyPair.verify (Hash.hash (payload, 0, payload.length), signature, alertKey);
 	}
 
 	public String getPayload ()

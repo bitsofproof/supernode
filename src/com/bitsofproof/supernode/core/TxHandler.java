@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,15 +79,22 @@ public class TxHandler
 					network.runForConnected (new PeerTask ()
 					{
 						@Override
-						public void run (BitcoinPeer p) throws Exception
+						public void run (BitcoinPeer p)
 						{
 							// tell others
 							if ( p != peer )
 							{
 								TxMessage tm = (TxMessage) p.createMessage ("tx");
 								tm.setTx (txm.getTx ());
-								p.send (tm);
-								log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
+								try
+								{
+									p.send (tm);
+									log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
+								}
+								catch ( IOException e )
+								{
+									log.trace ("Can not send to transaction, likely disconnected ", p.getAddress ());
+								}
 							}
 						}
 					});

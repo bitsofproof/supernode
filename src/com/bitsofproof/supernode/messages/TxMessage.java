@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.messages;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
-import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat.Reader;
 import com.bitsofproof.supernode.core.WireFormat.Writer;
 import com.bitsofproof.supernode.model.Tx;
@@ -38,12 +37,6 @@ public class TxMessage extends BitcoinPeer.Message
 	public void setTx (Tx tx)
 	{
 		this.tx = tx;
-	}
-
-	@Override
-	public void validate () throws ValidationException
-	{
-		tx.basicValidation ();
 	}
 
 	@Override

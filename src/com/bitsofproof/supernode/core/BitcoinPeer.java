@@ -117,10 +117,6 @@ public class BitcoinPeer extends P2P.Peer
 			return ByteUtils.toHex (toByteArray ());
 		}
 
-		public void validate () throws ValidationException
-		{
-		}
-
 		public void toWire (WireFormat.Writer writer)
 		{
 		};
@@ -162,7 +158,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 		else if ( command.equals ("alert") )
 		{
-			return new AlertMessage (this, this.getNetwork ().getChain ().getAlertKey ());
+			return new AlertMessage (this);
 		}
 		else if ( command.equals ("ping") )
 		{
@@ -313,15 +309,7 @@ public class BitcoinPeer extends P2P.Peer
 					throw new ValidationException ("Checksum mismatch " + getAddress ());
 				}
 
-				if ( m != null )
-				{
-					m.fromWire (new WireFormat.Reader (buf));
-					if ( m instanceof AlertMessage )
-					{
-						m.validate ();
-						log.warn (((AlertMessage) m).getPayload ());
-					}
-				}
+				m.fromWire (new WireFormat.Reader (buf));
 			}
 			lastSpoken = System.currentTimeMillis () / 1000;
 			return m;
@@ -375,8 +363,6 @@ public class BitcoinPeer extends P2P.Peer
 			{
 				try
 				{
-					bm.validate ();
-
 					List<BitcoinMessageListener<? extends BitcoinPeer.Message>> classListener = listener.get (bm.getCommand ());
 					if ( classListener != null )
 					{

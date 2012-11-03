@@ -29,7 +29,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
@@ -128,40 +127,6 @@ public class Tx implements Serializable
 			hash = reader.hash ().toString ();
 		}
 		return hash;
-	}
-
-	public void basicValidation () throws ValidationException
-	{
-		// cheap validations only
-		if ( inputs.isEmpty () || outputs.isEmpty () )
-		{
-			throw new ValidationException ("Input or Output of transaction is empty");
-		}
-
-		long sumOut = 0;
-		for ( TxOut out : outputs )
-		{
-			if ( out.getScript ().length > 520 )
-			{
-				throw new ValidationException ("script too long");
-			}
-			long n = out.getValue ();
-			checkMoneyRange (n);
-			sumOut += n;
-		}
-		checkMoneyRange (sumOut);
-		for ( TxIn in : inputs )
-		{
-			if ( in.getScript ().length > 520 )
-			{
-				throw new ValidationException ("script too long");
-			}
-			if ( !Script.isPushOnly (in.getScript ()) )
-			{
-				throw new ValidationException ("input script should be push only");
-			}
-		}
-
 	}
 
 	public String toWireDump ()

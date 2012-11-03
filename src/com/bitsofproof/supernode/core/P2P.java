@@ -282,7 +282,7 @@ public abstract class P2P
 			});
 		}
 
-		public void send (Message m) throws Exception
+		public void send (Message m) throws IOException
 		{
 			try
 			{

@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.core;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,31 +50,38 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 			{
 
 				@Override
-				public void run (final BitcoinPeer peer) throws Exception
+				public void run (final BitcoinPeer peer)
 				{
 					if ( peer.getLastSpoken () > (System.currentTimeMillis () / 1000 - delay) )
 					{
 						return;
 					}
 					PingMessage pi = (PingMessage) peer.createMessage ("ping");
-					peer.send (pi);
-					log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
-					if ( peer.getVersion () > 60000 )
+					try
 					{
-						sentNonces.put (peer, pi.getNonce ());
-						network.scheduleJob (new Runnable ()
+						peer.send (pi);
+						log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
+						if ( peer.getVersion () > 60000 )
 						{
-							@Override
-							public void run ()
+							sentNonces.put (peer, pi.getNonce ());
+							network.scheduleJob (new Runnable ()
 							{
-								if ( sentNonces.containsKey (peer) )
+								@Override
+								public void run ()
 								{
-									log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
-									sentNonces.remove (peer);
-									peer.disconnect ();
+									if ( sentNonces.containsKey (peer) )
+									{
+										log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
+										sentNonces.remove (peer);
+										peer.disconnect ();
+									}
 								}
-							}
-						}, timeout, TimeUnit.SECONDS);
+							}, timeout, TimeUnit.SECONDS);
+						}
+					}
+					catch ( IOException e )
+					{
+						log.trace ("Can not send png to peer. Likely disconnected " + peer.getAddress ().getAddress ());
 					}
 				}
 			});
