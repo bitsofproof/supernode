@@ -16,44 +16,19 @@
 package com.bitsofproof.supernode.test;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.core.Discovery;
 
-public class TestDiscovery implements Discovery
+@Component ("resultlessDiscovery")
+public class ResultlessDiscovery implements Discovery
 {
-	private static final Logger log = LoggerFactory.getLogger (TestDiscovery.class);
-
-	private String connectTo;
-
 	@Override
 	public List<InetAddress> discover ()
 	{
-		List<InetAddress> al = new ArrayList<InetAddress> ();
-		try
-		{
-			al.add (InetAddress.getByName (connectTo));
-		}
-		catch ( UnknownHostException e )
-		{
-			log.error ("can not connect to " + connectTo);
-		}
-		return al;
+		return new ArrayList<InetAddress> ();
 	}
-
-	public String getConnectTo ()
-	{
-		return connectTo;
-	}
-
-	public void setConnectTo (String connectTo)
-	{
-		this.connectTo = connectTo;
-	}
-
 }

@@ -16,12 +16,9 @@
 	
 	<alias name="${chain}" alias="chain"/>
 
-	<!-- with ssl <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource" 
-		p:driverClass="org.apache.derby.jdbc.ClientDriver" p:url="jdbc:derby://localhost:1527/data;ssl=peerAuthentication" 
-		p:username="dbuser" /> -->
 	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
 		p:portNumber="${port}" p:serverName="${server}" p:databaseName="${database}"
-		p:user="${user}" p:password="${password}"/>
+		p:user="${user}" p:password="${password}" p:createDatabase="create"/>
 
 	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
 		<property name="dataSource" ref="derbyDataSource" />

@@ -12,19 +12,17 @@
 
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
-		name="propertiesBean" p:location="classpath:supernode.properties" />
+		name="propertiesBean" p:location="classpath:testsupernode.properties" />
 
-	<!-- with ssl <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource" 
-		p:driverClass="org.apache.derby.jdbc.ClientDriver" p:url="jdbc:derby://localhost:1527/data;ssl=peerAuthentication" 
-		p:username="dbuser" /> -->
+	<alias name="${chain}" alias="chain"/>
+
 	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
 		p:portNumber="${port}" p:serverName="${server}" p:databaseName="${database}"
-		p:user="${user}" p:password="${password}"/>
+		p:user="${user}" p:password="${password}" p:createDatabase="create"/>
 
 	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
 		<property name="dataSource" ref="derbyDataSource" />
 	</bean>
-
 
 	<bean id="jpaVendorAdapter"
 		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
@@ -49,11 +47,13 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 	
-	<bean id="testDiscovery" class="com.bitsofproof.supernode.test.TestDiscovery"/>
+	<bean id="fixedDiscovery" class="com.bitsofproof.supernode.test.FixedAddressDiscovery">
+		<property name="connectTo" value="localhost"/>
+	</bean>
 	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="dnsDiscovery"/>
+		<property name="discovery" ref="resultlessDiscovery"/>
 		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="${store}" />
 		<property name="transactionManager" ref="transactionManager" />
