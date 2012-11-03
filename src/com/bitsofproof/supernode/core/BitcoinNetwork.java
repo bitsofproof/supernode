@@ -70,6 +70,7 @@ public class BitcoinNetwork extends P2P
 
 		transactionTemplate = new TransactionTemplate (transactionManager);
 
+		log.trace ("Starting network on port " + chain.getPort ());
 		super.start ();
 	}
 
