@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.core;
+package com.bitsofproof.supernode.test.unit;
 
-import com.bitsofproof.supernode.model.Blk;
+import org.junit.Test;
 
-public interface Chain
+import com.bitsofproof.supernode.core.SatoshiChain;
+import com.bitsofproof.supernode.test.TestChain;
+
+public class GenesisTest
 {
-	public Blk getGenesis ();
+	@Test
+	public void productionChainTest ()
+	{
+		new SatoshiChain ().getGenesis ().getHash ().toString ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
+	}
 
-	public long getMagic ();
-
-	public int getPort ();
-
-	public int getDifficultyReviewBlocks ();
-
-	public int getTargetBlockTime ();
-
-	public byte[] getAlertKey ();
-
-	public long getVersion ();
-
+	@Test
+	public void testChainTest ()
+	{
+		new TestChain ().getGenesis ().getHash ().toString ().equals ("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943");
+	}
 }

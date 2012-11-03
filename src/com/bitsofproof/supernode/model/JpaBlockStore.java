@@ -57,11 +57,14 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
+	@Autowired
+	private Chain chain;
+
 	@PersistenceContext
 	private EntityManager entityManager;
 
 	@Autowired
-	PlatformTransactionManager transactionManager;
+	private PlatformTransactionManager transactionManager;
 
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
@@ -71,18 +74,6 @@ class JpaBlockStore implements BlockStore
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
-
-	@Override
-	public PlatformTransactionManager getTransactionManager ()
-	{
-		return transactionManager;
-	}
-
-	@Override
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
-	}
 
 	public class CachedHead
 	{
@@ -396,17 +387,17 @@ class JpaBlockStore implements BlockStore
 			b.setHeight (head.getHeight ());
 			b.setChainWork (head.getChainWork ());
 
-			if ( b.getHeight () >= 2016 && b.getHeight () % 2016 == 0 )
+			if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
 			{
 				StoredMember c = null;
 				StoredMember p = (StoredMember) cachedPrevious;
-				for ( int i = 0; i < 2015; ++i )
+				for ( int i = 0; i < chain.getDifficultyReviewBlocks () - 1; ++i )
 				{
 					c = p;
 					p = c.getPrevious ();
 				}
 
-				long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget ());
+				long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget (), chain.getTargetBlockTime ());
 				if ( next != b.getDifficultyTarget () )
 				{
 					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
@@ -973,5 +964,4 @@ class JpaBlockStore implements BlockStore
 			lock.readLock ().unlock ();
 		}
 	}
-
 }

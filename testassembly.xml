@@ -8,13 +8,11 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
-	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
+	<description>supernode spring TEST assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
 
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
 		name="propertiesBean" p:location="classpath:supernode.properties" />
-	
-	<alias name="${chain}" alias="chain"/>
 
 	<!-- with ssl <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource" 
 		p:driverClass="org.apache.derby.jdbc.ClientDriver" p:url="jdbc:derby://localhost:1527/data;ssl=peerAuthentication" 
@@ -51,7 +49,7 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 	
-	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery"/>
+	<bean id="testDiscovery" class="com.bitsofproof.supernode.test.TestDiscovery"/>
 	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->

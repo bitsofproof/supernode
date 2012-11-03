@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test;
+package com.bitsofproof.supernode.test.unit;
 
 import static com.bitsofproof.supernode.core.Difficulty.getCompactTarget;
 import static com.bitsofproof.supernode.core.Difficulty.getDifficulty;
@@ -44,7 +44,7 @@ public class DIfficultyTest
 	@Test
 	public void nextTargetTest ()
 	{
-		assertTrue (getNextTarget (841428L, 454983370L) == 454375064L);
+		assertTrue (getNextTarget (841428L, 454983370L, 1209600) == 454375064L);
 	}
 
 	@Test

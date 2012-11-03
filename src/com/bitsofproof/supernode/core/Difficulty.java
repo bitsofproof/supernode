@@ -39,10 +39,10 @@ public class Difficulty
 		return (target.shiftRight (s - 24)).or (new BigInteger (String.valueOf ((s - 24) / 8 + 3)).shiftLeft (24)).longValue ();
 	}
 
-	public static long getNextTarget (long periodLength, long currentTarget)
+	public static long getNextTarget (long periodLength, long currentTarget, long targetTime)
 	{
 		// Limit the adjustment step.
-		periodLength = Math.max (Math.min (periodLength, 1209600 * 4), 1209600 / 4);
+		periodLength = Math.max (Math.min (periodLength, targetTime * 4), targetTime / 4);
 		BigInteger newTarget = (getTarget (currentTarget).multiply (BigInteger.valueOf (periodLength))).divide (BigInteger.valueOf (1209600));
 		// not simpler than this
 		if ( newTarget.compareTo (minTarget) > 0 )

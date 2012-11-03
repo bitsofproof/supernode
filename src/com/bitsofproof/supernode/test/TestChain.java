@@ -1,19 +1,4 @@
-/*
- * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.bitsofproof.supernode.core;
+package com.bitsofproof.supernode.test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,21 +6,23 @@ import java.util.List;
 import org.bouncycastle.util.encoders.Hex;
 import org.springframework.stereotype.Component;
 
+import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.core.ChainImpl;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-@Component ("productionChain")
-public class SatoshiChain extends ChainImpl
+@Component ("testChain")
+public class TestChain extends ChainImpl
 {
 
 	public static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
-	public SatoshiChain ()
+	public TestChain ()
 	{
-		super (60001, 0xD9B4BEF9L, 8333, 2016, 1209600, SATOSHI_KEY);
+		super (60001, 0x0709110bL, 18333, 2016, 1209600, SATOSHI_KEY);
 	}
 
 	@Override
@@ -47,9 +34,9 @@ public class SatoshiChain extends ChainImpl
 		block.setHeight (1);
 
 		block.setVersion (1);
-		block.setCreateTime (1231006505L);
+		block.setCreateTime (1296688602L);
 		block.setDifficultyTarget (0x1d00ffffL);
-		block.setNonce (2083236893);
+		block.setNonce (414098458L);
 		block.setPrevious (null);
 
 		List<Tx> transactions = new ArrayList<Tx> ();

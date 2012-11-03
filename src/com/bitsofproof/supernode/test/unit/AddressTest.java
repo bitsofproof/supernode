@@ -1,4 +1,19 @@
-package com.bitsofproof.supernode.test;
+/*
+ * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.bitsofproof.supernode.test.unit;
 
 import static org.junit.Assert.assertTrue;
 
@@ -13,6 +28,8 @@ import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.SatoshiChain;
 import com.bitsofproof.supernode.core.ValidationException;
+
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class AddressTest
 {
@@ -52,10 +69,7 @@ public class AddressTest
 			byte[] keyDigest = n.toByteArray ();
 			String a = converter.toSatoshiStyle (keyDigest, false);
 			byte[] check = converter.fromSatoshiStyle (a);
-			for ( int j = 0; j < keyDigest.length; ++j )
-			{
-				assertTrue (check[j] == keyDigest[j]);
-			}
+			assertTrue (Arrays.equals (check, keyDigest));
 		}
 	}
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test;
+package com.bitsofproof.supernode.test.unit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -68,6 +68,15 @@ public class ScriptTest
 		{
 			e.printStackTrace ();
 		}
+	}
+
+	@Test
+	public void testGenesis () throws ValidationException
+	{
+		assertTrue (Script
+				.parse (ByteUtils
+						.fromHex ("4104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac"))
+				.get (1).op == Script.Opcode.OP_CHECKSIG);
 	}
 
 	@Test

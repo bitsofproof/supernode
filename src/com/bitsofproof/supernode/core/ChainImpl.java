@@ -23,19 +23,15 @@ public abstract class ChainImpl implements Chain
 	private final long version;
 	private final long magic;
 	private final int port;
-	private final int addressType;
-	private final int privateKeyType;
 	private final int difficultyReviewBlocks;
 	private final int targetBlockTime;
 	private final byte[] alertKey;
 
-	public ChainImpl (long version, long magic, int port, int addressType, int privateKeyType, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
+	public ChainImpl (long version, long magic, int port, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
 	{
 		this.version = version;
 		this.magic = magic;
 		this.port = port;
-		this.addressType = addressType;
-		this.privateKeyType = privateKeyType;
 		this.difficultyReviewBlocks = difficultyReviewBlocks;
 		this.targetBlockTime = targetBlockTime;
 		this.alertKey = alertKey;
@@ -54,18 +50,6 @@ public abstract class ChainImpl implements Chain
 	public int getPort ()
 	{
 		return port;
-	}
-
-	@Override
-	public int getAddressType ()
-	{
-		return addressType;
-	}
-
-	@Override
-	public int getPrivateKeyType ()
-	{
-		return privateKeyType;
 	}
 
 	@Override
