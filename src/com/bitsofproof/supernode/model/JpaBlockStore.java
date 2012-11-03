@@ -211,15 +211,8 @@ class JpaBlockStore implements BlockStore
 		try
 		{
 			lock.readLock ().lock ();
-			CachedHead longest = null;
-			for ( CachedHead h : heads.values () )
-			{
-				if ( longest == null || longest.getChainWork () < h.getChainWork () )
-				{
-					longest = h;
-				}
-			}
-			return longest.getHeight ();
+
+			return currentHead.getHeight ();
 		}
 		finally
 		{
