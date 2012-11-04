@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -751,9 +752,8 @@ class JpaBlockStore implements BlockStore
 						{
 							if ( !new Script (t, nr, signatureCache).evaluate () )
 							{
-								throw new ValidationException ("The transaction script does not evaluate to true in input: " + nr + "-"
-										+ i.getSource ().getIx () + " " + t.toWireDump () + " source transaction: "
-										+ i.getSource ().getTransaction ().toWireDump ());
+								// can not dump here since not in transaction
+								return new ValidationException (nr + " The transaction script does not evaluate to true in input");
 							}
 
 							synchronized ( tcontext )
@@ -763,11 +763,11 @@ class JpaBlockStore implements BlockStore
 						}
 						catch ( ValidationException e )
 						{
-							return e;
+							return new ValidationException (nr + " " + e);
 						}
 						catch ( Exception e )
 						{
-							return new ValidationException (e);
+							return new ValidationException (nr + " " + e.toString (), e);
 						}
 						return null;
 					}
@@ -785,12 +785,10 @@ class JpaBlockStore implements BlockStore
 			}
 			for ( Future<ValidationException> r : results )
 			{
+				ValidationException ex;
 				try
 				{
-					if ( r.get () != null )
-					{
-						throw r.get ();
-					}
+					ex = r.get ();
 				}
 				catch ( InterruptedException e )
 				{
@@ -800,9 +798,13 @@ class JpaBlockStore implements BlockStore
 				{
 					throw new ValidationException ("The executor is corrupt", e);
 				}
-				catch ( Exception e )
+				if ( ex != null )
 				{
-					throw new ValidationException (e);
+					StringTokenizer tokenizer = new StringTokenizer (ex.toString ());
+					tokenizer.nextToken ();
+					int input = Integer.valueOf (tokenizer.nextToken ());
+					throw new ValidationException (ex.toString () + " " + t.toWireDump () + " input  " + t.getInputs ().get (input).getSource ().getIx ()
+							+ " : " + t.getInputs ().get (input).getSource ().getTransaction ().toWireDump (), ex);
 				}
 			}
 			if ( sumOut > sumIn )
