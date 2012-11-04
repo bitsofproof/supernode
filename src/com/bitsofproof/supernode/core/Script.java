@@ -212,7 +212,7 @@ public class Script
 
 		public long readInt16 ()
 		{
-			long value = ((bytes[cursor + 1] & 0xFFL) << 0) | ((bytes[cursor] & 0xFFL) << 8);
+			long value = ((bytes[cursor] & 0xFFL) << 0) | ((bytes[cursor + 1] & 0xFFL) << 8);
 			cursor += 2;
 			return value;
 		}
@@ -220,8 +220,8 @@ public class Script
 		public long readInt32 ()
 		{
 			long value =
-					((bytes[cursor + 3] & 0xFFL) << 0) | ((bytes[cursor + 2] & 0xFFL) << 8) | ((bytes[cursor + 1] & 0xFFL) << 16)
-							| ((bytes[cursor] & 0xFFL) << 24);
+					((bytes[cursor] & 0xFFL) << 0) | ((bytes[cursor + 1] & 0xFFL) << 8) | ((bytes[cursor + 2] & 0xFFL) << 16)
+							| ((bytes[cursor + 3] & 0xFFL) << 24);
 			cursor += 4;
 			return value;
 
@@ -275,16 +275,16 @@ public class Script
 
 		public void writeInt16 (long n)
 		{
-			s.write ((int) (0xFFL & (n >> 8)));
 			s.write ((int) (0xFFL & n));
+			s.write ((int) (0xFFL & (n >> 8)));
 		}
 
 		public void writeInt32 (long n)
 		{
-			s.write ((int) (0xFF & (n >> 24)));
-			s.write ((int) (0xFF & (n >> 16)));
-			s.write ((int) (0xFF & (n >> 8)));
 			s.write ((int) (0xFF & n));
+			s.write ((int) (0xFF & (n >> 8)));
+			s.write ((int) (0xFF & (n >> 16)));
+			s.write ((int) (0xFF & (n >> 24)));
 		}
 
 		public byte[] toByteArray ()
@@ -402,7 +402,7 @@ public class Script
 
 	private boolean isFalse (byte[] b)
 	{
-		return b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
+		return b.length == 0 || b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
 	}
 
 	private boolean isTrue (byte[] b)
@@ -417,7 +417,7 @@ public class Script
 
 	private boolean peekBoolean ()
 	{
-		return stack.empty () || isTrue (stack.peek ());
+		return isTrue (stack.peek ());
 	}
 
 	public Script ()
@@ -751,6 +751,10 @@ public class Script
 		{
 			return false;
 		}
+		if ( popBoolean () == false )
+		{
+			return false;
+		}
 		if ( psh )
 		{
 			if ( !isPushOnly (s1) )
@@ -762,6 +766,7 @@ public class Script
 			{
 				return false;
 			}
+			return popBoolean ();
 		}
 		return true;
 	}
@@ -1390,7 +1395,7 @@ public class Script
 		{
 			return false;
 		}
-		return peekBoolean ();
+		return true;
 	}
 
 	private byte[] scriptToSign (byte[] script, int codeseparator) throws ValidationException
