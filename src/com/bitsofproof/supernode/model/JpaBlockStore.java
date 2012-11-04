@@ -350,19 +350,19 @@ class JpaBlockStore implements BlockStore
 				}
 
 				long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget (), chain.getTargetBlockTime ());
-				if ( next != b.getDifficultyTarget () )
+				if ( chain.isProduction () && next != b.getDifficultyTarget () )
 				{
 					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
 				}
 			}
 			else
 			{
-				if ( b.getDifficultyTarget () != prev.getDifficultyTarget () )
+				if ( chain.isProduction () && b.getDifficultyTarget () != prev.getDifficultyTarget () )
 				{
 					throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
 				}
 			}
-			if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+			if ( chain.isProduction () && new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
 			{
 				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
 			}
@@ -633,12 +633,9 @@ class JpaBlockStore implements BlockStore
 			tcontext.coinbase = false;
 			for ( TxOut o : t.getOutputs () )
 			{
-				if ( chain.isProduction () )
+				if ( chain.isProduction () && !Script.isStandard (o.getScript ()) )
 				{
-					if ( !Script.isStandard (o.getScript ()) )
-					{
-						throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
-					}
+					throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
 				}
 				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 				tcontext.nsigs += Script.sigOpCount (o.getScript ());
