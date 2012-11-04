@@ -37,7 +37,7 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 	private final BlockStore store;
 	private TxHandler txHandler;
 
-	private PlatformTransactionManager transactionsManager;
+	private PlatformTransactionManager transactionManager;
 
 	public GetDataHandler (BitcoinNetwork network)
 	{
@@ -63,7 +63,7 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 		for ( final byte[] h : m.getBlocks () )
 		{
-			new TransactionTemplate (transactionsManager).execute (new TransactionCallbackWithoutResult ()
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
 				@Override
 				protected void doInTransactionWithoutResult (TransactionStatus status)
@@ -89,9 +89,9 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 		this.txHandler = txHandler;
 	}
 
-	public void setTransactionsManager (PlatformTransactionManager transactionsManager)
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
 	{
-		this.transactionsManager = transactionsManager;
+		this.transactionManager = transactionManager;
 	}
 
 }

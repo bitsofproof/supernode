@@ -51,6 +51,12 @@
 		<property name="connectTo" value="localhost"/>
 	</bean>
 	
+	<bean id="ircDiscovery" class="com.bitsofproof.supernode.test.IRCDiscovery">
+		<property name="server" value="irc.lfnet.org"/>
+		<property name="port" value="6667"/>
+		<property name="channel" value="#bitcoinTEST3"/>
+	</bean>
+	
 	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
 		<property name="seedHosts">
 			<list>
@@ -65,7 +71,7 @@
 	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="resultlessDiscovery"/>
+		<property name="discovery" ref="ircDiscovery"/>
 		<property name="chain" ref="${chain}"/>
 		<property name="store" ref="${store}" />
 	</bean>
@@ -91,6 +97,7 @@
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<property name="transactionManager" ref="transactionManager"/>
 		<property name="txHandler" ref="tx"/>
 	</bean>
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
