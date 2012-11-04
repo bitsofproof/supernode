@@ -402,7 +402,7 @@ public class Script
 
 	private boolean isFalse (byte[] b)
 	{
-		return b.length == 0 || b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
+		return b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
 	}
 
 	private boolean isTrue (byte[] b)
@@ -417,7 +417,7 @@ public class Script
 
 	private boolean peekBoolean ()
 	{
-		return isTrue (stack.peek ());
+		return stack.empty () || isTrue (stack.peek ());
 	}
 
 	public Script ()
@@ -576,7 +576,14 @@ public class Script
 				Token token = tokenizer.nextToken ();
 				if ( token.data != null )
 				{
-					b.append (ByteUtils.toHex (token.data));
+					if ( token.data.length > 0 )
+					{
+						b.append (ByteUtils.toHex (token.data));
+					}
+					else
+					{
+						b.append ("0");
+					}
 				}
 				else
 				{
@@ -717,7 +724,7 @@ public class Script
 	{
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
 		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
-		byte[] c = new byte[s1.length + s1.length];
+		byte[] c = new byte[s1.length + s2.length];
 		System.arraycopy (s1, 0, c, 0, s1.length);
 		System.arraycopy (s2, 0, c, s1.length, s2.length);
 		return ByteUtils.toHex (c);
