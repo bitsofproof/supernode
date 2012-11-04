@@ -303,8 +303,8 @@ public class Script
 			{
 				throw new IllegalArgumentException ("Number overflow in script");
 			}
-
-			w = b;
+			w = new byte[b.length];
+			System.arraycopy (b, 0, w, 0, b.length);
 		}
 
 		public Number (int n)
@@ -328,7 +328,7 @@ public class Script
 			}
 			if ( n <= 0xffff )
 			{
-				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff00) };
+				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff) };
 				w[1] |= negative ? 0x80 : 0;
 				return;
 			}
@@ -340,12 +340,13 @@ public class Script
 			}
 			w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff), (byte) ((n >> 16) & 0xff), (byte) ((n >> 24) & 0xff) };
 			w[3] |= negative ? 0x80 : 0;
-			return;
 		}
 
 		public byte[] toByteArray ()
 		{
-			return w;
+			byte[] tmp = new byte[w.length];
+			System.arraycopy (w, 0, tmp, 0, w.length);
+			return tmp;
 		}
 
 		public int intValue ()
@@ -353,6 +354,12 @@ public class Script
 			if ( w.length == 0 )
 			{
 				return 0;
+			}
+			boolean negative = false;
+			if ( (w[w.length - 1] & 0x80) != 0 )
+			{
+				negative = true;
+				w[w.length - 1] &= 0x7f;
 			}
 			int n = 0;
 			if ( w.length > 0 )
@@ -371,9 +378,8 @@ public class Script
 			{
 				n += (w[3] & 0xff) << 24;
 			}
-			if ( (w[w.length - 1] & 0x80) != 0 )
+			if ( negative )
 			{
-				n -= 0x80 << ((w.length - 1) * 8);
 				n = -n;
 			}
 			return n;
@@ -398,6 +404,24 @@ public class Script
 	public static int intValue (byte[] n)
 	{
 		return new Number (n).intValue ();
+	}
+
+	private static boolean equals (byte[] a, byte[] b)
+	{
+		int l = Math.max (a.length, b.length);
+		if ( a.length < l )
+		{
+			byte[] tmp = new byte[l];
+			System.arraycopy (a, 0, tmp, 0, a.length);
+			a = tmp;
+		}
+		if ( b.length < l )
+		{
+			byte[] tmp = new byte[l];
+			System.arraycopy (b, 0, tmp, 0, b.length);
+			b = tmp;
+		}
+		return Arrays.equals (a, b);
 	}
 
 	private boolean isFalse (byte[] b)
@@ -1058,7 +1082,7 @@ public class Script
 						case OP_EQUAL:
 						case OP_EQUALVERIFY:
 						{
-							pushInt (Arrays.equals (stack.pop (), stack.pop ()) == true ? 1 : 0);
+							pushInt (equals (stack.pop (), stack.pop ()) == true ? 1 : 0);
 							if ( token.op == Opcode.OP_EQUALVERIFY )
 							{
 								if ( !isTrue (stack.peek ()) )

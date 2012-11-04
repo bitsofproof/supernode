@@ -101,7 +101,6 @@ public class IRCDiscovery implements Discovery
 					}
 					tokenizer = new StringTokenizer (t);
 					tokenizer.nextToken ();
-					List<String> words = new ArrayList<String> ();
 					while ( tokenizer.hasMoreTokens () )
 					{
 						String w = tokenizer.nextToken ().substring (1);

@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -409,7 +408,7 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 
-			List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
+			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final Tx t : b.getTransactions () )
 			{
 				if ( tcontext.coinbase )
@@ -418,22 +417,22 @@ class JpaBlockStore implements BlockStore
 				}
 				else
 				{
-					callables.add (new Callable<ValidationException> ()
+					callables.add (new Callable<TransactionValidationException> ()
 					{
 						@Override
-						public ValidationException call ()
+						public TransactionValidationException call ()
 						{
 							try
 							{
 								validateTransaction (tcontext, t);
 							}
-							catch ( ValidationException e )
+							catch ( TransactionValidationException e )
 							{
 								return e;
 							}
 							catch ( Exception e )
 							{
-								return new ValidationException ("Transaction validation faled " + t.toWireDump (), e);
+								return new TransactionValidationException ("Transaction validation faled ", t);
 							}
 							return null;
 						}
@@ -442,13 +441,21 @@ class JpaBlockStore implements BlockStore
 			}
 			try
 			{
-				for ( Future<ValidationException> e : transactionsProcessor.invokeAll (callables) )
+				for ( Future<TransactionValidationException> e : transactionsProcessor.invokeAll (callables) )
 				{
 					try
 					{
 						if ( e.get () != null )
 						{
-							throw e.get ();
+							Tx t = e.get ().getTx ();
+							int in = e.get ().getIn ();
+							if ( in >= 0 )
+							{
+								int out = (int) t.getInputs ().get (in).getSource ().getIx ();
+								throw new ValidationException (e.get ().getMessage () + " " + in + "-" + out + " " + t.toWireDump () + " "
+										+ t.getInputs ().get (in).getSource ().getTransaction ().toWireDump (), e.get ());
+							}
+							throw new ValidationException (e.get ().getMessage () + " " + e.get ().getTx ().toWireDump (), e.get ());
 						}
 					}
 					catch ( ExecutionException e1 )
@@ -628,32 +635,39 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws ValidationException
+	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws TransactionValidationException
 	{
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
 					|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
 			{
-				throw new ValidationException ("first transaction must be coinbase " + tcontext.block.getHash ());
+				throw new TransactionValidationException ("first transaction must be coinbase ", t);
 			}
 			if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
 			{
-				throw new ValidationException ("coinbase scriptsig must be in 2-100 " + tcontext.block.getHash ());
+				throw new TransactionValidationException ("coinbase scriptsig must be in 2-100 ", t);
 			}
 			tcontext.coinbase = false;
 			for ( TxOut o : t.getOutputs () )
 			{
-				if ( chain.isProduction () && !Script.isStandard (o.getScript ()) )
+				try
 				{
-					throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
+					if ( chain.isProduction () && !Script.isStandard (o.getScript ()) )
+					{
+						throw new TransactionValidationException ("Nonstandard script rejected", t);
+					}
+					tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
+					tcontext.nsigs += Script.sigOpCount (o.getScript ());
 				}
-				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-				tcontext.nsigs += Script.sigOpCount (o.getScript ());
+				catch ( ValidationException e )
+				{
+					throw new TransactionValidationException (e, t);
+				}
 			}
 			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
 			{
-				throw new ValidationException ("too many signatures in this block " + tcontext.block.getHash ());
+				throw new TransactionValidationException ("too many signatures in this block ", t);
 			}
 			for ( TxOut out : t.getOutputs () )
 			{
@@ -664,15 +678,15 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
 			{
-				throw new ValidationException ("coinbase only first in a block");
+				throw new TransactionValidationException ("coinbase only first in a block", t);
 			}
 			if ( t.getOutputs ().isEmpty () )
 			{
-				throw new ValidationException ("Transaction must have outputs " + t.toWireDump ());
+				throw new TransactionValidationException ("Transaction must have outputs ", t);
 			}
 			if ( t.getInputs ().isEmpty () )
 			{
-				throw new ValidationException ("Transaction must have inputs " + t.toWireDump ());
+				throw new TransactionValidationException ("Transaction must have inputs ", t);
 			}
 
 			long sumOut = 0;
@@ -686,33 +700,47 @@ class JpaBlockStore implements BlockStore
 					}
 					else
 					{
-						throw new ValidationException ("script too long " + t.toWireDump ());
+						throw new TransactionValidationException ("script too long ", t);
 					}
 				}
 				if ( chain.isProduction () )
 				{
-					if ( !Script.isStandard (o.getScript ()) )
+					try
 					{
-						throw new ValidationException ("Nonstandard script rejected" + t.toWireDump ());
+						if ( !Script.isStandard (o.getScript ()) )
+						{
+							throw new TransactionValidationException ("Nonstandard script rejected", t);
+						}
+					}
+					catch ( ValidationException e )
+					{
+						throw new TransactionValidationException (e, t);
 					}
 				}
 				if ( tcontext.block != null )
 				{
-					tcontext.nsigs += Script.sigOpCount (o.getScript ());
+					try
+					{
+						tcontext.nsigs += Script.sigOpCount (o.getScript ());
+					}
+					catch ( ValidationException e )
+					{
+						throw new TransactionValidationException (e, t);
+					}
 					if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
 					{
-						throw new ValidationException ("too many signatures in this block " + tcontext.block.getHash ());
+						throw new TransactionValidationException ("too many signatures in this block ", t);
 					}
 				}
 				if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
 				{
-					throw new ValidationException ("Transaction output not in money range " + t.toWireDump ());
+					throw new TransactionValidationException ("Transaction output not in money range ", t);
 				}
 				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 				sumOut += o.getValue ();
 				if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
 				{
-					throw new ValidationException ("Transaction output not in money range " + t.toWireDump ());
+					throw new TransactionValidationException ("Transaction output not in money range ", t);
 				}
 				if ( tcontext.block != null )
 				{
@@ -722,20 +750,16 @@ class JpaBlockStore implements BlockStore
 
 			long sumIn = 0;
 			int inNumber = 0;
-			List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
+			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			HashMap<Integer, TxOut> resolved = tcontext.resolvedInputs.get (t.getHash ());
 			final Set<String> signatureCache = new HashSet<String> ();
 			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
 				{
-					if ( tcontext.block != null && tcontext.block.getHeight () < 80000 )
+					if ( tcontext.block == null || tcontext.block.getHeight () > 80000 )
 					{
-						log.trace ("Old DoD at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
-					}
-					else
-					{
-						throw new ValidationException ("script too long " + t.toWireDump ());
+						throw new TransactionValidationException ("script too long ", t);
 					}
 				}
 
@@ -743,17 +767,16 @@ class JpaBlockStore implements BlockStore
 				sumIn += i.getSource ().getValue ();
 
 				final int nr = inNumber;
-				callables.add (new Callable<ValidationException> ()
+				callables.add (new Callable<TransactionValidationException> ()
 				{
 					@Override
-					public ValidationException call () throws Exception
+					public TransactionValidationException call () throws Exception
 					{
 						try
 						{
 							if ( !new Script (t, nr, signatureCache).evaluate () )
 							{
-								// can not dump here since not in transaction
-								return new ValidationException (nr + " The transaction script does not evaluate to true in input");
+								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
 							}
 
 							synchronized ( tcontext )
@@ -761,108 +784,108 @@ class JpaBlockStore implements BlockStore
 								tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
 							}
 						}
-						catch ( ValidationException e )
-						{
-							return new ValidationException (nr + " " + e);
-						}
 						catch ( Exception e )
 						{
-							return new ValidationException (nr + " " + e.toString (), e);
+							return new TransactionValidationException (e, t, nr);
 						}
 						return null;
 					}
 				});
 				++inNumber;
 			}
-			List<Future<ValidationException>> results;
+			List<Future<TransactionValidationException>> results;
 			try
 			{
 				results = inputProcessor.invokeAll (callables);
 			}
 			catch ( InterruptedException e1 )
 			{
-				throw new ValidationException ("interrupted", e1);
+				throw new TransactionValidationException (e1, t);
 			}
-			for ( Future<ValidationException> r : results )
+			for ( Future<TransactionValidationException> r : results )
 			{
-				ValidationException ex;
+				TransactionValidationException ex;
 				try
 				{
 					ex = r.get ();
 				}
 				catch ( InterruptedException e )
 				{
-					throw new ValidationException ("interrupted", e);
+					throw new TransactionValidationException (e, t);
 				}
 				catch ( ExecutionException e )
 				{
-					throw new ValidationException ("The executor is corrupt", e);
+					throw new TransactionValidationException (e, t);
 				}
 				if ( ex != null )
 				{
-					StringTokenizer tokenizer = new StringTokenizer (ex.toString ());
-					tokenizer.nextToken ();
-					int input = Integer.valueOf (tokenizer.nextToken ());
-					throw new ValidationException (ex.toString () + " " + t.toWireDump () + " input  " + t.getInputs ().get (input).getSource ().getIx ()
-							+ " : " + t.getInputs ().get (input).getSource ().getTransaction ().toWireDump (), ex);
+					throw ex;
 				}
 			}
 			if ( sumOut > sumIn )
 			{
-				throw new ValidationException ("Transaction value out more than in " + t.toWireDump ());
+				throw new TransactionValidationException ("Transaction value out more than in", t);
 			}
 		}
 	}
 
-	private void addOwners (TxOut out) throws ValidationException
+	private void addOwners (TxOut out) throws TransactionValidationException
 	{
 		List<Owner> owners = new ArrayList<Owner> ();
 		parseOwners (out.getScript (), out, owners);
 		out.setOwners (owners);
 	}
 
-	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws ValidationException
+	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws TransactionValidationException
 	{
-		List<Script.Token> parsed = Script.parse (out.getScript ());
-		if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG )
+		List<Script.Token> parsed;
+		try
 		{
-			// pay to key
-			Owner o = new Owner ();
-			o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (0).data)));
-			o.setOutpoint (out);
-			owners.add (o);
-			out.setVotes (1L);
-		}
-		if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
-				&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
-		{
-			// pay to address
-			Owner o = new Owner ();
-			o.setHash (ByteUtils.toHex (parsed.get (2).data));
-			o.setOutpoint (out);
-			owners.add (o);
-			out.setVotes (1L);
-		}
-		if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
-				&& parsed.get (2).op == Opcode.OP_EQUAL )
-		{
-			// pay to script
-		}
-		for ( int i = 0; i < parsed.size (); ++i )
-		{
-			if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+			parsed = Script.parse (out.getScript ());
+			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG )
 			{
-				int nkeys = Script.intValue (parsed.get (i - 1).data);
-				for ( int j = 0; j < nkeys; ++j )
-				{
-					Owner o = new Owner ();
-					o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
-					o.setOutpoint (out);
-					owners.add (o);
-				}
-				out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
-				return;
+				// pay to key
+				Owner o = new Owner ();
+				o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (0).data)));
+				o.setOutpoint (out);
+				owners.add (o);
+				out.setVotes (1L);
 			}
+			if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
+					&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
+			{
+				// pay to address
+				Owner o = new Owner ();
+				o.setHash (ByteUtils.toHex (parsed.get (2).data));
+				o.setOutpoint (out);
+				owners.add (o);
+				out.setVotes (1L);
+			}
+			if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+					&& parsed.get (2).op == Opcode.OP_EQUAL )
+			{
+				// pay to script
+			}
+			for ( int i = 0; i < parsed.size (); ++i )
+			{
+				if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+				{
+					int nkeys = Script.intValue (parsed.get (i - 1).data);
+					for ( int j = 0; j < nkeys; ++j )
+					{
+						Owner o = new Owner ();
+						o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
+						o.setOutpoint (out);
+						owners.add (o);
+					}
+					out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
+					return;
+				}
+			}
+		}
+		catch ( ValidationException e )
+		{
+			throw new TransactionValidationException (e, out.getTransaction ());
 		}
 	}
 
