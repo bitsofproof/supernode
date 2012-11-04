@@ -158,35 +158,45 @@ class JpaBlockStore implements BlockStore
 	@Override
 	public void cache ()
 	{
-		log.trace ("filling chain cache with stored blocks");
-		QBlk block = QBlk.blk;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( Blk b : q.from (block).list (block) )
+		try
 		{
-			if ( b.getPrevious () != null )
+			lock.writeLock ().lock ();
+
+			log.trace ("filling chain cache with stored blocks");
+			QBlk block = QBlk.blk;
+			JPAQuery q = new JPAQuery (entityManager);
+			for ( Blk b : q.from (block).list (block) )
 			{
-				cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ()));
+				if ( b.getPrevious () != null )
+				{
+					cachedBlocks.put (b.getHash (),
+							new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ()));
+				}
+				else
+				{
+					cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ()));
+				}
 			}
-			else
+
+			log.trace ("filling chain cache with heads");
+			QHead head = QHead.head;
+			q = new JPAQuery (entityManager);
+			for ( Head h : q.from (head).list (head) )
 			{
-				cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ()));
+				CachedHead sh = new CachedHead ();
+				sh.setChainWork (h.getChainWork ());
+				sh.setHeight (h.getHeight ());
+				sh.setLast (cachedBlocks.get (h.getLeaf ()));
+				heads.put (h.getLeaf (), sh);
+				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
+				{
+					currentHead = sh;
+				}
 			}
 		}
-
-		log.trace ("filling chain cache with heads");
-		QHead head = QHead.head;
-		q = new JPAQuery (entityManager);
-		for ( Head h : q.from (head).list (head) )
+		finally
 		{
-			CachedHead sh = new CachedHead ();
-			sh.setChainWork (h.getChainWork ());
-			sh.setHeight (h.getHeight ());
-			sh.setLast (cachedBlocks.get (h.getLeaf ()));
-			heads.put (h.getLeaf (), sh);
-			if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
-			{
-				currentHead = sh;
-			}
+			lock.writeLock ().unlock ();
 		}
 	}
 
@@ -263,7 +273,7 @@ class JpaBlockStore implements BlockStore
 		Map<String, HashMap<Integer, TxOut>> resolvedInputs = new HashMap<String, HashMap<Integer, TxOut>> ();
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED)
+	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
 	public void storeBlock (Blk b) throws ValidationException
 	{
@@ -870,7 +880,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED)
+	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
 	public void resetStore (Chain chain)
 	{
