@@ -361,15 +361,15 @@ public class Script
 			}
 			if ( w.length > 1 )
 			{
-				n += w[1] & 0xff;
+				n += (w[1] & 0xff) << 8;
 			}
 			if ( w.length > 2 )
 			{
-				n += w[2] & 0xff;
+				n += (w[2] & 0xff) << 16;
 			}
 			if ( w.length > 3 )
 			{
-				n += w[3] & 0xff;
+				n += (w[3] & 0xff) << 24;
 			}
 			if ( (w[w.length - 1] & 0x80) != 0 )
 			{
