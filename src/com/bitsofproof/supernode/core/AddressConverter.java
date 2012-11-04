@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
+
 public class AddressConverter
 {
 	private final boolean production;
@@ -63,6 +65,26 @@ public class AddressConverter
 			s.append ("1");
 		}
 		return s.reverse ().toString ();
+	}
+
+	public static byte[] fromBase58WithChecksum (String s) throws ValidationException
+	{
+		byte[] b = fromBase58 (s);
+		if ( b.length < 4 )
+		{
+			throw new ValidationException ("Too short for checksum " + s);
+		}
+		byte[] cs = new byte[4];
+		System.arraycopy (b, b.length - 4, cs, 0, 4);
+		byte[] data = new byte[b.length - 4];
+		System.arraycopy (b, 0, data, 0, b.length - 4);
+		byte[] h = new byte[4];
+		System.arraycopy (Hash.hash (data), 0, h, 0, 4);
+		if ( Arrays.equals (cs, h) )
+		{
+			return data;
+		}
+		throw new ValidationException ("Checksum mismatch " + s);
 	}
 
 	public static byte[] fromBase58 (String s) throws ValidationException

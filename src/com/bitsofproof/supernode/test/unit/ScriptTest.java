@@ -18,56 +18,21 @@ package com.bitsofproof.supernode.test.unit;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.orm.jpa.EntityManagerFactoryUtils;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
-import com.bitsofproof.supernode.main.Setup;
-import com.bitsofproof.supernode.model.QTx;
 import com.bitsofproof.supernode.model.Tx;
-import com.mysema.query.jpa.impl.JPAQuery;
 
 public class ScriptTest
 {
-	private static PlatformTransactionManager transactionManager;
-	private static ApplicationContext context;
-	private static EntityManagerFactory emf;
-
-	private static final boolean usedb = false;
-
 	@BeforeClass
 	public static void setup ()
 	{
-		try
-		{
-			if ( usedb )
-			{
-				Setup.setup ();
-				context = new ClassPathXmlApplicationContext ("assembly.xml");
-				transactionManager = context.getBean (PlatformTransactionManager.class);
-				emf = context.getBean (EntityManagerFactory.class);
-			}
-		}
-		catch ( IOException e )
-		{
-			e.printStackTrace ();
-		}
 	}
 
 	@Test
@@ -230,65 +195,9 @@ public class ScriptTest
 		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
 		assertTrue (new Script (t1, 0).evaluate ());
 
-		if ( !usedb )
-		{
-			return;
-		}
-
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				try
-				{
-					EntityManager entityManager = EntityManagerFactoryUtils.getTransactionalEntityManager (emf);
-
-					QTx tx = QTx.tx;
-
-					JPAQuery query = new JPAQuery (entityManager);
-
-					Tx t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
-					System.out.println (t.toJSON ());
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					t.toWire (writer);
-					assertTrue (new Script (t, 0).evaluate ());
-
-					query = new JPAQuery (entityManager);
-					t = query.from (tx).where (tx.hash.eq ("74c1a6dd6e88f73035143f8fc7420b5c395d28300a70bb35b943f7f2eddc656d")).singleResult (tx);
-					System.out.println (t.toJSON ());
-					assertTrue (new Script (t, 0).evaluate ());
-
-					query = new JPAQuery (entityManager);
-					t = query.from (tx).where (tx.hash.eq ("131f68261e28a80c3300b048c4c51f3ca4745653ba7ad6b20cc9188322818f25")).singleResult (tx);
-					System.out.println (t.toJSON ());
-					assertTrue (new Script (t, 0).evaluate ());
-
-					query = new JPAQuery (entityManager);
-					t = query.from (tx).where (tx.hash.eq ("66ac54c1a3196e839c32c7700fbd91ee37b1ed4a53332e491bf5ddcd3901d0b1")).singleResult (tx);
-					System.out.println (t.toJSON ());
-					assertTrue (new Script (t, 0).evaluate ());
-
-					query = new JPAQuery (entityManager);
-					t = query.from (tx).where (tx.hash.eq ("c99c49da4c38af669dea436d3e73780dfdb6c1ecf9958baa52960e8baee30e73")).singleResult (tx);
-					writer = new WireFormat.Writer ();
-					t.toWire (writer);
-					assertTrue (new Script (t, 0).evaluate ());
-
-					query = new JPAQuery (entityManager);
-					t = query.from (tx).where (tx.hash.eq ("406b2b06bcd34d3c8733e6b79f7a394c8a431fbf4ff5ac705c93f4076bb77602")).singleResult (tx);
-					writer = new WireFormat.Writer ();
-					t.toWire (writer);
-					assertTrue (new Script (t, 0).evaluate ());
-				}
-				catch ( Exception e )
-				{
-					e.printStackTrace ();
-				}
-
-			}
-		});
-
+		// FROM TESTNET3
+		Tx tx =
+				Tx.fromWireDump ("0100000002434d2b0f298874c3f6d8467c07dea6883a650de00d48298cd6fb48e8322e1058000000004847304402202bf17878608386fb2e7be81b39cf6ea62eb94073fb52095740dc0a18759e9e3802203e6a6fadad57eca7db946b8b48c068c87c7a9baf075e5b28994116c2b3126baa01ffffffffe739176d62b588566afa47f5fbbc0ec01aa3f058c036ca0ee8f3cd13e4223e010000000049483045022100a251692023bc23e8bb36c811e6810a02480fec8719b102704b0a79629a6baf9b0220269413ee41ed779ebe74c1a540ac1cd249f3b3cdb78033733f5722ac3eb7113a01ffffffff02404fc3ed000000001976a914b2205a4dbc1d587c5d07769977962b173eab507688acc09448660100000017a91441fb6504f8bcb28206596184fd40a5ed42bce53d8700000000");
+		System.out.println (tx.toJSON ());
 	}
 }

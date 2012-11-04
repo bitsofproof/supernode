@@ -640,12 +640,8 @@ public class Script
 	public static boolean isPayToScriptHash (byte[] script) throws ValidationException
 	{
 		List<Token> parsed = parse (script);
-		if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
-				&& parsed.get (2).op == Opcode.OP_EQUAL )
-		{
-			return isStandard (parsed.get (1).data);
-		}
-		return false;
+		return parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+				&& parsed.get (2).op == Opcode.OP_EQUAL;
 	}
 
 	public static boolean isPayToKey (byte[] script) throws ValidationException

@@ -845,7 +845,6 @@ class JpaBlockStore implements BlockStore
 				&& parsed.get (2).op == Opcode.OP_EQUAL )
 		{
 			// pay to script
-			parseOwners (parsed.get (1).data, out, owners);
 		}
 		for ( int i = 0; i < parsed.size (); ++i )
 		{
