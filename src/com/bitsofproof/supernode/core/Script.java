@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.core;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -294,90 +293,129 @@ public class Script
 		}
 	}
 
-	private void pushInt (long n)
+	private static class Number
 	{
-		if ( n > 0xffffffffL )
+		byte[] w;
+
+		public Number (byte[] b)
 		{
-			throw new IllegalArgumentException ("Number overflow in script");
+			if ( b.length > 4 )
+			{
+				throw new IllegalArgumentException ("Number overflow in script");
+			}
+
+			w = b;
 		}
-		pushNumber (new BigInteger (String.valueOf (n)));
+
+		public Number (int n)
+		{
+			if ( n == 0 )
+			{
+				w = new byte[0];
+				return;
+			}
+			boolean negative = false;
+			if ( n < 0 )
+			{
+				negative = true;
+				n = -n;
+			}
+			if ( n <= 0xff )
+			{
+				w = new byte[] { (byte) (n & 0xff) };
+				w[0] |= negative ? 0x80 : 0;
+				return;
+			}
+			if ( n <= 0xffff )
+			{
+				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff00) };
+				w[1] |= negative ? 0x80 : 0;
+				return;
+			}
+			if ( n <= 0xffffff )
+			{
+				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff), (byte) ((n >> 16) & 0xff) };
+				w[2] |= negative ? 0x80 : 0;
+				return;
+			}
+			w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff), (byte) ((n >> 16) & 0xff), (byte) ((n >> 24) & 0xff) };
+			w[3] |= negative ? 0x80 : 0;
+			return;
+		}
+
+		public byte[] toByteArray ()
+		{
+			return w;
+		}
+
+		public int intValue ()
+		{
+			if ( w.length == 0 )
+			{
+				return 0;
+			}
+			int n = 0;
+			if ( w.length > 0 )
+			{
+				n += w[0] & 0xff;
+			}
+			if ( w.length > 1 )
+			{
+				n += w[1] & 0xff;
+			}
+			if ( w.length > 2 )
+			{
+				n += w[2] & 0xff;
+			}
+			if ( w.length > 3 )
+			{
+				n += w[3] & 0xff;
+			}
+			if ( (w[w.length - 1] & 0x80) != 0 )
+			{
+				n -= 0x80 << ((w.length - 1) * 8);
+				n = -n;
+			}
+			return n;
+		}
 	}
 
-	private long popInt ()
+	private void pushInt (int n)
+	{
+		Number wn = new Number (n);
+		stack.push (wn.toByteArray ());
+	}
+
+	private int popInt ()
 	{
 		if ( stack.peek ().length > 4 )
 		{
 			throw new IllegalArgumentException ("Number overflow in script");
 		}
-		return popNumber ().longValue ();
+		return new Number (stack.pop ()).intValue ();
 	}
 
-	public static BigInteger toNumber (byte[] b)
+	public static int intValue (byte[] n)
 	{
-		// reverse...
-		byte[] n = new byte[b.length];
-		System.arraycopy (b, 0, n, 0, b.length);
-		boolean negative = false;
-		ByteUtils.reverse (n);
-		if ( (n[0] & 0x80) != 0 )
-		{
-			n[0] &= (byte) 0x7f;
-		}
-		BigInteger bi = new BigInteger (n);
-		if ( negative )
-		{
-			bi = bi.negate ();
-		}
-		return bi;
+		return new Number (n).intValue ();
 	}
 
-	private BigInteger popNumber ()
+	private boolean isFalse (byte[] b)
 	{
-		byte[] b = stack.pop ();
-		return toNumber (b);
+		return b.length == 0 || b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
 	}
 
-	private void pushNumber (BigInteger n)
+	private boolean isTrue (byte[] b)
 	{
-		boolean negative = false;
-		if ( n.compareTo (BigInteger.ZERO) < 0 )
-		{
-			negative = true;
-			n = n.negate ();
-		}
-		if ( n.compareTo (BigInteger.ZERO) == 0 )
-		{
-			stack.push (new byte[0]);
-		}
-		else
-		{
-			byte[] b = n.toByteArray ();
-			ByteUtils.reverse (b);
-			if ( negative )
-			{
-				if ( (b[b.length - 1] & 0x80) != 0 )
-				{
-					byte[] l = new byte[b.length + 1];
-					System.arraycopy (b, 0, l, 0, b.length);
-					b = l;
-				}
-				b[b.length - 1] |= (byte) 0x80;
-			}
-			stack.push (b);
-		}
+		return !isFalse (b);
 	}
 
-	public boolean isTrue (byte[] b)
-	{
-		return b.length > 0 && !toNumber (b).equals (BigInteger.ZERO);
-	}
-
-	public boolean popBoolean ()
+	private boolean popBoolean ()
 	{
 		return isTrue (stack.pop ());
 	}
 
-	public boolean peekBoolean ()
+	private boolean peekBoolean ()
 	{
 		return isTrue (stack.peek ());
 	}
@@ -662,6 +700,29 @@ public class Script
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script);
 	}
 
+	public String toReadableConnected ()
+	{
+		StringBuffer b = new StringBuffer ();
+
+		byte[] s1 = tx.getInputs ().get (inr).getScript ();
+		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+
+		b.append (Script.toReadable (s1));
+		b.append (" | ");
+		b.append (Script.toReadable (s2));
+		return b.toString ();
+	}
+
+	public String dumpConnected ()
+	{
+		byte[] s1 = tx.getInputs ().get (inr).getScript ();
+		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+		byte[] c = new byte[s1.length + s1.length];
+		System.arraycopy (s1, 0, c, 0, s1.length);
+		System.arraycopy (s2, 0, c, s1.length, s2.length);
+		return ByteUtils.toHex (c);
+	}
+
 	@SuppressWarnings ("unchecked")
 	public boolean evaluate () throws ValidationException
 	{
@@ -933,13 +994,13 @@ public class Script
 							break;
 						case OP_PICK:
 						{
-							int n = popNumber ().intValue ();
+							int n = popInt ();
 							stack.push (stack.get (stack.size () - 1 - n));
 						}
 							break;
 						case OP_ROLL:
 						{
-							int n = popNumber ().intValue ();
+							int n = popInt ();
 							byte[] a = stack.get (stack.size () - 1 - n);
 							stack.remove (stack.size () - 1 - n);
 							stack.push (a);
@@ -1038,8 +1099,8 @@ public class Script
 							break;
 						case OP_SUB:// 0x94 a b out b is subtracted from a.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							int a = popInt ();
+							int b = popInt ();
 							pushInt (b - a);
 						}
 							break;
@@ -1273,7 +1334,7 @@ public class Script
 													// OP_VERIFY is executed
 													// afterward.
 						{
-							int nkeys = (int) popInt ();
+							int nkeys = popInt ();
 							if ( nkeys <= 0 || nkeys > 20 )
 							{
 								return false;
@@ -1283,7 +1344,7 @@ public class Script
 							{
 								keys[i] = stack.pop ();
 							}
-							int required = (int) popInt ();
+							int required = popInt ();
 							if ( required <= 0 )
 							{
 								return false;

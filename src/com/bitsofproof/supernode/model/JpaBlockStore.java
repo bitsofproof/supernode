@@ -852,7 +852,7 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
 			{
-				int nkeys = Script.toNumber (parsed.get (i - 1).data).intValue ();
+				int nkeys = Script.intValue (parsed.get (i - 1).data);
 				for ( int j = 0; j < nkeys; ++j )
 				{
 					Owner o = new Owner ();
@@ -860,7 +860,7 @@ class JpaBlockStore implements BlockStore
 					o.setOutpoint (out);
 					owners.add (o);
 				}
-				out.setVotes (Script.toNumber (parsed.get (i - nkeys - 2).data).longValue ());
+				out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
 				return;
 			}
 		}
