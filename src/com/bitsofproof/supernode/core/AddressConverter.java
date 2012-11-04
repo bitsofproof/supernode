@@ -23,10 +23,8 @@ public class AddressConverter
 
 	private static final char[] b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray ();
 	private static final int[] r58 = new int[256];
-
-	public AddressConverter (Chain chain)
+	static
 	{
-		production = chain.getGenesis ().getHash ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 		for ( int i = 0; i < 256; ++i )
 		{
 			r58[i] = -1;
@@ -35,6 +33,11 @@ public class AddressConverter
 		{
 			r58[b58[i]] = i;
 		}
+	}
+
+	public AddressConverter (Chain chain)
+	{
+		production = chain.getGenesis ().getHash ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 	}
 
 	public static String toBase58 (byte[] b)
