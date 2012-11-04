@@ -29,7 +29,7 @@ public abstract class ChainImpl implements Chain
 
 	public ChainImpl (boolean production, long version, long magic, int port, int difficultyReviewBlocks, int targetBlockTime, byte[] alertKey)
 	{
-		this.production = true;
+		this.production = production;
 		this.version = version;
 		this.magic = magic;
 		this.port = port;
@@ -77,6 +77,7 @@ public abstract class ChainImpl implements Chain
 		return version;
 	}
 
+	@Override
 	public boolean isProduction ()
 	{
 		return production;
