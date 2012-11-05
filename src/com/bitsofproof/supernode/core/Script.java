@@ -1025,7 +1025,7 @@ public class Script
 						{
 							long n = popInt ();
 							byte[] a = stack.get (stack.size () - 1 - (int) n);
-							stack.remove (stack.size () - 1 - n);
+							stack.remove ((int) (stack.size () - 1 - n));
 							stack.push (a);
 						}
 							break;
