@@ -72,7 +72,7 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
-	public String toJSON ()
+	public String toJSON () throws ValidationException
 	{
 		parseTransactions ();
 

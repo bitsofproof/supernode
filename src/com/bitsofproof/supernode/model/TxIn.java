@@ -30,6 +30,7 @@ import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -128,7 +129,7 @@ public class TxIn implements Serializable, Cloneable
 		this.transaction = transaction;
 	}
 
-	public String toJSON ()
+	public String toJSON () throws ValidationException
 	{
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");

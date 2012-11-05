@@ -29,6 +29,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -135,7 +136,7 @@ public class Tx implements Serializable
 		return b;
 	}
 
-	public String toJSON ()
+	public String toJSON () throws ValidationException
 	{
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");

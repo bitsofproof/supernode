@@ -299,16 +299,16 @@ public class Script
 
 		public Number (byte[] b)
 		{
-			if ( b.length > 4 )
-			{
-				throw new IllegalArgumentException ("Number overflow in script");
-			}
 			w = new byte[b.length];
 			System.arraycopy (b, 0, w, 0, b.length);
 		}
 
-		public Number (int n)
+		public Number (long n) throws ValidationException
 		{
+			if ( Math.abs (n) > 0xffffffffL )
+			{
+				throw new ValidationException ("Number overflow in script");
+			}
 			if ( n == 0 )
 			{
 				w = new byte[0];
@@ -339,7 +339,13 @@ public class Script
 				return;
 			}
 			w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff), (byte) ((n >> 16) & 0xff), (byte) ((n >> 24) & 0xff) };
-			w[3] |= negative ? 0x80 : 0;
+			if ( ((n >> 24) & 0x80) != 0 )
+			{
+				byte[] tmp = new byte[5];
+				System.arraycopy (w, 0, tmp, 0, 4);
+				w = tmp;
+			}
+			w[w.length - 1] |= negative ? 0x80 : 0;
 		}
 
 		public byte[] toByteArray ()
@@ -349,7 +355,7 @@ public class Script
 			return tmp;
 		}
 
-		public int intValue ()
+		public long intValue () throws ValidationException
 		{
 			if ( w.length == 0 )
 			{
@@ -386,24 +392,19 @@ public class Script
 		}
 	}
 
-	private void pushInt (int n)
+	private void pushInt (long n) throws ValidationException
 	{
-		Number wn = new Number (n);
-		stack.push (wn.toByteArray ());
+		stack.push (new Number (n).toByteArray ());
 	}
 
-	private int popInt ()
+	private long popInt () throws ValidationException
 	{
-		if ( stack.peek ().length > 4 )
-		{
-			throw new IllegalArgumentException ("Number overflow in script");
-		}
 		return new Number (stack.pop ()).intValue ();
 	}
 
-	public static int intValue (byte[] n)
+	public static int intValue (byte[] n) throws ValidationException
 	{
-		return new Number (n).intValue ();
+		return (int) new Number (n).intValue ();
 	}
 
 	private static boolean equals (byte[] a, byte[] b)
@@ -469,39 +470,37 @@ public class Script
 		while ( tokenizer.hasMoreElements () )
 		{
 			String token = tokenizer.nextToken ();
-			Opcode op = Opcode.valueOf (token);
-			if ( op.o <= 75 && op.o > 0 )
+			Opcode op = Opcode.OP_FALSE;
+			if ( token.startsWith ("OP_") )
 			{
+				op = Opcode.valueOf (token);
 				writer.writeByte (op.o);
-				writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
 			}
 			else
 			{
-				switch ( op )
+				byte[] data = ByteUtils.fromHex (token);
+				if ( data.length <= 75 )
 				{
-					case OP_PUSHDATA1:
-					{
-						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
-						writer.writeByte (b[0]);
-						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
-					}
-						break;
-					case OP_PUSHDATA2:
-					{
-						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
-						writer.writeInt16 (b[0] << 8 | b[1]);
-						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
-					}
-						break;
-					case OP_PUSHDATA4:
-					{
-						byte[] b = ByteUtils.fromHex (tokenizer.nextToken ());
-						writer.writeInt32 (b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
-						writer.writeBytes (ByteUtils.fromHex (tokenizer.nextToken ()));
-					}
-						break;
-					default:
-						writer.writeByte (op.o);
+					writer.writeByte (data.length);
+					writer.writeBytes (data);
+				}
+				else if ( data.length <= 0xff )
+				{
+					writer.writeByte (Opcode.OP_PUSHDATA1.o);
+					writer.writeByte (data.length);
+					writer.writeBytes (data);
+				}
+				else if ( data.length <= 0xffff )
+				{
+					writer.writeByte (Opcode.OP_PUSHDATA2.o);
+					writer.writeInt16 (data.length);
+					writer.writeBytes (data);
+				}
+				else if ( data.length <= 0x7fffffff )
+				{
+					writer.writeByte (Opcode.OP_PUSHDATA4.o);
+					writer.writeInt16 (data.length);
+					writer.writeBytes (data);
 				}
 			}
 		}
@@ -583,47 +582,35 @@ public class Script
 		return p;
 	}
 
-	public static String toReadable (byte[] script)
+	public static String toReadable (byte[] script) throws ValidationException
 	{
+		List<Token> tokens = parse (script);
 		StringBuffer b = new StringBuffer ();
-		try
+		boolean first = true;
+		for ( Token token : tokens )
 		{
-			Tokenizer tokenizer = new Tokenizer (script);
-			boolean first = true;
-			while ( tokenizer.hashMoreElements () )
+			if ( !first )
 			{
-				if ( !first )
+				b.append (" ");
+			}
+			first = false;
+			if ( token.data != null )
+			{
+				if ( token.data.length > 0 )
 				{
-					b.append (" ");
-				}
-				first = false;
-				Token token = tokenizer.nextToken ();
-				if ( token.data != null )
-				{
-					if ( token.data.length > 0 )
-					{
-						b.append (ByteUtils.toHex (token.data));
-					}
-					else
-					{
-						b.append ("0");
-					}
+					b.append (ByteUtils.toHex (token.data));
 				}
 				else
 				{
-					b.append (token.op);
+					b.append ("OP_FALSE");
 				}
 			}
-			return b.toString ();
+			else
+			{
+				b.append (token.op);
+			}
 		}
-		catch ( ValidationException e )
-		{
-			throw new RuntimeException (e);
-		}
-		catch ( Exception e )
-		{
-			throw new RuntimeException (b.toString (), e);
-		}
+		return b.toString ();
 	}
 
 	public static boolean isPushOnly (byte[] script) throws ValidationException
@@ -731,7 +718,7 @@ public class Script
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script);
 	}
 
-	public String toReadableConnected ()
+	public String toReadableConnected () throws ValidationException
 	{
 		StringBuffer b = new StringBuffer ();
 
@@ -1030,14 +1017,14 @@ public class Script
 							break;
 						case OP_PICK:
 						{
-							int n = popInt ();
-							stack.push (stack.get (stack.size () - 1 - n));
+							long n = popInt ();
+							stack.push (stack.get (stack.size () - 1 - (int) n));
 						}
 							break;
 						case OP_ROLL:
 						{
-							int n = popInt ();
-							byte[] a = stack.get (stack.size () - 1 - n);
+							long n = popInt ();
+							byte[] a = stack.get (stack.size () - 1 - (int) n);
 							stack.remove (stack.size () - 1 - n);
 							stack.push (a);
 						}
@@ -1135,8 +1122,8 @@ public class Script
 							break;
 						case OP_SUB:// 0x94 a b out b is subtracted from a.
 						{
-							int a = popInt ();
-							int b = popInt ();
+							long a = popInt ();
+							long b = popInt ();
 							pushInt (b - a);
 						}
 							break;
@@ -1179,7 +1166,7 @@ public class Script
 						case OP_NUMNOTEQUAL:// 0x9e a b out Returns 1 if the
 											// numbers
 											// are not equal, 0 otherwise.
-							pushInt (popInt () == popInt () ? 1 : 0);
+							pushInt (popInt () != popInt () ? 1 : 0);
 							break;
 
 						case OP_LESSTHAN:// 0x9f a b out Returns 1 if a is less
@@ -1370,7 +1357,7 @@ public class Script
 													// OP_VERIFY is executed
 													// afterward.
 						{
-							int nkeys = popInt ();
+							int nkeys = (int) popInt ();
 							if ( nkeys <= 0 || nkeys > 20 )
 							{
 								return false;
@@ -1380,7 +1367,7 @@ public class Script
 							{
 								keys[i] = stack.pop ();
 							}
-							int required = popInt ();
+							int required = (int) popInt ();
 							if ( required <= 0 )
 							{
 								return false;

@@ -30,6 +30,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -59,7 +60,7 @@ public class TxOut implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	List<Owner> owners;
 
-	public String toJSON ()
+	public String toJSON () throws ValidationException
 	{
 		StringBuffer b = new StringBuffer ();
 		b.append ("{");
