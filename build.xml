@@ -9,7 +9,7 @@
 	<property name="generated.dir" value="generated"/>
 	<property name="conf.dir" location="config"/>
  
-	<property name="dist.main.class" value="com.bitsofproof.supernode.test.TestMain"/>
+	<property name="dist.main.class" value="com.bitsofproof.supernode.main.Supernode"/>
 
 	<target name="generate" depends="retrieve">
 	    <javac srcdir="${src.dir}">
