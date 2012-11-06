@@ -1420,10 +1420,10 @@ public class Script
 		Tx copy = tx.flatCopy ();
 
 		// implicit SIGHASH_ALL
-		int ninr = 0;
+		int i = 0;
 		for ( TxIn in : copy.getInputs () )
 		{
-			if ( ninr == inr )
+			if ( i == inr )
 			{
 				in.setScript (script);
 			}
@@ -1431,13 +1431,13 @@ public class Script
 			{
 				in.setScript (new byte[0]);
 			}
-			++ninr;
+			++i;
 		}
 
-		if ( (hashType & 0x7f) == SIGHASH_NONE )
+		if ( (hashType & 0x1f) == SIGHASH_NONE )
 		{
 			copy.getOutputs ().clear ();
-			int i = 0;
+			i = 0;
 			for ( TxIn in : copy.getInputs () )
 			{
 				if ( i != inr )
@@ -1447,23 +1447,23 @@ public class Script
 				++i;
 			}
 		}
-		else if ( (hashType & 0x7f) == SIGHASH_SINGLE )
+		else if ( (hashType & 0x1f) == SIGHASH_SINGLE )
 		{
 			int onr = inr;
 			if ( onr >= copy.getOutputs ().size () )
 			{
 				throw new ValidationException ("Must have 1-1 in and output for SIGHASH_SINGLE");
 			}
-			for ( int i = copy.getOutputs ().size () - 1; i > onr; --i )
+			for ( i = copy.getOutputs ().size () - 1; i > onr; --i )
 			{
 				copy.getOutputs ().remove (i);
 			}
-			for ( int i = 0; i < copy.getOutputs ().size (); ++i )
+			for ( i = 0; i < onr; ++i )
 			{
 				copy.getOutputs ().get (i).setScript (new byte[0]);
-				copy.getOutputs ().get (i).setValue (-1);
+				copy.getOutputs ().get (i).setValue (-1L);
 			}
-			int i = 0;
+			i = 0;
 			for ( TxIn in : copy.getInputs () )
 			{
 				if ( i != inr )

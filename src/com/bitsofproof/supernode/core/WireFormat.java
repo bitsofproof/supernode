@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.core;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -85,7 +84,14 @@ public class WireFormat
 
 		public long readUint64 ()
 		{
-			return new BigInteger (ByteUtils.reverse (readBytes (8))).longValue ();
+			long value =
+					((bytes[cursor] & 0xFFL) << 0)
+							| ((bytes[cursor + 1] & 0xFFL) << 8)
+							| ((bytes[cursor + 2] & 0xFFL) << 16)
+							| ((bytes[cursor + 3] & 0xFFL) << 24 | ((bytes[cursor + 4] & 0xFFL) << 32) | ((bytes[cursor + 5] & 0xFFL) << 40)
+									| ((bytes[cursor + 6] & 0xFFL) << 48) | ((bytes[cursor + 7] & 0xFFL) << 56));
+			cursor += 8;
+			return value;
 		}
 
 		public long readVarInt ()
@@ -268,22 +274,14 @@ public class WireFormat
 
 		public void writeUint64 (long n)
 		{
-			try
-			{
-				BigInteger bi = BigInteger.valueOf (n);
-				byte[] b = ByteUtils.reverse (bi.toByteArray ());
-				bs.write (b);
-				if ( b.length < 8 )
-				{
-					for ( int i = 0; i < 8 - b.length; i++ )
-					{
-						bs.write (0);
-					}
-				}
-			}
-			catch ( IOException e )
-			{
-			}
+			bs.write ((int) (0xFF & n));
+			bs.write ((int) (0xFF & (n >> 8)));
+			bs.write ((int) (0xFF & (n >> 16)));
+			bs.write ((int) (0xFF & (n >> 24)));
+			bs.write ((int) (0xFF & (n >> 32)));
+			bs.write ((int) (0xFF & (n >> 40)));
+			bs.write ((int) (0xFF & (n >> 48)));
+			bs.write ((int) (0xFF & (n >> 56)));
 		}
 
 		public void writeVarInt (long n)
