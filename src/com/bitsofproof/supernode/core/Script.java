@@ -20,10 +20,8 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
@@ -452,13 +450,13 @@ public class Script
 
 	public Script (Tx tx, int inr)
 	{
-		this.tx = tx.flatCopy (); // we mess around with...
+		this.tx = tx;
 		this.inr = inr;
 	}
 
 	public Script (Tx tx, int inr, Set<String> sigCache)
 	{
-		this.tx = tx.flatCopy (); // we mess around with...
+		this.tx = tx;
 		this.inr = inr;
 		this.validSignatureCache = sigCache;
 	}
@@ -1416,20 +1414,15 @@ public class Script
 		return signedScript;
 	}
 
-	private boolean validateSignature (byte[] pubkey, byte[] sig, byte[] script)
+	private boolean validateSignature (byte[] pubkey, byte[] sig, byte[] script) throws ValidationException
 	{
 		byte hashType = sig[sig.length - 1];
-		if ( (hashType == SIGHASH_SINGLE) || (hashType == SIGHASH_NONE) || (hashType & SIGHASH_ANYONECANPAY) != 0 )
-		{
-			return false; // not supported as of now.
-		}
-		// implicit SIGHASH_ALL
+		Tx copy = tx.flatCopy ();
 
-		Map<TxIn, byte[]> originalInputs = new HashMap<TxIn, byte[]> ();
+		// implicit SIGHASH_ALL
 		int ninr = 0;
-		for ( TxIn in : tx.getInputs () )
+		for ( TxIn in : copy.getInputs () )
 		{
-			originalInputs.put (in, in.getScript ());
 			if ( ninr == inr )
 			{
 				in.setScript (script);
@@ -1441,12 +1434,52 @@ public class Script
 			++ninr;
 		}
 
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		tx.toWire (writer);
-		for ( Map.Entry<TxIn, byte[]> e : originalInputs.entrySet () )
+		if ( (hashType & 0x7f) == SIGHASH_NONE )
 		{
-			e.getKey ().setScript (e.getValue ());
+			copy.getOutputs ().clear ();
+			int i = 0;
+			for ( TxIn in : copy.getInputs () )
+			{
+				if ( i != inr )
+				{
+					in.setSequence (0);
+				}
+			}
 		}
+		else if ( (hashType & 0x7f) == SIGHASH_SINGLE )
+		{
+			int onr = inr;
+			if ( onr >= copy.getOutputs ().size () )
+			{
+				throw new ValidationException ("Must have 1-1 in and output for SIGHASH_SINGLE");
+			}
+			for ( int i = copy.getOutputs ().size () - 1; i > onr; --i )
+			{
+				copy.getOutputs ().remove (i);
+			}
+			for ( int i = 0; i < copy.getOutputs ().size (); ++i )
+			{
+				copy.getOutputs ().get (i).setScript (new byte[0]);
+				copy.getOutputs ().get (i).setValue (-1);
+			}
+			int i = 0;
+			for ( TxIn in : copy.getInputs () )
+			{
+				if ( i != inr )
+				{
+					in.setSequence (0);
+				}
+			}
+		}
+		if ( (hashType & SIGHASH_ANYONECANPAY) != 0 )
+		{
+			List<TxIn> oneIn = new ArrayList<TxIn> ();
+			oneIn.add (copy.getInputs ().get (inr));
+			copy.setInputs (oneIn);
+		}
+
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		copy.toWire (writer);
 
 		byte[] txwire = writer.toByteArray ();
 		byte[] hash;
