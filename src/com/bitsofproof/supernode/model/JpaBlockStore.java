@@ -390,6 +390,7 @@ class JpaBlockStore implements BlockStore
 			tcontext.block = b;
 
 			boolean skip = true;
+			log.trace ("resolving inputs for block " + b.getHash ());
 			for ( Tx t : b.getTransactions () )
 			{
 				ArrayList<TxOut> outs = new ArrayList<TxOut> ();
@@ -408,6 +409,7 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 
+			log.trace ("validating block " + b.getHash ());
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final Tx t : b.getTransactions () )
 			{
@@ -439,7 +441,7 @@ class JpaBlockStore implements BlockStore
 							}
 							catch ( Exception e )
 							{
-								return new TransactionValidationException ("Transaction validation faled ", t);
+								return new TransactionValidationException (e, t);
 							}
 							return null;
 						}
@@ -482,6 +484,7 @@ class JpaBlockStore implements BlockStore
 				throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
 			}
 
+			log.trace ("storing block " + b.getHash ());
 			entityManager.persist (b);
 
 			// modify transient caches only after persistent changes
@@ -714,7 +717,7 @@ class JpaBlockStore implements BlockStore
 				{
 					try
 					{
-						if ( !Script.isStandard (o.getScript ()) )
+						if ( tcontext.block.getHeight () > 80000 && !Script.isStandard (o.getScript ()) )
 						{
 							throw new TransactionValidationException ("Nonstandard script rejected", t);
 						}
@@ -877,16 +880,19 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
 				{
-					int nkeys = Script.intValue (parsed.get (i - 1).data);
-					for ( int j = 0; j < nkeys; ++j )
+					if ( parsed.get (i - 1).data != null ) // happens only on testnet
 					{
-						Owner o = new Owner ();
-						o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
-						o.setOutpoint (out);
-						owners.add (o);
+						int nkeys = Script.intValue (parsed.get (i - 1).data);
+						for ( int j = 0; j < nkeys; ++j )
+						{
+							Owner o = new Owner ();
+							o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
+							o.setOutpoint (out);
+							owners.add (o);
+						}
+						out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
+						return;
 					}
-					out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
-					return;
 				}
 			}
 		}

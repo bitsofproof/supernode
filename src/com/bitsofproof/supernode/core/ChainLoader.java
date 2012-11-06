@@ -105,6 +105,10 @@ public class ChainLoader
 												{
 													log.trace ("Peer did not anser to inventory request " + peer.getAddress ());
 													peer.disconnect ();
+													synchronized ( known )
+													{
+														known.notify ();
+													}
 												}
 											}, inventoryTimeout, TimeUnit.SECONDS));
 										}
@@ -147,7 +151,7 @@ public class ChainLoader
 							}
 							try
 							{
-								known.wait (inventoryTimeout * 1000);
+								known.wait ();
 							}
 							catch ( InterruptedException e )
 							{
@@ -215,6 +219,7 @@ public class ChainLoader
 					log.trace ("received inventory of " + m.getBlockHashes ().size () + " blocks from " + peer.getAddress ());
 					synchronized ( known )
 					{
+						known.notify ();
 						if ( m.getBlockHashes ().size () > 1 )
 						{
 							Long jobid = waitingForInventory.get (peer);
@@ -240,7 +245,6 @@ public class ChainLoader
 								kn.nr = n++;
 								kn.hash = hash;
 								k.add (kn);
-								known.notify ();
 							}
 						}
 					}
