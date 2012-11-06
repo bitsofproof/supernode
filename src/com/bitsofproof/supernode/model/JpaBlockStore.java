@@ -413,7 +413,14 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( tcontext.coinbase )
 				{
-					validateTransaction (tcontext, t);
+					try
+					{
+						validateTransaction (tcontext, t);
+					}
+					catch ( TransactionValidationException e )
+					{
+						throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
+					}
 				}
 				else
 				{
@@ -640,7 +647,7 @@ class JpaBlockStore implements BlockStore
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
-					|| t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL )
+					|| (chain.isProduction () && t.getInputs ().get (0).getSequence () != 0xFFFFFFFFL) )
 			{
 				throw new TransactionValidationException ("first transaction must be coinbase ", t);
 			}
