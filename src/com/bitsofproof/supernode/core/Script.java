@@ -1444,6 +1444,7 @@ public class Script
 				{
 					in.setSequence (0);
 				}
+				++i;
 			}
 		}
 		else if ( (hashType & 0x7f) == SIGHASH_SINGLE )
@@ -1469,6 +1470,7 @@ public class Script
 				{
 					in.setSequence (0);
 				}
+				++i;
 			}
 		}
 		if ( (hashType & SIGHASH_ANYONECANPAY) != 0 )

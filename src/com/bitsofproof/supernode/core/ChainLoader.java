@@ -142,21 +142,12 @@ public class ChainLoader
 								known.get (peer).clear ();
 								if ( gdm.getBlocks ().size () > 0 )
 								{
-									try
-									{
-										peer.send (gdm);
-									}
-									catch ( Exception e )
-									{
-										log.trace ("could not send to peer " + peer.getAddress (), e);
-										peer.disconnect ();
-										continue;
-									}
+									peer.send (gdm);
 								}
 							}
 							try
 							{
-								known.wait ();
+								known.wait (inventoryTimeout * 1000);
 							}
 							catch ( InterruptedException e )
 							{
