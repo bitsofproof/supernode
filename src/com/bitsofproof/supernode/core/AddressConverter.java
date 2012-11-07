@@ -21,8 +21,6 @@ import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class AddressConverter
 {
-	private final boolean production;
-
 	private static final char[] b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray ();
 	private static final int[] r58 = new int[256];
 	static
@@ -35,11 +33,6 @@ public class AddressConverter
 		{
 			r58[b58[i]] = i;
 		}
-	}
-
-	public AddressConverter (Chain chain)
-	{
-		production = chain.getGenesis ().getHash ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
 	}
 
 	public static String toBase58 (byte[] b)
@@ -136,12 +129,12 @@ public class AddressConverter
 		}
 	}
 
-	public byte[] fromSatoshiStyle (String s) throws ValidationException
+	public static byte[] fromSatoshiStyle (String s, Chain chain) throws ValidationException
 	{
 		try
 		{
 			byte[] raw = fromBase58 (s);
-			if ( production )
+			if ( chain.isProduction () )
 			{
 				if ( raw[0] != 0 && raw[0] != 5 )
 				{ // 5 is multisig
@@ -166,10 +159,10 @@ public class AddressConverter
 		}
 	}
 
-	public String toSatoshiStyle (byte[] keyDigest, boolean multisig)
+	public static String toSatoshiStyle (byte[] keyDigest, boolean multisig, Chain chain)
 	{
 		byte[] addressBytes = new byte[1 + keyDigest.length + 4];
-		addressBytes[0] = (byte) (production ? (multisig ? 5 : 0) : (multisig ? 1 : 0xc4));
+		addressBytes[0] = (byte) (chain.isProduction () ? (multisig ? 5 : 0) : (multisig ? 1 : 0xc4));
 		System.arraycopy (keyDigest, 0, addressBytes, 1, keyDigest.length);
 		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1);
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);

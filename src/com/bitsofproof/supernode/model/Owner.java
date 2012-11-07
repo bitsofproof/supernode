@@ -9,6 +9,8 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Index;
+
 @Entity
 @Table (name = "own")
 public class Owner implements Serializable
@@ -20,7 +22,8 @@ public class Owner implements Serializable
 	private Long id;
 
 	@Column (length = 40, nullable = false)
-	private String hash;
+	@Index (name = "addrindex")
+	private String address;
 
 	@ManyToOne
 	private TxOut outpoint;
@@ -45,13 +48,14 @@ public class Owner implements Serializable
 		this.outpoint = outpoint;
 	}
 
-	public String getHash ()
+	public String getAddress ()
 	{
-		return hash;
+		return address;
 	}
 
-	public void setHash (String hash)
+	public void setAddress (String address)
 	{
-		this.hash = hash;
+		this.address = address;
 	}
+
 }

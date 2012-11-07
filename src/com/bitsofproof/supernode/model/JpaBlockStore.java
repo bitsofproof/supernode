@@ -41,7 +41,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.core.Hash;
@@ -917,7 +917,7 @@ class JpaBlockStore implements BlockStore
 			{
 				// pay to key
 				Owner o = new Owner ();
-				o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (0).data)));
+				o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), false, chain));
 				o.setOutpoint (out);
 				owners.add (o);
 				out.setVotes (1L);
@@ -927,7 +927,7 @@ class JpaBlockStore implements BlockStore
 			{
 				// pay to address
 				Owner o = new Owner ();
-				o.setHash (ByteUtils.toHex (parsed.get (2).data));
+				o.setAddress (AddressConverter.toSatoshiStyle (parsed.get (2).data, false, chain));
 				o.setOutpoint (out);
 				owners.add (o);
 				out.setVotes (1L);
@@ -947,7 +947,7 @@ class JpaBlockStore implements BlockStore
 						for ( int j = 0; j < nkeys; ++j )
 						{
 							Owner o = new Owner ();
-							o.setHash (ByteUtils.toHex (Hash.keyHash (parsed.get (i - j - 2).data)));
+							o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
 							o.setOutpoint (out);
 							owners.add (o);
 						}
