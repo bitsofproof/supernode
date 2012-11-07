@@ -26,7 +26,8 @@
 	
 
     <target name="retrieve">
-        <ivy:resolve />
+    	<ivy:settings file="ivysettings.xml"/>
+    	<ivy:resolve />
         <ivy:cachepath pathid="build.path"/> 
     </target>
 
