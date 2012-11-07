@@ -78,7 +78,7 @@
 	
 	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="inventoryTimeout" value="30"/>
+		<property name="timeout" value="30"/>
 	</bean>
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>

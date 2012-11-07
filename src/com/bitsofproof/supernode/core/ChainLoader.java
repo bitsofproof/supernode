@@ -15,12 +15,10 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -41,11 +39,12 @@ public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	private int inventoryTimeout = 30;
+	private int timeout = 30;
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> known = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
 	private final Map<BitcoinPeer, Long> waitingForInventory = new HashMap<BitcoinPeer, Long> ();
+	private final Map<BitcoinPeer, Long> waitingForBlocks = new HashMap<BitcoinPeer, Long> ();
 	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
 	private class KnownBlock
@@ -77,20 +76,15 @@ public class ChainLoader
 					{
 						synchronized ( known )
 						{
-							List<byte[]> locator = new ArrayList<byte[]> ();
 							for ( final BitcoinPeer peer : known.keySet () )
 							{
 								if ( requests.get (peer).size () == 0 && peer.getHeight () > store.getChainHeight () && !waitingForInventory.containsKey (peer) )
 								{
 									GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
-									if ( locator.isEmpty () )
+									for ( String h : store.getLocator () )
 									{
-										for ( String h : store.getLocator () )
-										{
-											locator.add (new Hash (h).toByteArray ());
-										}
+										gbm.getHashes ().add (new Hash (h).toByteArray ());
 									}
-									gbm.setHashes (locator);
 									gbm.setLastHash (Hash.ZERO_HASH.toByteArray ());
 									try
 									{
@@ -103,14 +97,14 @@ public class ChainLoader
 												@Override
 												public void run ()
 												{
-													log.trace ("Peer did not anser to inventory request " + peer.getAddress ());
+													log.trace ("Peer did not answer to inventory request " + peer.getAddress ());
 													peer.disconnect ();
 													synchronized ( known )
 													{
 														known.notify ();
 													}
 												}
-											}, inventoryTimeout, TimeUnit.SECONDS));
+											}, timeout, TimeUnit.SECONDS));
 										}
 									}
 									catch ( Exception e )
@@ -147,6 +141,20 @@ public class ChainLoader
 								if ( gdm.getBlocks ().size () > 0 )
 								{
 									peer.send (gdm);
+
+									waitingForBlocks.put (peer, network.scheduleJob (new Runnable ()
+									{
+										@Override
+										public void run ()
+										{
+											log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
+											peer.disconnect ();
+											synchronized ( known )
+											{
+												known.notify ();
+											}
+										}
+									}, timeout, TimeUnit.SECONDS));
 								}
 							}
 							try
@@ -185,6 +193,14 @@ public class ChainLoader
 						return;
 					}
 					peerRequests.remove (block.getHash ());
+					if ( peerRequests.isEmpty () )
+					{
+						Long job = waitingForBlocks.get (peer);
+						network.cancelJob (job);
+						waitingForBlocks.remove (peer);
+						peer.disconnect ();
+						known.notify ();
+					}
 				}
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
@@ -263,6 +279,7 @@ public class ChainLoader
 					known.remove (peer);
 					requests.remove (peer);
 					waitingForInventory.remove (peer);
+					waitingForBlocks.remove (peer);
 					known.notify ();
 				}
 			}
@@ -295,14 +312,14 @@ public class ChainLoader
 		});
 	}
 
-	public int getInventoryTimeout ()
+	public int getTimeout ()
 	{
-		return inventoryTimeout;
+		return timeout;
 	}
 
-	public void setInventoryTimeout (int inventoryTimeout)
+	public void setTimeout (int inventoryTimeout)
 	{
-		this.inventoryTimeout = inventoryTimeout;
+		this.timeout = inventoryTimeout;
 	}
 
 }
