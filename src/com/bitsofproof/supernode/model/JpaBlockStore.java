@@ -57,6 +57,9 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
+	// a block can not branch from earlier than this
+	private static final int MAXBRANCH = 100;
+
 	@Autowired
 	private Chain chain;
 
@@ -378,6 +381,20 @@ class JpaBlockStore implements BlockStore
 			{
 				// branching
 				branching = true;
+				// check if branch is not too far back
+				CachedBlock c = currentHead.getLast ();
+				CachedBlock p = c.getPrevious ();
+				int i = 0;
+				while ( p != null && !p.getHash ().equals (prev.getHash ()) )
+				{
+					c = p;
+					p = c.getPrevious ();
+					if ( ++i == MAXBRANCH )
+					{
+						throw new ValidationException ("attempt to branch too far back in past " + b.toWireDump ());
+					}
+				}
+
 				head = new Head ();
 				head.setTrunk (prev.getHash ());
 				head.setHeight (prev.getHeight ());
