@@ -26,4 +26,34 @@ public class Stable implements Serializable
 
 	@OneToMany (fetch = FetchType.LAZY)
 	private List<TxOut> out;
+
+	public Long getId ()
+	{
+		return id;
+	}
+
+	public void setId (Long id)
+	{
+		this.id = id;
+	}
+
+	public String getUpto ()
+	{
+		return upto;
+	}
+
+	public void setUpto (String upto)
+	{
+		this.upto = upto;
+	}
+
+	public List<TxOut> getOut ()
+	{
+		return out;
+	}
+
+	public void setOut (List<TxOut> out)
+	{
+		this.out = out;
+	}
 }

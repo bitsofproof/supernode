@@ -28,6 +28,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Index;
+
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -51,6 +53,7 @@ public class Tx implements Serializable
 
 	// this is not unique on the chain see http://r6.ca/blog/20120206T005236Z.html
 	@Column (length = 64, nullable = false)
+	@Index (name = "txhash")
 	private String hash;
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
