@@ -26,6 +26,8 @@ public interface BlockStore
 
 	public List<String> getLocator ();
 
+	public List<String> getInventory (List<String> locator, String last);
+
 	public void storeBlock (Blk b) throws ValidationException;
 
 	public String getHeadHash ();

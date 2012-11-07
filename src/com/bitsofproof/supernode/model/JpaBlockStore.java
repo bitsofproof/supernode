@@ -19,6 +19,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -223,6 +224,49 @@ class JpaBlockStore implements BlockStore
 			lock.readLock ().lock ();
 
 			return currentHead.getHeight ();
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
+	public List<String> getInventory (List<String> locator, String last)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			List<String> inventory = new LinkedList<String> ();
+			CachedBlock curr = currentHead.getLast ();
+			CachedBlock prev = curr.getPrevious ();
+			if ( !last.equals (Hash.ZERO_HASH.toString ()) )
+			{
+				while ( prev != null && !curr.equals (last) )
+				{
+					curr = prev;
+					prev = curr.getPrevious ();
+				}
+			}
+			do
+			{
+				if ( locator.contains (curr) )
+				{
+					break;
+				}
+				inventory.add (0, curr.getHash ());
+				if ( inventory.size () > 500 )
+				{
+					inventory.remove (500);
+				}
+				curr = prev;
+				if ( prev != null )
+				{
+					prev = curr.getPrevious ();
+				}
+			} while ( curr != null );
+			return inventory;
 		}
 		finally
 		{

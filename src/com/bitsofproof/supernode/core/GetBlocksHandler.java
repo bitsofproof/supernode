@@ -15,25 +15,47 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
+import com.bitsofproof.supernode.messages.InvMessage;
+import com.bitsofproof.supernode.model.BlockStore;
 
 public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage>
 {
 	private static final Logger log = LoggerFactory.getLogger (GetBlocksHandler.class);
+	private final BlockStore store;
 
 	public GetBlocksHandler (BitcoinNetwork network)
 	{
 		network.addListener ("getblocks", this);
+		store = network.getStore ();
 	}
 
 	@Override
 	public void process (GetBlocksMessage m, BitcoinPeer peer)
 	{
-		log.trace ("received gedblocks");
+		log.trace ("received gedblocks from " + peer.getAddress ());
+		List<String> locator = new ArrayList<String> ();
+		for ( byte[] h : m.getHashes () )
+		{
+			locator.add (new Hash (h).toString ());
+		}
+		List<String> inventory = store.getInventory (locator, new Hash (m.getLastHash ()).toString ());
+		InvMessage im = (InvMessage) peer.createMessage ("inv");
+		for ( String h : inventory )
+		{
+			im.getBlockHashes ().add (new Hash (h).toByteArray ());
+		}
+		if ( !im.getBlockHashes ().isEmpty () )
+		{
+			peer.send (im);
+			log.trace ("delivered inventory to " + peer.getAddress ());
+		}
 	}
-
 }
