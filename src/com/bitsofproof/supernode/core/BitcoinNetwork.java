@@ -67,18 +67,24 @@ public class BitcoinNetwork extends P2P
 
 	private static class WrappedRunnable implements Runnable
 	{
-		Long nr = new SecureRandom ().nextLong ();
-		Runnable job;
+		private final Long nr = new SecureRandom ().nextLong ();
+		private final Runnable job;
+		private final boolean single;
 
-		WrappedRunnable (Runnable job)
+		WrappedRunnable (Runnable job, boolean single)
 		{
 			this.job = job;
 			jobs.put (nr, this);
+			this.single = single;
 		}
 
 		@Override
 		public void run ()
 		{
+			if ( single )
+			{
+				jobs.remove (this);
+			}
 			if ( jobs.containsKey (nr) )
 			{
 				job.run ();
@@ -89,14 +95,14 @@ public class BitcoinNetwork extends P2P
 
 	public long scheduleJob (final Runnable job, int delay, TimeUnit unit)
 	{
-		WrappedRunnable runnable = new WrappedRunnable (job);
+		WrappedRunnable runnable = new WrappedRunnable (job, true);
 		getScheduler ().schedule (runnable, delay, unit);
 		return runnable.nr;
 	}
 
 	public long scheduleJobWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
 	{
-		WrappedRunnable runnable = new WrappedRunnable (job);
+		WrappedRunnable runnable = new WrappedRunnable (job, false);
 		getScheduler ().scheduleWithFixedDelay (runnable, startDelay, delay, unit);
 		return runnable.nr;
 	}
