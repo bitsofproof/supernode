@@ -982,6 +982,11 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
+			if ( currentHead == null )
+			{
+				return null;
+			}
+
 			return currentHead.getLast ().getHash ();
 		}
 		finally

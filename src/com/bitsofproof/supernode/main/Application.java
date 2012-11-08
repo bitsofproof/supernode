@@ -38,7 +38,7 @@ public class Application
 	{
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
-		gnuOptions.addOption ("h", "help", false, "I can't help you").addOption ("r", "resetdb", false, "initialize database");
+		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
 
 		final CommandLine cl;
 		try
@@ -51,7 +51,7 @@ public class Application
 			return;
 		}
 
-		if ( cl.hasOption ("resetdb") )
+		if ( network.getStore ().getHeadHash () == null )
 		{
 			network.getStore ().resetStore (network.getChain ());
 		}
