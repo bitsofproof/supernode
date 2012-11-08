@@ -46,6 +46,9 @@ public class ChainLoader
 	private final Map<BitcoinPeer, Long> busy = new HashMap<BitcoinPeer, Long> ();
 	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
+	private final BlockStore store;
+	private final BitcoinNetwork network;
+
 	private class KnownBlock
 	{
 		private int nr;
@@ -54,15 +57,22 @@ public class ChainLoader
 
 	public boolean isBehind ()
 	{
-		synchronized ( knownInventory )
+		int stored = (int) store.getChainHeight ();
+
+		for ( BitcoinPeer peer : network.getConnectPeers () )
 		{
-			return !busy.isEmpty ();
+			if ( stored < peer.getHeight () )
+			{
+				return true;
+			}
 		}
+		return false;
 	}
 
 	public ChainLoader (final BitcoinNetwork network)
 	{
-		final BlockStore store = network.getStore ();
+		this.network = network;
+		store = network.getStore ();
 
 		network.addListener ("block", new BitcoinMessageListener<BlockMessage> ()
 		{
