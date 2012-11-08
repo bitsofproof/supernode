@@ -56,6 +56,7 @@ public class SatoshiChain extends ChainImpl
 		block.setTransactions (transactions);
 		Tx t = new Tx ();
 		transactions.add (t);
+		t.setBlock (block);
 		t.setVersion (1);
 
 		List<TxIn> inputs = new ArrayList<TxIn> ();

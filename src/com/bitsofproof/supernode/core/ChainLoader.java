@@ -273,7 +273,7 @@ public class ChainLoader
 		}
 	}
 
-	private final Comparator<KnownBlock> incomingOrder = new Comparator<KnownBlock> ()
+	private static final Comparator<KnownBlock> incomingOrder = new Comparator<KnownBlock> ()
 	{
 		@Override
 		public int compare (KnownBlock arg0, KnownBlock arg1)

@@ -25,6 +25,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -51,7 +52,7 @@ public class Tx implements Serializable
 
 	private long lockTime;
 
-	// this is not unique on the chain see http://r6.ca/blog/20120206T005236Z.html
+	// this is not unique since a transaction copy might be on different branches.
 	@Column (length = 64, nullable = false)
 	@Index (name = "txhash")
 	private String hash;
@@ -61,6 +62,9 @@ public class Tx implements Serializable
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<TxOut> outputs;
+
+	@ManyToOne (fetch = FetchType.LAZY, optional = false)
+	private Blk block;
 
 	public Long getId ()
 	{
@@ -137,6 +141,16 @@ public class Tx implements Serializable
 		Tx b = new Tx ();
 		b.fromWire (reader);
 		return b;
+	}
+
+	public Blk getBlock ()
+	{
+		return block;
+	}
+
+	public void setBlock (Blk block)
+	{
+		this.block = block;
 	}
 
 	public String toJSON () throws ValidationException

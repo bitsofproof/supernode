@@ -74,6 +74,7 @@ class JpaBlockStore implements BlockStore
 	private CachedHead currentHead = null;
 	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
+	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
@@ -83,11 +84,8 @@ class JpaBlockStore implements BlockStore
 		private CachedBlock last;
 		private double chainWork;
 		private long height;
-
-		public CachedBlock getLast ()
-		{
-			return last;
-		}
+		private CachedHead previous;
+		private final Set<CachedBlock> blocks = new HashSet<CachedBlock> ();
 
 		public double getChainWork ()
 		{
@@ -99,11 +97,6 @@ class JpaBlockStore implements BlockStore
 			return height;
 		}
 
-		public void setLast (CachedBlock last)
-		{
-			this.last = last;
-		}
-
 		public void setChainWork (double chainWork)
 		{
 			this.chainWork = chainWork;
@@ -112,6 +105,31 @@ class JpaBlockStore implements BlockStore
 		public void setHeight (long height)
 		{
 			this.height = height;
+		}
+
+		public Set<CachedBlock> getBlocks ()
+		{
+			return blocks;
+		}
+
+		public CachedHead getPrevious ()
+		{
+			return previous;
+		}
+
+		public void setPrevious (CachedHead previous)
+		{
+			this.previous = previous;
+		}
+
+		public CachedBlock getLast ()
+		{
+			return last;
+		}
+
+		public void setLast (CachedBlock last)
+		{
+			this.last = last;
 		}
 
 	}
@@ -166,36 +184,44 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.writeLock ().lock ();
 
-			log.trace ("filling chain cache with stored blocks");
-			QBlk block = QBlk.blk;
-			JPAQuery q = new JPAQuery (entityManager);
-			for ( Blk b : q.from (block).list (block) )
-			{
-				if ( b.getPrevious () != null )
-				{
-					cachedBlocks.put (b.getHash (),
-							new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ()));
-				}
-				else
-				{
-					cachedBlocks.put (b.getHash (), new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ()));
-				}
-			}
-
 			log.trace ("filling chain cache with heads");
 			QHead head = QHead.head;
-			q = new JPAQuery (entityManager);
+			JPAQuery q = new JPAQuery (entityManager);
 			for ( Head h : q.from (head).list (head) )
 			{
 				CachedHead sh = new CachedHead ();
 				sh.setChainWork (h.getChainWork ());
 				sh.setHeight (h.getHeight ());
-				sh.setLast (cachedBlocks.get (h.getLeaf ()));
 				heads.put (h.getLeaf (), sh);
+				if ( h.getPrevious () != null )
+				{
+					sh.setPrevious (cachedHeads.get (h.getId ()));
+				}
+				cachedHeads.put (h.getId (), sh);
 				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
 				{
 					currentHead = sh;
 				}
+			}
+
+			log.trace ("filling chain cache with stored blocks");
+			QBlk block = QBlk.blk;
+			q = new JPAQuery (entityManager);
+			for ( Blk b : q.from (block).list (block) )
+			{
+				CachedBlock cb = null;
+				if ( b.getPrevious () != null )
+				{
+					cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
+				}
+				else
+				{
+					cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
+				}
+				cachedBlocks.put (b.getHash (), cb);
+				CachedHead h = cachedHeads.get (b.getHead ().getId ());
+				h.getBlocks ().add (cb);
+				h.setLast (cb);
 			}
 		}
 		finally
@@ -474,6 +500,7 @@ class JpaBlockStore implements BlockStore
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final Tx t : b.getTransactions () )
 			{
+				t.setBlock (b);
 				if ( tcontext.coinbase )
 				{
 					try
@@ -556,18 +583,33 @@ class JpaBlockStore implements BlockStore
 			if ( branching )
 			{
 				heads.put (b.getHash (), usingHead = new CachedHead ());
+				cachedHeads.put (head.getId (), usingHead);
 			}
+			usingHead.setLast (m);
+			usingHead.setChainWork (head.getChainWork ());
+			usingHead.setHeight (head.getHeight ());
+			usingHead.getBlocks ().add (m);
+
 			if ( head.getChainWork () > currentHead.getChainWork () )
 			{
 				currentHead = usingHead;
 			}
 
-			usingHead.setLast (m);
-			usingHead.setChainWork (head.getChainWork ());
-			usingHead.setHeight (head.getHeight ());
-
 			log.trace ("stored block " + b.getHash ());
 		}
+	}
+
+	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch)
+	{
+		if ( branch.getBlocks ().contains (block) )
+		{
+			return true;
+		}
+		if ( branch.getPrevious () == null )
+		{
+			return false;
+		}
+		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
 	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
@@ -602,16 +644,20 @@ class JpaBlockStore implements BlockStore
 			QTxOut txout = QTxOut.txOut;
 			JPAQuery query = new JPAQuery (entityManager);
 
-			// find input transactions. Since tx hash is not unique ordering gets rid of older
+			// Unfortunatelly tx hash is not unique (not even on a branch) ordering ensures earlier will be overwritten
 			for ( TxOut out : query.from (tx).join (tx.outputs, txout).where (tx.hash.in (inputtx)).orderBy (tx.id.asc (), txout.ix.asc ()).list (txout) )
 			{
-				ArrayList<TxOut> cached = tcontext.transactionsOutputCache.get (out.getTransaction ().getHash ());
-				if ( cached == null || cached.size () > out.getIx () ) // replace if more than one tx
+				CachedBlock blockOfOut = cachedBlocks.get (out.getTransaction ().getBlock ().getHash ());
+				if ( isBlockOnBranch (blockOfOut, currentHead) )
 				{
-					cached = new ArrayList<TxOut> ();
-					tcontext.transactionsOutputCache.put (out.getTransaction ().getHash (), cached);
+					ArrayList<TxOut> cached = tcontext.transactionsOutputCache.get (out.getTransaction ().getHash ());
+					if ( cached == null || cached.size () > out.getIx () ) // replace if more than one tx
+					{
+						cached = new ArrayList<TxOut> ();
+						tcontext.transactionsOutputCache.put (out.getTransaction ().getHash (), cached);
+					}
+					cached.add (out);
 				}
-				cached.add (out);
 			}
 		}
 		// check for double spending
@@ -625,11 +671,8 @@ class JpaBlockStore implements BlockStore
 			{
 				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
 			}
-			try
-			{
-				transactionOutput = cached.get ((int) i.getIx ());
-			}
-			catch ( Exception e )
+			transactionOutput = cached.get ((int) i.getIx ());
+			if ( transactionOutput == null )
 			{
 				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
 			}
@@ -641,66 +684,35 @@ class JpaBlockStore implements BlockStore
 			resolved.put (nr++, transactionOutput);
 		}
 
-		// find previously spending blocks
-		List<String> dsblocks = new ArrayList<String> ();
 		if ( !outs.isEmpty () )
 		{
+			// find previously spending blocks
+			List<String> dsblocks = new ArrayList<String> ();
+
 			QTx tx = QTx.tx;
 			QBlk blk = QBlk.blk;
 			QTxIn txin = QTxIn.txIn;
 			JPAQuery query = new JPAQuery (entityManager);
-			dsblocks = query.from (blk).join (blk.transactions, tx).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);
-		}
-
-		if ( tcontext.block == null )
-		{
-			if ( !dsblocks.isEmpty () )
+			dsblocks = query.from (tx).join (tx.block, blk).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);
+			for ( String dsbh : dsblocks )
 			{
-				throw new ValidationException ("Double spend attempt " + t.toWireDump ());
-			}
-		}
-		else
-		{
-			if ( !dsblocks.isEmpty () )
-			{
-				// check if a block with double spend is reachable from this block
-				CachedBlock prev = cachedBlocks.get (tcontext.block.getPrevious ().getHash ());
-				while ( prev != null )
+				if ( isBlockOnBranch (cachedBlocks.get (dsbh), currentHead) )
 				{
-					if ( dsblocks.contains (prev.getHash ()) )
-					{
-						throw new ValidationException ("Double spend attempt " + t.toWireDump ());
-					}
-					prev = prev.getPrevious ();
+					throw new ValidationException ("Double spend attempt " + t.toWireDump ());
 				}
 			}
+		}
 
+		if ( tcontext.block != null )
+		{
 			// check coinbase spending
 			for ( int j = 0; j < nr; ++j )
 			{
 				TxOut transactionOutput = resolved.get (j);
-				if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null )
+				if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null && transactionOutput.getTransaction ().getBlock () != null
+						&& transactionOutput.getTransaction ().getBlock ().getHeight () > currentHead.getHeight () - 100 )
 				{
-					if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()) != null )
-					{
-						if ( tcontext.resolvedInputs.get (transactionOutput.getTransaction ().getHash ()).get (0) == null )
-						{
-							throw new ValidationException ("coinbase spent in same block " + t.toWireDump ());
-						}
-					}
-					else
-					{
-						QBlk blk = QBlk.blk;
-						QTx tx = QTx.tx;
-						JPAQuery query = new JPAQuery (entityManager);
-						Blk origin =
-								query.from (blk).join (blk.transactions, tx).where (tx.hash.eq (transactionOutput.getTransaction ().getHash ()))
-										.orderBy (blk.createTime.desc ()).limit (1).uniqueResult (blk);
-						if ( origin.getHeight () > (tcontext.block.getHeight () - 100) )
-						{
-							throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
-						}
-					}
+					throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 				}
 			}
 		}
