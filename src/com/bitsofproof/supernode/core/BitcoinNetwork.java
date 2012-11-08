@@ -54,7 +54,7 @@ public class BitcoinNetwork extends P2P
 	private final Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet (new HashSet<BitcoinPeer> ());
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
-	private static final Map<Long, Runnable> jobs = new HashMap<Long, Runnable> ();
+	private static final Map<Long, Runnable> jobs = Collections.synchronizedMap (new HashMap<Long, Runnable> ());
 
 	@Override
 	public void start () throws IOException
