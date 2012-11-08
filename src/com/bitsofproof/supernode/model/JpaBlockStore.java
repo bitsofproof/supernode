@@ -982,12 +982,24 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
-			if ( currentHead == null )
-			{
-				return null;
-			}
-
 			return currentHead.getLast ().getHash ();
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
+	public boolean isEmpty ()
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			QHead head = QHead.head;
+			JPAQuery q = new JPAQuery (entityManager);
+			return q.from (head).list (head).isEmpty ();
 		}
 		finally
 		{

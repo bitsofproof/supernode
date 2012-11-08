@@ -51,7 +51,7 @@ public class Application
 			return;
 		}
 
-		if ( network.getStore ().getHeadHash () == null )
+		if ( network.getStore ().isEmpty () )
 		{
 			network.getStore ().resetStore (network.getChain ());
 		}

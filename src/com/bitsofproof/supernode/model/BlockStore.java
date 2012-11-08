@@ -41,4 +41,6 @@ public interface BlockStore
 	public void validateTransaction (Tx tx) throws ValidationException;
 
 	public long getChainHeight ();
+
+	boolean isEmpty ();
 }
