@@ -73,6 +73,7 @@ public class BitcoinNetwork extends P2P
 		WrappedRunnable (Runnable job)
 		{
 			this.job = job;
+			jobs.put (nr, this);
 		}
 
 		@Override
