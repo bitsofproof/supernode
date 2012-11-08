@@ -595,7 +595,7 @@ class JpaBlockStore implements BlockStore
 				currentHead = usingHead;
 			}
 
-			log.trace ("stored block " + b.getHash ());
+			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
 	}
 

@@ -71,25 +71,6 @@ public class ChainLoader
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
-				synchronized ( knownInventory )
-				{
-					HashSet<String> peerRequests = requests.get (peer);
-					if ( peerRequests == null )
-					{
-						return;
-					}
-					peerRequests.remove (block.getHash ());
-					if ( peerRequests.isEmpty () )
-					{
-						Long job = busy.get (peer);
-						network.cancelJob (job);
-						busy.remove (peer);
-						if ( peer.getHeight () > store.getChainHeight () )
-						{
-							getBlockInventory (network, store, peer);
-						}
-					}
-				}
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
 					try
@@ -110,6 +91,29 @@ public class ChainLoader
 				{
 					pending.put (block.getPreviousHash (), block);
 				}
+				HashSet<String> peerRequests;
+				synchronized ( knownInventory )
+				{
+					peerRequests = requests.get (peer);
+					if ( peerRequests == null )
+					{
+						return;
+					}
+					peerRequests.remove (block.getHash ());
+				}
+				if ( peerRequests.isEmpty () )
+				{
+					Long job = busy.get (peer);
+					if ( job != null )
+					{
+						network.cancelJob (job);
+						busy.remove (peer);
+					}
+					if ( peer.getHeight () > store.getChainHeight () )
+					{
+						getBlockInventory (network, store, peer);
+					}
+				}
 			}
 		});
 
@@ -128,17 +132,6 @@ public class ChainLoader
 						{
 							return; // disconnected peer
 						}
-						if ( m.getBlockHashes ().size () > 1 )
-						{
-							// assuming this is an answer to a locator
-							Long jobid = busy.get (peer);
-							if ( jobid != null )
-							{
-								network.cancelJob (jobid.longValue ());
-								busy.remove (peer);
-							}
-						}
-
 						int n = k.size ();
 						for ( byte[] h : m.getBlockHashes () )
 						{
@@ -151,8 +144,8 @@ public class ChainLoader
 								k.add (kn);
 							}
 						}
-						getBlocks (network, peer);
 					}
+					getBlocks (network, peer);
 				}
 			}
 		});
@@ -168,7 +161,6 @@ public class ChainLoader
 					knownInventory.remove (peer);
 					requests.remove (peer);
 					busy.remove (peer);
-					knownInventory.notify ();
 				}
 			}
 
@@ -180,10 +172,10 @@ public class ChainLoader
 					knownInventory.notify ();
 					requests.put (peer, new HashSet<String> ());
 					knownInventory.put (peer, new TreeSet<KnownBlock> (incomingOrder));
-					if ( peer.getHeight () > store.getChainHeight () )
-					{
-						getBlockInventory (network, store, peer);
-					}
+				}
+				if ( peer.getHeight () > store.getChainHeight () )
+				{
+					getBlockInventory (network, store, peer);
 				}
 			}
 		});
@@ -202,29 +194,31 @@ public class ChainLoader
 	private void getBlocks (final BitcoinNetwork network, final BitcoinPeer peer)
 	{
 		GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
-		for ( KnownBlock b : knownInventory.get (peer) )
+		synchronized ( knownInventory )
 		{
-			boolean askedElswhere = false;
-			for ( Set<String> ps : requests.values () )
+			if ( busy.containsKey (peer) )
 			{
-				if ( ps.contains (b.hash) )
+				return;
+			}
+			for ( KnownBlock b : knownInventory.get (peer) )
+			{
+				boolean askedElswhere = false;
+				for ( Set<String> ps : requests.values () )
 				{
-					askedElswhere = true;
-					break;
+					if ( ps.contains (b.hash) )
+					{
+						askedElswhere = true;
+						break;
+					}
 				}
-				if ( pending.containsKey (b.hash) )
+				if ( !askedElswhere )
 				{
-					askedElswhere = true;
-					break;
+					gdm.getBlocks ().add (new Hash (b.hash).toByteArray ());
+					requests.get (peer).add (b.hash);
 				}
 			}
-			if ( !askedElswhere )
-			{
-				gdm.getBlocks ().add (new Hash (b.hash).toByteArray ());
-				requests.get (peer).add (b.hash);
-			}
+			knownInventory.get (peer).clear ();
 		}
-		knownInventory.get (peer).clear ();
 		if ( gdm.getBlocks ().size () > 0 )
 		{
 			peer.send (gdm);
@@ -236,10 +230,6 @@ public class ChainLoader
 				{
 					log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
 					peer.disconnect ();
-					synchronized ( knownInventory )
-					{
-						knownInventory.notify ();
-					}
 				}
 			}, timeout, TimeUnit.SECONDS));
 		}
@@ -257,19 +247,6 @@ public class ChainLoader
 		{
 			log.trace ("Sending inventory request to " + peer.getAddress ());
 			peer.send (gbm);
-			busy.put (peer, network.scheduleJob (new Runnable ()
-			{
-				@Override
-				public void run ()
-				{
-					log.trace ("Peer did not answer to inventory request " + peer.getAddress ());
-					peer.disconnect ();
-					synchronized ( knownInventory )
-					{
-						knownInventory.notify ();
-					}
-				}
-			}, timeout, TimeUnit.SECONDS));
 		}
 	}
 
