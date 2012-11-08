@@ -59,7 +59,6 @@ public abstract class P2P
 	{
 		private final InetSocketAddress address;
 		private SocketChannel channel;
-		private final Semaphore writeable = new Semaphore (1);
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
@@ -269,12 +268,15 @@ public abstract class P2P
 							m = parse (readIn);
 							receive (m);
 						}
-						notListened.release ();
 					}
 					catch ( Exception e )
 					{
 						log.error ("Exception in message processing", e);
 						disconnect ();
+					}
+					finally
+					{
+						notListened.release ();
 					}
 				}
 			});
@@ -286,29 +288,9 @@ public abstract class P2P
 			{
 				return false;
 			}
-			try
-			{
-				writeable.acquireUninterruptibly ();
-
-				byte[] wiremsg = m.toByteArray ();
-				int len = wiremsg.length;
-				int off = 0;
-				while ( len > 0 )
-				{
-					int s = Math.min (BUFFSIZE, len);
-					byte[] b = new byte[s];
-					System.arraycopy (wiremsg, off, b, 0, s);
-					off += s;
-					writes.add (b);
-					len -= s;
-				}
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
-				selector.wakeup ();
-			}
-			finally
-			{
-				writeable.release ();
-			}
+			writes.add (m.toByteArray ());
+			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
+			selector.wakeup ();
 			return true;
 		}
 
