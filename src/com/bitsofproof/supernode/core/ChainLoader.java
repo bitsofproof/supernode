@@ -142,6 +142,15 @@ public class ChainLoader
 						{
 							return; // disconnected peer
 						}
+						if ( m.getBlockHashes ().size () > 1 )
+						{
+							Long job = busy.get (peer);
+							if ( job != null )
+							{
+								network.cancelJob (job);
+								busy.remove (peer);
+							}
+						}
 						int n = k.size ();
 						for ( byte[] h : m.getBlockHashes () )
 						{
@@ -179,7 +188,6 @@ public class ChainLoader
 			{
 				synchronized ( knownInventory )
 				{
-					knownInventory.notify ();
 					requests.put (peer, new HashSet<String> ());
 					knownInventory.put (peer, new TreeSet<KnownBlock> (incomingOrder));
 				}
@@ -247,6 +255,13 @@ public class ChainLoader
 
 	private void getBlockInventory (final BitcoinNetwork network, final BlockStore store, final BitcoinPeer peer)
 	{
+		synchronized ( knownInventory )
+		{
+			if ( busy.containsKey (peer) )
+			{
+				return;
+			}
+		}
 		GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
 		for ( String h : store.getLocator () )
 		{
@@ -257,6 +272,15 @@ public class ChainLoader
 		{
 			log.trace ("Sending inventory request to " + peer.getAddress ());
 			peer.send (gbm);
+			busy.put (peer, network.scheduleJob (new Runnable ()
+			{
+				@Override
+				public void run ()
+				{
+					log.trace ("Peer did not answer to inventory requests " + peer.getAddress ());
+					peer.disconnect ();
+				}
+			}, timeout, TimeUnit.SECONDS));
 		}
 	}
 
