@@ -1,0 +1,7 @@
+THIS SOFTWARE ALSO CONTAINS 
+
+BCCAPI
+Sources under com.bccp.api were retrieved using svn checkout http://bccapi.googlecode.com/svn/trunk/ bccapi-read-only 
+on 9. November 2012. The source site stated that BCCAPI was also released under Apache Version 2.0 Licence.
+Retrieved BCCAPI sources were significantly modified by Tamas Blummer to embed its interface to clients
+into this software. This software contains only a small fraction, the client interface, of BCCAPI.

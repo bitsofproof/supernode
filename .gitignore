@@ -1,4 +1,4 @@
-bin/*
-lib/*
-/dist
-/generated
+bin
+lib
+dist
+generated
