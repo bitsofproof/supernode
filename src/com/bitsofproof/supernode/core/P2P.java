@@ -288,7 +288,7 @@ public abstract class P2P
 		public void send (Message m)
 		{
 			writes.add (m.toByteArray ());
-			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
+			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
 			selector.wakeup ();
 		}
 
