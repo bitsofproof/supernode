@@ -282,16 +282,11 @@ public abstract class P2P
 			});
 		}
 
-		public boolean send (Message m)
+		public void send (Message m)
 		{
-			if ( !connectedPeers.containsKey (channel) )
-			{
-				return false;
-			}
 			writes.add (m.toByteArray ());
 			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE));
 			selector.wakeup ();
-			return true;
 		}
 
 		protected abstract Message parse (InputStream readIn) throws IOException;

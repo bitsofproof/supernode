@@ -83,10 +83,7 @@ public class TxHandler
 							{
 								TxMessage tm = (TxMessage) p.createMessage ("tx");
 								tm.setTx (txm.getTx ());
-								if ( p.send (tm) )
-								{
-									log.trace ("Sent transaction " + txm.getTx ().getHash () + " to " + p.getAddress ());
-								}
+								p.send (tm);
 							}
 						}
 					}

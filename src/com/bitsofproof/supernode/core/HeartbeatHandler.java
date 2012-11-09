@@ -51,26 +51,23 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 					return;
 				}
 				PingMessage pi = (PingMessage) peer.createMessage ("ping");
-				if ( peer.send (pi) )
+				log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
+				if ( peer.getVersion () > 60000 )
 				{
-					log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
-					if ( peer.getVersion () > 60000 )
+					sentNonces.put (peer, pi.getNonce ());
+					network.scheduleJob (new Runnable ()
 					{
-						sentNonces.put (peer, pi.getNonce ());
-						network.scheduleJob (new Runnable ()
+						@Override
+						public void run ()
 						{
-							@Override
-							public void run ()
+							if ( sentNonces.containsKey (peer) )
 							{
-								if ( sentNonces.containsKey (peer) )
-								{
-									log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
-									sentNonces.remove (peer);
-									peer.disconnect ();
-								}
+								log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
+								sentNonces.remove (peer);
+								peer.disconnect ();
 							}
-						}, timeout, TimeUnit.SECONDS);
-					}
+						}
+					}, timeout, TimeUnit.SECONDS);
 				}
 			}
 		}
