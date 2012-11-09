@@ -39,7 +39,7 @@ public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	private int timeout = 120;
+	private int timeout = 10;
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
@@ -77,7 +77,7 @@ public class ChainLoader
 		network.addListener ("block", new BitcoinMessageListener<BlockMessage> ()
 		{
 			@Override
-			public void process (BlockMessage m, BitcoinPeer peer)
+			public void process (BlockMessage m, final BitcoinPeer peer)
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
@@ -111,14 +111,23 @@ public class ChainLoader
 					}
 					peerRequests.remove (block.getHash ());
 				}
+				Long job = busy.get (peer);
+				if ( job != null )
+				{
+					network.cancelJob (job);
+					busy.put (peer, network.scheduleJob (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
+							peer.disconnect ();
+						}
+					}, timeout, TimeUnit.SECONDS));
+				}
 				if ( peerRequests.isEmpty () )
 				{
-					Long job = busy.get (peer);
-					if ( job != null )
-					{
-						network.cancelJob (job);
-						busy.remove (peer);
-					}
+					busy.remove (peer);
 					if ( peer.getHeight () > store.getChainHeight () )
 					{
 						getBlockInventory (network, store, peer);
