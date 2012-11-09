@@ -287,7 +287,18 @@ public abstract class P2P
 
 		public void send (Message m)
 		{
-			writes.add (m.toByteArray ());
+			byte[] wiremsg = m.toByteArray ();
+			int len = wiremsg.length;
+			int off = 0;
+			while ( len > 0 )
+			{
+				int s = Math.min (BUFFSIZE, len);
+				byte[] b = new byte[s];
+				System.arraycopy (wiremsg, off, b, 0, s);
+				off += s;
+				writes.add (b);
+				len -= s;
+			}
 			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
 			selector.wakeup ();
 		}
