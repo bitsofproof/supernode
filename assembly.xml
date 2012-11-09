@@ -73,6 +73,9 @@
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 	</bean>
+	<bean id="alert" class="com.bitsofproof.supernode.core.AlertHandler">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
 	<bean id="heartbeat" class="com.bitsofproof.supernode.core.HeartbeatHandler">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
 		<property name="delay" value="60"/>

@@ -25,11 +25,12 @@ public class AlertHandler implements BitcoinMessageListener<AlertMessage>
 {
 	private static final Logger log = LoggerFactory.getLogger (AlertHandler.class);
 
-	private Chain chain;
+	private final Chain chain;
 
 	public AlertHandler (BitcoinNetwork network)
 	{
 		network.addListener ("alert", this);
+		chain = network.getChain ();
 	}
 
 	@Override
@@ -44,15 +45,5 @@ public class AlertHandler implements BitcoinMessageListener<AlertMessage>
 			log.trace ("rejected unauthorized alert. Disconnecting.");
 			peer.disconnect ();
 		}
-	}
-
-	public Chain getChain ()
-	{
-		return chain;
-	}
-
-	public void setChain (Chain chain)
-	{
-		this.chain = chain;
 	}
 }

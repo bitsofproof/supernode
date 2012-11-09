@@ -261,7 +261,7 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
-	public List<String> getInventory (List<String> locator, String last)
+	public List<String> getInventory (List<String> locator, String last, int limit)
 	{
 		try
 		{
@@ -285,9 +285,9 @@ class JpaBlockStore implements BlockStore
 					break;
 				}
 				inventory.add (0, curr.getHash ());
-				if ( inventory.size () > 500 )
+				if ( inventory.size () > limit )
 				{
-					inventory.remove (500);
+					inventory.remove (limit);
 				}
 				curr = prev;
 				if ( prev != null )

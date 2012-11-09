@@ -294,23 +294,7 @@ public class Blk implements Serializable
 
 	public void toWire (WireFormat.Writer writer)
 	{
-		writer.writeUint32 (version);
-		if ( previous != null )
-		{
-			writer.writeHash (new Hash (previous.getHash ()));
-		}
-		else if ( previousHash != null )
-		{
-			writer.writeHash (new Hash (previousHash));
-		}
-		else
-		{
-			writer.writeHash (Hash.ZERO_HASH);
-		}
-		writer.writeHash (new Hash (merkleRoot));
-		writer.writeUint32 (createTime);
-		writer.writeUint32 (difficultyTarget);
-		writer.writeUint32 (nonce);
+		toWireHeaderOnly (writer);
 		if ( wireTransactions != null )
 		{
 			writer.writeBytes (wireTransactions);
@@ -383,6 +367,14 @@ public class Blk implements Serializable
 		merkleRoot = computeMerkleRoot ();
 
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWireHeaderOnly (writer);
+		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
+
+		hash = reader.hash ().toString ();
+	}
+
+	public void toWireHeaderOnly (WireFormat.Writer writer)
+	{
 		writer.writeUint32 (version);
 		if ( previous != null )
 		{
@@ -400,9 +392,5 @@ public class Blk implements Serializable
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
-
-		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
-
-		hash = reader.hash ().toString ();
 	}
 }

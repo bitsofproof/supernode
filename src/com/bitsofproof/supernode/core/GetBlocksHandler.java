@@ -46,7 +46,7 @@ public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage
 		{
 			locator.add (new Hash (h).toString ());
 		}
-		List<String> inventory = store.getInventory (locator, new Hash (m.getLastHash ()).toString ());
+		List<String> inventory = store.getInventory (locator, new Hash (m.getLastHash ()).toString (), 500);
 		InvMessage im = (InvMessage) peer.createMessage ("inv");
 		for ( String h : inventory )
 		{
