@@ -229,7 +229,10 @@ public abstract class P2P
 				try
 				{
 					// note that no other reference to peer is stored here
-					// it might be garbage collected (that is probably the right thing to do)
+					// it might be garbage collected
+					// somebody else however might have retained a reference, so reduce size.
+					writes.clear ();
+					reads.clear ();
 					connectedPeers.remove (channel);
 					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
 					selector.wakeup ();
