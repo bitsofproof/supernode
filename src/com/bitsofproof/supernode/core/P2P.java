@@ -287,17 +287,24 @@ public abstract class P2P
 
 		public void send (Message m)
 		{
-			byte[] wiremsg = m.toByteArray ();
-			int len = wiremsg.length;
-			int off = 0;
-			while ( len > 0 )
+			if ( !connectedPeers.containsKey (channel) )
 			{
-				int s = Math.min (BUFFSIZE, len);
-				byte[] b = new byte[s];
-				System.arraycopy (wiremsg, off, b, 0, s);
-				off += s;
-				writes.add (b);
-				len -= s;
+				return;
+			}
+			synchronized ( writes )
+			{
+				byte[] wiremsg = m.toByteArray ();
+				int len = wiremsg.length;
+				int off = 0;
+				while ( len > 0 )
+				{
+					int s = Math.min (BUFFSIZE, len);
+					byte[] b = new byte[s];
+					System.arraycopy (wiremsg, off, b, 0, s);
+					off += s;
+					writes.add (b);
+					len -= s;
+				}
 			}
 			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
 			selector.wakeup ();
@@ -612,6 +619,7 @@ public abstract class P2P
 			}
 		});
 		selectorThread.setDaemon (false);
+		selectorThread.setPriority (Thread.NORM_PRIORITY - 1);
 		selectorThread.setName ("Peer selector");
 
 		// this thread keeps looking for new connections
