@@ -87,7 +87,15 @@ public class BitcoinNetwork extends P2P
 			}
 			if ( jobs.containsKey (nr) )
 			{
-				job.run ();
+				try
+				{
+					job.run ();
+				}
+				catch ( Exception e )
+				{
+					log.debug ("Exception in scheduled job. The job will not be rescheduled.", e);
+					jobs.remove (this);
+				}
 			}
 		}
 

@@ -42,42 +42,35 @@ public class AddressSeeder implements Runnable
 	@Override
 	public void run ()
 	{
-		try
+		BitcoinPeer[] peers = network.getConnectPeers ();
+		if ( peers.length == 0 )
 		{
-			BitcoinPeer[] peers = network.getConnectPeers ();
-			if ( peers.length == 0 )
+			return;
+		}
+		BitcoinPeer pick = peers[(int) (Math.floor (Math.random () * peers.length))];
+		List<Address> al = new ArrayList<Address> ();
+		Address address = new Address ();
+		address.address = pick.getAddress ().getAddress ();
+		address.port = network.getPort ();
+		address.services = pick.getServices ();
+		address.time = System.currentTimeMillis () / 1000;
+		al.add (address);
+		for ( BitcoinPeer peer : peers )
+		{
+			if ( peer != pick )
 			{
-				return;
-			}
-			BitcoinPeer pick = peers[(int) (Math.floor (Math.random () * peers.length))];
-			List<Address> al = new ArrayList<Address> ();
-			Address address = new Address ();
-			address.address = pick.getAddress ().getAddress ();
-			address.port = network.getPort ();
-			address.services = pick.getServices ();
-			address.time = System.currentTimeMillis () / 1000;
-			al.add (address);
-			for ( BitcoinPeer peer : peers )
-			{
-				if ( peer != pick )
+				AddrMessage m = new AddrMessage (peer);
+				m.setAddresses (al);
+				try
 				{
-					AddrMessage m = new AddrMessage (peer);
-					m.setAddresses (al);
-					try
-					{
-						peer.send (m);
-					}
-					catch ( Exception e )
-					{
-					}
+					peer.send (m);
+				}
+				catch ( Exception e )
+				{
 				}
 			}
-			log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
 		}
-		catch ( Exception e )
-		{
-			log.error ("Exception while broadcasting addresses", e);
-		}
+		log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());
 	}
 
 	public int getDelay ()

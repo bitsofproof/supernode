@@ -274,7 +274,7 @@ public abstract class P2P
 					}
 					catch ( Exception e )
 					{
-						log.error ("Exception in message processing", e);
+						log.debug ("Exception in message processing", e);
 						disconnect ();
 					}
 					finally
@@ -588,14 +588,14 @@ public abstract class P2P
 							}
 							catch ( Exception e )
 							{
-								log.error ("Error processing a selector key", e);
+								log.debug ("Error processing a selector key", e);
 								key.cancel ();
 							}
 						}
 					}
 					catch ( Exception e )
 					{
-						log.error ("Unhandled Exception in selector thread", e);
+						log.debug ("Unhandled Exception in selector thread", e);
 					}
 				}
 			}
@@ -652,7 +652,7 @@ public abstract class P2P
 								}
 								if ( runqueue.size () == 0 )
 								{
-									log.error ("Can not find new adresses");
+									log.trace ("Can not find new adresses");
 									Thread.sleep (60 * 1000);
 								}
 							}
@@ -660,7 +660,7 @@ public abstract class P2P
 					}
 					catch ( Exception e )
 					{
-						log.error ("Unhandled exception in peer queue", e);
+						log.debug ("Unhandled exception in peer queue", e);
 					}
 				}
 			}

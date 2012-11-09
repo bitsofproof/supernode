@@ -42,38 +42,31 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 	@Override
 	public void run ()
 	{
-		try
+		for ( final BitcoinPeer peer : network.getConnectPeers () )
 		{
-			for ( final BitcoinPeer peer : network.getConnectPeers () )
+			if ( peer.getLastSpoken () > (System.currentTimeMillis () / 1000 - delay) )
 			{
-				if ( peer.getLastSpoken () > (System.currentTimeMillis () / 1000 - delay) )
-				{
-					return;
-				}
-				PingMessage pi = (PingMessage) peer.createMessage ("ping");
-				log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
-				if ( peer.getVersion () > 60000 )
-				{
-					sentNonces.put (peer, pi.getNonce ());
-					network.scheduleJob (new Runnable ()
-					{
-						@Override
-						public void run ()
-						{
-							if ( sentNonces.containsKey (peer) )
-							{
-								log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
-								sentNonces.remove (peer);
-								peer.disconnect ();
-							}
-						}
-					}, timeout, TimeUnit.SECONDS);
-				}
+				return;
 			}
-		}
-		catch ( Exception e )
-		{
-			log.error ("Ignored exception in heartbeat", e);
+			PingMessage pi = (PingMessage) peer.createMessage ("ping");
+			log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
+			if ( peer.getVersion () > 60000 )
+			{
+				sentNonces.put (peer, pi.getNonce ());
+				network.scheduleJob (new Runnable ()
+				{
+					@Override
+					public void run ()
+					{
+						if ( sentNonces.containsKey (peer) )
+						{
+							log.trace ("Peer does not answer ping. Disconnecting." + peer.getAddress ().getAddress ());
+							sentNonces.remove (peer);
+							peer.disconnect ();
+						}
+					}
+				}, timeout, TimeUnit.SECONDS);
+			}
 		}
 	}
 
