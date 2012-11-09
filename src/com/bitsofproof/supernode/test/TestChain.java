@@ -7,22 +7,71 @@ import org.bouncycastle.util.encoders.Hex;
 import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.ChainImpl;
+import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
 @Component ("testChain")
-public class TestChain extends ChainImpl
+public class TestChain implements Chain
 {
 
 	public static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
-	public TestChain ()
+	@Override
+	public long getMagic ()
 	{
-		super (false, 60001, 0x0709110bL, 18333, 2016, 1209600, SATOSHI_KEY);
+		return 0x0709110bL;
+	}
+
+	@Override
+	public int getPort ()
+	{
+		return 18333;
+	}
+
+	@Override
+	public int getDifficultyReviewBlocks ()
+	{
+		return 2016;
+	}
+
+	@Override
+	public int getTargetBlockTime ()
+	{
+		return 1209600;
+	}
+
+	@Override
+	public byte[] getAlertKey ()
+	{
+		return SATOSHI_KEY;
+	}
+
+	@Override
+	public long getVersion ()
+	{
+		return 60001;
+	}
+
+	@Override
+	public boolean isProduction ()
+	{
+		return false;
+	}
+
+	@Override
+	public int getAddressFlag ()
+	{
+		return 0x6F;
+	}
+
+	@Override
+	public int getMultisigAddressFlag ()
+	{
+		return 0xc4;
 	}
 
 	@Override

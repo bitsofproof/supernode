@@ -162,7 +162,7 @@ public class AddressConverter
 	public static String toSatoshiStyle (byte[] keyDigest, boolean multisig, Chain chain)
 	{
 		byte[] addressBytes = new byte[1 + keyDigest.length + 4];
-		addressBytes[0] = (byte) (chain.isProduction () ? (multisig ? 5 : 0) : (multisig ? 1 : 0xc4));
+		addressBytes[0] = (byte) (multisig ? chain.getMultisigAddressFlag () : chain.getAddressFlag ());
 		System.arraycopy (keyDigest, 0, addressBytes, 1, keyDigest.length);
 		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1);
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);
