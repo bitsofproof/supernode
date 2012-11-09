@@ -329,7 +329,7 @@ public class ScriptTest
 		// 035c100972ff8c572dc80eaa15a958ab99064d7c6b9e55f0e6408dec11edd4debb
 		// OP_CHECKSIG
 		//
-		// SIGHASH_NONE
+		// SIGHASH_SINGLE
 		assertTrue (new Script (t1, 4).evaluate ());
 	}
 }
