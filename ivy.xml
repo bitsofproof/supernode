@@ -22,6 +22,7 @@
 		</dependency>
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
 		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>
+		<dependency org="org.apache.derby" name="derby" rev="10.9.1.0"/>
 		<dependency org="org.slf4j" name="slf4j-log4j12" rev="1.6.6"/>
 		<dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="1.47"/>
 		<dependency org="commons-cli" name="commons-cli" rev="1.2"/>

@@ -1,4 +1,4 @@
-<project name="supernode" default="generate" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="supernode" default="demo" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 	
     <property name="src.dir" location="${basedir}/src"/>
     <property name="build.dir" location="${basedir}/bin"/>
@@ -39,6 +39,30 @@
 		failonerror="true"
 		optimize="true"/>
     </target>
+
+    <target name="demo" depends="clean, compile">
+       <mkdir dir="${dist.dir}"/>
+       <ivy:retrieve pattern="${lib.dir}/[type]s/[artifact].[ext]" />
+       <manifestclasspath property="jar.classpath" jarfile="${dist.dir}/demo.jar">
+           <classpath>
+                       <fileset dir="${lib.dir}/jars" includes="*.jar"/>
+                       <fileset dir="${lib.dir}/bundles" includes="*.jar"/>
+           </classpath>
+       </manifestclasspath>
+
+       <jar destfile="${dist.dir}/demo.jar" basedir="${build.dir}" >
+               <manifest>
+                   <attribute name="Main-Class" value="com.bitsofproof.supernode.main.Supernode" />
+                   <attribute name="Class-Path" value="${jar.classpath}" />
+               </manifest>
+               <fileset dir="config/demo">
+                       <filename name="**/*.xml"/>
+               </fileset>
+	            <fileset dir="config/demo">
+                       <filename name="**/*.properties"/>
+               </fileset>
+        </jar>
+   </target>
 
      <target name="full" depends="clean, compile">
         <mkdir dir="${dist.dir}"/>

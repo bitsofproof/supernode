@@ -15,13 +15,8 @@ to comply your needs.
 5. run
 	java -jar dist/demo.jar
 	
-Enjoy.
+The demo will connect to testnet3, download and verify the chain.
 	
-You can build other configurations e.g. test to run on testnet3
-
-	ant -lib <ivy jar location here> test
-	java -jar dist/tes.jar
-
 In case you like the demo you might configure the full server by adapting
 config/full/assembly.xml to your environment and build
 	ant -lib <ivy jar location here> full
