@@ -39,7 +39,7 @@ public class ChainLoader
 {
 	private static final Logger log = LoggerFactory.getLogger (ChainLoader.class);
 
-	private int timeout = 10;
+	private int timeout = 60;
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
