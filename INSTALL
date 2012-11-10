@@ -15,7 +15,7 @@ The demo will connect to testnet3, download and verify the chain.
 In case you like the demo you might configure the full server by adapting
 config/full/assembly.xml to your environment and build
 	ant -lib <ivy jar location here> full
-	java -jar dist/tes.jar
+	java -jar dist/full.jar
 
 
 	
