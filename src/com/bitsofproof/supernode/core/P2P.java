@@ -59,17 +59,19 @@ public abstract class P2P
 	{
 		private final InetSocketAddress address;
 		private SocketChannel channel;
+		private final Semaphore writeable = new Semaphore (1);
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
-		private ByteArrayInputStream currentRead = null;
 		private final Semaphore notListened = new Semaphore (1);
 		private ByteBuffer pushBackBuffer = null;
 
 		private final InputStream readIn = new InputStream ()
 		{
+			private ByteArrayInputStream currentRead = null;
+
 			@Override
-			public int available () throws IOException
+			public synchronized int available () throws IOException
 			{
 				int a = 0;
 				if ( currentRead != null )
@@ -89,7 +91,7 @@ public abstract class P2P
 			}
 
 			@Override
-			public int read (byte[] b, int off, int len) throws IOException
+			public synchronized int read (byte[] b, int off, int len) throws IOException
 			{
 				int need = len;
 				if ( need <= 0 )
@@ -287,12 +289,15 @@ public abstract class P2P
 
 		public void send (Message m)
 		{
-			if ( !connectedPeers.containsKey (channel) )
+			try
 			{
-				return;
-			}
-			synchronized ( writes )
-			{
+				writeable.acquireUninterruptibly ();
+
+				if ( !connectedPeers.containsKey (this.channel) )
+				{
+					return;
+				}
+
 				byte[] wiremsg = m.toByteArray ();
 				int len = wiremsg.length;
 				int off = 0;
@@ -305,9 +310,13 @@ public abstract class P2P
 					writes.add (b);
 					len -= s;
 				}
+				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
+				selector.wakeup ();
 			}
-			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
-			selector.wakeup ();
+			finally
+			{
+				writeable.release ();
+			}
 		}
 
 		protected abstract Message parse (InputStream readIn) throws IOException;
