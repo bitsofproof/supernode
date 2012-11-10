@@ -5,3 +5,10 @@ This is a modular system assembled using Spring.
 Use ivy to resolve dependencies and modify assembly.xml
 to comply your needs.
 
+1. Check your ant version with
+	ant -version
+	It should be above 1.6 (I use 1.8.2)
+2. Download ivy from http://ant.apache.org/ivy/download.cgi
+3. copy ivy-xxx.jar to a location you later use for ant with the option -lib
+4. run
+	ant -lib <ivy jar location here> supernode
