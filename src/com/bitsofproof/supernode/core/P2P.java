@@ -65,6 +65,7 @@ public abstract class P2P
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
 		private final Semaphore notListened = new Semaphore (1);
 		private ByteBuffer pushBackBuffer = null;
+		private final byte[] closedMark = new byte[0];
 
 		private final InputStream readIn = new InputStream ()
 		{
@@ -82,8 +83,8 @@ public abstract class P2P
 						return a;
 					}
 				}
-				byte[] next;
-				if ( (next = reads.peek ()) != null )
+				byte[] next = reads.peek ();
+				if ( next != null && next != closedMark )
 				{
 					return next.length;
 				}
@@ -117,7 +118,7 @@ public abstract class P2P
 					try
 					{
 						buf = reads.poll (READTIMEOUT, TimeUnit.SECONDS);
-						if ( buf == null )
+						if ( buf == null || buf == closedMark )
 						{
 							return -1;
 						}
@@ -221,40 +222,44 @@ public abstract class P2P
 
 		public void disconnect ()
 		{
-			if ( !connectedPeers.containsKey (channel) )
+			synchronized ( connectedPeers )
 			{
-				return;
-			}
+				if ( !connectedPeers.containsKey (channel) )
+				{
+					return;
+				}
 
-			try
-			{
 				try
 				{
-					// note that no other reference to peer is stored here
-					// it might be garbage collected
-					// somebody else however might have retained a reference, so reduce size.
-					writes.clear ();
-					reads.clear ();
-					connectedPeers.remove (channel);
-					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
-					selector.wakeup ();
-					channel.close ();
-				}
-				catch ( IOException e )
-				{
-				}
-				peerThreads.execute (new Runnable ()
-				{
-					@Override
-					public void run ()
+					try
 					{
-						onDisconnect ();
+						// note that no other reference to peer is stored here
+						// it might be garbage collected
+						// somebody else however might have retained a reference, so reduce size.
+						writes.clear ();
+						reads.clear ();
+						reads.add (closedMark);
+						connectedPeers.remove (channel);
+						selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
+						selector.wakeup ();
+						channel.close ();
 					}
-				});
-			}
-			finally
-			{
-				connectSlot.release ();
+					catch ( IOException e )
+					{
+					}
+					peerThreads.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							onDisconnect ();
+						}
+					});
+				}
+				finally
+				{
+					connectSlot.release ();
+				}
 			}
 		}
 
@@ -268,20 +273,21 @@ public abstract class P2P
 					Message m = null;
 					try
 					{
-						while ( readIn.available () > 0 )
+						m = parse (readIn);
+						receive (m);
+						if ( readIn.available () > 0 )
 						{
-							m = parse (readIn);
-							receive (m);
+							peerThreads.execute (this);
+						}
+						else
+						{
+							notListened.release ();
 						}
 					}
 					catch ( Exception e )
 					{
 						log.debug ("Exception in message processing", e);
 						disconnect ();
-					}
-					finally
-					{
-						notListened.release ();
 					}
 				}
 			});
@@ -361,7 +367,7 @@ public abstract class P2P
 	private static final int CONNECTIONTIMEOUT = 5;
 
 	// number of seconds to wait until giving up on connections
-	private static final int READTIMEOUT = 10; // seconds
+	private static final int READTIMEOUT = 60; // seconds
 
 	// keep track with number of connections we asked for here
 	private final Semaphore connectSlot;
@@ -494,6 +500,11 @@ public abstract class P2P
 								keys.remove ();
 								if ( !key.isValid () )
 								{
+									final Peer peer = connectedPeers.get (key.channel ());
+									if ( peer != null )
+									{
+										peer.disconnect ();
+									}
 									continue;
 								}
 								if ( key.isAcceptable () )
