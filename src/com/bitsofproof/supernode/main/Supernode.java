@@ -28,8 +28,7 @@ public class Supernode
 	{
 		try
 		{
-			log.trace ("Authorisation");
-			Setup.setup ();
+			log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
 			log.trace ("Spring context setup");
 			ApplicationContext context = new ClassPathXmlApplicationContext ("assembly.xml");
 			Application application = context.getBean (Application.class);
