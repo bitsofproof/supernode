@@ -231,6 +231,23 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
+	public Blk getGenesisBlock ()
+	{
+		try
+		{
+			lock.writeLock ().lock ();
+
+			QBlk block = QBlk.blk;
+			JPAQuery q = new JPAQuery (entityManager);
+			return q.from (block).orderBy (block.id.asc ()).limit (1).uniqueResult (block);
+		}
+		finally
+		{
+			lock.writeLock ().unlock ();
+		}
+	}
+
+	@Override
 	public boolean isStoredBlock (String hash)
 	{
 		try
@@ -1050,9 +1067,10 @@ class JpaBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
-	public void resetStore (Chain chain)
+	public void resetStore (Chain chain) throws TransactionValidationException
 	{
 		Blk genesis = chain.getGenesis ();
+		addOwners (genesis.getTransactions ().get (0).getOutputs ().get (0));
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);

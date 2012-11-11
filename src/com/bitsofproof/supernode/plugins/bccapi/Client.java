@@ -42,4 +42,8 @@ class Client
 		touch ();
 	}
 
+	public void addAddress (String address)
+	{
+		addresses.add (address);
+	}
 }

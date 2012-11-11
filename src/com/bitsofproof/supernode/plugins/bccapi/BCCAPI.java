@@ -20,7 +20,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bccapi.api.APIException;
 import com.bccapi.api.AccountInfo;
 import com.bccapi.api.AccountStatement;
-import com.bccapi.api.BitcoinClientAPI;
 import com.bccapi.api.Network;
 import com.bccapi.api.SendCoinForm;
 import com.bitsofproof.supernode.core.AddressConverter;
@@ -31,7 +30,7 @@ import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class BCCAPI implements BitcoinClientAPI
+public class BCCAPI implements ExtendedBitcoinClientAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (BCCAPI.class);
 
@@ -152,6 +151,16 @@ public class BCCAPI implements BitcoinClientAPI
 			return new AccountInfo (client.getAddresses ().size (), balance, balance);
 		}
 		return null;
+	}
+
+	@Override
+	public void addAddress (String sessionID, String address)
+	{
+		final Client client = clients.get (sessionID);
+		if ( client != null )
+		{
+			client.addAddress (address);
+		}
 	}
 
 	@Override

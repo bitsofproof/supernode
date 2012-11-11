@@ -118,7 +118,7 @@
             <map>
                 <entry key="/bccapi">
                     <bean class="org.springframework.remoting.httpinvoker.SimpleHttpInvokerServiceExporter">
-                        <property name="serviceInterface" value="com.bccapi.api.BitcoinClientAPI" />
+                        <property name="serviceInterface" value="com.bitsofproof.supernode.plugins.bccapi.ExtendedBitcoinClientAPI" />
                         <property name="service" ref="bccapi" />
                     </bean>
                 </entry>
@@ -129,7 +129,7 @@
 
     <bean id="remoteBCCAPI" class="org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean">  
         <property name="serviceUrl" value="http://localhost:2345/bccapi" />
-        <property name="serviceInterface" value="com.bccapi.api.BitcoinClientAPI" />
+        <property name="serviceInterface" value="com.bitsofproof.supernode.plugins.bccapi.ExtendedBitcoinClientAPI" />
     </bean>
     
 	

@@ -24,6 +24,8 @@ public interface BlockStore
 {
 	public void cache ();
 
+	public Blk getGenesisBlock ();
+
 	public List<String> getLocator ();
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
@@ -32,7 +34,7 @@ public interface BlockStore
 
 	public String getHeadHash ();
 
-	public void resetStore (Chain chain);
+	public void resetStore (Chain chain) throws TransactionValidationException;
 
 	public Blk getBlock (String hash);
 

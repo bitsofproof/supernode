@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Application
 {
@@ -34,7 +35,7 @@ public class Application
 
 	private BitcoinNetwork network;
 
-	public void start (ApplicationContext context, String[] args) throws IOException
+	public void start (ApplicationContext context, String[] args) throws IOException, TransactionValidationException
 	{
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
