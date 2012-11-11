@@ -9,7 +9,7 @@ import com.bitsofproof.supernode.core.Chain;
  */
 public class Network implements Serializable
 {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -6735024535744912750L;
 
 	/**
 	 * The first byte of a base58 encoded bitcoin standard address.

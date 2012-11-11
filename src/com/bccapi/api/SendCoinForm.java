@@ -2,6 +2,7 @@ package com.bccapi.api;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,9 +14,9 @@ import com.bitsofproof.supernode.model.TxOut;
  * Contains all the information necessary to sign and verify a transaction that sends bitcoins to a bitcoin address. Before signing a transaction the client
  * should validate the amounts being signed and the receivers. This can be done using the {@link SendCoinFormValidator}.
  */
-public class SendCoinForm
+public class SendCoinForm implements Serializable
 {
-
+	private static final long serialVersionUID = -2620065938616820193L;
 	private final Tx _tx;
 	private final List<TxOut> _txFunding;
 	private final List<Integer> _keyIndexes;

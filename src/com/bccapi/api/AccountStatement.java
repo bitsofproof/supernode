@@ -2,6 +2,7 @@ package com.bccapi.api;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,8 +12,9 @@ import com.bitsofproof.supernode.core.WireFormat;
  * AccountStatement contains a detailed list of transaction records that send bitcoins to and from a wallet account and the accounts current balance. Instances
  * are retrieved from the BCCAPI server by calling {@link Account#getStatement}.
  */
-public class AccountStatement
+public class AccountStatement implements Serializable
 {
+	private static final long serialVersionUID = -4240314258838442911L;
 
 	/**
 	 * Represents a transaction that occurred on an account.

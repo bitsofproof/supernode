@@ -11,7 +11,7 @@ import com.bitsofproof.supernode.core.WireFormat;
  */
 public class AccountInfo implements Serializable
 {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 4995282304210998901L;
 	private final int _keys;
 	private final long _availableBalance;
 	private final long _estimatedBalance;
