@@ -8,7 +8,7 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
-	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
+	<description>supernode with BCCAPI spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
 
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
@@ -107,5 +107,29 @@
 	<bean id="application" class="com.bitsofproof.supernode.main.Application">
 		<property name="network" ref="bitcoinNetwork"/>
 	</bean>
+	
+	<!-- BCCAPI -->	
+	<bean id="bccapi" class="com.bitsofproof.supernode.plugins.bccapi.BCCAPI">
+		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+	</bean>
+   <bean id="httpServer" class="org.springframework.remoting.support.SimpleHttpServerFactoryBean">
+        <property name="contexts">
+            <map>
+                <entry key="/bccapi">
+                    <bean class="org.springframework.remoting.httpinvoker.SimpleHttpInvokerServiceExporter">
+                        <property name="serviceInterface" value="com.bccapi.api.BitcoinClientAPI" />
+                        <property name="service" ref="bccapi" />
+                    </bean>
+                </entry>
+            </map>
+        </property>
+        <property name="port" value="2345" />
+    </bean>
+
+    <bean id="remoteBCCAPI" class="org.springframework.remoting.httpinvoker.HttpInvokerProxyFactoryBean">  
+        <property name="serviceUrl" value="http://localhost:2345/bccapi" />
+        <property name="serviceInterface" value="com.bccapi.api.BitcoinClientAPI" />
+    </bean>
+    
 	
 </beans>
