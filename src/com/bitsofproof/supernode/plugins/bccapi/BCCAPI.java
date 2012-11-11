@@ -380,6 +380,7 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 					}
 					if ( balance < (amount + fee) )
 					{
+						log.trace ("Rejected send coins due to insufficient funds for " + sessionID);
 						return null;
 					}
 					Tx tx = new Tx ();
