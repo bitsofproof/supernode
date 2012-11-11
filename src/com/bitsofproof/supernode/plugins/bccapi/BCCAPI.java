@@ -2,9 +2,20 @@ package com.bitsofproof.supernode.plugins.bccapi;
 
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.bccapi.api.APIException;
 import com.bccapi.api.AccountInfo;
@@ -12,6 +23,7 @@ import com.bccapi.api.AccountStatement;
 import com.bccapi.api.BitcoinClientAPI;
 import com.bccapi.api.Network;
 import com.bccapi.api.SendCoinForm;
+import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ECKeyPair;
@@ -20,15 +32,48 @@ import com.bitsofproof.supernode.model.Tx;
 
 public class BCCAPI implements BitcoinClientAPI
 {
+	private static final Logger log = LoggerFactory.getLogger (BCCAPI.class);
+
+	private static final String API_VERSION = "1";
+
 	private final BitcoinNetwork network;
 
 	private final Map<String, byte[]> challenges = Collections.synchronizedMap (new HashMap<String, byte[]> ());
 	private final Map<String, Client> clients = Collections.synchronizedMap (new HashMap<String, Client> ());
 	private final SecureRandom rnd = new SecureRandom ();
 
+	private int sessionTimeout = 300;
+
 	public BCCAPI (BitcoinNetwork network)
 	{
 		this.network = network;
+		network.scheduleJobWithFixedDelay (new Runnable ()
+		{
+			@Override
+			public void run ()
+			{
+				synchronized ( clients )
+				{
+					List<String> forget = new ArrayList<String> ();
+					for ( Entry<String, Client> e : clients.entrySet () )
+					{
+						if ( e.getValue ().getLastSeen () < System.currentTimeMillis () / 1000 - sessionTimeout )
+						{
+							forget.add (e.getKey ());
+						}
+					}
+					for ( String k : forget )
+					{
+						clients.remove (k);
+					}
+				}
+			}
+		}, 0, 10, TimeUnit.SECONDS);
+	}
+
+	public void setSessionTimeout (int sessionTimeout)
+	{
+		this.sessionTimeout = sessionTimeout;
 	}
 
 	@Override
@@ -37,31 +82,59 @@ public class BCCAPI implements BitcoinClientAPI
 		return new Network (network.getChain ());
 	}
 
-	@Override
-	public byte[] getLoginChallenge (byte[] accountPublicKey) throws IOException, APIException
+	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/getLoginChallenge", produces = "application/octet-stream")
+	public @ResponseBody
+	byte[] getLoginChallenge (@RequestParam (value = "key", required = true) String accountPublicKey) throws IOException, APIException
 	{
-		String kh = Hash.keyHash (accountPublicKey).toString ();
-		byte[] c = new byte[20];
-		rnd.nextBytes (c);
-		challenges.put (kh, c);
-		return c;
+		return getLoginChallenge (ByteUtils.fromHex (accountPublicKey));
 	}
 
 	@Override
-	public String login (byte[] accountPublicKey, byte[] challengeResponse) throws IOException, APIException
+	public byte[] getLoginChallenge (byte[] accountPublicKey) throws IOException, APIException
 	{
-		String kh = Hash.keyHash (accountPublicKey).toString ();
-		if ( challenges.containsKey (kh) )
+		byte[] kh = Hash.keyHash (accountPublicKey);
+		byte[] c = new byte[20];
+		rnd.nextBytes (c);
+		challenges.put (ByteUtils.toHex (kh), c);
+		log.trace ("login challenge requested by " + AddressConverter.toSatoshiStyle (kh, false, network.getChain ()));
+		return c;
+	}
+
+	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/login", produces = "application/octet-stream")
+	public @ResponseBody
+	String login (@RequestParam (value = "key", required = true) String accountPublicKey,
+			@RequestParam (value = "response", required = true) String challengeResponse) throws IOException, APIException
+	{
+		return login (ByteUtils.fromHex (accountPublicKey), ByteUtils.fromHex (challengeResponse));
+	}
+
+	@Override
+	public @ResponseBody
+	String login (byte[] accountPublicKey, byte[] challengeResponse) throws IOException, APIException
+	{
+		byte[] kh = Hash.keyHash (accountPublicKey);
+		String khex = ByteUtils.toHex (kh);
+		try
 		{
-			if ( ECKeyPair.verify (challenges.get (kh), challengeResponse, accountPublicKey) )
+			if ( challenges.containsKey (khex) )
 			{
-				byte[] sk = new byte[20];
-				rnd.nextBytes (sk);
-				String token = ByteUtils.toHex (sk);
-				clients.put (token, new Client (System.currentTimeMillis () / 1000, accountPublicKey));
-				return token;
+				if ( ECKeyPair.verify (challenges.get (khex), challengeResponse, accountPublicKey) )
+				{
+					byte[] sk = new byte[20];
+					rnd.nextBytes (sk);
+					String token = ByteUtils.toHex (sk);
+					clients.put (token, new Client (System.currentTimeMillis () / 1000, accountPublicKey));
+					log.trace ("succesful login by " + AddressConverter.toSatoshiStyle (Hash.keyHash (kh), false, network.getChain ()) + " opening session "
+							+ token);
+					return token;
+				}
 			}
 		}
+		finally
+		{
+			challenges.remove (khex);
+		}
+		log.trace ("login failed by " + AddressConverter.toSatoshiStyle (kh, false, network.getChain ()));
 		return null;
 	}
 
@@ -86,11 +159,22 @@ public class BCCAPI implements BitcoinClientAPI
 		return null;
 	}
 
+	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/addKeyToWallet", produces = "application/octet-stream")
+	public void addKeyToWallet (@RequestParam (value = "sessionId", required = true) String sessionID,
+			@RequestParam (value = "key", required = true) String publicKey) throws IOException, APIException
+	{
+		addKeyToWallet (sessionID, ByteUtils.fromHex (publicKey));
+	}
+
 	@Override
 	public void addKeyToWallet (String sessionID, byte[] publicKey) throws IOException, APIException
 	{
-		// TODO Auto-generated method stub
-
+		Client client = clients.get (sessionID);
+		if ( client != null )
+		{
+			log.trace ("session " + sessionID + " adds key " + AddressConverter.toSatoshiStyle (Hash.keyHash (publicKey), false, network.getChain ()));
+			client.addKey (publicKey);
+		}
 	}
 
 	@Override

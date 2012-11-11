@@ -12,6 +12,15 @@
 			<exclude module="persistence-api"/>
 			<exclude module="commons-logging"/>
 		</dependency>
+		<dependency org="org.springframework" name="spring-web" rev="3.1.2.RELEASE">
+			<exclude module="com.springsource.org.hibernate.validator"/>
+			<exclude module="com.springsource.com.caucho"/>
+		</dependency>
+		<dependency org="org.springframework" name="spring-test" rev="3.1.2.RELEASE">
+			<exclude module="com.springsource.org.hibernate.validator"/>
+			<exclude module="persistence-api"/>
+		</dependency>
+		
 		
 		<dependency org="org.hibernate" name="hibernate-validator" rev="4.3.0.Final"/>
 
