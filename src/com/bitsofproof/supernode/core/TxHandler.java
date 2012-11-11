@@ -46,7 +46,7 @@ public class TxHandler implements ChainListener
 	private PlatformTransactionManager transactionManager;
 
 	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
-	private final Map<String, ArrayList<TxOut>> spentByAddress = new HashMap<String, ArrayList<TxOut>> ();
+	private final Map<String, ArrayList<TxIn>> spentByAddress = new HashMap<String, ArrayList<TxIn>> ();
 	private final Map<String, ArrayList<TxOut>> receivedByAddress = new HashMap<String, ArrayList<TxOut>> ();
 
 	public TxHandler (final BitcoinNetwork network, final ChainLoader loader)
@@ -105,13 +105,13 @@ public class TxHandler implements ChainListener
 									{
 										for ( Owner o : in.getSource ().getOwners () )
 										{
-											ArrayList<TxOut> spent = spentByAddress.get (o.getAddress ());
+											ArrayList<TxIn> spent = spentByAddress.get (o.getAddress ());
 											if ( spent == null )
 											{
-												spent = new ArrayList<TxOut> ();
+												spent = new ArrayList<TxIn> ();
 												spentByAddress.put (o.getAddress (), spent);
 											}
-											spent.add (in.getSource ());
+											spent.add (in);
 										}
 									}
 									for ( TxOut out : txm.getTx ().getOutputs () )
@@ -153,12 +153,12 @@ public class TxHandler implements ChainListener
 		});
 	}
 
-	public List<TxOut> getSpentByAddress (List<String> addresses)
+	public List<TxIn> getSpentByAddress (List<String> addresses)
 	{
-		List<TxOut> spent = new ArrayList<TxOut> ();
+		List<TxIn> spent = new ArrayList<TxIn> ();
 		for ( String a : addresses )
 		{
-			List<TxOut> s = spentByAddress.get (a);
+			List<TxIn> s = spentByAddress.get (a);
 			if ( s != null )
 			{
 				spent.addAll (s);
@@ -213,10 +213,10 @@ public class TxHandler implements ChainListener
 						{
 							for ( Owner o : in.getSource ().getOwners () )
 							{
-								List<TxOut> s = spentByAddress.get (o.getAddress ());
+								List<TxIn> s = spentByAddress.get (o.getAddress ());
 								if ( s != null )
 								{
-									s.remove (in.getSource ());
+									s.remove (in);
 								}
 							}
 						}

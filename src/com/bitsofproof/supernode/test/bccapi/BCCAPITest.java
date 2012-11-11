@@ -13,6 +13,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.bccapi.api.APIException;
+import com.bccapi.api.AccountStatement;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.BlockStore;
@@ -56,5 +57,17 @@ public class BCCAPITest
 		byte[] challenge = api.getLoginChallenge (keys.getPublic ());
 		final String sessionId = api.login (keys.getPublic (), keys.sign (challenge));
 		assertTrue (api.getAccountInfo (sessionId).getAvailableBalance () == 0L);
+	}
+
+	@Test
+	public void accountStatementTest () throws IOException, APIException, ValidationException
+	{
+		ECKeyPair keys = ECKeyPair.createNew ();
+
+		byte[] challenge = api.getLoginChallenge (keys.getPublic ());
+		final String sessionId = api.login (keys.getPublic (), keys.sign (challenge));
+		api.addAddress (sessionId, "17tAKf72nmD6TNdkLsWnj1jhmvFPajMHZw");
+		AccountStatement as = api.getAccountStatement (sessionId, 0, 1000);
+		System.out.println (as.getTotalRecordCount ());
 	}
 }

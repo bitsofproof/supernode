@@ -30,6 +30,10 @@ public interface BlockStore
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
 
+	public List<TxIn> getSpent (List<String> addresses);
+
+	public List<TxOut> getReceived (List<String> addresses);
+
 	public void storeBlock (Blk b) throws ValidationException;
 
 	public String getHeadHash ();

@@ -19,13 +19,14 @@ public class AccountStatement implements Serializable
 	/**
 	 * Represents a transaction that occurred on an account.
 	 */
-	public static class Record
+	public static class Record implements Serializable
 	{
+		private static final long serialVersionUID = 4450127350062711417L;
 
 		/**
 		 * Specifies the type of a {@link Record}.
 		 */
-		public enum Type
+		public enum Type implements Serializable
 		{
 
 			/**
@@ -93,7 +94,7 @@ public class AccountStatement implements Serializable
 			}
 		}
 
-		private final int _index;
+		private int _index;
 		private final int _confirmations;
 		private final long _date;
 		private final String _addresses;
@@ -118,6 +119,14 @@ public class AccountStatement implements Serializable
 		public int getIndex ()
 		{
 			return _index;
+		}
+
+		/**
+		 * Set the unique index of this record for the given account.
+		 */
+		public void setIndex (int i)
+		{
+			_index = i;
 		}
 
 		/**

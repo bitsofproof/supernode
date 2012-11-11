@@ -46,4 +46,9 @@ class Client
 	{
 		addresses.add (address);
 	}
+
+	public boolean hasAddress (String address)
+	{
+		return addresses.contains (address);
+	}
 }
