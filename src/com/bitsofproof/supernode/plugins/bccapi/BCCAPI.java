@@ -184,8 +184,7 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 		}
 	}
 
-	@Override
-	public AccountStatement getAccountStatement (String sessionID, final int startIndex, final int count) throws IOException, APIException
+	private AccountStatement getFullAccountStatement (String sessionID) throws IOException, APIException
 	{
 		final Client client = clients.get (sessionID);
 		if ( client != null )
@@ -272,17 +271,7 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 					{
 						records.get (i).setIndex (i);
 					}
-					if ( records.size () < startIndex )
-					{
-						return new AccountStatement (ai, 0, new ArrayList<Record> ());
-					}
-					else
-					{
-						// sublist does not serialize
-						ArrayList<Record> sub = new ArrayList<Record> ();
-						sub.addAll (records.subList (startIndex, Math.min (records.size (), count)));
-						return new AccountStatement (ai, records.size () - startIndex, sub);
-					}
+					return new AccountStatement (ai, records.size (), records);
 				}
 			});
 			log.trace ("retrieved account statement  for " + sessionID);
@@ -292,9 +281,35 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 	}
 
 	@Override
+	public AccountStatement getAccountStatement (String sessionID, final int startIndex, final int count) throws IOException, APIException
+	{
+		AccountStatement full = getFullAccountStatement (sessionID);
+		if ( full != null )
+		{
+			if ( startIndex > full.getTotalRecordCount () )
+			{
+				return new AccountStatement (full.getInfo (), full.getTotalRecordCount (), new ArrayList<Record> ());
+			}
+			ArrayList<Record> sub = new ArrayList<Record> ();
+			// sublist does not serialize
+			sub.addAll (full.getRecords ().subList (startIndex, Math.min (count, full.getTotalRecordCount ())));
+			return new AccountStatement (full.getInfo (), full.getTotalRecordCount (), sub);
+		}
+		return null;
+	}
+
+	@Override
 	public AccountStatement getRecentTransactionSummary (String sessionID, int count) throws IOException, APIException
 	{
-		// TODO Auto-generated method stub
+		AccountStatement full = getFullAccountStatement (sessionID);
+		if ( full != null )
+		{
+			count = Math.min (count, full.getTotalRecordCount ());
+			ArrayList<Record> sub = new ArrayList<Record> ();
+			// sublist does not serialize
+			sub.addAll (full.getRecords ().subList (full.getTotalRecordCount () - count, full.getTotalRecordCount ()));
+			return new AccountStatement (full.getInfo (), full.getTotalRecordCount (), sub);
+		}
 		return null;
 	}
 
