@@ -256,6 +256,33 @@ public class Script
 			}
 		}
 
+		public void writeData (byte[] data)
+		{
+			if ( data.length <= 75 )
+			{
+				writeByte (data.length);
+				writeBytes (data);
+			}
+			else if ( data.length <= 0xff )
+			{
+				writeByte (Opcode.OP_PUSHDATA1.o);
+				writeByte (data.length);
+				writeBytes (data);
+			}
+			else if ( data.length <= 0xffff )
+			{
+				writeByte (Opcode.OP_PUSHDATA2.o);
+				writeInt16 (data.length);
+				writeBytes (data);
+			}
+			else if ( data.length <= 0x7fffffff )
+			{
+				writeByte (Opcode.OP_PUSHDATA4.o);
+				writeInt16 (data.length);
+				writeBytes (data);
+			}
+		}
+
 		public void writeToken (Token token)
 		{
 			s.write (token.op.o);
@@ -476,30 +503,7 @@ public class Script
 			}
 			else
 			{
-				byte[] data = ByteUtils.fromHex (token);
-				if ( data.length <= 75 )
-				{
-					writer.writeByte (data.length);
-					writer.writeBytes (data);
-				}
-				else if ( data.length <= 0xff )
-				{
-					writer.writeByte (Opcode.OP_PUSHDATA1.o);
-					writer.writeByte (data.length);
-					writer.writeBytes (data);
-				}
-				else if ( data.length <= 0xffff )
-				{
-					writer.writeByte (Opcode.OP_PUSHDATA2.o);
-					writer.writeInt16 (data.length);
-					writer.writeBytes (data);
-				}
-				else if ( data.length <= 0x7fffffff )
-				{
-					writer.writeByte (Opcode.OP_PUSHDATA4.o);
-					writer.writeInt16 (data.length);
-					writer.writeBytes (data);
-				}
+				writer.writeData (ByteUtils.fromHex (token));
 			}
 		}
 		return writer.toByteArray ();
@@ -509,6 +513,16 @@ public class Script
 	{
 		public Opcode op;
 		public byte[] data;
+
+		public Token ()
+		{
+		}
+
+		public Token (Opcode op)
+		{
+			this.op = op;
+			data = null;
+		}
 	}
 
 	public static class Tokenizer
@@ -714,6 +728,17 @@ public class Script
 	public static boolean isStandard (byte[] script) throws ValidationException
 	{
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script);
+	}
+
+	public static byte[] getPayToAddressScript (byte[] keyHash)
+	{
+		Writer writer = new Writer ();
+		writer.writeToken (new Token (Opcode.OP_DUP));
+		writer.writeToken (new Token (Opcode.OP_HASH160));
+		writer.writeData (keyHash);
+		writer.writeToken (new Token (Opcode.OP_EQUALVERIFY));
+		writer.writeToken (new Token (Opcode.OP_CHECKSIG));
+		return writer.toByteArray ();
 	}
 
 	public String toReadableConnected () throws ValidationException

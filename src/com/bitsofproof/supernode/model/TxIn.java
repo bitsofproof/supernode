@@ -52,7 +52,7 @@ public class TxIn implements Serializable, Cloneable
 	@OneToOne (fetch = FetchType.LAZY, optional = true)
 	private TxOut source;
 
-	private long sequence;
+	private long sequence = 0xFFFFFFFFL;
 
 	@Lob
 	@Basic (fetch = FetchType.EAGER)

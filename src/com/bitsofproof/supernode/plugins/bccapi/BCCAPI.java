@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.bitsofproof.supernode.plugins.bccapi;
 
 import java.io.IOException;
@@ -26,10 +41,14 @@ import com.bccapi.api.Network;
 import com.bccapi.api.SendCoinForm;
 import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.TxHandler;
+import com.bitsofproof.supernode.core.ValidationException;
+import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Owner;
 import com.bitsofproof.supernode.model.Tx;
@@ -325,17 +344,127 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 	}
 
 	@Override
-	public SendCoinForm getSendCoinForm (String sessionID, String receivingAddressString, long amount, long fee) throws APIException, IOException
+	public SendCoinForm getSendCoinForm (final String sessionID, final String receivingAddressString, final long amount, final long fee) throws APIException,
+			IOException
 	{
-		// TODO Auto-generated method stub
+		final Client client = clients.get (sessionID);
+		if ( client != null )
+		{
+			return new TransactionTemplate (transactionManager).execute (new TransactionCallback<SendCoinForm> ()
+			{
+				@Override
+				public SendCoinForm doInTransaction (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+
+					long balance = 0;
+					List<TxOut> use = new ArrayList<TxOut> ();
+					for ( TxOut out : network.getStore ().getUnspentOutput (client.getAddresses ()) )
+					{
+						try
+						{
+							if ( Script.isPayToKey (out.getScript ()) || Script.isPayToAddress (out.getScript ()) )
+							{
+								balance += out.getValue ();
+								use.add (out);
+								if ( balance >= (amount + fee) )
+								{
+									break;
+								}
+							}
+						}
+						catch ( ValidationException e )
+						{
+							// can not re-use nonstandard output
+						}
+					}
+					if ( balance < (amount + fee) )
+					{
+						return null;
+					}
+					Tx tx = new Tx ();
+					List<TxIn> inputs = new ArrayList<TxIn> ();
+					tx.setInputs (inputs);
+					List<Integer> useKey = new ArrayList<Integer> ();
+					for ( TxOut out : use )
+					{
+						TxIn in = new TxIn ();
+						in.setSourceHash (out.getTransaction ().getHash ());
+						in.setIx (out.getIx ());
+						try
+						{
+							List<Script.Token> tokens = Script.parse (out.getScript ());
+							if ( Script.isPayToAddress (out.getScript ()) )
+							{
+								Script.Writer writer = new Script.Writer ();
+								int ki = client.getKeyIndexForKeyHash (tokens.get (2).data);
+								useKey.add (ki);
+								writer.writeData (client.getKey (ki));
+								in.setScript (writer.toByteArray ());
+							}
+							if ( Script.isPayToKey (out.getScript ()) )
+							{
+								useKey.add (client.getKeyIndex (tokens.get (0).data));
+								in.setScript (new byte[0]);
+							}
+						}
+						catch ( ValidationException e )
+						{
+							return null;
+						}
+						inputs.add (in);
+					}
+					List<TxOut> outs = new ArrayList<TxOut> ();
+					tx.setOutputs (outs);
+					TxOut out = new TxOut ();
+					try
+					{
+						out.setScript (Script.getPayToAddressScript (AddressConverter.fromSatoshiStyle (receivingAddressString, network.getChain ())));
+					}
+					catch ( ValidationException e )
+					{
+						log.trace ("Rejected send coins to invalid address " + receivingAddressString + " for " + sessionID);
+						return null;
+					}
+					out.setValue (amount);
+					outs.add (out);
+					if ( balance > (amount + fee) )
+					{
+						out = new TxOut ();
+						out.setScript (Script.getPayToAddressScript (Hash.keyHash (client.getKey (0))));
+						out.setValue (balance - amount - fee);
+						outs.add (out);
+					}
+					log.trace ("Prepared send " + amount + " (fee " + fee + ") to " + receivingAddressString + " for " + sessionID);
+					return new SendCoinForm (tx, useKey, use);
+				}
+			});
+
+		}
 		return null;
 	}
 
 	@Override
 	public void submitTransaction (String sessionID, Tx tx) throws IOException, APIException
 	{
-		// TODO Auto-generated method stub
-
+		final Client client = clients.get (sessionID);
+		if ( client != null )
+		{
+			try
+			{
+				network.getStore ().validateTransaction (tx);
+				for ( BitcoinPeer peer : network.getConnectPeers () )
+				{
+					TxMessage txm = (TxMessage) peer.createMessage ("tx");
+					txm.setTx (tx);
+					peer.send (txm);
+				}
+				log.trace ("Sent transaction for " + sessionID + " " + tx.toWireDump ());
+			}
+			catch ( ValidationException e )
+			{
+				log.trace ("Rejected invalid transaction for " + sessionID);
+			}
+		}
 	}
-
 }

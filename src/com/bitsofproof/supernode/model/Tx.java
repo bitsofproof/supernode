@@ -48,9 +48,9 @@ public class Tx implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	private long version;
+	private long version = 1;
 
-	private long lockTime;
+	private long lockTime = 0;
 
 	// this is not unique since a transaction copy might be on different branches.
 	@Column (length = 64, nullable = false)
