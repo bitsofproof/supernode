@@ -12,6 +12,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bccapi.api.APIException;
 import com.bccapi.api.AccountInfo;
@@ -25,12 +29,14 @@ import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class BCCAPI implements BitcoinClientAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (BCCAPI.class);
 
 	private final BitcoinNetwork network;
+	private PlatformTransactionManager transactionManager;
 
 	private final Map<String, byte[]> challenges = Collections.synchronizedMap (new HashMap<String, byte[]> ());
 	private final Map<String, Client> clients = Collections.synchronizedMap (new HashMap<String, Client> ());
@@ -63,6 +69,11 @@ public class BCCAPI implements BitcoinClientAPI
 				}
 			}
 		}, 0, 10, TimeUnit.SECONDS);
+	}
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
 	}
 
 	public void setSessionTimeout (int sessionTimeout)
@@ -101,7 +112,7 @@ public class BCCAPI implements BitcoinClientAPI
 					byte[] sk = new byte[20];
 					rnd.nextBytes (sk);
 					String token = ByteUtils.toHex (sk);
-					clients.put (token, new Client (System.currentTimeMillis () / 1000, accountPublicKey));
+					clients.put (token, new Client (System.currentTimeMillis () / 1000, accountPublicKey, network.getChain ()));
 					log.trace ("succesful login by " + AddressConverter.toSatoshiStyle (Hash.keyHash (kh), false, network.getChain ()) + " opening session "
 							+ token);
 					return token;
@@ -119,7 +130,27 @@ public class BCCAPI implements BitcoinClientAPI
 	@Override
 	public AccountInfo getAccountInfo (String sessionID) throws IOException, APIException
 	{
-		// TODO Auto-generated method stub
+		final Client client = clients.get (sessionID);
+		if ( client != null )
+		{
+			long balance = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Long> ()
+			{
+				@Override
+				public Long doInTransaction (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+
+					long balance = 0;
+					for ( TxOut out : network.getStore ().getUnspentOutput (client.getAddresses ()) )
+					{
+						balance += out.getValue ();
+					}
+					return balance;
+				}
+			}).longValue ();
+			log.trace ("retrieved account info for " + sessionID + " balance: " + balance);
+			return new AccountInfo (client.getAddresses ().size (), balance, balance);
+		}
 		return null;
 	}
 
@@ -144,7 +175,7 @@ public class BCCAPI implements BitcoinClientAPI
 		if ( client != null )
 		{
 			log.trace ("session " + sessionID + " adds key " + AddressConverter.toSatoshiStyle (Hash.keyHash (publicKey), false, network.getChain ()));
-			client.addKey (publicKey);
+			client.addKey (publicKey, network.getChain ());
 		}
 	}
 

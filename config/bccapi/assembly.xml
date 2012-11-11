@@ -111,6 +111,7 @@
 	<!-- BCCAPI -->	
 	<bean id="bccapi" class="com.bitsofproof.supernode.plugins.bccapi.BCCAPI">
 		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<property name="transactionManager" ref="transactionManager"/>
 	</bean>
    <bean id="httpServer" class="org.springframework.remoting.support.SimpleHttpServerFactoryBean">
         <property name="contexts">

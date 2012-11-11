@@ -1,6 +1,7 @@
 package com.bccapi.api;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import com.bitsofproof.supernode.core.WireFormat;
 
@@ -8,9 +9,9 @@ import com.bitsofproof.supernode.core.WireFormat;
  * AccountInfo holds information about an account such as the current balance and number of keys monitored. Instances are retrieved from the BCCAPI server by
  * calling {@link Account#getInfo}.
  */
-public class AccountInfo
+public class AccountInfo implements Serializable
 {
-
+	private static final long serialVersionUID = 1L;
 	private final int _keys;
 	private final long _availableBalance;
 	private final long _estimatedBalance;

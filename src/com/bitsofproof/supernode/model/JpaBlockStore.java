@@ -335,6 +335,47 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
+	@Override
+	public List<TxOut> getUnspentOutput (List<String> addresses)
+	{
+		List<TxOut> unspent = new ArrayList<TxOut> ();
+		try
+		{
+			lock.readLock ().lock ();
+
+			QTxOut txout = QTxOut.txOut;
+			QOwner owner = QOwner.owner;
+			JPAQuery query = new JPAQuery (entityManager);
+
+			for ( TxOut out : query.from (txout).join (txout.owners, owner).where (owner.address.in (addresses)).list (txout) )
+			{
+				CachedBlock blockOfOut = cachedBlocks.get (out.getTransaction ().getBlock ().getHash ());
+				if ( isBlockOnBranch (blockOfOut, currentHead) )
+				{
+					unspent.add (out);
+				}
+			}
+			if ( !unspent.isEmpty () )
+			{
+				QTxIn txin = QTxIn.txIn;
+				query = new JPAQuery (entityManager);
+				for ( TxIn in : query.from (txin).where (txin.source.in (unspent)).list (txin) )
+				{
+					CachedBlock blockOfIn = cachedBlocks.get (in.getTransaction ().getBlock ().getHash ());
+					if ( isBlockOnBranch (blockOfIn, currentHead) )
+					{
+						unspent.remove (in.getSource ());
+					}
+				}
+			}
+			return unspent;
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
 	private static class TransactionContext
 	{
 		Blk block;

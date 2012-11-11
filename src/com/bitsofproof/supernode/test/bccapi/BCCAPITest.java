@@ -33,4 +33,14 @@ public class BCCAPITest
 		String sessionId = api.login (keys.getPublic (), keys.sign (challenge));
 		assertTrue (sessionId != null);
 	}
+
+	@Test
+	public void balanceTest () throws IOException, APIException, ValidationException
+	{
+		ECKeyPair keys = ECKeyPair.createNew ();
+
+		byte[] challenge = api.getLoginChallenge (keys.getPublic ());
+		String sessionId = api.login (keys.getPublic (), keys.sign (challenge));
+		assertTrue (api.getAccountInfo (sessionId).getAvailableBalance () == 0L);
+	}
 }
