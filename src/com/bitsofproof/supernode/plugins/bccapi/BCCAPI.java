@@ -12,10 +12,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.bccapi.api.APIException;
 import com.bccapi.api.AccountInfo;
@@ -33,8 +29,6 @@ import com.bitsofproof.supernode.model.Tx;
 public class BCCAPI implements BitcoinClientAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (BCCAPI.class);
-
-	private static final String API_VERSION = "1";
 
 	private final BitcoinNetwork network;
 
@@ -82,13 +76,6 @@ public class BCCAPI implements BitcoinClientAPI
 		return new Network (network.getChain ());
 	}
 
-	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/getLoginChallenge", produces = "application/octet-stream")
-	public @ResponseBody
-	byte[] getLoginChallenge (@RequestParam (value = "key", required = true) String accountPublicKey) throws IOException, APIException
-	{
-		return getLoginChallenge (ByteUtils.fromHex (accountPublicKey));
-	}
-
 	@Override
 	public byte[] getLoginChallenge (byte[] accountPublicKey) throws IOException, APIException
 	{
@@ -100,17 +87,8 @@ public class BCCAPI implements BitcoinClientAPI
 		return c;
 	}
 
-	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/login", produces = "application/octet-stream")
-	public @ResponseBody
-	String login (@RequestParam (value = "key", required = true) String accountPublicKey,
-			@RequestParam (value = "response", required = true) String challengeResponse) throws IOException, APIException
-	{
-		return login (ByteUtils.fromHex (accountPublicKey), ByteUtils.fromHex (challengeResponse));
-	}
-
 	@Override
-	public @ResponseBody
-	String login (byte[] accountPublicKey, byte[] challengeResponse) throws IOException, APIException
+	public String login (byte[] accountPublicKey, byte[] challengeResponse) throws IOException, APIException
 	{
 		byte[] kh = Hash.keyHash (accountPublicKey);
 		String khex = ByteUtils.toHex (kh);
@@ -157,13 +135,6 @@ public class BCCAPI implements BitcoinClientAPI
 	{
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/addKeyToWallet", produces = "application/octet-stream")
-	public void addKeyToWallet (@RequestParam (value = "sessionId", required = true) String sessionID,
-			@RequestParam (value = "key", required = true) String publicKey) throws IOException, APIException
-	{
-		addKeyToWallet (sessionID, ByteUtils.fromHex (publicKey));
 	}
 
 	@Override
