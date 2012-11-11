@@ -27,6 +27,7 @@ import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.TxHandler;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxOut;
 
@@ -36,6 +37,7 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 
 	private final BitcoinNetwork network;
 	private PlatformTransactionManager transactionManager;
+	private TxHandler txhandler;
 
 	private final Map<String, byte[]> challenges = Collections.synchronizedMap (new HashMap<String, byte[]> ());
 	private final Map<String, Client> clients = Collections.synchronizedMap (new HashMap<String, Client> ());
@@ -78,6 +80,11 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 	public void setSessionTimeout (int sessionTimeout)
 	{
 		this.sessionTimeout = sessionTimeout;
+	}
+
+	public void setTxhandler (TxHandler txhandler)
+	{
+		this.txhandler = txhandler;
 	}
 
 	@Override
@@ -132,10 +139,10 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 		final Client client = clients.get (sessionID);
 		if ( client != null )
 		{
-			long balance = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Long> ()
+			AccountInfo ai = new TransactionTemplate (transactionManager).execute (new TransactionCallback<AccountInfo> ()
 			{
 				@Override
-				public Long doInTransaction (TransactionStatus status)
+				public AccountInfo doInTransaction (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
 
@@ -144,11 +151,20 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 					{
 						balance += out.getValue ();
 					}
-					return balance;
+					long estimate = balance;
+					for ( TxOut out : txhandler.getSpentByAddress (client.getAddresses ()) )
+					{
+						estimate -= out.getValue ();
+					}
+					for ( TxOut out : txhandler.getReceivedByAddress (client.getAddresses ()) )
+					{
+						estimate += out.getValue ();
+					}
+					return new AccountInfo (client.getAddresses ().size (), balance, estimate);
 				}
-			}).longValue ();
-			log.trace ("retrieved account info for " + sessionID + " balance: " + balance);
-			return new AccountInfo (client.getAddresses ().size (), balance, balance);
+			});
+			log.trace ("retrieved account info for " + sessionID + "  " + ai);
+			return ai;
 		}
 		return null;
 	}

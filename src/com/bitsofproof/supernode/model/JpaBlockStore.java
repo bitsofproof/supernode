@@ -231,6 +231,7 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
+	@Transactional (propagation = Propagation.MANDATORY)
 	public Blk getGenesisBlock ()
 	{
 		try
@@ -353,6 +354,7 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
+	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
 		List<TxOut> unspent = new ArrayList<TxOut> ();

@@ -15,10 +15,12 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -48,6 +50,8 @@ public class ChainLoader
 
 	private final BlockStore store;
 	private final BitcoinNetwork network;
+
+	private final List<ChainListener> chainListener = new ArrayList<ChainListener> ();
 
 	private class KnownBlock
 	{
@@ -86,10 +90,12 @@ public class ChainLoader
 					try
 					{
 						store.storeBlock (block);
+						notifyBlockAdded (block);
 						while ( pending.containsKey (block.getHash ()) )
 						{
 							block = pending.get (block.getHash ());
 							store.storeBlock (block);
+							notifyBlockAdded (block);
 						}
 					}
 					catch ( ValidationException e )
@@ -290,6 +296,19 @@ public class ChainLoader
 					peer.disconnect ();
 				}
 			}, timeout, TimeUnit.SECONDS));
+		}
+	}
+
+	public void addChainListener (ChainListener l)
+	{
+		chainListener.add (l);
+	}
+
+	public void notifyBlockAdded (Blk b)
+	{
+		for ( ChainListener c : chainListener )
+		{
+			c.blockAdded (b);
 		}
 	}
 
