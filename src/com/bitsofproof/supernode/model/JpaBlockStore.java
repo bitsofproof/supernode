@@ -854,7 +854,7 @@ class JpaBlockStore implements BlockStore
 			{
 				try
 				{
-					if ( chain.isProduction () && !Script.isStandard (o.getScript ()) )
+					if ( chain.isProduction () && tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
 					{
 						throw new TransactionValidationException ("Nonstandard script rejected", t);
 					}
@@ -975,7 +975,7 @@ class JpaBlockStore implements BlockStore
 					{
 						try
 						{
-							if ( !new Script (t, nr, signatureCache).evaluate () )
+							if ( !new Script (t, nr, signatureCache).evaluate (chain.isProduction ()) )
 							{
 								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
 							}
@@ -1071,7 +1071,7 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
 				{
-					if ( parsed.get (i - 1).data != null ) // happens only on testnet
+					if ( chain.isProduction () || parsed.get (i - 1).data != null )
 					{
 						int nkeys = Script.intValue (parsed.get (i - 1).data);
 						for ( int j = 0; j < nkeys; ++j )

@@ -629,7 +629,7 @@ public class Script
 	{
 		for ( Token t : parse (script) )
 		{
-			if ( t.data != null )
+			if ( t.op.o > 75 || t.data != null )
 			{
 				return false;
 			}
@@ -725,9 +725,42 @@ public class Script
 				&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG;
 	}
 
+	public static boolean isMultiSig (byte[] script) throws ValidationException
+	{
+		List<Token> parsed = parse (script);
+		boolean multisig = false;
+		int nkeys = -1;
+		int nvotes = -1;
+		for ( int i = 0; i < parsed.size (); ++i )
+		{
+			if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+			{
+				nkeys = Script.intValue (parsed.get (i - 1).data);
+				nvotes = Script.intValue (parsed.get (i - nkeys - 2).data);
+				break;
+			}
+		}
+		if ( nkeys >= 0 )
+		{
+			if ( parsed.size () != nkeys + 3 )
+			{
+				return false;
+			}
+		}
+		if ( nkeys <= 0 || nkeys > 3 )
+		{
+			return false;
+		}
+		if ( nvotes < 0 || nvotes > nkeys )
+		{
+			return false;
+		}
+		return multisig;
+	}
+
 	public static boolean isStandard (byte[] script) throws ValidationException
 	{
-		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script);
+		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script) || isMultiSig (script);
 	}
 
 	public static byte[] getPayToAddressScript (byte[] keyHash)
@@ -765,7 +798,7 @@ public class Script
 	}
 
 	@SuppressWarnings ("unchecked")
-	public boolean evaluate () throws ValidationException
+	public boolean evaluate (boolean production) throws ValidationException
 	{
 		Stack<byte[]> copy = new Stack<byte[]> ();
 
@@ -796,7 +829,15 @@ public class Script
 				throw new ValidationException ("input script for PTH should be push only.");
 			}
 			stack = copy;
-			if ( !evaluateSingleScript (stack.pop ()) )
+			byte[] script = stack.pop ();
+			if ( production )
+			{
+				if ( !isStandard (script) )
+				{
+					return false;
+				}
+			}
+			if ( !evaluateSingleScript (script) )
 			{
 				return false;
 			}
