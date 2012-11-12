@@ -85,6 +85,20 @@ public class ChainLoader
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
+				Long job = busy.get (peer);
+				if ( job != null )
+				{
+					network.cancelJob (job);
+					busy.put (peer, network.scheduleJob (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
+							peer.disconnect ();
+						}
+					}, timeout, TimeUnit.SECONDS));
+				}
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
 					try
@@ -116,20 +130,6 @@ public class ChainLoader
 						return;
 					}
 					peerRequests.remove (block.getHash ());
-				}
-				Long job = busy.get (peer);
-				if ( job != null )
-				{
-					network.cancelJob (job);
-					busy.put (peer, network.scheduleJob (new Runnable ()
-					{
-						@Override
-						public void run ()
-						{
-							log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
-							peer.disconnect ();
-						}
-					}, timeout, TimeUnit.SECONDS));
 				}
 				if ( peerRequests.isEmpty () )
 				{
@@ -195,6 +195,16 @@ public class ChainLoader
 					knownInventory.remove (peer);
 					requests.remove (peer);
 					busy.remove (peer);
+					if ( busy.isEmpty () )
+					{
+						for ( BitcoinPeer p : network.getConnectPeers () )
+						{
+							if ( store.getChainHeight () < p.getHeight () )
+							{
+								getBlockInventory (network, store, p);
+							}
+						}
+					}
 				}
 			}
 
