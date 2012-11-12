@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,8 +31,6 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class Script
 {
