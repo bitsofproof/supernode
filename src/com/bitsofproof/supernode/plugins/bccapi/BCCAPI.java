@@ -454,6 +454,7 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 			try
 			{
 				network.getStore ().validateTransaction (tx);
+				txhandler.cacheTransaction (tx);
 				for ( BitcoinPeer peer : network.getConnectPeers () )
 				{
 					TxMessage txm = (TxMessage) peer.createMessage ("tx");

@@ -97,37 +97,7 @@ public class TxHandler implements ChainListener
 							try
 							{
 								store.validateTransaction (txm.getTx ());
-								log.trace ("Caching unconfirmed transaction " + txm.getTx ().getHash ());
-								synchronized ( unconfirmed )
-								{
-									unconfirmed.put (txm.getTx ().getHash (), txm.getTx ());
-									for ( TxIn in : txm.getTx ().getInputs () )
-									{
-										for ( Owner o : in.getSource ().getOwners () )
-										{
-											ArrayList<TxIn> spent = spentByAddress.get (o.getAddress ());
-											if ( spent == null )
-											{
-												spent = new ArrayList<TxIn> ();
-												spentByAddress.put (o.getAddress (), spent);
-											}
-											spent.add (in);
-										}
-									}
-									for ( TxOut out : txm.getTx ().getOutputs () )
-									{
-										for ( Owner o : out.getOwners () )
-										{
-											ArrayList<TxOut> spent = receivedByAddress.get (o.getAddress ());
-											if ( spent == null )
-											{
-												spent = new ArrayList<TxOut> ();
-												receivedByAddress.put (o.getAddress (), spent);
-											}
-											spent.add (out);
-										}
-									}
-								}
+								cacheTransaction (txm.getTx ());
 								return true;
 							}
 							catch ( ValidationException e )
@@ -189,6 +159,41 @@ public class TxHandler implements ChainListener
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
 	{
 		this.transactionManager = transactionManager;
+	}
+
+	public void cacheTransaction (Tx tx)
+	{
+		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
+		synchronized ( unconfirmed )
+		{
+			unconfirmed.put (tx.getHash (), tx);
+			for ( TxIn in : tx.getInputs () )
+			{
+				for ( Owner o : in.getSource ().getOwners () )
+				{
+					ArrayList<TxIn> spent = spentByAddress.get (o.getAddress ());
+					if ( spent == null )
+					{
+						spent = new ArrayList<TxIn> ();
+						spentByAddress.put (o.getAddress (), spent);
+					}
+					spent.add (in);
+				}
+			}
+			for ( TxOut out : tx.getOutputs () )
+			{
+				for ( Owner o : out.getOwners () )
+				{
+					ArrayList<TxOut> recd = receivedByAddress.get (o.getAddress ());
+					if ( recd == null )
+					{
+						recd = new ArrayList<TxOut> ();
+						receivedByAddress.put (o.getAddress (), recd);
+					}
+					recd.add (out);
+				}
+			}
+		}
 	}
 
 	@Override
