@@ -897,7 +897,7 @@ class JpaBlockStore implements BlockStore
 				{
 					if ( tcontext.block != null && tcontext.block.getHeight () < 80000 )
 					{
-						log.trace ("Old DoD at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
+						log.trace ("Old DoS at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
 					}
 					else
 					{
@@ -908,7 +908,7 @@ class JpaBlockStore implements BlockStore
 				{
 					try
 					{
-						if ( tcontext.block.getHeight () > 80000 && !Script.isStandard (o.getScript ()) )
+						if ( tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
 						{
 							throw new TransactionValidationException ("Nonstandard script rejected", t);
 						}
