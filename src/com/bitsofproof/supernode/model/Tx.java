@@ -30,6 +30,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Index;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -153,39 +155,30 @@ public class Tx implements Serializable
 		this.block = block;
 	}
 
-	public String toJSON () throws ValidationException
+	public JSONObject toJSON () throws ValidationException
 	{
-		StringBuffer b = new StringBuffer ();
-		b.append ("{");
-		b.append ("\"hash\":\"" + getHash () + "\",");
-		b.append ("\"version\":" + String.valueOf (version) + ",");
-		b.append ("\"inputs\":[");
-		boolean first = true;
-		for ( TxIn input : inputs )
+		JSONObject o = new JSONObject ();
+		try
 		{
-			if ( !first )
+			o.put ("hash", getHash ());
+			o.put ("version", version);
+			List<JSONObject> ins = new ArrayList<JSONObject> ();
+			for ( TxIn input : inputs )
 			{
-				b.append (",");
+				ins.add (input.toJSON ());
 			}
-			first = false;
-			b.append (input.toJSON ());
+			o.put ("inputs", ins);
+			List<JSONObject> outs = new ArrayList<JSONObject> ();
+			for ( TxOut output : outputs )
+			{
+				outs.add (output.toJSON ());
+			}
+			o.put ("lockTime", lockTime);
 		}
-		b.append ("],");
-		b.append ("\"outputs\":[");
-		first = true;
-		for ( TxOut output : outputs )
+		catch ( JSONException e )
 		{
-			if ( !first )
-			{
-				b.append (",");
-			}
-			first = false;
-			b.append (output.toJSON ());
 		}
-		b.append ("],");
-		b.append ("\"lockTime\":" + String.valueOf (lockTime));
-		b.append ("}");
-		return b.toString ();
+		return o;
 	}
 
 	public void toWire (WireFormat.Writer writer)

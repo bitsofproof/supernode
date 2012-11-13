@@ -31,6 +31,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -72,39 +75,33 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
-	public String toJSON () throws ValidationException
+	public JSONObject toJSON () throws ValidationException
 	{
 		parseTransactions ();
 
-		StringBuffer b = new StringBuffer ();
-		b.append ("{");
-		b.append ("\"hash\":\"" + hash + "\",");
-		b.append ("\"version\":" + version + ",");
-		b.append ("\"previous\":\"" + (previous != null ? previous.getHash () : previousHash) + "\",");
-		b.append ("\"merkleRoot\":\"" + merkleRoot + "\",");
-		b.append ("\"createTime\":" + createTime + ",");
-		b.append ("\"difficultyTarget\":" + difficultyTarget + ",");
-		b.append ("\"chainWork\":" + chainWork + ",");
-		b.append ("\"height\":" + height + ",");
-		b.append ("\"nonce\":" + nonce + ",");
-		b.append ("\"transactions\":[");
-		boolean first = true;
-		for ( Tx t : transactions )
+		JSONObject o = new JSONObject ();
+		try
 		{
-			if ( first )
+			o.put ("hash", hash);
+			o.put ("version", version);
+			o.put ("previous", (previousHash != null ? previousHash : previous.getHash ()));
+			o.put ("merkleRoot", merkleRoot);
+			o.put ("createTime", createTime);
+			o.put ("difficultyTarget", difficultyTarget);
+			o.put ("chainWork", chainWork);
+			o.put ("height", height);
+			o.put ("nonce", nonce);
+			List<JSONObject> txJSON = new ArrayList<JSONObject> ();
+			for ( Tx t : transactions )
 			{
-				b.append (t.toJSON ());
-				first = false;
+				txJSON.add (t.toJSON ());
 			}
-			else
-			{
-				b.append (",");
-				b.append (t.toJSON ());
-			}
-
+			o.put ("transactions", txJSON);
 		}
-		b.append ("]}");
-		return b.toString ();
+		catch ( JSONException e )
+		{
+		}
+		return o;
 	}
 
 	public Long getId ()

@@ -28,6 +28,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -129,38 +132,42 @@ public class TxIn implements Serializable, Cloneable
 		this.transaction = transaction;
 	}
 
-	public String toJSON () throws ValidationException
+	public JSONObject toJSON () throws ValidationException
 	{
-		StringBuffer b = new StringBuffer ();
-		b.append ("{");
-		if ( source != null )
+		JSONObject o = new JSONObject ();
+		try
 		{
-			b.append ("\"sourceHash\":\"" + source.getTransaction ().getHash () + "\",");
-			b.append ("\"sourceIx\":" + source.getIx () + ",");
-			b.append ("\"script\":\"" + Script.toReadable (script) + "\"" + ",");
-		}
-		else if ( sourceHash != null )
-		{
-			b.append ("\"sourceHash\":\"" + sourceHash + "\",");
-			b.append ("\"sourceIx\":" + ix + ",");
-			if ( !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
+			if ( sourceHash != null )
 			{
-				b.append ("\"script\":\"" + Script.toReadable (script) + "\"" + ",");
+				o.put ("sourceHash", sourceHash);
+				o.put ("sourceIx", ix);
+				if ( !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
+				{
+					o.put ("script", Script.toReadable (script));
+				}
+				else
+				{
+					o.put ("script", JSONObject.NULL);
+				}
+			}
+			else if ( source != null )
+			{
+				o.put ("sourceHash", source.getTransaction ().getHash ());
+				o.put ("sourceIx", source.getIx ());
+				o.put ("script", Script.toReadable (script));
 			}
 			else
 			{
-				b.append ("\"script\":\"\"" + ",");
+				o.put ("sourceHash", Hash.ZERO_HASH.toString ());
+				o.put ("sourceIx", -1);
+				o.put ("script", JSONObject.NULL);
 			}
+			o.put ("sequence", sequence);
 		}
-		else
+		catch ( JSONException e )
 		{
-			b.append ("\"sourceHash\":\"" + Hash.ZERO_HASH.toString () + "\",");
-			b.append ("\"sourceIx\":" + -1 + ",");
-			b.append ("\"script\":\"\"" + ",");
 		}
-		b.append ("\"sequence\":" + String.valueOf (sequence));
-		b.append ("}");
-		return b.toString ();
+		return o;
 	}
 
 	public void toWire (WireFormat.Writer writer)

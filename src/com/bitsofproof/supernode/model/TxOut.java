@@ -29,6 +29,9 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -60,14 +63,18 @@ public class TxOut implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	List<Owner> owners;
 
-	public String toJSON () throws ValidationException
+	public JSONObject toJSON () throws ValidationException
 	{
-		StringBuffer b = new StringBuffer ();
-		b.append ("{");
-		b.append ("\"value\":" + getValue () + ",");
-		b.append ("\"script\":\"" + Script.toReadable (script) + "\"");
-		b.append ("}");
-		return b.toString ();
+		JSONObject o = new JSONObject ();
+		try
+		{
+			o.put ("value", value);
+			o.put ("script", Script.toReadable (script));
+		}
+		catch ( JSONException e )
+		{
+		}
+		return o;
 	}
 
 	public void toWire (WireFormat.Writer writer)
