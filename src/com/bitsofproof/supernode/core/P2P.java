@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
@@ -463,110 +464,116 @@ public abstract class P2P
 						Iterator<SelectionKey> keys = selector.selectedKeys ().iterator ();
 						while ( keys.hasNext () )
 						{
-							SelectionKey key = keys.next ();
-							keys.remove ();
-							if ( !key.isValid () )
+							try
 							{
-								continue;
-							}
-							if ( key.isAcceptable () )
-							{
-								SocketChannel client;
-								try
+								SelectionKey key = keys.next ();
+								keys.remove ();
+								if ( !key.isValid () )
 								{
-									client = ((ServerSocketChannel) key.channel ()).accept ();
-									client.configureBlocking (false);
-									InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
-									final Peer peer;
-									peer = createPeer (address, false);
-									peer.channel = client;
-									client.register (selector, SelectionKey.OP_READ);
-									connectedPeers.put (client, peer);
-								}
-								catch ( IOException e )
-								{
-									log.trace ("unsuccessful unsolicited connection ", e);
-								}
-							}
-							else
-							{
-								final Peer peer = connectedPeers.get (key.channel ());
-								if ( peer == null )
-								{
-									key.cancel ();
 									continue;
 								}
-								if ( key.isConnectable () )
+								if ( key.isAcceptable () )
 								{
-									// we asked for connection here
+									SocketChannel client;
 									try
 									{
-										SocketChannel client = (SocketChannel) key.channel ();
-										client.finishConnect ();
-										key.interestOps (SelectionKey.OP_READ);
-										peerThreads.execute (new Runnable ()
-										{
-											@Override
-											public void run ()
-											{
-												peer.onConnect ();
-											}
-										});
+										client = ((ServerSocketChannel) key.channel ()).accept ();
+										client.configureBlocking (false);
+										InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
+										final Peer peer;
+										peer = createPeer (address, false);
+										peer.channel = client;
+										client.register (selector, SelectionKey.OP_READ);
+										connectedPeers.put (client, peer);
 									}
 									catch ( IOException e )
 									{
-										connectedPeers.remove (peer.channel);
-										connectSlot.release ();
-										key.cancel ();
+										log.trace ("unsuccessful unsolicited connection ", e);
 									}
 								}
 								else
 								{
-									try
+									final Peer peer = connectedPeers.get (key.channel ());
+									if ( peer == null )
 									{
-										if ( key.isReadable () )
+										key.cancel ();
+										continue;
+									}
+									if ( key.isConnectable () )
+									{
+										// we asked for connection here
+										try
 										{
 											SocketChannel client = (SocketChannel) key.channel ();
-											int len;
-											len = client.read (readBuffer);
-											if ( len > 0 )
+											client.finishConnect ();
+											key.interestOps (SelectionKey.OP_READ);
+											peerThreads.execute (new Runnable ()
 											{
-												peer.process (readBuffer, len);
-												readBuffer.clear ();
-											}
-											else
-											{
-												peer.disconnect ();
-											}
-										}
-										if ( key.isWritable () )
-										{
-											SocketChannel client = (SocketChannel) key.channel ();
-											ByteBuffer b;
-											if ( (b = peer.getBuffer ()) != null )
-											{
-												client.write (b);
-												int rest = b.remaining ();
-												if ( rest != 0 )
+												@Override
+												public void run ()
 												{
-													peer.pushBack (b);
+													peer.onConnect ();
+												}
+											});
+										}
+										catch ( IOException e )
+										{
+											connectedPeers.remove (peer.channel);
+											connectSlot.release ();
+											key.cancel ();
+										}
+									}
+									else
+									{
+										try
+										{
+											if ( key.isReadable () )
+											{
+												SocketChannel client = (SocketChannel) key.channel ();
+												int len;
+												len = client.read (readBuffer);
+												if ( len > 0 )
+												{
+													peer.process (readBuffer, len);
+													readBuffer.clear ();
 												}
 												else
 												{
-													peer.pushBack (null);
+													peer.disconnect ();
 												}
 											}
-											else
+											if ( key.isWritable () )
 											{
-												key.interestOps (SelectionKey.OP_READ);
+												SocketChannel client = (SocketChannel) key.channel ();
+												ByteBuffer b;
+												if ( (b = peer.getBuffer ()) != null )
+												{
+													client.write (b);
+													int rest = b.remaining ();
+													if ( rest != 0 )
+													{
+														peer.pushBack (b);
+													}
+													else
+													{
+														peer.pushBack (null);
+													}
+												}
+												else
+												{
+													key.interestOps (SelectionKey.OP_READ);
+												}
 											}
 										}
-									}
-									catch ( IOException e )
-									{
-										peer.disconnect ();
+										catch ( IOException e )
+										{
+											peer.disconnect ();
+										}
 									}
 								}
+							}
+							catch ( CancelledKeyException e )
+							{
 							}
 						}
 					}
