@@ -18,11 +18,10 @@ package com.bitsofproof.supernode.core;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -59,7 +58,6 @@ public abstract class P2P
 	{
 		private final InetSocketAddress address;
 		private SocketChannel channel;
-		private final Semaphore writeable = new Semaphore (1);
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
@@ -222,31 +220,19 @@ public abstract class P2P
 
 		public void disconnect ()
 		{
-			synchronized ( connectedPeers )
+			try
 			{
-				if ( !connectedPeers.containsKey (channel) )
+				// note that no other reference to peer is stored here
+				// it might be garbage collected
+				// somebody else however might have retained a reference, so reduce size.
+				writes.clear ();
+				reads.clear ();
+				reads.add (closedMark);
+				connectedPeers.remove (channel);
+				if ( channel.isConnected () )
 				{
-					return;
-				}
-
-				try
-				{
-					try
-					{
-						// note that no other reference to peer is stored here
-						// it might be garbage collected
-						// somebody else however might have retained a reference, so reduce size.
-						writes.clear ();
-						reads.clear ();
-						reads.add (closedMark);
-						connectedPeers.remove (channel);
-						selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
-						selector.wakeup ();
-						channel.close ();
-					}
-					catch ( IOException e )
-					{
-					}
+					connectSlot.release ();
+					channel.close ();
 					peerThreads.execute (new Runnable ()
 					{
 						@Override
@@ -256,10 +242,11 @@ public abstract class P2P
 						}
 					});
 				}
-				finally
-				{
-					connectSlot.release ();
-				}
+				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
+				selector.wakeup ();
+			}
+			catch ( IOException e )
+			{
 			}
 		}
 
@@ -295,34 +282,9 @@ public abstract class P2P
 
 		public void send (Message m)
 		{
-			try
-			{
-				writeable.acquireUninterruptibly ();
-
-				if ( !connectedPeers.containsKey (this.channel) )
-				{
-					return;
-				}
-
-				byte[] wiremsg = m.toByteArray ();
-				int len = wiremsg.length;
-				int off = 0;
-				while ( len > 0 )
-				{
-					int s = Math.min (BUFFSIZE, len);
-					byte[] b = new byte[s];
-					System.arraycopy (wiremsg, off, b, 0, s);
-					off += s;
-					writes.add (b);
-					len -= s;
-				}
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
-				selector.wakeup ();
-			}
-			finally
-			{
-				writeable.release ();
-			}
+			writes.add (m.toByteArray ());
+			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
+			selector.wakeup ();
 		}
 
 		protected abstract Message parse (InputStream readIn) throws IOException;
@@ -453,10 +415,10 @@ public abstract class P2P
 			@Override
 			public void run ()
 			{
-				ByteBuffer readBuffer = ByteBuffer.allocate (BUFFSIZE);
-				while ( true )
+				try
 				{
-					try
+					ByteBuffer readBuffer = ByteBuffer.allocate (BUFFSIZE);
+					while ( true )
 					{
 						ChangeRequest cr;
 						while ( (cr = selectorChanges.poll ()) != null )
@@ -471,7 +433,14 @@ public abstract class P2P
 							}
 							if ( cr.type == ChangeRequest.REGISTER )
 							{
-								cr.socket.register (selector, cr.ops);
+								try
+								{
+									cr.socket.register (selector, cr.ops);
+								}
+								catch ( ClosedChannelException e )
+								{
+									continue;
+								}
 							}
 							else if ( cr.type == ChangeRequest.CHANGEOPS )
 							{
@@ -490,76 +459,76 @@ public abstract class P2P
 								}
 							}
 						}
-						selector.select (); // wait for events
+						selector.select ();
 						Iterator<SelectionKey> keys = selector.selectedKeys ().iterator ();
 						while ( keys.hasNext () )
 						{
 							SelectionKey key = keys.next ();
-							try
+							keys.remove ();
+							if ( !key.isValid () )
 							{
-								keys.remove ();
-								if ( !key.isValid () )
+								continue;
+							}
+							if ( key.isAcceptable () )
+							{
+								SocketChannel client;
+								try
 								{
-									final Peer peer = connectedPeers.get (key.channel ());
-									if ( peer != null )
-									{
-										peer.disconnect ();
-									}
-									continue;
-								}
-								if ( key.isAcceptable () )
-								{
-									// unsolicited request to connect
-									final SocketChannel client = ((ServerSocketChannel) key.channel ()).accept ();
+									client = ((ServerSocketChannel) key.channel ()).accept ();
 									client.configureBlocking (false);
 									InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
 									final Peer peer;
 									peer = createPeer (address, false);
 									peer.channel = client;
-									connectedPeers.put (client, peer);
 									client.register (selector, SelectionKey.OP_READ);
+									connectedPeers.put (client, peer);
+								}
+								catch ( IOException e )
+								{
+									log.trace ("unsuccessful unsolicited connection ", e);
+								}
+							}
+							else
+							{
+								final Peer peer = connectedPeers.get (key.channel ());
+								if ( peer == null )
+								{
+									key.cancel ();
+									continue;
 								}
 								if ( key.isConnectable () )
 								{
 									// we asked for connection here
-									key.interestOps (SelectionKey.OP_READ);
-									SocketChannel client = (SocketChannel) key.channel ();
 									try
 									{
-										client.finishConnect (); // finish
-										final Peer peer;
-										if ( (peer = connectedPeers.get (client)) != null )
+										SocketChannel client = (SocketChannel) key.channel ();
+										client.finishConnect ();
+										key.interestOps (SelectionKey.OP_READ);
+										peerThreads.execute (new Runnable ()
 										{
-											peerThreads.execute (new Runnable ()
+											@Override
+											public void run ()
 											{
-												@Override
-												public void run ()
-												{
-													peer.onConnect ();
-												}
-											});
-										}
-										else
-										{
-											key.cancel ();
-											client.close (); // do not know you
-										}
+												peer.onConnect ();
+											}
+										});
 									}
-									catch ( ConnectException ce )
+									catch ( IOException e )
 									{
+										connectedPeers.remove (peer.channel);
+										connectSlot.release ();
 										key.cancel ();
-										client.close (); // do not know you
 									}
 								}
-								if ( key.isReadable () )
+								else
 								{
-									SocketChannel client = (SocketChannel) key.channel ();
-									final Peer peer = connectedPeers.get (client);
-									if ( peer != null )
+									try
 									{
-										try
+										if ( key.isReadable () )
 										{
-											int len = client.read (readBuffer);
+											SocketChannel client = (SocketChannel) key.channel ();
+											int len;
+											len = client.read (readBuffer);
 											if ( len > 0 )
 											{
 												peer.process (readBuffer, len);
@@ -567,29 +536,12 @@ public abstract class P2P
 											}
 											else
 											{
-												key.cancel ();
 												peer.disconnect ();
 											}
 										}
-										catch ( IOException e )
+										if ( key.isWritable () )
 										{
-											key.cancel ();
-											peer.disconnect ();
-										}
-									}
-									else
-									{
-										key.cancel ();
-									}
-								}
-								if ( key.isWritable () )
-								{
-									SocketChannel client = (SocketChannel) key.channel ();
-									Peer peer = connectedPeers.get (client);
-									if ( peer != null )
-									{
-										try
-										{
+											SocketChannel client = (SocketChannel) key.channel ();
 											ByteBuffer b;
 											if ( (b = peer.getBuffer ()) != null )
 											{
@@ -609,32 +561,19 @@ public abstract class P2P
 												key.interestOps (SelectionKey.OP_READ);
 											}
 										}
-										catch ( IOException e )
-										{
-											peer.disconnect ();
-											key.cancel ();
-										}
 									}
-									else
+									catch ( IOException e )
 									{
-										key.cancel ();
+										peer.disconnect ();
 									}
 								}
 							}
-							catch ( CancelledKeyException e )
-							{
-							}
-							catch ( Exception e )
-							{
-								log.debug ("Error processing a selector key", e);
-								key.cancel ();
-							}
 						}
 					}
-					catch ( Exception e )
-					{
-						log.debug ("Unhandled Exception in selector thread", e);
-					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Fatal selector failure ", e);
 				}
 			}
 		});
