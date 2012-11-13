@@ -45,7 +45,8 @@ public class ChainLoader
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
-	private final Map<BitcoinPeer, Long> busy = new HashMap<BitcoinPeer, Long> ();
+	private final Map<BitcoinPeer, Long> blockTimer = new HashMap<BitcoinPeer, Long> ();
+	private final Map<BitcoinPeer, Long> invTimer = new HashMap<BitcoinPeer, Long> ();
 	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
 	private final BlockStore store;
@@ -85,11 +86,11 @@ public class ChainLoader
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
-				Long job = busy.get (peer);
+				Long job = blockTimer.get (peer);
 				if ( job != null )
 				{
 					network.cancelJob (job);
-					busy.put (peer, network.scheduleJob (new Runnable ()
+					blockTimer.put (peer, network.scheduleJob (new Runnable ()
 					{
 						@Override
 						public void run ()
@@ -133,7 +134,7 @@ public class ChainLoader
 				}
 				if ( peerRequests.isEmpty () )
 				{
-					busy.remove (peer);
+					blockTimer.remove (peer);
 					if ( peer.getHeight () > store.getChainHeight () )
 					{
 						getBlockInventory (network, store, peer);
@@ -159,11 +160,11 @@ public class ChainLoader
 						}
 						if ( m.getBlockHashes ().size () > 1 )
 						{
-							Long job = busy.get (peer);
+							Long job = invTimer.get (peer);
 							if ( job != null )
 							{
 								network.cancelJob (job);
-								busy.remove (peer);
+								invTimer.remove (peer);
 							}
 						}
 						int n = k.size ();
@@ -194,8 +195,9 @@ public class ChainLoader
 				{
 					knownInventory.remove (peer);
 					requests.remove (peer);
-					busy.remove (peer);
-					if ( busy.isEmpty () )
+					blockTimer.remove (peer);
+					invTimer.remove (peer);
+					if ( blockTimer.isEmpty () && invTimer.isEmpty () )
 					{
 						for ( BitcoinPeer p : network.getConnectPeers () )
 						{
@@ -239,7 +241,7 @@ public class ChainLoader
 		GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
 		synchronized ( knownInventory )
 		{
-			if ( busy.containsKey (peer) )
+			if ( blockTimer.containsKey (peer) )
 			{
 				return;
 			}
@@ -266,7 +268,7 @@ public class ChainLoader
 		{
 			peer.send (gdm);
 			log.trace ("asking for " + gdm.getBlocks ().size () + " blocks from " + peer.getAddress ());
-			busy.put (peer, network.scheduleJob (new Runnable ()
+			blockTimer.put (peer, network.scheduleJob (new Runnable ()
 			{
 				@Override
 				public void run ()
@@ -282,7 +284,7 @@ public class ChainLoader
 	{
 		synchronized ( knownInventory )
 		{
-			if ( busy.containsKey (peer) )
+			if ( invTimer.containsKey (peer) )
 			{
 				return;
 			}
@@ -297,7 +299,7 @@ public class ChainLoader
 		{
 			log.trace ("Sending inventory request to " + peer.getAddress ());
 			peer.send (gbm);
-			busy.put (peer, network.scheduleJob (new Runnable ()
+			invTimer.put (peer, network.scheduleJob (new Runnable ()
 			{
 				@Override
 				public void run ()
