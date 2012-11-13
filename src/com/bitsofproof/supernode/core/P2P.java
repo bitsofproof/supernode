@@ -221,6 +221,10 @@ public abstract class P2P
 
 		public void disconnect ()
 		{
+			if ( !connectedPeers.containsKey (channel) )
+			{
+				return;
+			}
 			try
 			{
 				// note that no other reference to peer is stored here
@@ -230,19 +234,16 @@ public abstract class P2P
 				reads.clear ();
 				reads.add (closedMark);
 				connectedPeers.remove (channel);
-				if ( channel.isConnected () )
+				connectSlot.release ();
+				channel.close ();
+				peerThreads.execute (new Runnable ()
 				{
-					connectSlot.release ();
-					channel.close ();
-					peerThreads.execute (new Runnable ()
+					@Override
+					public void run ()
 					{
-						@Override
-						public void run ()
-						{
-							onDisconnect ();
-						}
-					});
-				}
+						onDisconnect ();
+					}
+				});
 				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
 				selector.wakeup ();
 			}
