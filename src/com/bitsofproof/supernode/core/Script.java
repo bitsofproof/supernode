@@ -1568,7 +1568,19 @@ public class Script
 		String cacheKey = c.toString ();
 		synchronized ( validSignatureCache )
 		{
-			return validSignatureCache.contains (cacheKey) || ECKeyPair.verify (hash, sig, pubkey) && validSignatureCache.add (cacheKey);
+			if ( validSignatureCache.contains (cacheKey) )
+			{
+				return true;
+			}
 		}
+		if ( ECKeyPair.verify (hash, sig, pubkey) )
+		{
+			synchronized ( validSignatureCache )
+			{
+				validSignatureCache.add (cacheKey);
+			}
+			return true;
+		}
+		return false;
 	}
 }
