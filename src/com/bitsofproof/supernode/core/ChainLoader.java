@@ -54,6 +54,8 @@ public class ChainLoader
 
 	private final List<ChainListener> chainListener = new ArrayList<ChainListener> ();
 
+	private final int MAXPENDING = 500;
+
 	private class KnownBlock
 	{
 		private int nr;
@@ -120,7 +122,14 @@ public class ChainLoader
 				}
 				else
 				{
-					pending.put (block.getPreviousHash (), block);
+					if ( pending.size () < MAXPENDING )
+					{
+						pending.put (block.getPreviousHash (), block);
+					}
+					else
+					{
+						log.warn ("Pending block pool limit reached");
+					}
 				}
 				HashSet<String> peerRequests;
 				synchronized ( knownInventory )
