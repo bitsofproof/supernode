@@ -468,10 +468,10 @@ public abstract class P2P
 						Iterator<SelectionKey> keys = selector.selectedKeys ().iterator ();
 						while ( keys.hasNext () )
 						{
+							SelectionKey key = keys.next ();
+							keys.remove ();
 							try
 							{
-								SelectionKey key = keys.next ();
-								keys.remove ();
 								if ( !key.isValid () )
 								{
 									continue;
@@ -589,6 +589,11 @@ public abstract class P2P
 							}
 							catch ( CancelledKeyException e )
 							{
+								final Peer peer = connectedPeers.get (key.channel ());
+								if ( peer != null )
+								{
+									peer.disconnect ();
+								}
 							}
 						}
 					}
