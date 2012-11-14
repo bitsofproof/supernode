@@ -46,7 +46,8 @@ public class ChainLoader
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
 	private final Map<BitcoinPeer, Long> invTimer = new HashMap<BitcoinPeer, Long> ();
-	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
+	private final Map<String, Blk> pendingOn = Collections.synchronizedMap (new HashMap<String, Blk> ());
+	private final Map<String, Blk> havePending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
 	private final BlockStore store;
 	private final BitcoinNetwork network;
@@ -91,9 +92,11 @@ public class ChainLoader
 					{
 						store.storeBlock (block);
 						notifyBlockAdded (block);
-						while ( pending.containsKey (block.getHash ()) )
+						while ( pendingOn.containsKey (block.getHash ()) )
 						{
-							block = pending.get (block.getHash ());
+							block = pendingOn.get (block.getHash ());
+							pendingOn.remove (block.getHash ());
+							havePending.remove (block);
 							store.storeBlock (block);
 							notifyBlockAdded (block);
 						}
@@ -105,7 +108,8 @@ public class ChainLoader
 				}
 				else
 				{
-					pending.put (block.getPreviousHash (), block);
+					pendingOn.put (block.getPreviousHash (), block);
+					havePending.put (block.getHash (), block);
 				}
 				HashSet<String> peerRequests;
 				synchronized ( knownInventory )
@@ -155,7 +159,7 @@ public class ChainLoader
 						for ( byte[] h : m.getBlockHashes () )
 						{
 							String hash = new Hash (h).toString ();
-							if ( !store.isStoredBlock (hash) )
+							if ( !havePending.containsKey (hash) && !store.isStoredBlock (hash) )
 							{
 								KnownBlock kn = new KnownBlock ();
 								kn.nr = n++;
