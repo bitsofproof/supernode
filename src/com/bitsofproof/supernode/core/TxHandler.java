@@ -86,7 +86,7 @@ public class TxHandler implements ChainListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
+				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) && !loader.isBehind () )
 				{
 					if ( new TransactionTemplate (transactionManager).execute (new TransactionCallback<Boolean> ()
 					{
