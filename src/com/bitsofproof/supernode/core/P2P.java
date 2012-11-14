@@ -28,10 +28,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -319,7 +319,8 @@ public abstract class P2P
 	}
 
 	// peers connected
-	private final Map<SocketChannel, Peer> connectedPeers = Collections.synchronizedMap (new HashMap<SocketChannel, Peer> ());
+	@SuppressWarnings ({ "rawtypes", "unchecked" })
+	private final Map<SocketChannel, Peer> connectedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
 
 	// peers waiting to be connected
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress> ();
