@@ -354,6 +354,7 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
+	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxIn> getSpent (List<String> addresses)
 	{
 		List<TxIn> spent = new ArrayList<TxIn> ();
