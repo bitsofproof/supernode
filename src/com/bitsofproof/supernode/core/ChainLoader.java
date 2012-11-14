@@ -260,6 +260,11 @@ public class ChainLoader
 			{
 				return;
 			}
+			HashSet<String> peerRequests = requests.get (peer);
+			if ( peerRequests != null && !peerRequests.isEmpty () )
+			{
+				return;
+			}
 		}
 		GetBlocksMessage gbm = (GetBlocksMessage) peer.createMessage ("getblocks");
 		for ( String h : store.getLocator () )
