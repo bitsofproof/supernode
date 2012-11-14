@@ -45,7 +45,6 @@ public class ChainLoader
 
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
-	private final Map<BitcoinPeer, Long> blockTimer = new HashMap<BitcoinPeer, Long> ();
 	private final Map<BitcoinPeer, Long> invTimer = new HashMap<BitcoinPeer, Long> ();
 	private final Map<String, Blk> pending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
@@ -53,8 +52,6 @@ public class ChainLoader
 	private final BitcoinNetwork network;
 
 	private final List<ChainListener> chainListener = new ArrayList<ChainListener> ();
-
-	private final int MAXPENDING = 500;
 
 	private class KnownBlock
 	{
@@ -88,20 +85,6 @@ public class ChainLoader
 			{
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
-				Long job = blockTimer.get (peer);
-				if ( job != null )
-				{
-					network.cancelJob (job);
-					blockTimer.put (peer, network.scheduleJob (new Runnable ()
-					{
-						@Override
-						public void run ()
-						{
-							log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
-							peer.disconnect ();
-						}
-					}, timeout, TimeUnit.SECONDS));
-				}
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
 					try
@@ -122,14 +105,7 @@ public class ChainLoader
 				}
 				else
 				{
-					if ( pending.size () < MAXPENDING )
-					{
-						pending.put (block.getPreviousHash (), block);
-					}
-					else
-					{
-						log.warn ("Pending block pool limit reached");
-					}
+					pending.put (block.getPreviousHash (), block);
 				}
 				HashSet<String> peerRequests;
 				synchronized ( knownInventory )
@@ -143,7 +119,6 @@ public class ChainLoader
 				}
 				if ( peerRequests.isEmpty () )
 				{
-					blockTimer.remove (peer);
 					if ( peer.getHeight () > store.getChainHeight () )
 					{
 						getBlockInventory (network, store, peer);
@@ -200,20 +175,21 @@ public class ChainLoader
 			@Override
 			public void remove (final BitcoinPeer peer)
 			{
+				boolean nowork = false;
 				synchronized ( knownInventory )
 				{
 					knownInventory.remove (peer);
 					requests.remove (peer);
-					blockTimer.remove (peer);
 					invTimer.remove (peer);
-					if ( blockTimer.isEmpty () && invTimer.isEmpty () )
+					nowork = invTimer.isEmpty ();
+				}
+				if ( nowork )
+				{
+					for ( BitcoinPeer p : network.getConnectPeers () )
 					{
-						for ( BitcoinPeer p : network.getConnectPeers () )
+						if ( store.getChainHeight () < p.getHeight () )
 						{
-							if ( store.getChainHeight () < p.getHeight () )
-							{
-								getBlockInventory (network, store, p);
-							}
+							getBlockInventory (network, store, p);
 						}
 					}
 				}
@@ -250,10 +226,6 @@ public class ChainLoader
 		GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
 		synchronized ( knownInventory )
 		{
-			if ( blockTimer.containsKey (peer) )
-			{
-				return;
-			}
 			for ( KnownBlock b : knownInventory.get (peer) )
 			{
 				boolean askedElswhere = false;
@@ -277,15 +249,6 @@ public class ChainLoader
 		{
 			peer.send (gdm);
 			log.trace ("asking for " + gdm.getBlocks ().size () + " blocks from " + peer.getAddress ());
-			blockTimer.put (peer, network.scheduleJob (new Runnable ()
-			{
-				@Override
-				public void run ()
-				{
-					log.trace ("Peer did not answer to getblock requests " + peer.getAddress ());
-					peer.disconnect ();
-				}
-			}, timeout, TimeUnit.SECONDS));
 		}
 	}
 
