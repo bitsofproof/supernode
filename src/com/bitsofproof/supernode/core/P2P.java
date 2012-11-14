@@ -297,6 +297,8 @@ public abstract class P2P
 
 		protected abstract void onDisconnect ();
 
+		protected abstract boolean isHandshakeSuccessful ();
+
 	}
 
 	protected abstract Peer createPeer (InetSocketAddress address, boolean active);
@@ -487,6 +489,17 @@ public abstract class P2P
 										peer.channel = client;
 										client.register (selector, SelectionKey.OP_READ);
 										connectedPeers.put (client, peer);
+										scheduler.schedule (new Runnable ()
+										{
+											@Override
+											public void run ()
+											{
+												if ( !peer.isHandshakeSuccessful () )
+												{
+													peer.disconnect ();
+												}
+											}
+										}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
 									}
 									catch ( IOException e )
 									{
@@ -600,11 +613,11 @@ public abstract class P2P
 				{ // forever
 					try
 					{
-						connectSlot.acquireUninterruptibly ();
-
 						InetSocketAddress address = runqueue.poll ();
 						if ( address != null )
 						{
+							connectSlot.acquireUninterruptibly ();
+
 							final Peer peer = createPeer (address, true);
 							peer.connect ();
 							scheduler.schedule (new Runnable ()
@@ -633,10 +646,7 @@ public abstract class P2P
 							if ( connectedPeers.size () < desiredConnections )
 							{
 								log.trace ("Need to discover new adresses.");
-								if ( !discover () )
-								{
-									break; // testing
-								}
+								discover ();
 								if ( runqueue.size () == 0 )
 								{
 									log.trace ("Can not find new adresses");

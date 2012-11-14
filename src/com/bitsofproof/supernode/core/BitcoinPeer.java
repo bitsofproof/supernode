@@ -333,6 +333,12 @@ public class BitcoinPeer extends P2P.Peer
 	}
 
 	@Override
+	protected boolean isHandshakeSuccessful ()
+	{
+		return network.isConnected (this);
+	}
+
+	@Override
 	@SuppressWarnings ({ "rawtypes", "unchecked" })
 	protected void receive (P2P.Message m)
 	{
