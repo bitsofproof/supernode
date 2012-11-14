@@ -94,9 +94,9 @@ public class ChainLoader
 						notifyBlockAdded (block);
 						while ( pendingOn.containsKey (block.getHash ()) )
 						{
-							block = pendingOn.get (block.getHash ());
 							pendingOn.remove (block.getHash ());
-							havePending.remove (block);
+							block = pendingOn.get (block.getHash ());
+							havePending.remove (block.getHash ());
 							store.storeBlock (block);
 							notifyBlockAdded (block);
 						}
