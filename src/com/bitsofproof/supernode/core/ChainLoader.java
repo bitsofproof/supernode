@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,7 +47,7 @@ public class ChainLoader
 	private final Map<BitcoinPeer, TreeSet<KnownBlock>> knownInventory = new HashMap<BitcoinPeer, TreeSet<KnownBlock>> ();
 	private final Map<BitcoinPeer, HashSet<String>> requests = new HashMap<BitcoinPeer, HashSet<String>> ();
 	private final Map<BitcoinPeer, Long> invTimer = new HashMap<BitcoinPeer, Long> ();
-	private final Map<String, Blk> pendingOn = Collections.synchronizedMap (new HashMap<String, Blk> ());
+	private final Map<String, ArrayList<Blk>> pendingOn = Collections.synchronizedMap (new HashMap<String, ArrayList<Blk>> ());
 	private final Map<String, Blk> havePending = Collections.synchronizedMap (new HashMap<String, Blk> ());
 
 	private final BlockStore store;
@@ -91,14 +92,13 @@ public class ChainLoader
 					try
 					{
 						store.storeBlock (block);
+						havePending.remove (block.getHash ());
 						notifyBlockAdded (block);
-						while ( pendingOn.containsKey (block.getHash ()) )
+
+						if ( pendingOn.containsKey (block.getHash ()) )
 						{
+							storePending (pendingOn.get (block.getHash ()));
 							pendingOn.remove (block.getHash ());
-							block = pendingOn.get (block.getHash ());
-							havePending.remove (block.getHash ());
-							store.storeBlock (block);
-							notifyBlockAdded (block);
 						}
 					}
 					catch ( ValidationException e )
@@ -108,7 +108,13 @@ public class ChainLoader
 				}
 				else
 				{
-					pendingOn.put (block.getPreviousHash (), block);
+					ArrayList<Blk> pendingList = pendingOn.get (block.getPreviousHash ());
+					if ( pendingList == null )
+					{
+						pendingList = new ArrayList<Blk> ();
+						pendingOn.put (block.getPreviousHash (), pendingList);
+					}
+					pendingList.add (block);
 					havePending.put (block.getHash (), block);
 				}
 				HashSet<String> peerRequests;
@@ -126,6 +132,32 @@ public class ChainLoader
 					if ( peer.getHeight () > store.getChainHeight () )
 					{
 						getBlockInventory (network, store, peer);
+					}
+				}
+			}
+
+			private void storePending (List<Blk> blocks) throws ValidationException
+			{
+				Iterator<Blk> i = blocks.iterator ();
+				while ( i.hasNext () )
+				{
+					Blk b = i.next ();
+					store.storeBlock (b);
+					havePending.remove (b.getHash ());
+					notifyBlockAdded (b);
+					List<Blk> next = pendingOn.get (b.getHash ());
+					if ( next != null )
+					{
+						if ( next.size () == 1 )
+						{
+							// avoid deep recursion for simple chain
+							i = next.iterator ();
+						}
+						else
+						{
+							storePending (next);
+						}
+						pendingOn.remove (b.getHash ());
 					}
 				}
 			}
