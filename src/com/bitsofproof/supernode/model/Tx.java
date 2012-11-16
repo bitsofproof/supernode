@@ -173,6 +173,7 @@ public class Tx implements Serializable
 			{
 				outs.add (output.toJSON ());
 			}
+			o.put ("outputs", outs);
 			o.put ("lockTime", lockTime);
 		}
 		catch ( JSONException e )
