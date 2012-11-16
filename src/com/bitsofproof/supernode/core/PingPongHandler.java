@@ -39,15 +39,8 @@ public class PingPongHandler implements BitcoinMessageListener<PingMessage>
 			log.trace ("received ping from " + peer.getAddress ());
 			PongMessage po = (PongMessage) peer.createMessage ("pong");
 			po.setNonce (pi.getNonce ());
-			try
-			{
-				peer.send (po);
-				log.trace ("sent pong to " + peer.getAddress ());
-			}
-			catch ( Exception e )
-			{
-				peer.disconnect ();
-			}
+			peer.send (po);
+			log.trace ("sent pong to " + peer.getAddress ());
 		}
 	}
 }
