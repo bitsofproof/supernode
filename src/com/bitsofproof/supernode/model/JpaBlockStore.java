@@ -1066,7 +1066,16 @@ class JpaBlockStore implements BlockStore
 			else if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
 					&& parsed.get (2).op == Opcode.OP_EQUAL )
 			{
-				// pay to script
+				byte[] hash = parsed.get (1).data;
+				if ( hash.length == 20 )
+				{
+					// BIP 0013
+					Owner o = new Owner ();
+					o.setAddress (AddressConverter.toSatoshiStyle (hash, true, chain));
+					o.setOutpoint (out);
+					owners.add (o);
+					out.setVotes (1L);
+				}
 			}
 			else
 			{
