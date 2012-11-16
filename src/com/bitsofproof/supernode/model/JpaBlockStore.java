@@ -890,6 +890,28 @@ class JpaBlockStore implements BlockStore
 			{
 				throw new TransactionValidationException ("Transaction must have inputs ", t);
 			}
+			if ( tcontext.block != null && tcontext.block.getHeight () > 200000 )
+			{
+				// BIP 0034
+				if ( t.getVersion () != 1 )
+				{
+					throw new TransactionValidationException ("Transaction version must be 1", t);
+				}
+				if ( tcontext.block.getVersion () == 2 && tcontext.coinbase )
+				{
+					try
+					{
+						if ( Script.intValue (Script.parse (t.getInputs ().get (0).getScript ()).get (0).data) != tcontext.block.getHeight () )
+						{
+							throw new TransactionValidationException ("Block height mismatch in coinbase", t);
+						}
+					}
+					catch ( ValidationException e )
+					{
+						throw new TransactionValidationException (e, t);
+					}
+				}
+			}
 
 			long sumOut = 0;
 			for ( TxOut o : t.getOutputs () )
