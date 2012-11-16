@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.servlet;
+package com.bitsofproof.supernode.plugins.bccapi;
 
 import java.io.IOException;
 
@@ -33,7 +33,6 @@ import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.WireFormat;
 import com.bitsofproof.supernode.main.Supernode;
 import com.bitsofproof.supernode.model.Tx;
-import com.bitsofproof.supernode.plugins.bccapi.BCCAPI;
 
 @Controller
 @RequestMapping ("/bccapi")

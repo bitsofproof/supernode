@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -40,10 +39,9 @@ public class Application
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
 
-		final CommandLine cl;
 		try
 		{
-			cl = parser.parse (gnuOptions, args);
+			parser.parse (gnuOptions, args);
 		}
 		catch ( ParseException e1 )
 		{

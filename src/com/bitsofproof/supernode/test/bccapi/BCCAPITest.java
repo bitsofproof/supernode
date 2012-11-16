@@ -22,25 +22,22 @@ import java.io.IOException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.bccapi.api.APIException;
-import com.bccapi.api.AccountStatement;
+import com.bccapi.api.BitcoinClientAPI;
 import com.bitsofproof.supernode.core.ECKeyPair;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.BlockStore;
-import com.bitsofproof.supernode.plugins.bccapi.ExtendedBitcoinClientAPI;
 
 @RunWith (SpringJUnit4ClassRunner.class)
 @ContextConfiguration (inheritLocations = true, value = "/assembly.xml")
 public class BCCAPITest
 {
 	@Autowired
-	@Qualifier ("remoteBCCAPI")
-	private ExtendedBitcoinClientAPI api;
+	private BitcoinClientAPI api;
 
 	@Autowired
 	private BlockStore store;
@@ -81,9 +78,7 @@ public class BCCAPITest
 
 		byte[] challenge = api.getLoginChallenge (keys.getPublic ());
 		final String sessionId = api.login (keys.getPublic (), keys.sign (challenge));
-		api.addAddress (sessionId, "1HfiCu5LgoKTptrpGmfZ7yz9mKRvgPM36Y");
-		AccountStatement as = api.getAccountStatement (sessionId, 0, 1000);
-		as = api.getRecentTransactionSummary (sessionId, 10);
-		System.out.println (as);
+		api.getAccountStatement (sessionId, 0, 1000);
+		api.getRecentTransactionSummary (sessionId, 10);
 	}
 }

@@ -37,6 +37,7 @@ import com.bccapi.api.APIException;
 import com.bccapi.api.AccountInfo;
 import com.bccapi.api.AccountStatement;
 import com.bccapi.api.AccountStatement.Record;
+import com.bccapi.api.BitcoinClientAPI;
 import com.bccapi.api.Network;
 import com.bccapi.api.SendCoinForm;
 import com.bitsofproof.supernode.core.AddressConverter;
@@ -55,7 +56,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class BCCAPI implements ExtendedBitcoinClientAPI
+public class BCCAPI implements BitcoinClientAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (BCCAPI.class);
 
@@ -191,16 +192,6 @@ public class BCCAPI implements ExtendedBitcoinClientAPI
 			return ai;
 		}
 		return null;
-	}
-
-	@Override
-	public void addAddress (String sessionID, String address)
-	{
-		final Client client = clients.get (sessionID);
-		if ( client != null )
-		{
-			client.addAddress (address);
-		}
 	}
 
 	private AccountStatement getFullAccountStatement (String sessionID) throws IOException, APIException

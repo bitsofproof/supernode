@@ -8,18 +8,19 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
-	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
+	<description>supernode spring assembly (c) 2012 Tamas Blummer
+		tamas@bitsofproof.com</description>
 
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
 		name="propertiesBean" p:location="classpath:supernode.properties" />
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 
-  	<alias name="${chain}" alias="chain"/>
+	<alias name="${chain}" alias="chain" />
 
 	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
 		p:portNumber="${port}" p:serverName="${server}" p:databaseName="${database}"
-		p:user="${user}" p:password="${password}" p:createDatabase="create"/>
+		p:user="${user}" p:password="${password}" p:createDatabase="create" />
 
 	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
 		<property name="dataSource" ref="derbyDataSource" />
@@ -42,12 +43,12 @@
 			</props>
 		</property>
 	</bean>
-	
+
 	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"
 		p:entityManagerFactory-ref="entityManagerFactory" />
 
 	<tx:annotation-driven transaction-manager="transactionManager" />
-	
+
 	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
 		<property name="seedHosts">
 			<list>
@@ -58,55 +59,165 @@
 			</list>
 		</property>
 	</bean>
-	
+
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
-		<constructor-arg><value>10</value></constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="dnsDiscovery"/>
-		<property name="chain" ref="${chain}"/>
+		<constructor-arg>
+			<value>10</value>
+		</constructor-arg> <!-- Number of connections desired -->
+		<property name="discovery" ref="dnsDiscovery" />
+		<property name="chain" ref="${chain}" />
 		<property name="store" ref="${store}" />
 	</bean>
-	
+
 	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="timeout" value="60"/>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="timeout" value="60" />
 	</bean>
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
 	</bean>
 	<bean id="alert" class="com.bitsofproof.supernode.core.AlertHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
 	</bean>
 	<bean id="heartbeat" class="com.bitsofproof.supernode.core.HeartbeatHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="delay" value="60"/>
-		<property name="timeout" value="60"/>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="delay" value="60" />
+		<property name="timeout" value="60" />
 	</bean>
 	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
 	</bean>
 	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<constructor-arg><ref bean="chainloader"/></constructor-arg>
-		<property name="transactionManager" ref="transactionManager"/>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="chainloader" />
+		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="txHandler" ref="tx"/>
-		<property name="transactionManager" ref="transactionManager"/>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="txHandler" ref="tx" />
+		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
 	</bean>
 	<bean id="getheaders" class="com.bitsofproof.supernode.core.GetHeadersHandler">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
 	</bean>
 	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
-		<constructor-arg><ref bean="bitcoinNetwork"/></constructor-arg>
-		<property name="delay" value="60"/>
-		<property name="startDelay" value="60"/>		
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="delay" value="60" />
+		<property name="startDelay" value="60" />
 	</bean>
 	<bean id="application" class="com.bitsofproof.supernode.main.Application">
-		<property name="network" ref="bitcoinNetwork"/>
+		<property name="network" ref="bitcoinNetwork" />
 	</bean>
-	
+	<!-- jetty -->
+	<bean id="jettyhandler" class="org.eclipse.jetty.server.handler.HandlerCollection">
+		<property name="handlers">
+			<list>
+				<bean class="org.eclipse.jetty.servlet.ServletContextHandler">
+					<property name="contextPath" value="/" />
+					<property name="resourceBase" value="." />
+					<property name="servletHandler">
+						<bean class="org.eclipse.jetty.servlet.ServletHandler">
+							<property name="servlets"> <!-- servlet definition -->
+								<list>
+									<bean class="org.eclipse.jetty.servlet.ServletHolder">
+										<property name="name" value="SupernodeServlet" />
+										<property name="servlet">
+											<bean class="org.springframework.web.servlet.DispatcherServlet" />
+										</property>
+										<property name="initParameters">
+											<map>
+												<entry key="contextConfigLocation" value="classpath:servlet.xml" />
+											</map>
+										</property>
+									</bean>
+								</list>
+							</property>
+							<property name="servletMappings">
+								<list>
+									<bean class="org.eclipse.jetty.servlet.ServletMapping">
+										<property name="pathSpecs">
+											<list>
+												<value>/*</value>
+											</list>
+										</property>
+										<property name="servletName" value="SupernodeServlet" />
+									</bean>
+								</list>
+							</property>
+						</bean>
+					</property>
+				</bean>
+				<bean class="org.eclipse.jetty.server.handler.RequestLogHandler">
+					<property name="requestLog">
+						<bean class="org.eclipse.jetty.server.NCSARequestLog">
+							<constructor-arg value="jetty-yyyy_mm_dd.request.log" />
+							<property name="extended" value="false" />
+						</bean>
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="Server" class="org.mortbay.jetty.spring.Server"
+		init-method="start" destroy-method="stop">
+
+		<property name="threadPool">
+			<bean id="ThreadPool" class="org.eclipse.jetty.util.thread.QueuedThreadPool">
+				<property name="minThreads" value="10" />
+				<property name="maxThreads" value="50" />
+			</bean>
+		</property>
+
+		<property name="connectors">
+			<list>
+				<bean id="Connector" class="org.eclipse.jetty.server.nio.SelectChannelConnector">
+					<property name="port" value="${httpPort}" />
+					<property name="host" value="${httpBind}" />
+				</bean>
+			</list>
+		</property>
+
+		<property name="handler" ref="jettyhandler" />
+
+		<property name="stopAtShutdown" value="true" />
+		<property name="sendDateHeader" value="true" />
+		<property name="dumpAfterStart" value="false" />
+		<property name="dumpBeforeStop" value="false" />
+
+	</bean>
+
+	<bean id="bccapi" class="com.bitsofproof.supernode.plugins.bccapi.BCCAPI">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="txhandler" ref="tx" />
+	</bean>
+
 </beans>
