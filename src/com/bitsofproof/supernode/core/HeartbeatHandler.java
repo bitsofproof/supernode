@@ -49,6 +49,7 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 				return;
 			}
 			PingMessage pi = (PingMessage) peer.createMessage ("ping");
+			peer.send (pi);
 			log.trace ("Sent ping to " + peer.getAddress ().getAddress ());
 			if ( peer.getVersion () > 60000 )
 			{
