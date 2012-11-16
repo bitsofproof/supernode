@@ -917,6 +917,9 @@ public class Script
 						case OP_1NEGATE:
 							pushInt (-1);
 							break;
+						case OP_FALSE:
+							stack.push (new byte[0]);
+							break;
 						case OP_1:
 							pushInt (1);
 							break;
