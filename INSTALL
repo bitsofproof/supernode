@@ -10,6 +10,8 @@ INSTALL
 5. run
 	java -jar dist/demo.jar
 	
+NOTE: build problems were reported with java 7. I use java 6.
+	
 The demo will connect to testnet3, download and verify the chain.
 	
 In case you like the demo you might configure the full server by adapting
