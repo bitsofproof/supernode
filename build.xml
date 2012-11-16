@@ -88,55 +88,7 @@
          </jar>
     </target>
 
-    <target name="test" depends="clean, compile">
-       <mkdir dir="${dist.dir}"/>
-       <ivy:retrieve pattern="${lib.dir}/[type]s/[artifact].[ext]" />
-       <manifestclasspath property="jar.classpath" jarfile="${dist.dir}/test.jar">
-           <classpath>
-                       <fileset dir="${lib.dir}/jars" includes="*.jar"/>
-                       <fileset dir="${lib.dir}/bundles" includes="*.jar"/>
-           </classpath>
-       </manifestclasspath>
-
-       <jar destfile="${dist.dir}/test.jar" basedir="${build.dir}" >
-               <manifest>
-                   <attribute name="Main-Class" value="com.bitsofproof.supernode.main.Supernode" />
-                   <attribute name="Class-Path" value="${jar.classpath}" />
-               </manifest>
-               <fileset dir="config/test">
-                       <filename name="**/*.xml"/>
-               </fileset>
-	            <fileset dir="config/test">
-                       <filename name="**/*.properties"/>
-               </fileset>
-        </jar>
-   </target>
-
-    <target name="bccapi" depends="clean, compile">
-        <mkdir dir="${dist.dir}"/>
-        <ivy:retrieve pattern="${lib.dir}/[type]s/[artifact].[ext]" />
-        <manifestclasspath property="jar.classpath" jarfile="${dist.dir}/bccapi.jar">
-            <classpath>
-                        <fileset dir="${lib.dir}/jars" includes="*.jar"/>
-                        <fileset dir="${lib.dir}/bundles" includes="*.jar"/>
-            </classpath>
-        </manifestclasspath>
-
-        <jar destfile="${dist.dir}/bccapi.jar" basedir="${build.dir}" >
-                <manifest>
-                    <attribute name="Main-Class" value="com.bitsofproof.supernode.main.Supernode" />
-                    <attribute name="Class-Path" value="${jar.classpath}" />
-                </manifest>
-                <fileset dir="config/bccapi">
-                        <filename name="**/*.xml"/>
-                </fileset>
-	            <fileset dir="config/bccapi">
-                        <filename name="**/*.properties"/>
-                </fileset>
-         </jar>
-    </target>
-
-	<target name="clean">
+ 	<target name="clean">
         <delete dir="${generated.dir}"/>
         <delete dir="${build.dir}"/>
         <delete dir="${dist.dir}"/>
