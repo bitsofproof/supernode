@@ -1053,7 +1053,7 @@ class JpaBlockStore implements BlockStore
 				owners.add (o);
 				out.setVotes (1L);
 			}
-			if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
+			else if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
 					&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
 			{
 				// pay to address
@@ -1063,27 +1063,30 @@ class JpaBlockStore implements BlockStore
 				owners.add (o);
 				out.setVotes (1L);
 			}
-			if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+			else if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
 					&& parsed.get (2).op == Opcode.OP_EQUAL )
 			{
 				// pay to script
 			}
-			for ( int i = 0; i < parsed.size (); ++i )
+			else
 			{
-				if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+				for ( int i = 0; i < parsed.size (); ++i )
 				{
-					if ( chain.isProduction () || parsed.get (i - 1).data != null )
+					if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
 					{
-						int nkeys = Script.intValue (parsed.get (i - 1).data);
-						for ( int j = 0; j < nkeys; ++j )
+						if ( chain.isProduction () )
 						{
-							Owner o = new Owner ();
-							o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
-							o.setOutpoint (out);
-							owners.add (o);
+							int nkeys = parsed.get (i - 1).op.ordinal () - Opcode.OP_1.ordinal () + 1;
+							for ( int j = 0; j < nkeys; ++j )
+							{
+								Owner o = new Owner ();
+								o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+								o.setOutpoint (out);
+								owners.add (o);
+							}
+							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - Opcode.OP_1.ordinal () + 1);
+							return;
 						}
-						out.setVotes ((long) Script.intValue (parsed.get (i - nkeys - 2).data));
-						return;
 					}
 				}
 			}
