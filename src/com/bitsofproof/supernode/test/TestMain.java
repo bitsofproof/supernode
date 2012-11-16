@@ -33,7 +33,7 @@ public class TestMain
 			log.trace ("Spring context setup");
 			ApplicationContext context = new ClassPathXmlApplicationContext ("testassembly.xml");
 			Application application = context.getBean (Application.class);
-			application.start (context, args);
+			application.start (args);
 		}
 		catch ( Exception e )
 		{

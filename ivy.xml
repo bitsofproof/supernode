@@ -29,6 +29,9 @@
 			<exclude module="geronimo-jpa_3.0_spec"/> <!-- redefined javax.presistence.spi -->
 			<exclude module="com.springsource.org.hibernate.validator"/>
 		</dependency>
+		
+		<dependency org="org.mortbay.jetty" name="jetty-spring" rev="8.0.0.RC0"/>
+		
 		<dependency org="org.json" name="json" rev="20090211"/>
 		<dependency org="javax.validation" name="validation-api" rev="1.0.0.GA"/>
 		<dependency org="org.apache.derby" name="derbyclient" rev="10.9.1.0"/>

@@ -92,7 +92,7 @@ public class SendCoinForm implements Serializable
 	 * @param writer
 	 * @throws IOException
 	 */
-	public void toStream (WireFormat.Writer writer) throws IOException
+	public void toWire (WireFormat.Writer writer) throws IOException
 	{
 		_tx.toWire (writer);
 		writer.writeVarInt (_keyIndexes.size ());

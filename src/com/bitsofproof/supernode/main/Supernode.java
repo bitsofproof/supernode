@@ -24,15 +24,22 @@ public class Supernode
 {
 	private static final Logger log = LoggerFactory.getLogger (Supernode.class);
 
+	private static ApplicationContext context;
+
+	public static ApplicationContext getApplicationContext ()
+	{
+		return context;
+	}
+
 	public static void main (String[] args)
 	{
 		try
 		{
 			log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
 			log.trace ("Spring context setup");
-			ApplicationContext context = new ClassPathXmlApplicationContext ("assembly.xml");
+			context = new ClassPathXmlApplicationContext ("assembly.xml");
 			Application application = context.getBean (Application.class);
-			application.start (context, args);
+			application.start (args);
 		}
 		catch ( Exception e )
 		{
