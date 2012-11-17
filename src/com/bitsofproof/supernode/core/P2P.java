@@ -265,7 +265,6 @@ public abstract class P2P
 				@Override
 				public void run ()
 				{
-					log.trace ("Listening to " + address);
 					Message m = null;
 					try
 					{
