@@ -316,7 +316,6 @@ public abstract class P2P
 		if ( !runqueue.contains (address) )
 		{
 			runqueue.add (address);
-			log.trace ("added new peer to runqueue " + address);
 		}
 	}
 
@@ -638,7 +637,7 @@ public abstract class P2P
 									if ( peer.channel.isConnectionPending () )
 									{
 										log.trace ("Give up connect on " + peer.channel);
-										peer.disconnect (CONNECTIONTIMEOUT, 0, null);
+										peer.disconnect (Integer.MAX_VALUE, 0, null);
 									}
 								}
 							}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
