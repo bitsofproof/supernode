@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
 
+import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -25,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Application
@@ -38,10 +40,31 @@ public class Application
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
+		gnuOptions.addOption ("p", "prune", true, "Prune upto given hash");
 
+		if ( network.getStore ().isEmpty () )
+		{
+			network.getStore ().resetStore (network.getChain ());
+		}
+		network.getStore ().cache ();
+
+		CommandLine cl = null;
 		try
 		{
-			parser.parse (gnuOptions, args);
+			cl = parser.parse (gnuOptions, args);
+			if ( cl.hasOption ('p') )
+			{
+				String upto = cl.getOptionValue ('p');
+				try
+				{
+					network.getStore ().prune (upto);
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Pruning failed", e);
+					return;
+				}
+			}
 		}
 		catch ( ParseException e1 )
 		{
@@ -49,11 +72,6 @@ public class Application
 			return;
 		}
 
-		if ( network.getStore ().isEmpty () )
-		{
-			network.getStore ().resetStore (network.getChain ());
-		}
-		network.getStore ().cache ();
 		network.start ();
 	}
 
