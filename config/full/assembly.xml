@@ -59,12 +59,21 @@
 			</list>
 		</property>
 	</bean>
+	
+	<bean id="discoveryChain" class="com.bitsofproof.supernode.core.DiscoveryChain">
+		<constructor-arg>
+			<list>
+				<ref bean="${peerStore}"/>
+				<ref bean="dnsDiscovery"/>
+			</list>
+		</constructor-arg>		
+	</bean>
 
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>
 			<value>10</value>
 		</constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="dnsDiscovery" />
+		<property name="discovery" ref="discoveryChain" />
 		<property name="chain" ref="${chain}" />
 		<property name="store" ref="${store}" />
 	</bean>
@@ -175,7 +184,7 @@
 				<bean class="org.eclipse.jetty.server.handler.RequestLogHandler">
 					<property name="requestLog">
 						<bean class="org.eclipse.jetty.server.NCSARequestLog">
-							<constructor-arg value="jetty-yyyy_mm_dd.request.log" />
+							<constructor-arg value="${logdir}/jetty-yyyy_mm_dd.request.log" />
 							<property name="extended" value="false" />
 						</bean>
 					</property>
