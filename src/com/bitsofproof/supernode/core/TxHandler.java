@@ -105,6 +105,7 @@ public class TxHandler implements ChainListener
 							}
 							catch ( ValidationException e )
 							{
+								peer.error ("Received invalid transaction", 50);
 								log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress (), e);
 							}
 							return false;

@@ -55,6 +55,8 @@ public class ChainLoader
 
 	private final List<ChainListener> chainListener = new ArrayList<ChainListener> ();
 
+	private final static int ORPHANLIMIT = 1000;
+
 	private class KnownBlock
 	{
 		private int nr;
@@ -104,6 +106,7 @@ public class ChainLoader
 					catch ( ValidationException e )
 					{
 						log.trace ("Rejecting block " + block.getHash () + " from " + peer.getAddress (), e);
+						peer.ban ("Sent invalid block");
 					}
 				}
 				else
@@ -116,6 +119,12 @@ public class ChainLoader
 					}
 					pendingList.add (block);
 					havePending.put (block.getHash (), block);
+					if ( havePending.size () > ORPHANLIMIT )
+					{
+						havePending.clear ();
+						pendingOn.clear ();
+						log.warn ("Orphan block limit exceeded. Resetting cache.");
+					}
 				}
 				HashSet<String> peerRequests;
 				synchronized ( knownInventory )

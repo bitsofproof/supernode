@@ -63,6 +63,7 @@ public class BitcoinPeer extends P2P.Peer
 	private long lastSpoken;
 	private long trafficIn;
 	private long trafficOut;
+	private long errors;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -287,6 +288,15 @@ public class BitcoinPeer extends P2P.Peer
 	public String getAgent ()
 	{
 		return agent;
+	}
+
+	public void error (String reason, int severity)
+	{
+		errors += severity;
+		if ( errors >= 100 )
+		{
+			ban (reason);
+		}
 	}
 
 	public void ban (String reason)
