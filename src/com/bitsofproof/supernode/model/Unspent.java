@@ -1,14 +1,14 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 @Entity
@@ -21,11 +21,11 @@ public class Unspent implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	@ManyToOne (optional = false, fetch = FetchType.LAZY)
-	private Blk upto;
+	@Column (length = 64, nullable = false, unique = true)
+	private String upto;
 
-	@OneToMany (fetch = FetchType.LAZY)
-	private List<TxOut> outputs;
+	@ManyToMany (fetch = FetchType.LAZY)
+	private Set<TxOut> outputs;
 
 	public Long getId ()
 	{
@@ -37,22 +37,22 @@ public class Unspent implements Serializable
 		this.id = id;
 	}
 
-	public Blk getUpto ()
+	public String getUpto ()
 	{
 		return upto;
 	}
 
-	public void setUpto (Blk upto)
+	public void setUpto (String upto)
 	{
 		this.upto = upto;
 	}
 
-	public List<TxOut> getOutputs ()
+	public Set<TxOut> getOutputs ()
 	{
 		return outputs;
 	}
 
-	public void setOutputs (List<TxOut> outputs)
+	public void setOutputs (Set<TxOut> outputs)
 	{
 		this.outputs = outputs;
 	}
