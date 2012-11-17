@@ -68,6 +68,13 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 					}
 				}, timeout, TimeUnit.SECONDS);
 			}
+			else
+			{
+				if ( peer.getLastSpoken () > System.currentTimeMillis () / 1000 - 2 * delay )
+				{
+					log.trace ("Disconnected silent old peer " + peer.getAddress ());
+				}
+			}
 		}
 	}
 
