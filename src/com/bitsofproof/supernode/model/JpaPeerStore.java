@@ -16,7 +16,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Discovery;
 import com.mysema.query.jpa.impl.JPAQuery;
 
@@ -75,7 +74,7 @@ public class JpaPeerStore implements Discovery, PeerStore
 		{
 			try
 			{
-				peers.add (InetAddress.getByAddress (ByteUtils.fromHex (kp.getAddress ())));
+				peers.add (InetAddress.getByName (kp.getAddress ()));
 			}
 			catch ( UnknownHostException e )
 			{
