@@ -300,7 +300,7 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
 			p.setTrafficIn (trafficIn);
-			p.setTrafficIn (trafficOut);
+			p.setTrafficOut (trafficOut);
 			p.setDisconnected (System.currentTimeMillis () / 1000);
 			if ( timeout > 0 )
 			{
