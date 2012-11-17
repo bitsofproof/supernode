@@ -918,7 +918,7 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( o.getScript ().length > 520 )
 				{
-					if ( tcontext.block != null && tcontext.block.getHeight () < 80000 )
+					if ( tcontext.block != null && tcontext.block.getHeight () < 200000 )
 					{
 						log.trace ("Old DoS at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
 					}
