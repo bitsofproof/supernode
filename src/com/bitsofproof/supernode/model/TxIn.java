@@ -58,7 +58,7 @@ public class TxIn implements Serializable, Cloneable
 	private long sequence = 0xFFFFFFFFL;
 
 	@Lob
-	@Basic (fetch = FetchType.EAGER)
+	@Basic (fetch = FetchType.LAZY)
 	// scriptSig
 	private byte[] script;
 

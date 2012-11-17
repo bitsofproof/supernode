@@ -49,7 +49,7 @@ public class TxOut implements Serializable
 	private long value;
 
 	@Lob
-	@Basic (fetch = FetchType.EAGER)
+	@Basic (fetch = FetchType.LAZY)
 	// scriptPubKey
 	private byte[] script;
 
