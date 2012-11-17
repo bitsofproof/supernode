@@ -229,15 +229,18 @@ public class BitcoinPeer extends P2P.Peer
 							log.trace ("Disconnecting banned peer " + address);
 							peer.disconnect ();
 						}
-						p.setAddress (address.getAddress ().getHostAddress ());
-						p.setName (address.toString ());
-						p.setVersion (peerVersion);
-						p.setHeight (height);
-						p.setAgent (agent);
-						p.setServices (peerServices);
-						p.setResponseTime (Integer.MAX_VALUE);
-						p.setConnected (System.currentTimeMillis () / 1000);
-						network.getPeerStore ().store (p);
+						else
+						{
+							p.setAddress (address.getAddress ().getHostAddress ());
+							p.setName (address.toString ());
+							p.setVersion (peerVersion);
+							p.setHeight (height);
+							p.setAgent (agent);
+							p.setServices (peerServices);
+							p.setResponseTime (Integer.MAX_VALUE);
+							p.setConnected (System.currentTimeMillis () / 1000);
+							network.getPeerStore ().store (p);
+						}
 					}
 					if ( !outgoing )
 					{
