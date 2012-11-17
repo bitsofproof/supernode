@@ -976,7 +976,6 @@ class JpaBlockStore implements BlockStore
 			int inNumber = 0;
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			HashMap<Integer, TxOut> resolved = tcontext.resolvedInputs.get (t.getHash ());
-			final Set<String> signatureCache = new HashSet<String> ();
 			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
@@ -998,7 +997,7 @@ class JpaBlockStore implements BlockStore
 					{
 						try
 						{
-							if ( !new Script (t, nr, signatureCache).evaluate (chain.isProduction ()) )
+							if ( !new Script (t, nr).evaluate (chain.isProduction ()) )
 							{
 								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
 							}

@@ -21,9 +21,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -36,7 +34,6 @@ public class Script
 {
 	private Stack<byte[]> stack = new Stack<byte[]> ();
 	private final Stack<byte[]> alt = new Stack<byte[]> ();
-	private Set<String> validSignatureCache = new HashSet<String> ();
 	private final Tx tx;
 	private int inr;
 
@@ -478,13 +475,6 @@ public class Script
 	{
 		this.tx = tx;
 		this.inr = inr;
-	}
-
-	public Script (Tx tx, int inr, Set<String> sigCache)
-	{
-		this.tx = tx;
-		this.inr = inr;
-		this.validSignatureCache = sigCache;
 	}
 
 	public static byte[] fromReadable (String s)
@@ -1564,26 +1554,6 @@ public class Script
 		{
 			return false;
 		}
-		StringBuffer c = new StringBuffer ();
-		c.append (ByteUtils.toHex (sig));
-		c.append (ByteUtils.toHex (pubkey));
-		c.append (ByteUtils.toHex (hash));
-		String cacheKey = c.toString ();
-		synchronized ( validSignatureCache )
-		{
-			if ( validSignatureCache.contains (cacheKey) )
-			{
-				return true;
-			}
-		}
-		if ( ECKeyPair.verify (hash, sig, pubkey) )
-		{
-			synchronized ( validSignatureCache )
-			{
-				validSignatureCache.add (cacheKey);
-			}
-			return true;
-		}
-		return false;
+		return ECKeyPair.verify (hash, sig, pubkey);
 	}
 }
