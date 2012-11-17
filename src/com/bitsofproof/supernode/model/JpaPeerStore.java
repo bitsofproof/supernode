@@ -36,8 +36,8 @@ public class JpaPeerStore implements Discovery, PeerStore
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
 		List<KnownPeer> pl =
-				q.from (kp).where (kp.banned.lt (System.currentTimeMillis () / 1000)).orderBy (kp.preference.desc ()).orderBy (kp.responseTime.desc ())
-						.orderBy (kp.connected.desc ()).list (kp);
+				q.from (kp).where (kp.banned.lt (System.currentTimeMillis () / 1000)).orderBy (kp.preference.desc ()).orderBy (kp.height.desc ())
+						.orderBy (kp.responseTime.desc ()).orderBy (kp.connected.desc ()).list (kp);
 		log.trace ("Retrieved " + pl.size () + " peers from store");
 		return pl;
 	}
