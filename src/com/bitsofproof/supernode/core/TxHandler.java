@@ -16,9 +16,12 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +48,7 @@ public class TxHandler implements ChainListener
 
 	private PlatformTransactionManager transactionManager;
 
+	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
 	private final Map<String, ArrayList<TxIn>> spentByAddress = new HashMap<String, ArrayList<TxIn>> ();
 	private final Map<String, ArrayList<TxOut>> receivedByAddress = new HashMap<String, ArrayList<TxOut>> ();
@@ -63,13 +67,11 @@ public class TxHandler implements ChainListener
 				for ( byte[] h : im.getTransactionHashes () )
 				{
 					String hash = new Hash (h).toString ();
-					synchronized ( unconfirmed )
+					if ( !heard.contains (hash) )
 					{
-						if ( unconfirmed.get (hash) == null )
-						{
-							log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
-							get.getTransactions ().add (h);
-						}
+						heard.add (hash);
+						log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
+						get.getTransactions ().add (h);
 					}
 				}
 				if ( !loader.isBehind () && get.getTransactions ().size () > 0 )
@@ -86,6 +88,7 @@ public class TxHandler implements ChainListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+				heard.remove (txm.getTx ().getHash ());
 				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) && !loader.isBehind () )
 				{
 					if ( new TransactionTemplate (transactionManager).execute (new TransactionCallback<Boolean> ()
@@ -213,6 +216,7 @@ public class TxHandler implements ChainListener
 					}
 					for ( Tx tx : blk.getTransactions () )
 					{
+						heard.remove (tx.getHash ());
 						unconfirmed.remove (tx.getHash ());
 						for ( TxIn in : tx.getInputs () )
 						{
