@@ -312,19 +312,22 @@ public class BitcoinPeer extends P2P.Peer
 		if ( network.getPeerStore () != null )
 		{
 			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-			p.setTrafficIn (trafficIn);
-			p.setTrafficOut (trafficOut);
-			p.setDisconnected (System.currentTimeMillis () / 1000);
-			if ( timeout > 0 )
+			if ( p != null )
 			{
-				p.setResponseTime (timeout * 1000 + 1);
+				p.setTrafficIn (trafficIn);
+				p.setTrafficOut (trafficOut);
+				p.setDisconnected (System.currentTimeMillis () / 1000);
+				if ( timeout > 0 )
+				{
+					p.setResponseTime (timeout * 1000 + 1);
+				}
+				if ( bannedForSeconds > 0 )
+				{
+					p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
+					p.setBanReason (reason);
+				}
+				network.getPeerStore ().store (p);
 			}
-			if ( bannedForSeconds > 0 )
-			{
-				p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
-				p.setBanReason (reason);
-			}
-			network.getPeerStore ().store (p);
 		}
 	}
 
