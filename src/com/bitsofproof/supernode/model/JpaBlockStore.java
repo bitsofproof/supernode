@@ -855,7 +855,8 @@ class JpaBlockStore implements BlockStore
 			{
 				try
 				{
-					if ( chain.isProduction () && tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
+					// some miner add 0 with garbage...
+					if ( chain.isProduction () && o.getValue () != 0 && tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
 					{
 						throw new TransactionValidationException ("Nonstandard script rejected", t);
 					}
