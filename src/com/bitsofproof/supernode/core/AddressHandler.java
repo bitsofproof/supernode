@@ -21,13 +21,16 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.core.WireFormat.Address;
 import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
+import com.bitsofproof.supernode.model.KnownPeer;
 
 public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 {
 	private static final Logger log = LoggerFactory.getLogger (AddressHandler.class);
+	private final BitcoinNetwork network;
 
 	public AddressHandler (BitcoinNetwork network)
 	{
+		this.network = network;
 		network.addListener ("addr", this);
 	}
 
@@ -38,6 +41,17 @@ public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 		{
 			log.trace ("received address " + a.address + " from " + peer.getAddress ().getAddress ());
 			peer.getNetwork ().addPeer (a.address, (int) a.port);
+			if ( network.getPeerStore () != null )
+			{
+				KnownPeer p = network.getPeerStore ().findPeer (a.address);
+				if ( p == null )
+				{
+					p = new KnownPeer ();
+					p.setAddress (a.address.getHostAddress ());
+					p.setResponseTime (Integer.MAX_VALUE);
+					network.getPeerStore ().store (p);
+				}
+			}
 		}
 	}
 }

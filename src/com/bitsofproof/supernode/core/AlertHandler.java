@@ -42,8 +42,8 @@ public class AlertHandler implements BitcoinMessageListener<AlertMessage>
 		}
 		else
 		{
-			log.trace ("rejected unauthorized alert. Disconnecting.");
-			peer.disconnect ();
+			log.trace ("Rejected unauthorized alert. Banning.");
+			peer.ban ("Unauthorized alert");
 		}
 	}
 }

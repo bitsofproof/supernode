@@ -45,10 +45,13 @@ import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.messages.VersionMessage;
+import com.bitsofproof.supernode.model.KnownPeer;
 
 public class BitcoinPeer extends P2P.Peer
 {
 	private static final Logger log = LoggerFactory.getLogger (BitcoinPeer.class);
+
+	private static final long BANTIME = 24 * 60 * 60;
 
 	private final BitcoinNetwork network;
 
@@ -58,6 +61,8 @@ public class BitcoinPeer extends P2P.Peer
 	private long peerServices;
 	private final boolean outgoing;
 	private long lastSpoken;
+	private long trafficIn;
+	private long trafficOut;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -105,7 +110,9 @@ public class BitcoinPeer extends P2P.Peer
 			writer.writeBytes (checksum);
 
 			writer.writeBytes (data);
-			return writer.toByteArray ();
+			byte[] a = writer.toByteArray ();
+			trafficOut += a.length;
+			return a;
 		}
 
 		public void toWire (WireFormat.Writer writer)
@@ -167,7 +174,12 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new TxMessage (this);
 		}
-
+		else if ( command.equals ("verack") )
+		{
+			return new Message (command);
+		}
+		log.trace ("Peer sent unknown message. Banned. " + getAddress ());
+		ban ("Sent unknown message");
 		return new Message (command);
 	}
 
@@ -179,7 +191,7 @@ public class BitcoinPeer extends P2P.Peer
 	private final Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections
 			.synchronizedMap (new HashMap<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> ());
 
-	protected BitcoinPeer (P2P p2p, InetSocketAddress address, boolean out)
+	protected BitcoinPeer (P2P p2p, final InetSocketAddress address, boolean out)
 	{
 		p2p.super (address);
 		network = (BitcoinNetwork) p2p;
@@ -195,7 +207,7 @@ public class BitcoinPeer extends P2P.Peer
 			{
 				if ( v.getNonce () == network.getVersionNonce () )
 				{
-					disconnect (); // connect to self
+					disconnect (0, Integer.MAX_VALUE, "myself"); // connect to self
 				}
 				else
 				{
@@ -203,6 +215,30 @@ public class BitcoinPeer extends P2P.Peer
 					height = v.getHeight ();
 					peerVersion = Math.min (peerVersion, v.getVersion ());
 					peerServices = v.getServices ();
+					if ( network.getPeerStore () != null )
+					{
+						KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
+						if ( p == null )
+						{
+							p = new KnownPeer ();
+						}
+						trafficIn = p.getTrafficIn ();
+						trafficOut = p.getTrafficOut ();
+						if ( p.getBanned () > System.currentTimeMillis () / 1000 )
+						{
+							log.trace ("Disconnecting banned peer " + address);
+							peer.disconnect ();
+						}
+						p.setAddress (address.getAddress ().getHostAddress ());
+						p.setName (address.toString ());
+						p.setVersion (peerVersion);
+						p.setHeight (height);
+						p.setAgent (agent);
+						p.setServices (peerServices);
+						p.setResponseTime (Integer.MAX_VALUE);
+						p.setConnected (System.currentTimeMillis () / 1000);
+						network.getPeerStore ().store (p);
+					}
 					if ( !outgoing )
 					{
 						onConnect ();
@@ -250,11 +286,33 @@ public class BitcoinPeer extends P2P.Peer
 		return agent;
 	}
 
+	public void ban (String reason)
+	{
+		disconnect (0, BANTIME, reason);
+	}
+
 	@Override
-	protected void onDisconnect ()
+	protected void onDisconnect (long timeout, long bannedForSeconds, String reason)
 	{
 		network.notifyPeerRemoved (this);
 		log.info ("Disconnected '" + getAgent () + "' at " + getAddress () + ". Open connections: " + getNetwork ().getNumberOfConnections ());
+		if ( network.getPeerStore () != null )
+		{
+			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
+			p.setTrafficIn (trafficIn);
+			p.setTrafficIn (trafficOut);
+			p.setDisconnected (System.currentTimeMillis () / 1000);
+			if ( timeout > 0 )
+			{
+				p.setResponseTime (timeout * 1000 + 1);
+			}
+			if ( bannedForSeconds > 0 )
+			{
+				p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
+				p.setBanReason (reason);
+			}
+			network.getPeerStore ().store (p);
+		}
 	}
 
 	private static final int MAX_BLOCK_SIZE = 1000000;
@@ -273,6 +331,8 @@ public class BitcoinPeer extends P2P.Peer
 			long mag = reader.readUint32 ();
 			if ( mag != network.getChain ().getMagic () )
 			{
+				log.trace ("Peer talks to thw wrong chain. Banned.");
+				ban ("Talked to the wrong chain");
 				throw new ValidationException ("Wrong magic for this chain " + getAddress ());
 			}
 
@@ -282,6 +342,8 @@ public class BitcoinPeer extends P2P.Peer
 			byte[] checksum = reader.readBytes (4);
 			if ( length < 0 || length >= MAX_BLOCK_SIZE )
 			{
+				log.trace ("Peer sends oversize message. Banned.");
+				ban ("Sent oversize message");
 				throw new ValidationException ("Block size limit exceeded " + getAddress ());
 			}
 			else
@@ -289,18 +351,21 @@ public class BitcoinPeer extends P2P.Peer
 				byte[] buf = new byte[(int) length];
 				if ( readIn.read (buf) != buf.length )
 				{
+					ban ("Message length mismatch");
 					throw new ValidationException ("Package length mismatch " + getAddress ());
 				}
 				byte[] cs = new byte[4];
 				System.arraycopy (Hash.hash (buf), 0, cs, 0, 4);
 				if ( !Arrays.equals (cs, checksum) )
 				{
+					ban ("Message checksum mismatch");
 					throw new ValidationException ("Checksum mismatch " + getAddress ());
 				}
 
 				m.fromWire (new WireFormat.Reader (buf));
 			}
 			lastSpoken = System.currentTimeMillis () / 1000;
+			trafficIn += length;
 			return m;
 		}
 		catch ( ValidationException e )

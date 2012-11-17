@@ -18,26 +18,63 @@ public class KnownPeer implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	@Column (length = 32, nullable = false, unique = true)
+	@Column (length = 40, nullable = false, unique = true)
 	private String address;
 
-	private long lastSeen;
-
 	private long version;
+
+	private long services;
 
 	private long height;
 
 	@Column (length = 256, nullable = true)
 	private String name;
 
-	@Column (length = 32, nullable = false)
+	@Column (length = 32, nullable = true)
 	private String agent;
 
 	private long responseTime;
 
-	private long traffic;
+	private long connected;
+	private long disconnected;
+
+	private long trafficIn;
+	private long trafficOut;
 
 	private long banned;
+
+	@Column (length = 256, nullable = true)
+	private String banReason;
+
+	public long getConnected ()
+	{
+		return connected;
+	}
+
+	public void setConnected (long connected)
+	{
+		this.connected = connected;
+	}
+
+	public long getDisconnected ()
+	{
+		return disconnected;
+	}
+
+	public void setDisconnected (long disconnected)
+	{
+		this.disconnected = disconnected;
+	}
+
+	public String getBanReason ()
+	{
+		return banReason;
+	}
+
+	public void setBanReason (String banReason)
+	{
+		this.banReason = banReason;
+	}
 
 	private long preference;
 
@@ -59,16 +96,6 @@ public class KnownPeer implements Serializable
 	public void setAddress (String address)
 	{
 		this.address = address;
-	}
-
-	public long getLastSeen ()
-	{
-		return lastSeen;
-	}
-
-	public void setLastSeen (long lastSeen)
-	{
-		this.lastSeen = lastSeen;
 	}
 
 	public long getVersion ()
@@ -111,14 +138,34 @@ public class KnownPeer implements Serializable
 		this.responseTime = responseTime;
 	}
 
-	public long getTraffic ()
+	public String getName ()
 	{
-		return traffic;
+		return name;
 	}
 
-	public void setTraffic (long traffic)
+	public void setName (String name)
 	{
-		this.traffic = traffic;
+		this.name = name;
+	}
+
+	public long getTrafficIn ()
+	{
+		return trafficIn;
+	}
+
+	public void setTrafficIn (long trafficIn)
+	{
+		this.trafficIn = trafficIn;
+	}
+
+	public long getTrafficOut ()
+	{
+		return trafficOut;
+	}
+
+	public void setTrafficOut (long trafficOut)
+	{
+		this.trafficOut = trafficOut;
 	}
 
 	public long getBanned ()
@@ -139,6 +186,16 @@ public class KnownPeer implements Serializable
 	public void setPreference (long preference)
 	{
 		this.preference = preference;
+	}
+
+	public long getServices ()
+	{
+		return services;
+	}
+
+	public void setServices (long services)
+	{
+		this.services = services;
 	}
 
 }

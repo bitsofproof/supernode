@@ -219,7 +219,12 @@ public abstract class P2P
 			return address;
 		}
 
-		public void disconnect ()
+		protected void disconnect ()
+		{
+			disconnect (0, 0, null);
+		}
+
+		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
 			if ( !connectedPeers.containsKey (channel) )
 			{
@@ -241,7 +246,7 @@ public abstract class P2P
 					@Override
 					public void run ()
 					{
-						onDisconnect ();
+						onDisconnect (timeout, bannedFor, reason);
 					}
 				});
 				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
@@ -295,7 +300,7 @@ public abstract class P2P
 
 		protected abstract void onConnect ();
 
-		protected abstract void onDisconnect ();
+		protected abstract void onDisconnect (long timeout, long bannedForSeconds, String reason);
 
 		protected abstract boolean isHandshakeSuccessful ();
 
@@ -632,16 +637,8 @@ public abstract class P2P
 								{
 									if ( peer.channel.isConnectionPending () )
 									{
-										try
-										{
-											log.trace ("Give up connect on " + peer.channel);
-											peer.channel.close ();
-											connectedPeers.remove (peer);
-											connectSlot.release ();
-										}
-										catch ( IOException e )
-										{
-										}
+										log.trace ("Give up connect on " + peer.channel);
+										peer.disconnect (CONNECTIONTIMEOUT, 0, null);
 									}
 								}
 							}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);

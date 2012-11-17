@@ -37,8 +37,8 @@ public class JpaPeerStore implements Discovery, PeerStore
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
 		List<KnownPeer> pl =
-				q.from (kp).where (kp.banned.lt (System.currentTimeMillis () / 1000)).orderBy (kp.preference.desc ()).orderBy (kp.lastSeen.desc ())
-						.orderBy (kp.responseTime.desc ()).list (kp);
+				q.from (kp).where (kp.banned.lt (System.currentTimeMillis () / 1000)).orderBy (kp.preference.desc ()).orderBy (kp.responseTime.desc ())
+						.orderBy (kp.connected.desc ()).list (kp);
 		log.trace ("Retrieved " + pl.size () + " peers from store");
 		return pl;
 	}
@@ -57,15 +57,10 @@ public class JpaPeerStore implements Discovery, PeerStore
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
-		KnownPeer peer = q.from (kp).where (kp.address.eq (ByteUtils.toHex (address.getAddress ()))).uniqueResult (kp);
+		KnownPeer peer = q.from (kp).where (kp.address.eq (address.getHostAddress ())).uniqueResult (kp);
 		if ( peer != null )
 		{
 			log.trace ("Retrieved peer " + peer.getAddress ());
-		}
-		else
-		{
-			peer = new KnownPeer ();
-			log.trace ("Just met new peer " + peer.getAddress ());
 		}
 		return peer;
 	}

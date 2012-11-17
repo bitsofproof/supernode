@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.model.BlockStore;
+import com.bitsofproof.supernode.model.PeerStore;
 
 public class BitcoinNetwork extends P2P
 {
@@ -46,6 +47,7 @@ public class BitcoinNetwork extends P2P
 	private Chain chain;
 	private BlockStore store;
 	private Discovery discovery;
+	private PeerStore peerStore;
 
 	private final long versionNonce = new SecureRandom ().nextLong ();
 
@@ -262,6 +264,16 @@ public class BitcoinNetwork extends P2P
 	public void setDiscovery (Discovery discovery)
 	{
 		this.discovery = discovery;
+	}
+
+	public PeerStore getPeerStore ()
+	{
+		return peerStore;
+	}
+
+	public void setPeerStore (PeerStore peerStore)
+	{
+		this.peerStore = peerStore;
 	}
 
 }
