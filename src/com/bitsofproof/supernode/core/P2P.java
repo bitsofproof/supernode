@@ -40,6 +40,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -264,6 +265,7 @@ public abstract class P2P
 				@Override
 				public void run ()
 				{
+					log.trace ("Listening to " + address);
 					Message m = null;
 					try
 					{
@@ -391,6 +393,27 @@ public abstract class P2P
 
 	private final Thread connector;
 
+	private static class PeerFactory implements ThreadFactory
+	{
+		final static AtomicInteger peerNumber = new AtomicInteger (0);
+
+		@Override
+		public Thread newThread (final Runnable r)
+		{
+			Thread peerThread = new Thread ()
+			{
+				@Override
+				public void run ()
+				{
+					r.run ();
+				}
+			};
+			peerThread.setDaemon (false);
+			peerThread.setName ("Peer-thread-" + peerNumber.getAndIncrement ());
+			return peerThread;
+		}
+	}
+
 	public P2P (int connections) throws IOException
 	{
 		desiredConnections = connections;
@@ -398,24 +421,7 @@ public abstract class P2P
 		// create a pool of threads
 		peerThreads =
 				(ThreadPoolExecutor) Executors.newFixedThreadPool (Math.min (desiredConnections, Runtime.getRuntime ().availableProcessors () * 2),
-						new ThreadFactory ()
-						{
-							@Override
-							public Thread newThread (final Runnable r)
-							{
-								Thread peerThread = new Thread ()
-								{
-									@Override
-									public void run ()
-									{
-										r.run ();
-									}
-								};
-								peerThread.setDaemon (false);
-								peerThread.setName ("Peer");
-								return peerThread;
-							}
-						});
+						new PeerFactory ());
 
 		selector = Selector.open ();
 		// this thread waits on the selector above and acts on events
