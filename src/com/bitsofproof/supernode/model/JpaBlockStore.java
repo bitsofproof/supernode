@@ -85,6 +85,14 @@ class JpaBlockStore implements BlockStore
 		private String txhash;
 		private long ix;
 
+		public static CachedUnspent key (String hash, long ix)
+		{
+			CachedUnspent cu = new CachedUnspent ();
+			cu.txhash = hash;
+			cu.ix = ix;
+			return cu;
+		}
+
 		@Override
 		public boolean equals (Object obj)
 		{
@@ -242,44 +250,112 @@ class JpaBlockStore implements BlockStore
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
 			}
-			log.trace ("filling unspent txout cache");
-			QUnspent uns = QUnspent.unspent;
-			q = new JPAQuery (entityManager);
-			List<Unspent> ul = q.from (uns).list (uns);
-			CachedBlock b = currentHead.last;
-			CachedBlock p = b.previous;
-			Unspent unspent = null;
-			while ( p != null )
-			{
-				for ( Unspent u : ul )
-				{
-					if ( u.getUpto ().getHash ().equals (b.hash) )
-					{
-						unspent = u;
-						break;
-					}
-				}
-				if ( unspent != null )
-				{
-					break;
-				}
-				b = p;
-				p = b.previous;
-			}
-			if ( unspent != null )
-			{
-				for ( TxOut out : unspent.getOutputs () )
-				{
-					CachedUnspent cu = new CachedUnspent ();
-					cu.ix = out.getIx ();
-					cu.txhash = out.getTransaction ().getHash ();
-					unspentTxOut.put (cu, out.getId ());
-				}
-			}
+			fillUnspentCache ();
 		}
 		finally
 		{
 			lock.writeLock ().unlock ();
+		}
+	}
+
+	private void fillUnspentCache ()
+	{
+		log.trace ("filling unspent txout cache");
+		unspentTxOut.clear ();
+		QUnspent uns = QUnspent.unspent;
+		JPAQuery q = new JPAQuery (entityManager);
+		List<Unspent> ul = q.from (uns).list (uns);
+		CachedBlock b = currentHead.last;
+		CachedBlock p = b.previous;
+		Unspent unspent = null;
+		while ( p != null )
+		{
+			for ( Unspent u : ul )
+			{
+				if ( u.getUpto ().equals (b.hash) )
+				{
+					unspent = u;
+					break;
+				}
+			}
+			if ( unspent != null )
+			{
+				break;
+			}
+			b = p;
+			p = b.previous;
+		}
+		if ( unspent != null )
+		{
+			for ( TxOut out : unspent.getOutputs () )
+			{
+				unspentTxOut.put (CachedUnspent.key (out.getTransaction ().getHash (), out.getIx ()), out.getId ());
+			}
+		}
+	}
+
+	@Transactional (propagation = Propagation.REQUIRED)
+	@Override
+	public void prune (String upto) throws ValidationException
+	{
+		log.trace ("Pruning upto " + upto);
+		CachedBlock b = currentHead.last;
+		CachedBlock p = b.previous;
+		while ( p != null )
+		{
+			if ( b.getHash ().equals (upto) )
+			{
+				break;
+			}
+			b = p;
+			p = b.previous;
+		}
+
+		QUnspent uns = QUnspent.unspent;
+		JPAQuery q = new JPAQuery (entityManager);
+		Map<String, Unspent> ulm = new HashMap<String, Unspent> ();
+		for ( Unspent u : q.from (uns).list (uns) )
+		{
+			ulm.put (u.getUpto (), u);
+		}
+		Unspent unspent = null;
+		List<String> path = new ArrayList<String> ();
+		while ( p != null )
+		{
+			if ( (unspent = ulm.get (b.hash)) != null )
+			{
+				break;
+			}
+			path.add (b.hash);
+			b = p;
+			p = b.previous;
+		}
+		if ( unspent == null )
+		{
+			unspent = new Unspent ();
+			unspent.setOutputs (new HashSet<TxOut> ());
+			for ( Tx t : entityManager.find (Blk.class, b.id).getTransactions () )
+			{
+				unspent.getOutputs ().addAll (t.getOutputs ());
+			}
+		}
+		if ( !path.isEmpty () )
+		{
+			QBlk blk = QBlk.blk;
+			QTx tx = QTx.tx;
+			QTxOut txout = QTxOut.txOut;
+			QTxIn txin = QTxIn.txIn;
+
+			q = new JPAQuery (entityManager);
+			unspent.getOutputs ().addAll (q.from (blk).join (blk.transactions, tx).join (tx.outputs, txout).where (blk.hash.in (path)).list (txout));
+
+			q = new JPAQuery (entityManager);
+			unspent.getOutputs ().removeAll (
+					q.from (blk).join (blk.transactions, tx).join (tx.inputs, txin).join (txin.source, txout).where (blk.hash.in (path)).list (txout));
+
+			unspent.setUpto (upto);
+			unspent = entityManager.merge (unspent);
+			fillUnspentCache ();
 		}
 	}
 
