@@ -75,9 +75,28 @@ class JpaBlockStore implements BlockStore
 	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
+	private final Map<CachedUnspent, Long> unspentTxOut = new HashMap<CachedUnspent, Long> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
+
+	private static class CachedUnspent
+	{
+		private String txhash;
+		private long ix;
+
+		@Override
+		public boolean equals (Object obj)
+		{
+			return txhash.equals (((CachedUnspent) obj).txhash) && ix == ((CachedUnspent) obj).ix;
+		}
+
+		@Override
+		public int hashCode ()
+		{
+			return txhash.hashCode ();
+		}
+	}
 
 	private static class CachedHead
 	{
@@ -222,6 +241,40 @@ class JpaBlockStore implements BlockStore
 				CachedHead h = cachedHeads.get (b.getHead ().getId ());
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
+			}
+			log.trace ("filling unspent txout cache");
+			QUnspent uns = QUnspent.unspent;
+			q = new JPAQuery (entityManager);
+			List<Unspent> ul = q.from (uns).list (uns);
+			CachedBlock b = currentHead.last;
+			CachedBlock p = b.previous;
+			Unspent unspent = null;
+			while ( p != null )
+			{
+				for ( Unspent u : ul )
+				{
+					if ( u.getUpto ().getHash ().equals (b.hash) )
+					{
+						unspent = u;
+						break;
+					}
+				}
+				if ( unspent != null )
+				{
+					break;
+				}
+				b = p;
+				p = b.previous;
+			}
+			if ( unspent != null )
+			{
+				for ( TxOut out : unspent.getOutputs () )
+				{
+					CachedUnspent cu = new CachedUnspent ();
+					cu.ix = out.getIx ();
+					cu.txhash = out.getTransaction ().getHash ();
+					unspentTxOut.put (cu, out.getId ());
+				}
 			}
 		}
 		finally
@@ -741,6 +794,7 @@ class JpaBlockStore implements BlockStore
 		}
 
 		Set<String> inputtx = new HashSet<String> ();
+		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
 			ArrayList<TxOut> outs;
@@ -753,7 +807,18 @@ class JpaBlockStore implements BlockStore
 			}
 			else
 			{
-				inputtx.add (i.getSourceHash ());
+				CachedUnspent cu = new CachedUnspent ();
+				cu.txhash = i.getSourceHash ();
+				cu.ix = i.getIx ();
+				Long txoutId = unspentTxOut.get (cu);
+				if ( txoutId != null )
+				{
+					resolved.put (nr++, entityManager.find (TxOut.class, txoutId));
+				}
+				else
+				{
+					inputtx.add (i.getSourceHash ());
+				}
 			}
 		}
 
@@ -781,9 +846,14 @@ class JpaBlockStore implements BlockStore
 		}
 		// check for double spending
 		Set<TxOut> outs = new HashSet<TxOut> ();
-		int nr = 0;
+		nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
+			if ( resolved.containsKey (nr) )
+			{
+				continue;
+			}
+
 			ArrayList<TxOut> cached;
 			TxOut transactionOutput = null;
 			if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
@@ -808,8 +878,8 @@ class JpaBlockStore implements BlockStore
 			// find previously spending blocks
 			List<String> dsblocks = new ArrayList<String> ();
 
-			QTx tx = QTx.tx;
 			QBlk blk = QBlk.blk;
+			QTx tx = QTx.tx;
 			QTxIn txin = QTxIn.txIn;
 			JPAQuery query = new JPAQuery (entityManager);
 			dsblocks = query.from (tx).join (tx.block, blk).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);
