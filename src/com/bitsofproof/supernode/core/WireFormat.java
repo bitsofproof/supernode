@@ -191,27 +191,6 @@ public class WireFormat
 			return hash (0, bytes.length);
 		}
 
-		public String dump (int offset, int length)
-		{
-			StringBuffer buf = new StringBuffer (length * 2);
-			for ( int i = offset; i < length; ++i )
-			{
-				byte b = bytes[i];
-				String s = Integer.toString (0xFF & b, 16);
-				if ( s.length () < 2 )
-				{
-					buf.append ('0');
-				}
-				buf.append (s);
-			}
-			return buf.toString ();
-		}
-
-		public String dump ()
-		{
-			return dump (0, bytes.length);
-		}
-
 		public Address readAddress (long version, boolean versionMessage)
 		{
 			Address address = new Address ();
