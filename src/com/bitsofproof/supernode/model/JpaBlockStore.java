@@ -294,6 +294,16 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
+	private TxOut getUnspent (String hash, long ix)
+	{
+		Long id = unspentTxOut.get (CachedUnspent.key (hash, ix));
+		if ( id != null )
+		{
+			return entityManager.find (TxOut.class, id);
+		}
+		return null;
+	}
+
 	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
 	public void prune (String upto) throws ValidationException
@@ -873,29 +883,27 @@ class JpaBlockStore implements BlockStore
 		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
-			ArrayList<TxOut> outs;
-			if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
+			TxOut out = getUnspent (i.getSourceHash (), i.getIx ());
+			if ( out != null )
 			{
-				if ( i.getIx () >= outs.size () )
-				{
-					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
-				}
+				resolved.put (nr, out);
 			}
 			else
 			{
-				CachedUnspent cu = new CachedUnspent ();
-				cu.txhash = i.getSourceHash ();
-				cu.ix = i.getIx ();
-				Long txoutId = unspentTxOut.get (cu);
-				if ( txoutId != null )
+				ArrayList<TxOut> outs;
+				if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
 				{
-					resolved.put (nr++, entityManager.find (TxOut.class, txoutId));
+					if ( i.getIx () >= outs.size () )
+					{
+						throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
+					}
 				}
 				else
 				{
 					inputtx.add (i.getSourceHash ());
 				}
 			}
+			++nr;
 		}
 
 		if ( !inputtx.isEmpty () )
@@ -925,28 +933,27 @@ class JpaBlockStore implements BlockStore
 		nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
-			if ( resolved.containsKey (nr) )
+			if ( !resolved.containsKey (nr) )
 			{
-				continue;
+				ArrayList<TxOut> cached;
+				TxOut transactionOutput = null;
+				if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
+				{
+					throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
+				}
+				transactionOutput = cached.get ((int) i.getIx ());
+				if ( transactionOutput == null )
+				{
+					throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
+				}
+				if ( transactionOutput.getId () != null )
+				{
+					// double spend within same block will be caught by the sum in/out
+					outs.add (transactionOutput);
+				}
+				resolved.put (nr, transactionOutput);
 			}
-
-			ArrayList<TxOut> cached;
-			TxOut transactionOutput = null;
-			if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
-			}
-			transactionOutput = cached.get ((int) i.getIx ());
-			if ( transactionOutput == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
-			}
-			if ( transactionOutput.getId () != null )
-			{
-				// double spend within same block will be caught by the sum in/out
-				outs.add (transactionOutput);
-			}
-			resolved.put (nr++, transactionOutput);
+			++nr;
 		}
 
 		if ( !outs.isEmpty () )
