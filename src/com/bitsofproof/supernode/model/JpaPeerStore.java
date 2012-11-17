@@ -21,7 +21,7 @@ import com.bitsofproof.supernode.core.Discovery;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaPeerStore")
-public class JpaPeerStore implements PeerStore, Discovery
+public class JpaPeerStore implements Discovery, PeerStore
 {
 	private static final Logger log = LoggerFactory.getLogger (JpaPeerStore.class);
 
@@ -31,7 +31,8 @@ public class JpaPeerStore implements PeerStore, Discovery
 	@Autowired
 	private PlatformTransactionManager transactionManager;
 
-	List<KnownPeer> getConnectablePeers ()
+	@Override
+	public List<KnownPeer> getConnectablePeers ()
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
@@ -42,15 +43,17 @@ public class JpaPeerStore implements PeerStore, Discovery
 		return pl;
 	}
 
+	@Override
 	@Transactional (propagation = Propagation.REQUIRED)
-	void store (KnownPeer peer)
+	public void store (KnownPeer peer)
 	{
 		entityManager.merge (peer);
 		log.trace ("Stored peer " + peer.getAddress ());
 	}
 
+	@Override
 	@Transactional (propagation = Propagation.REQUIRED)
-	KnownPeer findPeer (InetAddress address)
+	public KnownPeer findPeer (InetAddress address)
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
