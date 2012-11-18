@@ -57,9 +57,6 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
-	// a block can not branch from earlier than this
-	private static final int MAXBRANCH = 100;
-
 	@Autowired
 	private Chain chain;
 
@@ -72,9 +69,9 @@ class JpaBlockStore implements BlockStore
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private CachedHead currentHead = null;
-	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
+	private final Map<String, ArrayList<Integer>> unspentCache = new HashMap<String, ArrayList<Integer>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -192,7 +189,6 @@ class JpaBlockStore implements BlockStore
 				CachedHead sh = new CachedHead ();
 				sh.setChainWork (h.getChainWork ());
 				sh.setHeight (h.getHeight ());
-				heads.put (h.getLeaf (), sh);
 				if ( h.getPrevious () != null )
 				{
 					sh.setPrevious (cachedHeads.get (h.getId ()));
@@ -510,7 +506,6 @@ class JpaBlockStore implements BlockStore
 				throw new ValidationException ("Future generation attempt " + b.getHash ());
 			}
 
-			boolean branching = false;
 			Head head;
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
@@ -525,25 +520,8 @@ class JpaBlockStore implements BlockStore
 			else
 			{
 				// branching
-				branching = true;
-				// check if branch is not too far back
-				CachedBlock c = currentHead.getLast ();
-				CachedBlock p = c.getPrevious ();
-				int i = 0;
-				while ( p != null && !p.getHash ().equals (prev.getHash ()) )
-				{
-					c = p;
-					p = c.getPrevious ();
-					if ( ++i == MAXBRANCH )
-					{
-						throw new ValidationException ("attempt to branch too far back in past " + b.toWireDump ());
-					}
-				}
-
 				head = new Head ();
 				head.setTrunk (prev.getHash ());
-				head.setHeight (prev.getHeight ());
-				head.setChainWork (prev.getChainWork ());
 				head.setPrevious (prev.getHead ());
 
 				head.setLeaf (b.getHash ());
@@ -698,23 +676,95 @@ class JpaBlockStore implements BlockStore
 			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
 			cachedBlocks.put (b.getHash (), m);
 
-			CachedHead usingHead = currentHead;
-			if ( branching )
+			CachedHead usingHead = cachedHeads.get (head.getId ());
+			if ( usingHead == null )
 			{
-				heads.put (b.getHash (), usingHead = new CachedHead ());
-				cachedHeads.put (head.getId (), usingHead);
+				cachedHeads.put (head.getId (), usingHead = new CachedHead ());
 			}
 			usingHead.setLast (m);
-			usingHead.setChainWork (head.getChainWork ());
-			usingHead.setHeight (head.getHeight ());
+			usingHead.setChainWork (b.getChainWork ());
+			usingHead.setHeight (b.getHeight ());
 			usingHead.getBlocks ().add (m);
 
-			if ( head.getChainWork () > currentHead.getChainWork () )
+			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
+				// we have a new head
+				// if branching from main we have to revert unspent cache
+				if ( isBlockOnBranch (cachedBlocks.get (head.getTrunk ()), currentHead) )
+				{
+					CachedBlock p = currentHead.getLast ();
+					CachedBlock q = p.previous;
+					while ( !q.hash.equals (head.getTrunk ()) )
+					{
+						reverseCacheSpends (entityManager.find (Blk.class, p.id));
+						p = q;
+						q = p.previous;
+					}
+				}
+				// now this is the new trunk
 				currentHead = usingHead;
 			}
+			cacheSpends (b);
 
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
+		}
+	}
+
+	private void reverseCacheSpends (Blk b)
+	{
+		for ( Tx t : b.getTransactions () )
+		{
+			for ( TxIn in : t.getInputs () )
+			{
+				ArrayList<Integer> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
+				if ( ul == null )
+				{
+					ul = new ArrayList<Integer> ();
+					unspentCache.put (in.getSource ().getTransaction ().getHash (), ul);
+				}
+				ul.add ((int) in.getSource ().getIx ());
+			}
+			ArrayList<Integer> ul = unspentCache.get (t.getHash ());
+			if ( ul != null )
+			{
+				for ( TxOut out : t.getOutputs () )
+				{
+					ul.remove ((int) out.getIx ());
+					if ( ul.isEmpty () )
+					{
+						unspentCache.remove (t.getHash ());
+					}
+				}
+			}
+		}
+	}
+
+	private void cacheSpends (Blk b)
+	{
+		for ( Tx t : b.getTransactions () )
+		{
+			ArrayList<Integer> ul = unspentCache.get (t.getHash ());
+			if ( ul == null )
+			{
+				ul = new ArrayList<Integer> ();
+				unspentCache.put (t.getHash (), ul);
+			}
+			for ( TxOut out : t.getOutputs () )
+			{
+				ul.add ((int) out.getIx ());
+			}
+			for ( TxIn in : t.getInputs () )
+			{
+				ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
+				if ( ul != null )
+				{
+					ul.remove ((int) in.getSource ().getIx ());
+					if ( ul.isEmpty () )
+					{
+						unspentCache.remove (in.getSource ().getTransaction ().getHash ());
+					}
+				}
+			}
 		}
 	}
 
