@@ -341,7 +341,7 @@ public class BitcoinPeer extends P2P.Peer
 			byte[] head = new byte[24];
 			if ( readIn.read (head) != head.length )
 			{
-				throw new ValidationException ("Read timeout for " + getAddress ());
+				throw new IOException ("Read timeout for " + getAddress ());
 			}
 			WireFormat.Reader reader = new WireFormat.Reader (head);
 			long mag = reader.readUint32 ();
