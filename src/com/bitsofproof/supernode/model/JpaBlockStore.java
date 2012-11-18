@@ -716,20 +716,24 @@ class JpaBlockStore implements BlockStore
 		{
 			for ( TxIn in : t.getInputs () )
 			{
-				ArrayList<Integer> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
-				if ( ul == null )
+				if ( in.getSource () != null )
 				{
-					ul = new ArrayList<Integer> ();
-					unspentCache.put (in.getSource ().getTransaction ().getHash (), ul);
+					ArrayList<Integer> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
+					if ( ul == null )
+					{
+						ul = new ArrayList<Integer> ();
+						unspentCache.put (in.getSource ().getTransaction ().getHash (), ul);
+					}
+					ul.add ((int) in.getSource ().getIx ());
 				}
-				ul.add ((int) in.getSource ().getIx ());
 			}
 			ArrayList<Integer> ul = unspentCache.get (t.getHash ());
 			if ( ul != null )
 			{
 				for ( TxOut out : t.getOutputs () )
 				{
-					ul.remove ((int) out.getIx ());
+					// note : autoboxing would point to remove at index!
+					ul.remove (new Integer ((int) out.getIx ()));
 					if ( ul.isEmpty () )
 					{
 						unspentCache.remove (t.getHash ());
@@ -755,13 +759,17 @@ class JpaBlockStore implements BlockStore
 			}
 			for ( TxIn in : t.getInputs () )
 			{
-				ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
-				if ( ul != null )
+				if ( in.getSource () != null )
 				{
-					ul.remove ((int) in.getSource ().getIx ());
-					if ( ul.isEmpty () )
+					ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
+					if ( ul != null )
 					{
-						unspentCache.remove (in.getSource ().getTransaction ().getHash ());
+						// note : autoboxing would point to remove at index!
+						ul.remove (new Integer ((int) in.getSource ().getIx ()));
+						if ( ul.isEmpty () )
+						{
+							unspentCache.remove (in.getSource ().getTransaction ().getHash ());
+						}
 					}
 				}
 			}
