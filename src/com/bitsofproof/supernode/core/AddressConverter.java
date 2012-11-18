@@ -16,8 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
+import java.util.Arrays;
 
 public class AddressConverter
 {

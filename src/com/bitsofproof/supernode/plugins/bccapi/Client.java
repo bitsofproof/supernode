@@ -16,13 +16,12 @@
 package com.bitsofproof.supernode.plugins.bccapi;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Hash;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 class Client
 {

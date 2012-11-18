@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -29,8 +30,6 @@ import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.SatoshiChain;
 import com.bitsofproof.supernode.core.ValidationException;
-
-import edu.emory.mathcs.backport.java.util.Arrays;
 
 public class AddressTest
 {

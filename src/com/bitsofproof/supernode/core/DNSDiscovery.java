@@ -17,12 +17,11 @@ package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class DNSDiscovery implements Discovery
 {
