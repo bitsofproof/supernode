@@ -45,7 +45,7 @@ public class JpaPeerStore implements Discovery, PeerStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED)
-	public void store (KnownPeer peer)
+	public synchronized void store (KnownPeer peer)
 	{
 		try
 		{
