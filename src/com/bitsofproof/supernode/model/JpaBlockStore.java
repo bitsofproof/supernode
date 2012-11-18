@@ -805,7 +805,7 @@ class JpaBlockStore implements BlockStore
 			tcontext.resolvedInputs.put (t.getHash (), resolved);
 		}
 
-		Set<String> inputtx = new HashSet<String> ();
+		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
 			ArrayList<TxOut> outs;
@@ -815,75 +815,18 @@ class JpaBlockStore implements BlockStore
 				{
 					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
+				resolved.put (nr++, outs.get ((int) i.getIx ()));
 			}
 			else
 			{
-				inputtx.add (i.getSourceHash ());
-			}
-		}
-
-		if ( !inputtx.isEmpty () )
-		{
-			QTx tx = QTx.tx;
-			QTxOut txout = QTxOut.txOut;
-			JPAQuery query = new JPAQuery (entityManager);
-
-			// Unfortunatelly tx hash is not unique (not even on a branch) ordering ensures earlier will be overwritten
-			for ( TxOut out : query.from (tx).join (tx.outputs, txout).where (tx.hash.in (inputtx)).orderBy (tx.id.asc (), txout.ix.asc ()).list (txout) )
-			{
-				CachedBlock blockOfOut = cachedBlocks.get (out.getTransaction ().getBlock ().getHash ());
-				if ( isBlockOnBranch (blockOfOut, currentHead) )
+				QUTxOut utxo = QUTxOut.uTxOut;
+				JPAQuery query = new JPAQuery (entityManager);
+				UTxOut u = query.from (utxo).where (utxo.hash.eq (i.getSourceHash ()).and (utxo.ix.eq (i.getIx ()))).uniqueResult (utxo);
+				if ( u == null )
 				{
-					ArrayList<TxOut> cached = tcontext.transactionsOutputCache.get (out.getTransaction ().getHash ());
-					if ( cached == null || cached.size () > out.getIx () ) // replace if more than one tx
-					{
-						cached = new ArrayList<TxOut> ();
-						tcontext.transactionsOutputCache.put (out.getTransaction ().getHash (), cached);
-					}
-					cached.add (out);
+					throw new ValidationException ("Transaction refers to unknown or spent input [" + i.getIx () + "] " + t.toWireDump ());
 				}
-			}
-		}
-		// check for double spending
-		Set<TxOut> outs = new HashSet<TxOut> ();
-		int nr = 0;
-		for ( final TxIn i : t.getInputs () )
-		{
-			ArrayList<TxOut> cached;
-			TxOut transactionOutput = null;
-			if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
-			}
-			transactionOutput = cached.get ((int) i.getIx ());
-			if ( transactionOutput == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
-			}
-			if ( transactionOutput.getId () != null )
-			{
-				// double spend within same block will be caught by the sum in/out
-				outs.add (transactionOutput);
-			}
-			resolved.put (nr++, transactionOutput);
-		}
-
-		if ( !outs.isEmpty () )
-		{
-			// find previously spending blocks
-			List<String> dsblocks = new ArrayList<String> ();
-
-			QTx tx = QTx.tx;
-			QBlk blk = QBlk.blk;
-			QTxIn txin = QTxIn.txIn;
-			JPAQuery query = new JPAQuery (entityManager);
-			dsblocks = query.from (tx).join (tx.block, blk).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);
-			for ( String dsbh : dsblocks )
-			{
-				if ( isBlockOnBranch (cachedBlocks.get (dsbh), currentHead) )
-				{
-					throw new ValidationException ("Double spend attempt " + t.toWireDump ());
-				}
+				resolved.put (nr++, u.getTxout ());
 			}
 		}
 
