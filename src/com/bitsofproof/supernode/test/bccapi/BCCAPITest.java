@@ -48,7 +48,7 @@ public class BCCAPITest
 	@Test
 	public void cacheTest ()
 	{
-		store.cache ();
+		store.cache (0);
 	}
 
 	@Test

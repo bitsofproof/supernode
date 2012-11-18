@@ -175,13 +175,13 @@ class JpaBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
-	public void cache ()
+	public void cache (int nblocks)
 	{
 		try
 		{
 			lock.writeLock ().lock ();
 
-			log.trace ("filling chain cache with heads");
+			log.trace ("Filling chain cache with heads");
 			QHead head = QHead.head;
 			JPAQuery q = new JPAQuery (entityManager);
 			for ( Head h : q.from (head).list (head) )
@@ -200,7 +200,7 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 
-			log.trace ("filling chain cache with stored blocks");
+			log.trace ("Filling chain cache with stored blocks");
 			QBlk block = QBlk.blk;
 			q = new JPAQuery (entityManager);
 			for ( Blk b : q.from (block).list (block) )
@@ -219,6 +219,17 @@ class JpaBlockStore implements BlockStore
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
 			}
+
+			log.trace ("Cache unspent output for last " + nblocks + " blocks.");
+			CachedBlock b = currentHead.last;
+			CachedBlock p = b.previous;
+			while ( p != null && nblocks-- > 0 )
+			{
+				reverseCacheSpends (entityManager.find (Blk.class, b.id));
+				b = p;
+				p = b.previous;
+			}
+			log.trace ("Found unspent output in " + unspentCache.size () + " transactions.");
 		}
 		finally
 		{
