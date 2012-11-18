@@ -287,9 +287,13 @@ class JpaBlockStore implements BlockStore
 		}
 		if ( unspent != null )
 		{
-			for ( TxOut out : unspent.getOutputs () )
+			q = new JPAQuery (entityManager);
+			QTxOut txout = QTxOut.txOut;
+			QTx tx = QTx.tx;
+			for ( Object[] o : q.from (uns).join (uns.outputs, txout).join (txout.transaction, tx).where (uns.upto.eq (unspent.getUpto ()))
+					.list (tx.hash, txout.ix, txout.id) )
 			{
-				unspentTxOut.put (CachedUnspent.key (out.getTransaction ().getHash (), out.getIx ()), out.getId ());
+				unspentTxOut.put (CachedUnspent.key ((String) o[0], (Long) o[1]), (Long) o[2]);
 			}
 		}
 	}
