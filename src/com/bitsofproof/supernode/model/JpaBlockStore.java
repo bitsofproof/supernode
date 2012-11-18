@@ -75,36 +75,9 @@ class JpaBlockStore implements BlockStore
 	private final Map<String, CachedHead> heads = new HashMap<String, CachedHead> ();
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	private final Map<CachedUnspent, Long> unspentTxOut = new HashMap<CachedUnspent, Long> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
-
-	private static class CachedUnspent
-	{
-		private String txhash;
-		private long ix;
-
-		public static CachedUnspent key (String hash, long ix)
-		{
-			CachedUnspent cu = new CachedUnspent ();
-			cu.txhash = hash;
-			cu.ix = ix;
-			return cu;
-		}
-
-		@Override
-		public boolean equals (Object obj)
-		{
-			return txhash.equals (((CachedUnspent) obj).txhash) && ix == ((CachedUnspent) obj).ix;
-		}
-
-		@Override
-		public int hashCode ()
-		{
-			return txhash.hashCode ();
-		}
-	}
 
 	private static class CachedHead
 	{
@@ -250,126 +223,10 @@ class JpaBlockStore implements BlockStore
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
 			}
-			fillUnspentCache ();
 		}
 		finally
 		{
 			lock.writeLock ().unlock ();
-		}
-	}
-
-	private void fillUnspentCache ()
-	{
-		log.trace ("filling unspent txout cache");
-		unspentTxOut.clear ();
-		QUnspent uns = QUnspent.unspent;
-		JPAQuery q = new JPAQuery (entityManager);
-		List<Unspent> ul = q.from (uns).list (uns);
-		CachedBlock b = currentHead.last;
-		CachedBlock p = b.previous;
-		Unspent unspent = null;
-		while ( p != null )
-		{
-			for ( Unspent u : ul )
-			{
-				if ( u.getUpto ().equals (b.hash) )
-				{
-					unspent = u;
-					break;
-				}
-			}
-			if ( unspent != null )
-			{
-				break;
-			}
-			b = p;
-			p = b.previous;
-		}
-		if ( unspent != null )
-		{
-			q = new JPAQuery (entityManager);
-			QTxOut txout = QTxOut.txOut;
-			QTx tx = QTx.tx;
-			for ( Object[] o : q.from (uns).join (uns.outputs, txout).join (txout.transaction, tx).where (uns.upto.eq (unspent.getUpto ()))
-					.list (tx.hash, txout.ix, txout.id) )
-			{
-				unspentTxOut.put (CachedUnspent.key ((String) o[0], (Long) o[1]), (Long) o[2]);
-			}
-		}
-	}
-
-	private TxOut getUnspent (String hash, long ix)
-	{
-		Long id = unspentTxOut.get (CachedUnspent.key (hash, ix));
-		if ( id != null )
-		{
-			return entityManager.find (TxOut.class, id);
-		}
-		return null;
-	}
-
-	@Transactional (propagation = Propagation.REQUIRED)
-	@Override
-	public void prune (String upto) throws ValidationException
-	{
-		log.trace ("Pruning upto " + upto);
-		CachedBlock b = currentHead.last;
-		CachedBlock p = b.previous;
-		while ( p != null )
-		{
-			if ( b.getHash ().equals (upto) )
-			{
-				break;
-			}
-			b = p;
-			p = b.previous;
-		}
-
-		QUnspent uns = QUnspent.unspent;
-		JPAQuery q = new JPAQuery (entityManager);
-		Map<String, Unspent> ulm = new HashMap<String, Unspent> ();
-		for ( Unspent u : q.from (uns).list (uns) )
-		{
-			ulm.put (u.getUpto (), u);
-		}
-		Unspent unspent = null;
-		List<String> path = new ArrayList<String> ();
-		while ( p != null )
-		{
-			if ( (unspent = ulm.get (b.hash)) != null )
-			{
-				break;
-			}
-			path.add (b.hash);
-			b = p;
-			p = b.previous;
-		}
-		if ( unspent == null )
-		{
-			unspent = new Unspent ();
-			unspent.setOutputs (new HashSet<TxOut> ());
-			for ( Tx t : entityManager.find (Blk.class, b.id).getTransactions () )
-			{
-				unspent.getOutputs ().addAll (t.getOutputs ());
-			}
-		}
-		if ( !path.isEmpty () )
-		{
-			QBlk blk = QBlk.blk;
-			QTx tx = QTx.tx;
-			QTxOut txout = QTxOut.txOut;
-			QTxIn txin = QTxIn.txIn;
-
-			q = new JPAQuery (entityManager);
-			unspent.getOutputs ().addAll (q.from (blk).join (blk.transactions, tx).join (tx.outputs, txout).where (blk.hash.in (path)).list (txout));
-
-			q = new JPAQuery (entityManager);
-			unspent.getOutputs ().removeAll (
-					q.from (blk).join (blk.transactions, tx).join (tx.inputs, txin).join (txin.source, txout).where (blk.hash.in (path)).list (txout));
-
-			unspent.setUpto (upto);
-			unspent = entityManager.merge (unspent);
-			fillUnspentCache ();
 		}
 	}
 
@@ -884,30 +741,20 @@ class JpaBlockStore implements BlockStore
 		}
 
 		Set<String> inputtx = new HashSet<String> ();
-		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
-			TxOut out = getUnspent (i.getSourceHash (), i.getIx ());
-			if ( out != null )
+			ArrayList<TxOut> outs;
+			if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
 			{
-				resolved.put (nr, out);
+				if ( i.getIx () >= outs.size () )
+				{
+					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
+				}
 			}
 			else
 			{
-				ArrayList<TxOut> outs;
-				if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
-				{
-					if ( i.getIx () >= outs.size () )
-					{
-						throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
-					}
-				}
-				else
-				{
-					inputtx.add (i.getSourceHash ());
-				}
+				inputtx.add (i.getSourceHash ());
 			}
-			++nr;
 		}
 
 		if ( !inputtx.isEmpty () )
@@ -934,30 +781,26 @@ class JpaBlockStore implements BlockStore
 		}
 		// check for double spending
 		Set<TxOut> outs = new HashSet<TxOut> ();
-		nr = 0;
+		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
-			if ( !resolved.containsKey (nr) )
+			ArrayList<TxOut> cached;
+			TxOut transactionOutput = null;
+			if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
 			{
-				ArrayList<TxOut> cached;
-				TxOut transactionOutput = null;
-				if ( (cached = tcontext.transactionsOutputCache.get (i.getSourceHash ())) == null )
-				{
-					throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
-				}
-				transactionOutput = cached.get ((int) i.getIx ());
-				if ( transactionOutput == null )
-				{
-					throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
-				}
-				if ( transactionOutput.getId () != null )
-				{
-					// double spend within same block will be caught by the sum in/out
-					outs.add (transactionOutput);
-				}
-				resolved.put (nr, transactionOutput);
+				throw new ValidationException ("Transaction refers to unknown source " + i.getSourceHash () + " " + t.toWireDump ());
 			}
-			++nr;
+			transactionOutput = cached.get ((int) i.getIx ());
+			if ( transactionOutput == null )
+			{
+				throw new ValidationException ("Transaction refers to unknown input " + i.getSourceHash () + " [" + i.getIx () + "] " + t.toWireDump ());
+			}
+			if ( transactionOutput.getId () != null )
+			{
+				// double spend within same block will be caught by the sum in/out
+				outs.add (transactionOutput);
+			}
+			resolved.put (nr++, transactionOutput);
 		}
 
 		if ( !outs.isEmpty () )
@@ -965,8 +808,8 @@ class JpaBlockStore implements BlockStore
 			// find previously spending blocks
 			List<String> dsblocks = new ArrayList<String> ();
 
-			QBlk blk = QBlk.blk;
 			QTx tx = QTx.tx;
+			QBlk blk = QBlk.blk;
 			QTxIn txin = QTxIn.txIn;
 			JPAQuery query = new JPAQuery (entityManager);
 			dsblocks = query.from (tx).join (tx.block, blk).join (tx.inputs, txin).where (txin.source.in (outs)).list (blk.hash);

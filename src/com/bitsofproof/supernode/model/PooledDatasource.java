@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.model;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -171,10 +170,6 @@ public class PooledDatasource implements DataSource
 	public Connection getConnection (String arg0, String arg1) throws SQLException
 	{
 		throw new SQLException ("not implemented");
-	}
-
-	public java.util.logging.Logger getParentLogger () throws SQLFeatureNotSupportedException {
-		return java.util.logging.Logger.getLogger(java.util.logging.Logger.GLOBAL_LOGGER_NAME);
 	}
 
 }

@@ -312,22 +312,19 @@ public class BitcoinPeer extends P2P.Peer
 		if ( network.getPeerStore () != null )
 		{
 			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-			if ( p != null )
+			p.setTrafficIn (trafficIn);
+			p.setTrafficOut (trafficOut);
+			p.setDisconnected (System.currentTimeMillis () / 1000);
+			if ( timeout > 0 )
 			{
-				p.setTrafficIn (trafficIn);
-				p.setTrafficOut (trafficOut);
-				p.setDisconnected (System.currentTimeMillis () / 1000);
-				if ( timeout > 0 )
-				{
-					p.setResponseTime (timeout * 1000 + 1);
-				}
-				if ( bannedForSeconds > 0 )
-				{
-					p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
-					p.setBanReason (reason);
-				}
-				network.getPeerStore ().store (p);
+				p.setResponseTime (timeout * 1000 + 1);
 			}
+			if ( bannedForSeconds > 0 )
+			{
+				p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
+				p.setBanReason (reason);
+			}
+			network.getPeerStore ().store (p);
 		}
 	}
 
@@ -341,7 +338,7 @@ public class BitcoinPeer extends P2P.Peer
 			byte[] head = new byte[24];
 			if ( readIn.read (head) != head.length )
 			{
-				throw new IOException ("Read timeout for " + getAddress ());
+				throw new ValidationException ("Read timeout for " + getAddress ());
 			}
 			WireFormat.Reader reader = new WireFormat.Reader (head);
 			long mag = reader.readUint32 ();
@@ -367,7 +364,7 @@ public class BitcoinPeer extends P2P.Peer
 				byte[] buf = new byte[(int) length];
 				if ( readIn.read (buf) != buf.length )
 				{
-					throw new IOException ("Package length mismatch " + getAddress ());
+					throw new ValidationException ("Package length mismatch " + getAddress ());
 				}
 				byte[] cs = new byte[4];
 				System.arraycopy (Hash.hash (buf), 0, cs, 0, 4);

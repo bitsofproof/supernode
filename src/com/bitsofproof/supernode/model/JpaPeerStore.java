@@ -8,6 +8,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,10 +45,16 @@ public class JpaPeerStore implements Discovery, PeerStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED)
-	public synchronized void store (KnownPeer peer)
+	public void store (KnownPeer peer)
 	{
-		entityManager.merge (peer);
-		log.trace ("Stored peer " + peer.getAddress ());
+		try
+		{
+			entityManager.merge (peer);
+			log.trace ("Stored peer " + peer.getAddress ());
+		}
+		catch ( ConstraintViolationException e )
+		{
+		}
 	}
 
 	@Override
