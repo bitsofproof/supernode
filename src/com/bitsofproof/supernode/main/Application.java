@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
 
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -39,17 +38,10 @@ public class Application
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
-		gnuOptions.addOption ("c", "cache", true, "Nuber of blocks to cache unspent output for");
 
-		int cblocks = 1000;
-		CommandLine cl;
 		try
 		{
-			cl = parser.parse (gnuOptions, args);
-			if ( cl.hasOption ('c') )
-			{
-				cblocks = Integer.valueOf (cl.getOptionValue ('c'));
-			}
+			parser.parse (gnuOptions, args);
 		}
 		catch ( ParseException e1 )
 		{
@@ -61,7 +53,7 @@ public class Application
 		{
 			network.getStore ().resetStore (network.getChain ());
 		}
-		network.getStore ().cache (cblocks);
+		network.getStore ().cache ();
 		network.start ();
 	}
 

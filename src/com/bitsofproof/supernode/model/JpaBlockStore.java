@@ -190,7 +190,7 @@ class JpaBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED)
 	@Override
-	public void cache (int nblocks)
+	public void cache ()
 	{
 		try
 		{
@@ -234,67 +234,6 @@ class JpaBlockStore implements BlockStore
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
 			}
-
-			log.trace ("Cache unspent output for last " + nblocks + " blocks.");
-			CachedBlock b = currentHead.last;
-			CachedBlock p = b.previous;
-			List<String> path = new ArrayList<String> ();
-			while ( p != null && nblocks-- > 0 )
-			{
-				path.add (p.hash);
-				b = p;
-				p = b.previous;
-			}
-			if ( !path.isEmpty () )
-			{
-				QTx tx = QTx.tx;
-				QTxIn txin = QTxIn.txIn;
-				QTxOut txout = QTxOut.txOut;
-
-				q = new JPAQuery (entityManager);
-				for ( Object[] o : q.from (block).join (block.transactions, tx).join (tx.outputs, txout).where (block.hash.in (path))
-						.list (tx.hash, txout.ix, txout.id) )
-				{
-					String hash = (String) o[0];
-					Long ix = (Long) o[1];
-					Long id = (Long) o[2];
-					ArrayList<TxOutId> ul = unspentCache.get (hash);
-					if ( ul == null )
-					{
-						ul = new ArrayList<TxOutId> ();
-						unspentCache.put (hash, ul);
-					}
-					ul.add (TxOutId.create (ix, id));
-				}
-				q = new JPAQuery (entityManager);
-				QTx tx2 = new QTx ("tx2");
-				for ( Object[] o : q.from (block).join (block.transactions, tx).join (tx.inputs, txin).join (txin.source, txout).join (txout.transaction, tx2)
-						.where (block.hash.in (path)).list (tx2.hash, txout.id) )
-				{
-					String hash = (String) o[0];
-					Long id = (Long) o[1];
-					ArrayList<TxOutId> ul = unspentCache.get (hash);
-					if ( ul != null )
-					{
-						Iterator<TxOutId> i = ul.iterator ();
-						while ( i.hasNext () )
-						{
-							TxOutId outid = i.next ();
-							if ( outid.id == id.longValue () )
-							{
-								i.remove ();
-								break;
-							}
-						}
-						if ( ul.isEmpty () )
-						{
-							unspentCache.remove (hash);
-						}
-					}
-				}
-
-			}
-			log.trace ("Found unspent output in " + unspentCache.size () + " transactions.");
 		}
 		finally
 		{
