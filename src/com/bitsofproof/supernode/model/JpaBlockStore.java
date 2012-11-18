@@ -77,11 +77,22 @@ class JpaBlockStore implements BlockStore
 
 	private static class CachedHead
 	{
+		private Long id;
 		private CachedBlock last;
 		private double chainWork;
 		private long height;
 		private CachedHead previous;
 		private final Set<CachedBlock> blocks = new HashSet<CachedBlock> ();
+
+		public Long getId ()
+		{
+			return id;
+		}
+
+		public void setId (Long id)
+		{
+			this.id = id;
+		}
 
 		public double getChainWork ()
 		{
@@ -186,6 +197,7 @@ class JpaBlockStore implements BlockStore
 			for ( Head h : q.from (head).list (head) )
 			{
 				CachedHead sh = new CachedHead ();
+				sh.setId (h.getId ());
 				sh.setChainWork (h.getChainWork ());
 				sh.setHeight (h.getHeight ());
 				if ( h.getPrevious () != null )
@@ -687,7 +699,7 @@ class JpaBlockStore implements BlockStore
 
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
-				// we have a new head
+				// we have a new trunk
 				// if branching from main we have to revert unspent cache
 				if ( isBlockOnBranch (cachedBlocks.get (head.getTrunk ()), currentHead) )
 				{
@@ -703,7 +715,11 @@ class JpaBlockStore implements BlockStore
 				// now this is the new trunk
 				currentHead = usingHead;
 			}
-			forwardUTXO (b);
+			if ( b.getHead ().getId () == currentHead.getId () )
+			{
+				// spend if remained on the trunk
+				forwardUTXO (b);
+			}
 
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
