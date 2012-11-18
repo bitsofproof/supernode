@@ -19,7 +19,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -72,24 +71,9 @@ class JpaBlockStore implements BlockStore
 	private CachedHead currentHead = null;
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	private final Map<String, ArrayList<TxOutId>> unspentCache = new HashMap<String, ArrayList<TxOutId>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
-
-	private static class TxOutId
-	{
-		public static TxOutId create (Long ix, Long id)
-		{
-			TxOutId oi = new TxOutId ();
-			oi.ix = ix.intValue ();
-			oi.id = id;
-			return oi;
-		}
-
-		int ix;
-		long id;
-	}
 
 	private static class CachedHead
 	{
@@ -711,7 +695,7 @@ class JpaBlockStore implements BlockStore
 					CachedBlock q = p.previous;
 					while ( !q.hash.equals (head.getTrunk ()) )
 					{
-						reverseCacheSpends (entityManager.find (Blk.class, p.id));
+						backwardUTXO (entityManager.find (Blk.class, p.id));
 						p = q;
 						q = p.previous;
 					}
@@ -719,13 +703,13 @@ class JpaBlockStore implements BlockStore
 				// now this is the new trunk
 				currentHead = usingHead;
 			}
-			cacheSpends (b);
+			forwardUTXO (b);
 
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
 	}
 
-	private void reverseCacheSpends (Blk b)
+	private void backwardUTXO (Blk b)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
@@ -733,76 +717,50 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( in.getSource () != null )
 				{
-					ArrayList<TxOutId> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
-					if ( ul == null )
-					{
-						ul = new ArrayList<TxOutId> ();
-						unspentCache.put (in.getSource ().getTransaction ().getHash (), ul);
-					}
-					ul.add (TxOutId.create (in.getSource ().getId (), in.getSource ().getId ()));
+					UTxOut utxo = new UTxOut ();
+					utxo.setHash (in.getSource ().getTransaction ().getHash ());
+					utxo.setIx (in.getSource ().getIx ());
+					utxo.setTxout (in.getSource ());
+					entityManager.persist (utxo);
 				}
 			}
-			ArrayList<TxOutId> ul = unspentCache.get (t.getHash ());
-			if ( ul != null )
+			for ( TxOut out : t.getOutputs () )
 			{
-				for ( TxOut out : t.getOutputs () )
+				QUTxOut utxo = QUTxOut.uTxOut;
+				JPAQuery q = new JPAQuery (entityManager);
+				UTxOut u = q.from (utxo).where (utxo.hash.eq (t.getHash ()).and (utxo.ix.eq (out.getIx ()))).uniqueResult (utxo);
+				if ( u != null )
 				{
-					Iterator<TxOutId> i = ul.iterator ();
-					while ( i.hasNext () )
-					{
-						TxOutId outid = i.next ();
-						if ( outid.id == out.getId ().longValue () )
-						{
-							i.remove ();
-							break;
-						}
-					}
-					if ( ul.isEmpty () )
-					{
-						unspentCache.remove (t.getHash ());
-						break;
-					}
+					entityManager.remove (u);
 				}
 			}
 		}
 	}
 
-	private void cacheSpends (Blk b)
+	private void forwardUTXO (Blk b)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
-			ArrayList<TxOutId> ul = unspentCache.get (t.getHash ());
-			if ( ul == null )
-			{
-				ul = new ArrayList<TxOutId> ();
-				unspentCache.put (t.getHash (), ul);
-			}
 			for ( TxOut out : t.getOutputs () )
 			{
-				ul.add (TxOutId.create (out.getIx (), out.getId ()));
+				UTxOut utxo = new UTxOut ();
+				utxo.setHash (out.getTransaction ().getHash ());
+				utxo.setIx (out.getIx ());
+				utxo.setTxout (out);
+				entityManager.persist (utxo);
 			}
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( in.getSource () != null )
 				{
-					ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
-					if ( ul != null )
+					QUTxOut utxo = QUTxOut.uTxOut;
+					JPAQuery q = new JPAQuery (entityManager);
+					UTxOut u =
+							q.from (utxo).where (utxo.hash.eq (in.getSource ().getTransaction ().getHash ()).and (utxo.ix.eq (in.getSource ().getIx ())))
+									.uniqueResult (utxo);
+					if ( u != null )
 					{
-						Iterator<TxOutId> i = ul.iterator ();
-						while ( i.hasNext () )
-						{
-							TxOutId outid = i.next ();
-							if ( outid.id == in.getSource ().getId ().longValue () )
-							{
-								i.remove ();
-								break;
-							}
-						}
-						if ( ul.isEmpty () )
-						{
-							unspentCache.remove (in.getSource ().getTransaction ().getHash ());
-							break;
-						}
+						entityManager.remove (u);
 					}
 				}
 			}
