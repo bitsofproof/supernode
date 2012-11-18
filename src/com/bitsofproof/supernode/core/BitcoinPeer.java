@@ -367,7 +367,7 @@ public class BitcoinPeer extends P2P.Peer
 				byte[] buf = new byte[(int) length];
 				if ( readIn.read (buf) != buf.length )
 				{
-					throw new ValidationException ("Package length mismatch " + getAddress ());
+					throw new IOException ("Package length mismatch " + getAddress ());
 				}
 				byte[] cs = new byte[4];
 				System.arraycopy (Hash.hash (buf), 0, cs, 0, 4);
