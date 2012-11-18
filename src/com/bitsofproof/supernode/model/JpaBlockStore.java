@@ -19,6 +19,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -71,10 +72,24 @@ class JpaBlockStore implements BlockStore
 	private CachedHead currentHead = null;
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	private final Map<String, ArrayList<Integer>> unspentCache = new HashMap<String, ArrayList<Integer>> ();
+	private final Map<String, ArrayList<TxOutId>> unspentCache = new HashMap<String, ArrayList<TxOutId>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
+
+	private static class TxOutId
+	{
+		public static TxOutId create (Long ix, Long id)
+		{
+			TxOutId oi = new TxOutId ();
+			oi.ix = ix.intValue ();
+			oi.id = id;
+			return oi;
+		}
+
+		int ix;
+		long id;
+	}
 
 	private static class CachedHead
 	{
@@ -223,11 +238,61 @@ class JpaBlockStore implements BlockStore
 			log.trace ("Cache unspent output for last " + nblocks + " blocks.");
 			CachedBlock b = currentHead.last;
 			CachedBlock p = b.previous;
+			List<String> path = new ArrayList<String> ();
 			while ( p != null && nblocks-- > 0 )
 			{
-				reverseCacheSpends (entityManager.find (Blk.class, b.id));
+				path.add (p.hash);
 				b = p;
 				p = b.previous;
+			}
+			if ( !path.isEmpty () )
+			{
+				QTx tx = QTx.tx;
+				QTxIn txin = QTxIn.txIn;
+				QTxOut txout = QTxOut.txOut;
+
+				q = new JPAQuery (entityManager);
+				for ( Object[] o : q.from (block).join (block.transactions, tx).join (tx.outputs, txout).where (block.hash.in (path))
+						.list (tx.hash, txout.ix, txout.id) )
+				{
+					String hash = (String) o[0];
+					Long ix = (Long) o[1];
+					Long id = (Long) o[2];
+					ArrayList<TxOutId> ul = unspentCache.get (hash);
+					if ( ul == null )
+					{
+						ul = new ArrayList<TxOutId> ();
+						unspentCache.put (hash, ul);
+					}
+					ul.add (TxOutId.create (ix, id));
+				}
+				q = new JPAQuery (entityManager);
+				QTx tx2 = new QTx ("tx2");
+				for ( Object[] o : q.from (block).join (block.transactions, tx).join (tx.inputs, txin).join (txin.source, txout).join (txout.transaction, tx2)
+						.where (block.hash.in (path)).list (tx2.hash, txout.id) )
+				{
+					String hash = (String) o[0];
+					Long id = (Long) o[1];
+					ArrayList<TxOutId> ul = unspentCache.get (hash);
+					if ( ul != null )
+					{
+						Iterator<TxOutId> i = ul.iterator ();
+						while ( i.hasNext () )
+						{
+							TxOutId outid = i.next ();
+							if ( outid.id == id.longValue () )
+							{
+								i.remove ();
+								break;
+							}
+						}
+						if ( ul.isEmpty () )
+						{
+							unspentCache.remove (hash);
+						}
+					}
+				}
+
 			}
 			log.trace ("Found unspent output in " + unspentCache.size () + " transactions.");
 		}
@@ -729,25 +794,34 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( in.getSource () != null )
 				{
-					ArrayList<Integer> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
+					ArrayList<TxOutId> ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
 					if ( ul == null )
 					{
-						ul = new ArrayList<Integer> ();
+						ul = new ArrayList<TxOutId> ();
 						unspentCache.put (in.getSource ().getTransaction ().getHash (), ul);
 					}
-					ul.add ((int) in.getSource ().getIx ());
+					ul.add (TxOutId.create (in.getSource ().getId (), in.getSource ().getId ()));
 				}
 			}
-			ArrayList<Integer> ul = unspentCache.get (t.getHash ());
+			ArrayList<TxOutId> ul = unspentCache.get (t.getHash ());
 			if ( ul != null )
 			{
 				for ( TxOut out : t.getOutputs () )
 				{
-					// note : autoboxing would point to remove at index!
-					ul.remove (new Integer ((int) out.getIx ()));
+					Iterator<TxOutId> i = ul.iterator ();
+					while ( i.hasNext () )
+					{
+						TxOutId outid = i.next ();
+						if ( outid.id == out.getId ().longValue () )
+						{
+							i.remove ();
+							break;
+						}
+					}
 					if ( ul.isEmpty () )
 					{
 						unspentCache.remove (t.getHash ());
+						break;
 					}
 				}
 			}
@@ -758,15 +832,15 @@ class JpaBlockStore implements BlockStore
 	{
 		for ( Tx t : b.getTransactions () )
 		{
-			ArrayList<Integer> ul = unspentCache.get (t.getHash ());
+			ArrayList<TxOutId> ul = unspentCache.get (t.getHash ());
 			if ( ul == null )
 			{
-				ul = new ArrayList<Integer> ();
+				ul = new ArrayList<TxOutId> ();
 				unspentCache.put (t.getHash (), ul);
 			}
 			for ( TxOut out : t.getOutputs () )
 			{
-				ul.add ((int) out.getIx ());
+				ul.add (TxOutId.create (out.getIx (), out.getId ()));
 			}
 			for ( TxIn in : t.getInputs () )
 			{
@@ -775,11 +849,20 @@ class JpaBlockStore implements BlockStore
 					ul = unspentCache.get (in.getSource ().getTransaction ().getHash ());
 					if ( ul != null )
 					{
-						// note : autoboxing would point to remove at index!
-						ul.remove (new Integer ((int) in.getSource ().getIx ()));
+						Iterator<TxOutId> i = ul.iterator ();
+						while ( i.hasNext () )
+						{
+							TxOutId outid = i.next ();
+							if ( outid.id == in.getSource ().getId ().longValue () )
+							{
+								i.remove ();
+								break;
+							}
+						}
 						if ( ul.isEmpty () )
 						{
 							unspentCache.remove (in.getSource ().getTransaction ().getHash ());
+							break;
 						}
 					}
 				}
