@@ -820,13 +820,15 @@ class JpaBlockStore implements BlockStore
 			else
 			{
 				QUTxOut utxo = QUTxOut.uTxOut;
+				QTxOut txout = QTxOut.txOut;
 				JPAQuery query = new JPAQuery (entityManager);
-				UTxOut u = query.from (utxo).where (utxo.hash.eq (i.getSourceHash ()).and (utxo.ix.eq (i.getIx ()))).uniqueResult (utxo);
-				if ( u == null )
+				TxOut out =
+						query.from (utxo).join (utxo.txout, txout).where (utxo.hash.eq (i.getSourceHash ()).and (utxo.ix.eq (i.getIx ()))).uniqueResult (txout);
+				if ( out == null )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent input [" + i.getIx () + "] " + t.toWireDump ());
 				}
-				resolved.put (nr++, u.getTxout ());
+				resolved.put (nr++, out);
 			}
 		}
 
