@@ -805,6 +805,7 @@ class JpaBlockStore implements BlockStore
 			tcontext.resolvedInputs.put (t.getHash (), resolved);
 		}
 
+		Set<String> needTx = new HashSet<String> ();
 		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
@@ -815,23 +816,56 @@ class JpaBlockStore implements BlockStore
 				{
 					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
-				resolved.put (nr++, outs.get ((int) i.getIx ()));
+				resolved.put (nr, outs.get ((int) i.getIx ()));
 			}
 			else
 			{
-				QUTxOut utxo = QUTxOut.uTxOut;
-				QTxOut txout = QTxOut.txOut;
-				JPAQuery query = new JPAQuery (entityManager);
-				TxOut out =
-						query.from (utxo).join (utxo.txout, txout).where (utxo.hash.eq (i.getSourceHash ()).and (utxo.ix.eq (i.getIx ()))).uniqueResult (txout);
-				if ( out == null )
-				{
-					throw new ValidationException ("Transaction refers to unknown or spent input [" + i.getIx () + "] " + t.toWireDump ());
-				}
-				resolved.put (nr++, out);
+				needTx.add (i.getSourceHash ());
 			}
+			++nr;
 		}
 
+		if ( !needTx.isEmpty () )
+		{
+			Map<String, HashMap<Long, UTxOut>> unspentPrefetch = new HashMap<String, HashMap<Long, UTxOut>> ();
+			QUTxOut utxo = QUTxOut.uTxOut;
+			JPAQuery query = new JPAQuery (entityManager);
+			for ( UTxOut u : query.from (utxo).where (utxo.hash.in (needTx)).list (utxo) )
+			{
+				HashMap<Long, UTxOut> byIx = unspentPrefetch.get (u.getHash ());
+				if ( byIx == null )
+				{
+					byIx = new HashMap<Long, UTxOut> ();
+					unspentPrefetch.put (u.getHash (), byIx);
+				}
+				byIx.put (u.getIx (), u);
+			}
+			if ( unspentPrefetch.isEmpty () )
+			{
+				throw new ValidationException ("Transaction refers to unknown or spent input(s) " + t.toWireDump ());
+			}
+
+			nr = 0;
+			for ( final TxIn i : t.getInputs () )
+			{
+				if ( !resolved.containsKey (nr) )
+				{
+					Map<Long, UTxOut> byHash = unspentPrefetch.get (i.getSourceHash ());
+					if ( byHash == null )
+					{
+						throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
+					}
+					UTxOut u = byHash.get (i.getIx ());
+					if ( u == null )
+					{
+						throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
+								+ t.toWireDump ());
+					}
+					resolved.put (nr, u.getTxout ());
+				}
+				++nr;
+			}
+		}
 		if ( tcontext.block != null )
 		{
 			// check coinbase spending
