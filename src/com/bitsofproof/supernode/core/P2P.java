@@ -240,8 +240,13 @@ public abstract class P2P
 				reads.clear ();
 				reads.add (closedMark);
 				connectedPeers.remove (channel);
-				connectSlot.release ();
 				channel.close ();
+
+				connectSlot.release ();
+				if ( unsolicitedPeers.containsKey (channel) )
+				{
+					unsolicitedConnectSlot.release ();
+				}
 				peerThreads.execute (new Runnable ()
 				{
 					@Override
@@ -328,6 +333,8 @@ public abstract class P2P
 	// peers connected
 	@SuppressWarnings ({ "rawtypes", "unchecked" })
 	private final Map<SocketChannel, Peer> connectedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
+	@SuppressWarnings ({ "rawtypes", "unchecked" })
+	private final Map<SocketChannel, Peer> unsolicitedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
 
 	// peers waiting to be connected
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress> ();
@@ -341,8 +348,11 @@ public abstract class P2P
 	// number of seconds to wait until giving up on connections
 	private static final int READTIMEOUT = 60; // seconds
 
-	// keep track with number of connections we asked for here
+	// keep track of connections we asked for
 	private final Semaphore connectSlot;
+
+	// keep track of connections coming unsolicited
+	private final Semaphore unsolicitedConnectSlot;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 
@@ -417,6 +427,7 @@ public abstract class P2P
 	{
 		desiredConnections = connections;
 		connectSlot = new Semaphore (desiredConnections);
+		unsolicitedConnectSlot = new Semaphore (desiredConnections / 2);
 		// create a pool of threads
 		peerThreads =
 				(ThreadPoolExecutor) Executors.newFixedThreadPool (Math.min (desiredConnections, Runtime.getRuntime ().availableProcessors () * 2),
@@ -490,25 +501,34 @@ public abstract class P2P
 									SocketChannel client;
 									try
 									{
-										client = ((ServerSocketChannel) key.channel ()).accept ();
-										client.configureBlocking (false);
-										InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
-										final Peer peer;
-										peer = createPeer (address, false);
-										peer.channel = client;
-										client.register (selector, SelectionKey.OP_READ);
-										connectedPeers.put (client, peer);
-										scheduler.schedule (new Runnable ()
+										if ( unsolicitedConnectSlot.tryAcquire () )
 										{
-											@Override
-											public void run ()
+											client = ((ServerSocketChannel) key.channel ()).accept ();
+											client.configureBlocking (false);
+											InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
+											final Peer peer;
+											peer = createPeer (address, false);
+											peer.channel = client;
+											client.register (selector, SelectionKey.OP_READ);
+											connectedPeers.put (client, peer);
+											unsolicitedPeers.put (client, peer);
+											scheduler.schedule (new Runnable ()
 											{
-												if ( !peer.isHandshakeSuccessful () )
+												@Override
+												public void run ()
 												{
-													peer.disconnect ();
+													if ( !peer.isHandshakeSuccessful () )
+													{
+														peer.disconnect ();
+													}
 												}
-											}
-										}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+											}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+										}
+										else
+										{
+											key.channel ().close ();
+											key.cancel ();
+										}
 									}
 									catch ( IOException e )
 									{
@@ -658,6 +678,11 @@ public abstract class P2P
 									log.trace ("Can not find new adresses");
 									Thread.sleep (60 * 1000);
 								}
+							}
+							else
+							{
+								log.trace ("No peer in run queue, but " + connectedPeers.size () + " connected.");
+								Thread.sleep (60 * 1000);
 							}
 						}
 					}
