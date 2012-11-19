@@ -506,23 +506,38 @@ public abstract class P2P
 											client = ((ServerSocketChannel) key.channel ()).accept ();
 											client.configureBlocking (false);
 											InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
-											final Peer peer;
-											peer = createPeer (address, false);
-											peer.channel = client;
-											client.register (selector, SelectionKey.OP_READ);
-											connectedPeers.put (client, peer);
-											unsolicitedPeers.put (client, peer);
-											scheduler.schedule (new Runnable ()
+											log.trace ("Unsolicited connection from " + address.getAddress ());
+											for ( SocketChannel c : connectedPeers.keySet () )
 											{
-												@Override
-												public void run ()
+												if ( c.socket ().getInetAddress ().equals (client.socket ().getInetAddress ()) )
 												{
-													if ( !peer.isHandshakeSuccessful () )
-													{
-														peer.disconnect ();
-													}
+													client.close ();
+													key.cancel ();
+													unsolicitedConnectSlot.release ();
+													log.trace ("Closing duplicate connection from " + address.getAddress ());
+													break;
 												}
-											}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+											}
+											if ( client.isOpen () )
+											{
+												final Peer peer;
+												peer = createPeer (address, false);
+												peer.channel = client;
+												client.register (selector, SelectionKey.OP_READ);
+												connectedPeers.put (client, peer);
+												unsolicitedPeers.put (client, peer);
+												scheduler.schedule (new Runnable ()
+												{
+													@Override
+													public void run ()
+													{
+														if ( !peer.isHandshakeSuccessful () )
+														{
+															peer.disconnect ();
+														}
+													}
+												}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
+											}
 										}
 										else
 										{
