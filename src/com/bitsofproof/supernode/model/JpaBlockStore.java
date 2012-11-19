@@ -48,6 +48,7 @@ import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.core.ValidationException;
+import com.mysema.query.jpa.impl.JPADeleteClause;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaBlockStore")
@@ -727,6 +728,7 @@ class JpaBlockStore implements BlockStore
 
 	private void backwardUTXO (Blk b)
 	{
+		List<TxOut> sources = new ArrayList<TxOut> ();
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxIn in : t.getInputs () )
@@ -740,21 +742,19 @@ class JpaBlockStore implements BlockStore
 					entityManager.persist (utxo);
 				}
 			}
-			for ( TxOut out : t.getOutputs () )
-			{
-				QUTxOut utxo = QUTxOut.uTxOut;
-				JPAQuery q = new JPAQuery (entityManager);
-				UTxOut u = q.from (utxo).where (utxo.hash.eq (t.getHash ()).and (utxo.ix.eq (out.getIx ()))).uniqueResult (utxo);
-				if ( u != null )
-				{
-					entityManager.remove (u);
-				}
-			}
+			sources.addAll (t.getOutputs ());
+		}
+		if ( !sources.isEmpty () )
+		{
+			QUTxOut utxo = QUTxOut.uTxOut;
+			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
+			d.where (utxo.txout.in (sources)).execute ();
 		}
 	}
 
 	private void forwardUTXO (Blk b)
 	{
+		List<TxOut> sources = new ArrayList<TxOut> ();
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxOut out : t.getOutputs () )
@@ -769,17 +769,15 @@ class JpaBlockStore implements BlockStore
 			{
 				if ( in.getSource () != null )
 				{
-					QUTxOut utxo = QUTxOut.uTxOut;
-					JPAQuery q = new JPAQuery (entityManager);
-					UTxOut u =
-							q.from (utxo).where (utxo.hash.eq (in.getSource ().getTransaction ().getHash ()).and (utxo.ix.eq (in.getSource ().getIx ())))
-									.uniqueResult (utxo);
-					if ( u != null )
-					{
-						entityManager.remove (u);
-					}
+					sources.add (in.getSource ());
 				}
 			}
+		}
+		if ( !sources.isEmpty () )
+		{
+			QUTxOut utxo = QUTxOut.uTxOut;
+			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
+			d.where (utxo.txout.in (sources)).execute ();
 		}
 	}
 
