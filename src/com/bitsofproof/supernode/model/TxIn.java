@@ -46,8 +46,8 @@ public class TxIn implements Serializable, Cloneable
 	@GeneratedValue
 	private Long id;
 
-	transient private String sourceHash;
-	transient private long ix;
+	private String sourceHash;
+	private long ix;
 
 	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
