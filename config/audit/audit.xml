@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+	<description>supernode audit assembly (c) 2012 Tamas Blummer
+		tamas@bitsofproof.com</description>
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"
+		name="propertiesBean" p:location="classpath:audit.properties" />
+	<context:component-scan base-package="com.bitsofproof.supernode" />
+
+	<alias name="${chain}" alias="chain" />
+
+	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
+		p:portNumber="${port}" p:serverName="${server}" p:databaseName="${database}"
+		p:user="${user}" p:password="${password}" p:createDatabase="create" />
+
+	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
+		<property name="dataSource" ref="derbyDataSource" />
+	</bean>
+
+
+	<bean id="jpaVendorAdapter"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
+		p:showSql="false" p:generateDdl="true" p:database="DERBY" />
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="persistenceXmlLocation" value="persistence.xml" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter" ref="jpaVendorAdapter" />
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.DerbyDialect</prop>
+				<prop key="hibernate.cache.provider_class">org.hibernate.cache.HashtableCacheProvider</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"
+		p:entityManagerFactory-ref="entityManagerFactory" />
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<bean id="application" class="com.bitsofproof.supernode.main.Audit">
+	</bean>
+</beans>

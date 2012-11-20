@@ -83,10 +83,35 @@
 		</jar>
 	</target>
 
+	<target name="audit" depends="clean, compile">
+		<mkdir dir="${dist.dir}" />
+		<mkdir dir="${log.dir}" />
+
+		<ivy:retrieve pattern="${lib.dir}/[type]s/[artifact].[ext]" />
+		<manifestclasspath property="jar.classpath" jarfile="${dist.dir}/audit.jar">
+			<classpath>
+				<fileset dir="${lib.dir}/jars" includes="*.jar" />
+				<fileset dir="${lib.dir}/bundles" includes="*.jar" />
+			</classpath>
+		</manifestclasspath>
+
+		<jar destfile="${dist.dir}/audit.jar" basedir="${build.dir}">
+			<manifest>
+				<attribute name="Main-Class" value="com.bitsofproof.supernode.main.Audit" />
+				<attribute name="Class-Path" value="${jar.classpath}" />
+			</manifest>
+			<fileset dir="config/audit">
+				<filename name="**/*.xml" />
+			</fileset>
+			<fileset dir="config/audit">
+				<filename name="**/*.properties" />
+			</fileset>
+		</jar>
+	</target>
+
 	<target name="clean">
 		<delete dir="${generated.dir}" />
 		<delete dir="${build.dir}" />
-		<delete dir="${dist.dir}" />
 		<delete dir="${lib.dir}" />
 	</target>
 
