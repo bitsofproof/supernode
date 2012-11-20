@@ -718,7 +718,7 @@ class JpaBlockStore implements BlockStore
 			}
 			if ( b.getHead ().getId () == currentHead.getId () )
 			{
-				// spend if remained on the trunk
+				// spend if on the trunk
 				forwardUTXO (b);
 			}
 
