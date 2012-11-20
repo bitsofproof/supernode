@@ -18,10 +18,8 @@ package com.bitsofproof.supernode.main;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.EntityManager;
@@ -98,7 +96,7 @@ public class Audit
 		if ( upto > 0 )
 		{
 			long ms = System.currentTimeMillis ();
-			log.info ("Check 1. All heads lead to genesis");
+			log.info ("Check 1. All paths lead to genesis");
 			reachableBlocks = validateHeads ();
 			log.info ("Check 1. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
 			if ( upto > 1 )
@@ -197,7 +195,7 @@ public class Audit
 				status.setRollbackOnly ();
 				try
 				{
-					Map<Long, Double> checked = new HashMap<Long, Double> ();
+					Set<Long> checked = new HashSet<Long> ();
 					QHead head = QHead.head;
 					JPAQuery q = new JPAQuery (entityManager);
 					for ( Head h : q.from (head).list (head) )
@@ -213,19 +211,20 @@ public class Audit
 						}
 						Collections.reverse (path);
 
-						double cwork = b.getChainWork ();
-						int height = 0;
+						double cwork = 1; // 1 is genesis
+						long difficultyTarget = b.getDifficultyTarget ();
+						int height = 1;
+						b = null;
 						for ( Long id : path )
 						{
-							if ( !checked.containsKey (b.getId ()) )
+							Blk prev = b;
+							if ( !checked.contains (id) )
 							{
+								b = entityManager.find (Blk.class, id);
 								if ( b.getHeight () != height )
 								{
 									log.error ("Incorrect block height for " + b.getHash () + ", should be " + height);
 								}
-								b = entityManager.find (Blk.class, id);
-								Blk prev = b.getPrevious ();
-								long difficultyTarget = prev.getDifficultyTarget ();
 								if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
 								{
 									Blk c = null;
@@ -235,36 +234,26 @@ public class Audit
 										c = p;
 										p = c.getPrevious ();
 									}
-									long next =
+									difficultyTarget =
 											Difficulty.getNextTarget (prev.getCreateTime () - p.getCreateTime (), prev.getDifficultyTarget (),
 													chain.getTargetBlockTime ());
-									if ( next != b.getDifficultyTarget () )
-									{
-										log.error ("Wrong difficulty for block " + b.getHash () + ", should be " + next);
-									}
-									difficultyTarget = next;
 								}
 								if ( difficultyTarget != b.getDifficultyTarget () )
 								{
 									log.error ("Wrong difficulty for block " + b.getHash () + ", should be " + difficultyTarget);
 								}
-								double difficulty = Difficulty.getDifficulty (difficultyTarget);
-								cwork += difficulty;
-								if ( b.getChainWork () != cwork )
-								{
-									log.error ("Wrong cummulative work for block " + b.getHash () + " should be " + cwork);
-								}
-								checked.put (b.getId (), difficulty);
 							}
-							else
+							cwork += Difficulty.getDifficulty (difficultyTarget);
+							if ( b.getChainWork () != cwork )
 							{
-								cwork += checked.get (b.getId ());
+								log.error ("Wrong cummulative work for block " + b.getHash () + " should be " + cwork);
 							}
 							++height;
+							checked.add (b.getId ());
 						}
 						if ( cwork != h.getChainWork () )
 						{
-							log.error ("Cummulative work mismatch for head " + h.getLeaf () + " should be " + cwork);
+							log.error ("Cummulative work mismatch for head " + b.getHash () + " should be " + cwork);
 						}
 					}
 				}
