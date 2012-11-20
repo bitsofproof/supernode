@@ -26,20 +26,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Audit
 {
 	private static final Logger log = LoggerFactory.getLogger (Audit.class);
 
-	private BitcoinNetwork network;
-
 	public void start (String[] args) throws IOException, TransactionValidationException
 	{
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
+		gnuOptions.addOption ("f", "full", false, "Full validation");
 
 		try
 		{
@@ -51,11 +49,6 @@ public class Audit
 			return;
 		}
 
-	}
-
-	public void setNetwork (BitcoinNetwork network)
-	{
-		this.network = network;
 	}
 
 	private static ApplicationContext context;
