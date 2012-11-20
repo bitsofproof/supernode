@@ -359,6 +359,17 @@ public class Blk implements Serializable
 		}
 	}
 
+	public void checkHash () throws ValidationException
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWireHeaderOnly (writer);
+		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
+		if ( !reader.hash ().toString ().equals (hash) )
+		{
+			throw new ValidationException ("block hash mismatch");
+		}
+	}
+
 	public void computeHash ()
 	{
 		merkleRoot = computeMerkleRoot ();

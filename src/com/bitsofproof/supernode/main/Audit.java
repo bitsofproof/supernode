@@ -44,6 +44,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
+import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
@@ -111,6 +113,13 @@ public class Audit
 					log.info ("Check 3. Sufficient proof of work on all blocks and correct cumulative work on all paths");
 					powCheck ();
 					log.info ("Check 3. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
+					if ( upto > 3 )
+					{
+						ms = System.currentTimeMillis ();
+						log.info ("Check 4. Check merkle root on all blocks");
+						merkleRootCheck ();
+						log.info ("Check 4. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
+					}
 				}
 			}
 		}
@@ -248,12 +257,58 @@ public class Audit
 							{
 								log.error ("Wrong cummulative work for block " + b.getHash () + " should be " + cwork);
 							}
+							try
+							{
+								b.checkHash ();
+							}
+							catch ( ValidationException e )
+							{
+								log.error ("Block hash incorrect hash " + b.getHash ());
+							}
+							if ( new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+							{
+								throw new ValidationException ("Insufficuent proof of work for the difficulty in block " + b.getHash ());
+							}
+
 							++height;
 							checked.add (b.getId ());
 						}
 						if ( cwork != h.getChainWork () )
 						{
 							log.error ("Cummulative work mismatch for head " + b.getHash () + " should be " + cwork);
+						}
+					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Exception", e);
+				}
+			}
+		});
+	}
+
+	public void merkleRootCheck ()
+	{
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				try
+				{
+					QBlk blk = QBlk.blk;
+					JPAQuery q = new JPAQuery (entityManager);
+					for ( Blk b : q.from (blk).list (blk) )
+					{
+						try
+						{
+							b.checkMerkleRoot ();
+							entityManager.detach (b);
+						}
+						catch ( ValidationException e )
+						{
+							log.error ("Failed. Block " + b.getHash () + " has incorrect merkle root");
 						}
 					}
 				}
