@@ -726,7 +726,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private void backwardUTXO (Blk b)
+	private void backwardUTXO (Blk b) throws ValidationException
 	{
 		List<TxOut> sources = new ArrayList<TxOut> ();
 		for ( Tx t : b.getTransactions () )
@@ -748,11 +748,14 @@ class JpaBlockStore implements BlockStore
 		{
 			QUTxOut utxo = QUTxOut.uTxOut;
 			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
-			d.where (utxo.txout.in (sources)).execute ();
+			if ( d.where (utxo.txout.in (sources)).execute () != sources.size () )
+			{
+				throw new ValidationException ("FATAL Inconsistent UTXO");
+			}
 		}
 	}
 
-	private void forwardUTXO (Blk b)
+	private void forwardUTXO (Blk b) throws ValidationException
 	{
 		List<TxOut> sources = new ArrayList<TxOut> ();
 		for ( Tx t : b.getTransactions () )
@@ -777,7 +780,10 @@ class JpaBlockStore implements BlockStore
 		{
 			QUTxOut utxo = QUTxOut.uTxOut;
 			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
-			d.where (utxo.txout.in (sources)).execute ();
+			if ( d.where (utxo.txout.in (sources)).execute () != sources.size () )
+			{
+				throw new ValidationException ("FATAL Inconsistent UTXO");
+			}
 		}
 	}
 
