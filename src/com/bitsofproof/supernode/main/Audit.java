@@ -16,12 +16,18 @@
 package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
+import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -34,10 +40,12 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.Chain;
+import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
@@ -64,17 +72,95 @@ public class Audit
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
-		gnuOptions.addOption ("f", "full", false, "Full validation");
+		gnuOptions.addOption ("u", "upto", true, "Checks upto n");
 
+		CommandLine cl = null;
+		int upto = Integer.MAX_VALUE;
 		try
 		{
-			parser.parse (gnuOptions, args);
+			cl = parser.parse (gnuOptions, args);
+			if ( cl.hasOption ('u') )
+			{
+				upto = Integer.valueOf (cl.getOptionValue ('c'));
+			}
 		}
 		catch ( ParseException e1 )
 		{
 			log.error ("Invalid options ", e1);
 			return;
 		}
+		audit (upto);
+	}
+
+	public void audit (int upto)
+	{
+		Set<String> reachableBlocks;
+		if ( upto > 0 )
+		{
+			long ms = System.currentTimeMillis ();
+			log.info ("Check 1. All heads lead to genesis");
+			reachableBlocks = validateHeads ();
+			log.info ("Check 1. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
+			if ( upto > 1 )
+			{
+				ms = System.currentTimeMillis ();
+				log.info ("Check 2. There are no orphan blocks");
+				orphanChecks (reachableBlocks);
+				log.info ("Check 2. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
+				if ( upto > 2 )
+				{
+					ms = System.currentTimeMillis ();
+					log.info ("Check 3. Sufficient proof of work on all blocks and correct cumulative work on all paths");
+					powCheck ();
+					log.info ("Check 3. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
+				}
+			}
+		}
+	}
+
+	public Set<String> validateHeads ()
+	{
+		return new TransactionTemplate (transactionManager).execute (new TransactionCallback<Set<String>> ()
+		{
+			@Override
+			public Set<String> doInTransaction (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				try
+				{
+					QHead head = QHead.head;
+					JPAQuery q = new JPAQuery (entityManager);
+					Set<String> checked = new HashSet<String> ();
+					final String genesisHash = chain.getGenesis ().getHash ();
+					for ( Head h : q.from (head).list (head) )
+					{
+						QBlk blk = QBlk.blk;
+						q = new JPAQuery (entityManager);
+						Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
+						while ( b.getPrevious () != null && !checked.contains (b.getHash ()) )
+						{
+							checked.add (b.getHash ());
+							b = b.getPrevious ();
+						}
+						if ( !b.getHash ().equals (genesisHash) && !checked.contains (b.getHash ()) )
+						{
+							log.error ("Failed. " + h.getLeaf () + " is not connected to genesis");
+						}
+					}
+					checked.add (genesisHash);
+					return checked;
+				}
+				catch ( Exception e )
+				{
+					log.error ("Exception", e);
+				}
+				return null;
+			}
+		});
+	}
+
+	public void orphanChecks (final Set<String> reachable)
+	{
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
 			@Override
@@ -83,41 +169,111 @@ public class Audit
 				status.setRollbackOnly ();
 				try
 				{
-					audit ();
+					QBlk blk = QBlk.blk;
+					JPAQuery q = new JPAQuery (entityManager);
+					for ( Blk b : q.from (blk).list (blk) )
+					{
+						if ( !reachable.contains (b.getHash ()) )
+						{
+							log.error ("Failed. Block " + b.getHash () + " is orphan.");
+						}
+					}
 				}
 				catch ( Exception e )
 				{
-					log.error ("Exception in audit", e);
+					log.error ("Exception", e);
 				}
 			}
 		});
 	}
 
-	public void audit () throws Exception
+	public void powCheck ()
 	{
-		long ms = System.currentTimeMillis ();
-		log.info ("Check 1. All heads lead to genesis");
-		validateHeads ();
-		log.info ("Check 1. Done in " + (System.currentTimeMillis () - ms) / 1000.0 + " seconds.");
-		ms = System.currentTimeMillis ();
-	}
-
-	public void validateHeads ()
-	{
-		QHead head = QHead.head;
-		JPAQuery q = new JPAQuery (entityManager);
-		Set<String> checked = new HashSet<String> ();
-		for ( Head h : q.from (head).list (head) )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			QBlk blk = QBlk.blk;
-			q = new JPAQuery (entityManager);
-			Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
-			while ( b.getPrevious () != null && !checked.contains (b.getHash ()) )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				b = b.getPrevious ();
-				checked.add (b.getHash ());
+				status.setRollbackOnly ();
+				try
+				{
+					Map<Long, Double> checked = new HashMap<Long, Double> ();
+					QHead head = QHead.head;
+					JPAQuery q = new JPAQuery (entityManager);
+					for ( Head h : q.from (head).list (head) )
+					{
+						List<Long> path = new ArrayList<Long> ();
+						QBlk blk = QBlk.blk;
+						q = new JPAQuery (entityManager);
+						Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
+						while ( b.getPrevious () != null )
+						{
+							path.add (b.getId ());
+							b = b.getPrevious ();
+						}
+						Collections.reverse (path);
+
+						double cwork = b.getChainWork ();
+						int height = 0;
+						for ( Long id : path )
+						{
+							if ( !checked.containsKey (b.getId ()) )
+							{
+								if ( b.getHeight () != height )
+								{
+									log.error ("Incorrect block height for " + b.getHash () + ", should be " + height);
+								}
+								b = entityManager.find (Blk.class, id);
+								Blk prev = b.getPrevious ();
+								long difficultyTarget = prev.getDifficultyTarget ();
+								if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
+								{
+									Blk c = null;
+									Blk p = b.getPrevious ();
+									for ( int i = 0; i < chain.getDifficultyReviewBlocks () - 1; ++i )
+									{
+										c = p;
+										p = c.getPrevious ();
+									}
+									long next =
+											Difficulty.getNextTarget (prev.getCreateTime () - p.getCreateTime (), prev.getDifficultyTarget (),
+													chain.getTargetBlockTime ());
+									if ( next != b.getDifficultyTarget () )
+									{
+										log.error ("Wrong difficulty for block " + b.getHash () + ", should be " + next);
+									}
+									difficultyTarget = next;
+								}
+								if ( difficultyTarget != b.getDifficultyTarget () )
+								{
+									log.error ("Wrong difficulty for block " + b.getHash () + ", should be " + difficultyTarget);
+								}
+								double difficulty = Difficulty.getDifficulty (difficultyTarget);
+								cwork += difficulty;
+								if ( b.getChainWork () != cwork )
+								{
+									log.error ("Wrong cummulative work for block " + b.getHash () + " should be " + cwork);
+								}
+								checked.put (b.getId (), difficulty);
+							}
+							else
+							{
+								cwork += checked.get (b.getId ());
+							}
+							++height;
+						}
+						if ( cwork != h.getChainWork () )
+						{
+							log.error ("Cummulative work mismatch for head " + h.getLeaf () + " should be " + cwork);
+						}
+					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Exception", e);
+				}
 			}
-		}
+		});
 	}
 
 	private static ApplicationContext context;
