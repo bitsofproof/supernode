@@ -140,7 +140,7 @@
 		<property name="delay" value="60" />
 		<property name="startDelay" value="60" />
 	</bean>
-	<bean id="application" class="com.bitsofproof.supernode.main.Application">
+	<bean id="application" class="com.bitsofproof.supernode.main.Supernode">
 		<property name="network" ref="bitcoinNetwork" />
 	</bean>
 	<!-- jetty -->

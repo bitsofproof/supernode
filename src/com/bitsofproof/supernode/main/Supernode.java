@@ -15,14 +15,54 @@
  */
 package com.bitsofproof.supernode.main;
 
+import java.io.IOException;
+
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.model.TransactionValidationException;
+
 public class Supernode
 {
 	private static final Logger log = LoggerFactory.getLogger (Supernode.class);
+
+	private BitcoinNetwork network;
+
+	public void start (String[] args) throws IOException, TransactionValidationException
+	{
+		final CommandLineParser parser = new GnuParser ();
+		final Options gnuOptions = new Options ();
+		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
+
+		try
+		{
+			parser.parse (gnuOptions, args);
+		}
+		catch ( ParseException e1 )
+		{
+			log.error ("Invalid options ", e1);
+			return;
+		}
+
+		if ( network.getStore ().isEmpty () )
+		{
+			network.getStore ().resetStore (network.getChain ());
+		}
+		network.getStore ().cache ();
+		network.start ();
+	}
+
+	public void setNetwork (BitcoinNetwork network)
+	{
+		this.network = network;
+	}
 
 	private static ApplicationContext context;
 
@@ -38,7 +78,7 @@ public class Supernode
 			log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
 			log.trace ("Spring context setup");
 			context = new ClassPathXmlApplicationContext ("assembly.xml");
-			Application application = context.getBean (Application.class);
+			Supernode application = context.getBean (Supernode.class);
 			application.start (args);
 		}
 		catch ( Exception e )
