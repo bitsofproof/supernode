@@ -244,7 +244,7 @@ class JpaBlockStore implements BlockStore
 	{
 		try
 		{
-			lock.writeLock ().lock ();
+			lock.readLock ().lock ();
 
 			QBlk block = QBlk.blk;
 			JPAQuery q = new JPAQuery (entityManager);
@@ -252,7 +252,7 @@ class JpaBlockStore implements BlockStore
 		}
 		finally
 		{
-			lock.writeLock ().unlock ();
+			lock.readLock ().unlock ();
 		}
 	}
 
