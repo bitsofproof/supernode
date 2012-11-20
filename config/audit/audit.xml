@@ -49,6 +49,4 @@
 
 	<tx:annotation-driven transaction-manager="transactionManager" />
 
-	<bean id="application" class="com.bitsofproof.supernode.main.Audit">
-	</bean>
 </beans>
