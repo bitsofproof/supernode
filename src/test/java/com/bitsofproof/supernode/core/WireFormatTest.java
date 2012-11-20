@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.unit;
+package com.bitsofproof.supernode.core;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,9 +22,6 @@ import java.io.ByteArrayOutputStream;
 
 import org.junit.Test;
 
-import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.ValidationException;
-import com.bitsofproof.supernode.core.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 

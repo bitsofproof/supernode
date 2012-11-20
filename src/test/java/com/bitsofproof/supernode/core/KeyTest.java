@@ -13,18 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.unit;
+package com.bitsofproof.supernode.core;
 
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
 
 import org.junit.Test;
-
-import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.ECKeyPair;
-import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.ValidationException;
 
 public class KeyTest
 {

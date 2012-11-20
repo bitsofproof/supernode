@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.unit;
+package com.bitsofproof.supernode.core;
 
 import static org.junit.Assert.assertTrue;
 
@@ -24,12 +24,6 @@ import java.util.Arrays;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.bitsofproof.supernode.core.AddressConverter;
-import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.core.SatoshiChain;
-import com.bitsofproof.supernode.core.ValidationException;
 
 public class AddressTest
 {

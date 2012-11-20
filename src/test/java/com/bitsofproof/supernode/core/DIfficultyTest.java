@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.unit;
+package com.bitsofproof.supernode.core;
 
 import static com.bitsofproof.supernode.core.Difficulty.getCompactTarget;
 import static com.bitsofproof.supernode.core.Difficulty.getDifficulty;

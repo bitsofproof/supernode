@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.unit;
+package com.bitsofproof.supernode.core;
 
 import org.junit.Test;
 
-import com.bitsofproof.supernode.core.SatoshiChain;
 import com.bitsofproof.supernode.test.TestChain;
 
 public class GenesisTest
