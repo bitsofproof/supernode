@@ -93,7 +93,7 @@ public class SatoshiChain implements Chain
 		Blk block = new Blk ();
 
 		block.setChainWork (1);
-		block.setHeight (1);
+		block.setHeight (0);
 
 		block.setVersion (1);
 		block.setCreateTime (1231006505L);
