@@ -547,6 +547,9 @@ class JpaBlockStore implements BlockStore
 					throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
 				}
 			}
+
+			b.checkHash ();
+
 			if ( chain.isProduction () && new Hash (b.getHash ()).toBigInteger ().compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
 			{
 				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
