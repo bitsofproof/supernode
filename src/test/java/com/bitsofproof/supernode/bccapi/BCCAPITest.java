@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.test.bccapi;
+package com.bitsofproof.supernode.bccapi;
 
 import static org.junit.Assert.assertTrue;
 

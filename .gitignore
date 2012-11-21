@@ -2,3 +2,8 @@ bin
 lib
 dist
 generated
+/target
+.classpath
+.project
+.settings
+.factorypath
