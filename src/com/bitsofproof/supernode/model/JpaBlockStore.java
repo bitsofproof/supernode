@@ -1207,6 +1207,11 @@ class JpaBlockStore implements BlockStore
 		entityManager.persist (h);
 		genesis.setHead (h);
 		entityManager.persist (genesis);
+		UTxOut utxo = new UTxOut ();
+		utxo.setHash (genesis.getHash ());
+		utxo.setIx (0);
+		utxo.setTxout (genesis.getTransactions ().get (0).getOutputs ().get (0));
+		entityManager.persist (utxo);
 	}
 
 	@Transactional (propagation = Propagation.MANDATORY)
