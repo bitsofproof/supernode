@@ -507,17 +507,6 @@ public abstract class P2P
 											client.configureBlocking (false);
 											InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
 											log.trace ("Unsolicited connection from " + address.getAddress ());
-											for ( SocketChannel c : connectedPeers.keySet () )
-											{
-												if ( c.socket ().getInetAddress ().equals (client.socket ().getInetAddress ()) )
-												{
-													client.close ();
-													key.cancel ();
-													unsolicitedConnectSlot.release ();
-													log.trace ("Closing duplicate connection from " + address.getAddress ());
-													break;
-												}
-											}
 											if ( client.isOpen () )
 											{
 												final Peer peer;
