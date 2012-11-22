@@ -2,6 +2,8 @@ bin
 lib
 dist
 generated
+log
+derby.log
 /target
 .classpath
 .project

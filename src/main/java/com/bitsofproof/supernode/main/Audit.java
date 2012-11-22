@@ -133,8 +133,8 @@ public class Audit
 					}
 					if ( passed && from <= 2 && to >= 2 )
 					{
-						log.info ("Check 2. There are no orphan blocks...");
-						orphanChecks ();
+						log.info ("Check 2. There are no unconnected blocks...");
+						connectionCheck ();
 						if ( passed )
 						{
 							log.info ("Check 2. Passed.");
@@ -220,7 +220,7 @@ public class Audit
 		return passed;
 	}
 
-	public boolean orphanChecks ()
+	public boolean connectionCheck ()
 	{
 		boolean passed = true;
 		final Set<String> reachable = new HashSet<String> ();
@@ -244,7 +244,7 @@ public class Audit
 		{
 			if ( !reachable.contains (b.getHash ()) )
 			{
-				log.error ("Failed. Block " + b.getHash () + " is orphan.");
+				log.error ("Failed. Block " + b.getHash () + " is not connected to genesis.");
 				passed = false;
 			}
 		}
