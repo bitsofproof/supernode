@@ -174,23 +174,15 @@ public class TxIn implements Serializable, Cloneable
 
 	public void toWire (WireFormat.Writer writer)
 	{
-		if ( source != null )
+		if ( sourceHash != null && !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
 		{
-			writer.writeHash (new Hash (source.getTransaction ().getHash ()));
-			writer.writeUint32 (source.getIx ());
+			writer.writeHash (new Hash (sourceHash));
+			writer.writeUint32 (ix);
 		}
 		else
 		{
-			if ( sourceHash != null && !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
-			{
-				writer.writeHash (new Hash (sourceHash));
-				writer.writeUint32 (ix);
-			}
-			else
-			{
-				writer.writeBytes (Hash.ZERO_HASH.toByteArray ());
-				writer.writeUint32 (-1);
-			}
+			writer.writeBytes (Hash.ZERO_HASH.toByteArray ());
+			writer.writeUint32 (-1);
 		}
 		writer.writeVarBytes (script);
 		writer.writeUint32 (sequence);
