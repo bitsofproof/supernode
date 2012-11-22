@@ -2,4 +2,10 @@ INSTALL
 
 Th project just got mavenized. Stay tuned for new instructions....
 
-	
+UPGRADE to maven for previously used ant-eclipse project
+1. Delete the project in eclipse (just the project, not the content)
+2. Install m2e through the marketplace (Help > Eclipse Marketplace)
+3. For the APT source generator to work in eclipse automatically install m2e-apt. In eclipse: Window > Preference > Maven > Discovery > Open Catalog
+4. Merge the pull request
+5. Import the project into eclipse File > Import > Existing Maven Project
+6. Go to Project Properties > Maven > Annotation Processing, enable project specific settings and turn on annotation processing	
