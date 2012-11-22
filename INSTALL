@@ -1,23 +1,5 @@
 INSTALL
 
-1. Check your ant version with
-	ant -version
-	It should be above 1.6 (I use 1.8.2)
-2. Download ivy from http://ant.apache.org/ivy/download.cgi
-3. copy ivy-xxx.jar to a location you later use for ant with the option -lib
-4. build
-	ant -lib <ivy jar location here> demo
-5. run
-	java -jar dist/demo.jar
-	
-NOTE: build problems were reported with java 7. I use java 6.
-	
-The demo will connect to testnet3, download and verify the chain.
-	
-In case you like the demo you might configure the full server by adapting
-config/full/assembly.xml to your environment and build
-	ant -lib <ivy jar location here> full
-	java -jar dist/full.jar
-
+Th project just got mavenized. Stay tuned for new instructions....
 
 	
