@@ -122,19 +122,10 @@ public class Tx implements Serializable
 	{
 		if ( hash == null )
 		{
-			if ( outputs == null && inputs != null && inputs.size () == 1 && inputs.get (0).getScript () == null && inputs.get (0).getIx () == 0
-					&& inputs.get (0).getSequence () == 0xFFFFFFFFL )
-			{
-				// this is a pruned transaction BIP tbd
-				return hash = inputs.get (0).getSourceHash ();
-			}
-			else
-			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				toWire (writer);
-				WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
-				hash = reader.hash ().toString ();
-			}
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			toWire (writer);
+			WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
+			hash = reader.hash ().toString ();
 		}
 		return hash;
 	}
