@@ -31,7 +31,7 @@ import com.bccapi.api.AccountStatement;
 import com.bccapi.api.SendCoinForm;
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.WireFormat;
-import com.bitsofproof.supernode.main.Supernode;
+import com.bitsofproof.supernode.main.Server;
 import com.bitsofproof.supernode.model.Tx;
 
 @Controller
@@ -44,7 +44,7 @@ public class NativeBCCAPI
 	public @ResponseBody
 	byte[] getLoginChallenge (@RequestParam (value = "key", required = true) String accountPublicKey) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		return api.getLoginChallenge (ByteUtils.fromHex (accountPublicKey));
 	}
 
@@ -53,7 +53,7 @@ public class NativeBCCAPI
 	String login (@RequestParam (value = "key", required = true) String accountPublicKey,
 			@RequestParam (value = "response", required = true) String challengeResponse) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		return api.login (ByteUtils.fromHex (accountPublicKey), ByteUtils.fromHex (challengeResponse));
 	}
 
@@ -61,7 +61,7 @@ public class NativeBCCAPI
 	public @ResponseBody
 	byte[] getAccountInfo (WebRequest request) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		AccountInfo ai = api.getAccountInfo (request.getParameter ("sessionId"));
 		if ( ai == null )
 		{
@@ -77,7 +77,7 @@ public class NativeBCCAPI
 	byte[] getAccountStatement (@RequestParam (value = "index", required = true) int startIndex, @RequestParam (value = "count", required = true) int count,
 			WebRequest request) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		AccountStatement as = api.getAccountStatement (request.getParameter ("sessionId"), startIndex, count);
 		if ( as == null )
 		{
@@ -92,7 +92,7 @@ public class NativeBCCAPI
 	public @ResponseBody
 	byte[] getRecentTransactionSummary (@RequestParam (value = "count", required = true) int count, WebRequest request) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		AccountStatement as = api.getRecentTransactionSummary (request.getParameter ("sessionId"), count);
 		if ( as == null )
 		{
@@ -106,7 +106,7 @@ public class NativeBCCAPI
 	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/addKeyToWallet")
 	public void addKeyToWallet (@RequestParam (value = "key", required = true) String publicKey, WebRequest request) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		api.addKeyToWallet (request.getParameter ("sessionId"), ByteUtils.fromHex (publicKey));
 	}
 
@@ -114,7 +114,7 @@ public class NativeBCCAPI
 	public @ResponseBody
 	byte[] getSendCoinForm (WebRequest request, @RequestBody byte[] body) throws APIException, IOException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		String sessionId = request.getParameter ("sessionId");
 		WireFormat.Reader reader = new WireFormat.Reader (body);
 		String address = reader.readString ();
@@ -133,7 +133,7 @@ public class NativeBCCAPI
 	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/submitTransaction", produces = "application/octet-stream")
 	public void submitTransaction (WebRequest request, @RequestBody byte[] body) throws IOException, APIException
 	{
-		BCCAPI api = Supernode.getApplicationContext ().getBean (BCCAPI.class);
+		BCCAPI api = Server.getApplicationContext ().getBean (BCCAPI.class);
 		String sessionId = request.getParameter ("sessionId");
 		WireFormat.Reader reader = new WireFormat.Reader (body);
 		Tx tx = new Tx ();

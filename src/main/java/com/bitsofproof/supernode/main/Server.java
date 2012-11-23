@@ -29,9 +29,9 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
-public class Supernode
+public class Server
 {
-	private static final Logger log = LoggerFactory.getLogger (Supernode.class);
+	private static final Logger log = LoggerFactory.getLogger (Server.class);
 
 	private BitcoinNetwork network;
 
@@ -78,7 +78,7 @@ public class Supernode
 			log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
 			log.trace ("Spring context setup");
 			context = new ClassPathXmlApplicationContext ("assembly.xml");
-			Supernode application = context.getBean (Supernode.class);
+			Server application = context.getBean (Server.class);
 			application.start (args);
 		}
 		catch ( Exception e )
