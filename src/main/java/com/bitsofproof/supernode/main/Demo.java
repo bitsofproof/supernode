@@ -24,8 +24,8 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.Supernode.App;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.main.Main.App;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Demo implements App

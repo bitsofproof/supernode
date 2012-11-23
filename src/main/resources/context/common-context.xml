@@ -11,7 +11,7 @@
 	<description>supernode spring assembly (c) 2012 Tamas Blummer
 		tamas@bitsofproof.com</description>
 
-    <context:property-placeholder location="classpath:supernode-${spring.profiles.active:demo}.properties"/>
+    <context:property-placeholder />
     
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 
@@ -22,7 +22,7 @@
 
 	<bean id="entityManagerFactory"
 		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
-		<property name="persistenceXmlLocation" value="persistence-${spring.profiles.active:demo}.xml" />
+		<property name="persistenceXmlLocation" value="classpath:/etc/persistence-${spring.profiles.active:demo}.xml" />
 		<property name="jpaVendorAdapter" ref="jpaVendorAdapter" />
 		<property name="dataSource" ref="dataSource" />
 		<property name="jpaProperties">

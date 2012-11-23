@@ -23,13 +23,12 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.main.Main.App;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
-public class Server
+public class Server implements App
 {
 	private static final Logger log = LoggerFactory.getLogger (Server.class);
 
@@ -62,29 +61,6 @@ public class Server
 	public void setNetwork (BitcoinNetwork network)
 	{
 		this.network = network;
-	}
-
-	private static ApplicationContext context;
-
-	public static ApplicationContext getApplicationContext ()
-	{
-		return context;
-	}
-
-	public static void main (String[] args)
-	{
-		try
-		{
-			log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
-			log.trace ("Spring context setup");
-			context = new ClassPathXmlApplicationContext ("assembly.xml");
-			Server application = context.getBean (Server.class);
-			application.start (args);
-		}
-		catch ( Exception e )
-		{
-			log.error ("Application", e);
-		}
 	}
 
 }

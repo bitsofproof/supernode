@@ -1,8 +1,9 @@
 /**
  * 
  */
-package com.bitsofproof;
+package com.bitsofproof.supernode.main;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.kohsuke.args4j.Argument;
@@ -10,21 +11,18 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
+import org.springframework.core.io.support.ResourcePropertySource;
 
 import com.google.common.collect.Lists;
 
-/**
- * @author Bártfai Tamás <bartfaitamas@gmail.com>
- * 
- */
-public class Supernode
+public class Main
 {
     public interface App
     {
         public void start(String[] args) throws Exception;
     }
 
-    private static final Logger log = LoggerFactory.getLogger (Supernode.class);
+    private static final Logger log = LoggerFactory.getLogger (Main.class);
 
     public static void main(String[] args) throws Exception
     {
@@ -38,33 +36,54 @@ public class Supernode
 
     }
 
-    private static GenericXmlApplicationContext loadContext(Profiles profile)
+    private static GenericXmlApplicationContext loadContext(Profile profile) throws IOException
     {
         log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
         log.trace ("Spring context setup");
+        log.info ("Profile: " + profile.toString ());
 
         GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
-        ctx.getEnvironment ().setActiveProfiles (profile.name ().toLowerCase ());
+        ctx.getEnvironment ().getPropertySources ().addFirst (loadProperties (profile));
+        ctx.getEnvironment ().setActiveProfiles (profile.toString ());
+        ctx.load ("classpath:context/common-context.xml");
         ctx.load ("classpath:context/*-config.xml");
         ctx.refresh ();
 
-        log.info ("Profile: " + profile.name());
         return ctx;
     }
 
-    private static enum Profiles
+    /**
+     * @param profile
+     * @return
+     * @throws IOException
+     */
+    private static ResourcePropertySource loadProperties(Profile profile) throws IOException
     {
-        DEMO, SERVER
+        String propertiesLocation = String.format ("classpath:etc/supernode-%s.properties", profile.toString ());
+        return new ResourcePropertySource (propertiesLocation);
+    }
+    
+    
+
+    static enum Profile
+    {
+        DEMO, AUDIT, SERVER;
+        
+        @Override
+        public String toString()
+        {
+            return super.toString ().toLowerCase ();
+        }
     }
 
-    private static class Options
+    static class Options
     {
 
         @Argument(required = true, metaVar = "<COMMAND>", usage = "DEMO or SERVER", index = 0)
-        Profiles profile;
+        Profile profile;
 
         @Argument(required = false, metaVar = "<COMMAND ARGS>", usage = "Command specific arguments", multiValued = true, index = 1)
-        List<String> arguments = Lists.newArrayList();
+        List<String> arguments = Lists.newArrayList ();
 
         public static Options parse(String[] args)
         {

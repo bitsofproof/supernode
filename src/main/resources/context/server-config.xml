@@ -13,7 +13,7 @@
 		tamas@bitsofproof.com
     </description>
 
-	<bean id="application" class="com.bitsofproof.supernode.main.Supernode">
+	<bean id="application" class="com.bitsofproof.supernode.main.Server">
 		<property name="network" ref="bitcoinNetwork" />
 	</bean>
 	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
