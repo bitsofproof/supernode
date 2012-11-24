@@ -450,7 +450,7 @@ class JpaBlockStore implements BlockStore
 		int nsigs = 0;
 		boolean coinbase = true;
 		Map<String, ArrayList<TxOut>> transactionsOutputCache = new HashMap<String, ArrayList<TxOut>> ();
-		Map<String, HashMap<Integer, TxOut>> resolvedInputs = new HashMap<String, HashMap<Integer, TxOut>> ();
+		Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
 	}
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
@@ -817,17 +817,16 @@ class JpaBlockStore implements BlockStore
 
 	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
 	{
-		HashMap<Integer, TxOut> resolved;
-		if ( (resolved = tcontext.resolvedInputs.get (t.getHash ())) == null )
-		{
-			resolved = new HashMap<Integer, TxOut> ();
-			tcontext.resolvedInputs.put (t.getHash (), resolved);
-		}
-
 		Set<String> needTx = new HashSet<String> ();
-		int nr = 0;
 		for ( final TxIn i : t.getInputs () )
 		{
+			HashMap<Long, TxOut> resolved;
+			if ( (resolved = tcontext.resolvedInputs.get (i.getSourceHash ())) == null )
+			{
+				resolved = new HashMap<Long, TxOut> ();
+				tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
+			}
+
 			ArrayList<TxOut> outs;
 			if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
 			{
@@ -835,13 +834,12 @@ class JpaBlockStore implements BlockStore
 				{
 					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
 				}
-				resolved.put (nr, outs.get ((int) i.getIx ()));
+				resolved.put (i.getIx (), outs.get ((int) i.getIx ()));
 			}
 			else
 			{
 				needTx.add (i.getSourceHash ());
 			}
-			++nr;
 		}
 
 		if ( !needTx.isEmpty () )
@@ -864,10 +862,10 @@ class JpaBlockStore implements BlockStore
 				throw new ValidationException ("Transaction refers to unknown or spent input(s) " + t.toWireDump ());
 			}
 
-			nr = 0;
 			for ( final TxIn i : t.getInputs () )
 			{
-				if ( !resolved.containsKey (nr) )
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
+				if ( !resolved.containsKey (i.getIx ()) )
 				{
 					Map<Long, UTxOut> byHash = unspentPrefetch.get (i.getSourceHash ());
 					if ( byHash == null )
@@ -880,24 +878,24 @@ class JpaBlockStore implements BlockStore
 						throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 								+ t.toWireDump ());
 					}
-					resolved.put (nr, u.getTxout ());
-				}
-				++nr;
-			}
-		}
-		if ( tcontext.block != null )
-		{
-			// check coinbase spending
-			for ( int j = 0; j < nr; ++j )
-			{
-				TxOut transactionOutput = resolved.get (j);
-				if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null && transactionOutput.getTransaction ().getBlock () != null
-						&& transactionOutput.getTransaction ().getBlock ().getHeight () > currentHead.getHeight () - 100 )
-				{
-					throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+					resolved.put (i.getIx (), u.getTxout ());
 				}
 			}
 		}
+
+		// if ( tcontext.block != null )
+		// {
+		// // check coinbase spending
+		// for ( int j = 0; j < nr; ++j )
+		// {
+		// TxOut transactionOutput = resolved.get (j);
+		// if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null && transactionOutput.getTransaction ().getBlock () != null
+		// && transactionOutput.getTransaction ().getBlock ().getHeight () > currentHead.getHeight () - 100 )
+		// {
+		// throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+		// }
+		// }
+		// }
 	}
 
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws TransactionValidationException
@@ -1039,7 +1037,6 @@ class JpaBlockStore implements BlockStore
 			long sumIn = 0;
 			int inNumber = 0;
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
-			HashMap<Integer, TxOut> resolved = tcontext.resolvedInputs.get (t.getHash ());
 			for ( final TxIn i : t.getInputs () )
 			{
 				if ( i.getScript ().length > 520 )
@@ -1050,7 +1047,7 @@ class JpaBlockStore implements BlockStore
 					}
 				}
 
-				i.setSource (resolved.get (inNumber));
+				i.setSource (tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()));
 				sumIn += i.getSource ().getValue ();
 
 				final int nr = inNumber;
