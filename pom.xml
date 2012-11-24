@@ -3,12 +3,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bitsofproof.supernode</groupId>
 	<artifactId>supernode</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.6-SNAPSHOT</version>
 	<name>supernode</name>
 	<description>Implementation of the Bitcoin protocol</description>
 	<properties>
 		<springframework.version>3.1.2.RELEASE</springframework.version>
-		<spring-data.version>1.1.0.RELEASE</spring-data.version>
+		<spring-data.version>1.1.2.RELEASE</spring-data.version>
 		<querydsl.version>2.9.0</querydsl.version>
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
@@ -34,20 +34,6 @@
 						</configuration>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.4</version>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>com.bitsofproof.supernode.main.Main</mainClass>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
 			</plugin>
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -206,6 +192,11 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
 			<version>${springframework.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
 		</dependency>
 	</dependencies>
 </project>

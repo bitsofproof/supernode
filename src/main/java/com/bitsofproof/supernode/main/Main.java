@@ -63,7 +63,7 @@ public class Main
 				}
 				first = false;
 			}
-			loadContext (profile).getBean (App.class).start ((String[]) a.toArray ());
+			loadContext (profile).getBean (App.class).start (a.toArray (new String[0]));
 		}
 		catch ( CmdLineException cle )
 		{
