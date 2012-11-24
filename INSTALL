@@ -2,7 +2,7 @@ COMPILE
 mvn package
 
 RUN
-java -jar target/supernode-0.6.jar demo
+java -jar target/supernode-0.6-SNAPSHOT.jar demo
 
 UPGRADE 
 to maven for previously used ant-eclipse project
