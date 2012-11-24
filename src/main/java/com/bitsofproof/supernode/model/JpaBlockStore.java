@@ -449,7 +449,6 @@ class JpaBlockStore implements BlockStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		Map<String, ArrayList<TxOut>> transactionsOutputCache = new HashMap<String, ArrayList<TxOut>> ();
 		Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
 	}
 
@@ -577,12 +576,16 @@ class JpaBlockStore implements BlockStore
 			log.trace ("resolving inputs for block " + b.getHash ());
 			for ( Tx t : b.getTransactions () )
 			{
-				ArrayList<TxOut> outs = new ArrayList<TxOut> ();
-				for ( int i = 0; i < t.getOutputs ().size (); ++i )
+				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (t.getHash ());
+				if ( outs == null )
 				{
-					outs.add (t.getOutputs ().get (i));
+					outs = new HashMap<Long, TxOut> ();
+					tcontext.resolvedInputs.put (t.getHash (), outs);
 				}
-				tcontext.transactionsOutputCache.put (t.getHash (), outs);
+				for ( TxOut o : t.getOutputs () )
+				{
+					outs.put (o.getIx (), o);
+				}
 				if ( skip ) // skip coinbase
 				{
 					skip = false;
@@ -825,60 +828,36 @@ class JpaBlockStore implements BlockStore
 			{
 				resolved = new HashMap<Long, TxOut> ();
 				tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
-			}
 
-			ArrayList<TxOut> outs;
-			if ( (outs = tcontext.transactionsOutputCache.get (i.getSourceHash ())) != null )
-			{
-				if ( i.getIx () >= outs.size () )
-				{
-					throw new ValidationException ("Transaction refers to output number not available " + t.toWireDump ());
-				}
-				resolved.put (i.getIx (), outs.get ((int) i.getIx ()));
-			}
-			else
-			{
 				needTx.add (i.getSourceHash ());
 			}
 		}
 
 		if ( !needTx.isEmpty () )
 		{
-			Map<String, HashMap<Long, UTxOut>> unspentPrefetch = new HashMap<String, HashMap<Long, UTxOut>> ();
 			QUTxOut utxo = QUTxOut.uTxOut;
 			JPAQuery query = new JPAQuery (entityManager);
 			for ( UTxOut u : query.from (utxo).where (utxo.hash.in (needTx)).list (utxo) )
 			{
-				HashMap<Long, UTxOut> byIx = unspentPrefetch.get (u.getHash ());
-				if ( byIx == null )
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (u.getHash ());
+				if ( resolved == null )
 				{
-					byIx = new HashMap<Long, UTxOut> ();
-					unspentPrefetch.put (u.getHash (), byIx);
+					resolved = new HashMap<Long, TxOut> ();
+					tcontext.resolvedInputs.put (u.getHash (), resolved);
 				}
-				byIx.put (u.getIx (), u);
+				resolved.put (u.getIx (), u.getTxout ());
 			}
-			if ( unspentPrefetch.isEmpty () )
-			{
-				throw new ValidationException ("Transaction refers to unknown or spent input(s) " + t.toWireDump ());
-			}
-
 			for ( final TxIn i : t.getInputs () )
 			{
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
-				if ( !resolved.containsKey (i.getIx ()) )
+				if ( resolved == null )
 				{
-					Map<Long, UTxOut> byHash = unspentPrefetch.get (i.getSourceHash ());
-					if ( byHash == null )
-					{
-						throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
-					}
-					UTxOut u = byHash.get (i.getIx ());
-					if ( u == null )
-					{
-						throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
-								+ t.toWireDump ());
-					}
-					resolved.put (i.getIx (), u.getTxout ());
+					throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
+				}
+				if ( resolved.get (i.getIx ()) == null )
+				{
+					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
+							+ t.toWireDump ());
 				}
 			}
 		}
@@ -1276,7 +1255,6 @@ class JpaBlockStore implements BlockStore
 
 			TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = null;
-			tcontext.transactionsOutputCache = new HashMap<String, ArrayList<TxOut>> ();
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
 			resolveInputs (tcontext, t);
