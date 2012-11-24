@@ -32,6 +32,7 @@ import javax.persistence.Table;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
@@ -63,13 +64,20 @@ public class TxOut implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	List<Owner> owners;
 
-	public JSONObject toJSON () throws ValidationException
+	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
 		try
 		{
 			o.put ("value", value);
-			o.put ("script", Script.toReadable (script));
+			try
+			{
+				o.put ("script", Script.toReadable (script));
+			}
+			catch ( ValidationException e )
+			{
+				o.put ("invalidScript", ByteUtils.toHex (script));
+			}
 		}
 		catch ( JSONException e )
 		{

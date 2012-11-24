@@ -11,6 +11,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Index;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 @Entity
 @Table (name = "utxout")
@@ -70,5 +72,20 @@ public class UTxOut implements Serializable
 	public void setTxout (TxOut txout)
 	{
 		this.txout = txout;
+	}
+
+	public JSONObject toJSON ()
+	{
+		JSONObject o = new JSONObject ();
+		try
+		{
+			o.append ("tx", hash);
+			o.append ("ix", ix);
+			o.append ("out", txout.toJSON ());
+		}
+		catch ( JSONException e )
+		{
+		}
+		return o;
 	}
 }

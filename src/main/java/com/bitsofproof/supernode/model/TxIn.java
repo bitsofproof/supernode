@@ -32,6 +32,7 @@ import javax.persistence.Table;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.ValidationException;
@@ -134,35 +135,27 @@ public class TxIn implements Serializable, Cloneable
 		this.transaction = transaction;
 	}
 
-	public JSONObject toJSON () throws ValidationException
+	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
 		try
 		{
-			if ( sourceHash != null )
+			o.put ("sourceHash", sourceHash);
+			o.put ("sourceIx", ix);
+			if ( !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
 			{
-				o.put ("sourceHash", sourceHash);
-				o.put ("sourceIx", ix);
-				if ( !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
+				try
 				{
 					o.put ("script", Script.toReadable (script));
 				}
-				else
+				catch ( ValidationException e )
 				{
-					o.put ("script", JSONObject.NULL);
+					o.put ("invalidScript", ByteUtils.toHex (script));
 				}
-			}
-			else if ( source != null )
-			{
-				o.put ("sourceHash", source.getTransaction ().getHash ());
-				o.put ("sourceIx", source.getIx ());
-				o.put ("script", Script.toReadable (script));
 			}
 			else
 			{
-				o.put ("sourceHash", Hash.ZERO_HASH.toString ());
-				o.put ("sourceIx", -1);
-				o.put ("script", JSONObject.NULL);
+				o.put ("script", ByteUtils.toHex (script));
 			}
 			o.put ("sequence", sequence);
 		}

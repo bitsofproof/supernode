@@ -34,7 +34,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -155,7 +154,7 @@ public class Tx implements Serializable
 		this.block = block;
 	}
 
-	public JSONObject toJSON () throws ValidationException
+	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
 		try

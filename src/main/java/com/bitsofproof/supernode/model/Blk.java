@@ -75,7 +75,7 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
-	public JSONObject toJSON () throws ValidationException
+	public JSONObject toJSON ()
 	{
 		parseTransactions ();
 
