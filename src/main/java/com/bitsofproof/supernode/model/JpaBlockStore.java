@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.model;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -512,7 +513,12 @@ class JpaBlockStore implements BlockStore
 			{
 				// branching
 				head = new Head ();
-				head.setTrunk (prev.getHash ());
+				CachedBlock trunkBlock = cachedPrevious;
+				while ( !isBlockOnBranch (trunkBlock, currentHead) )
+				{
+					trunkBlock = trunkBlock.getPrevious ();
+				}
+				head.setTrunk (trunkBlock.hash);
 				head.setPrevious (prev.getHead ());
 
 				head.setLeaf (b.getHash ());
@@ -683,7 +689,7 @@ class JpaBlockStore implements BlockStore
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
 				// we have a new trunk
-				// if branching from main we have to revert unspent cache
+				// if branching from main we have to revert, then forward unspent cache
 				if ( isBlockOnBranch (cachedBlocks.get (head.getTrunk ()), currentHead) )
 				{
 					CachedBlock p = currentHead.getLast ();
@@ -694,15 +700,28 @@ class JpaBlockStore implements BlockStore
 						p = q;
 						q = p.previous;
 					}
+					List<Long> pathToNewHead = new ArrayList<Long> ();
+					p = cachedBlocks.get (usingHead.getLast ());
+					q = p.previous;
+					while ( !q.hash.equals (head.getTrunk ()) )
+					{
+						pathToNewHead.add (p.getId ());
+					}
+					Collections.reverse (pathToNewHead);
+					// spend what now came to trunk
+					for ( Long id : pathToNewHead )
+					{
+						forwardUTXO (entityManager.find (Blk.class, id));
+					}
 				}
-				// now this is the new trunk
-				currentHead = usingHead;
 			}
-			if ( b.getHead ().getId () == currentHead.getId () )
+			else if ( b.getHead ().getId () == currentHead.getId () )
 			{
 				// spend if on the trunk
 				forwardUTXO (b);
 			}
+			// now this is the new trunk
+			currentHead = usingHead;
 
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
