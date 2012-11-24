@@ -24,4 +24,5 @@
 		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
 		p:showSql="false" p:generateDdl="true" p:database="DERBY" />
 
+	<bean id="application" class="com.bitsofproof.supernode.main.Audit"/>
 </beans>
