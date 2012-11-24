@@ -710,21 +710,28 @@ class JpaBlockStore implements BlockStore
 
 	private void backwardUTXO (Blk b) throws ValidationException
 	{
-		List<TxOut> sources = new ArrayList<TxOut> ();
+		Set<TxOut> sources = new HashSet<TxOut> ();
 		for ( Tx t : b.getTransactions () )
 		{
+			sources.addAll (t.getOutputs ());
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( in.getSource () != null )
 				{
-					UTxOut utxo = new UTxOut ();
-					utxo.setHash (in.getSource ().getTransaction ().getHash ());
-					utxo.setIx (in.getSource ().getIx ());
-					utxo.setTxout (in.getSource ());
-					entityManager.persist (utxo);
+					if ( !sources.contains (in.getSource ()) )
+					{
+						UTxOut utxo = new UTxOut ();
+						utxo.setHash (in.getSource ().getTransaction ().getHash ());
+						utxo.setIx (in.getSource ().getIx ());
+						utxo.setTxout (in.getSource ());
+						entityManager.persist (utxo);
+					}
+					else
+					{
+						sources.remove (in.getSource ());
+					}
 				}
 			}
-			sources.addAll (t.getOutputs ());
 		}
 		if ( !sources.isEmpty () )
 		{
@@ -739,22 +746,29 @@ class JpaBlockStore implements BlockStore
 
 	private void forwardUTXO (Blk b) throws ValidationException
 	{
-		List<TxOut> sources = new ArrayList<TxOut> ();
+		Set<TxOut> sources = new HashSet<TxOut> ();
 		for ( Tx t : b.getTransactions () )
 		{
-			for ( TxOut out : t.getOutputs () )
-			{
-				UTxOut utxo = new UTxOut ();
-				utxo.setHash (out.getTransaction ().getHash ());
-				utxo.setIx (out.getIx ());
-				utxo.setTxout (out);
-				entityManager.persist (utxo);
-			}
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( in.getSource () != null )
 				{
 					sources.add (in.getSource ());
+				}
+			}
+			for ( TxOut out : t.getOutputs () )
+			{
+				if ( !sources.contains (out) )
+				{
+					UTxOut utxo = new UTxOut ();
+					utxo.setHash (out.getTransaction ().getHash ());
+					utxo.setIx (out.getIx ());
+					utxo.setTxout (out);
+					entityManager.persist (utxo);
+				}
+				else
+				{
+					sources.remove (out);
 				}
 			}
 		}
@@ -1208,7 +1222,7 @@ class JpaBlockStore implements BlockStore
 		genesis.setHead (h);
 		entityManager.persist (genesis);
 		UTxOut utxo = new UTxOut ();
-		utxo.setHash (genesis.getHash ());
+		utxo.setHash (genesis.getTransactions ().get (0).getHash ());
 		utxo.setIx (0);
 		utxo.setTxout (genesis.getTransactions ().get (0).getOutputs ().get (0));
 		entityManager.persist (utxo);
