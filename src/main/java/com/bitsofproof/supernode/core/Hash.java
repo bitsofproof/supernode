@@ -25,6 +25,7 @@ public class Hash
 {
 	private final byte[] bytes;
 	public static final Hash ZERO_HASH = new Hash (new byte[32]);
+	public static final String ZERO_HASH_STRING = new Hash (new byte[32]).toString ();
 
 	public Hash (byte[] bytes)
 	{
