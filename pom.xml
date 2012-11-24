@@ -63,7 +63,6 @@
                         <groupId>com.mysema.querydsl</groupId>
                         <artifactId>querydsl-apt</artifactId>
                         <version>${querydsl.version}</version>
-                        <classifier>jpa</classifier>
                     </dependency>
                 </dependencies>
             </plugin>
