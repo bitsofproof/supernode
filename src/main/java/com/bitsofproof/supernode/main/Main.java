@@ -28,7 +28,7 @@ import com.google.common.base.Enums;
 
 public class Main
 {
-	public interface App
+	protected interface App
 	{
 		public void start (String[] args) throws Exception;
 	}
@@ -59,12 +59,12 @@ public class Main
 		}
 	}
 
-	private static void printUsage ()
+	protected static void printUsage ()
 	{
 		System.err.println ("Usage: java com.bitsofproof.Supernode < demo | server | audit > [COMMAND ARGS]");
 	}
 
-	private static GenericXmlApplicationContext loadContext (Profile profile) throws IOException
+	protected static GenericXmlApplicationContext loadContext (Profile profile) throws IOException
 	{
 		log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
 		log.trace ("Spring context setup");
@@ -80,13 +80,13 @@ public class Main
 		return ctx;
 	}
 
-	private static ResourcePropertySource loadProperties (Profile profile) throws IOException
+	protected static ResourcePropertySource loadProperties (Profile profile) throws IOException
 	{
 		String propertiesLocation = String.format ("classpath:etc/supernode-%s.properties", profile.toString ());
 		return new ResourcePropertySource (propertiesLocation);
 	}
 
-	static enum Profile
+	protected static enum Profile
 	{
 		DEMO, AUDIT, SERVER;
 

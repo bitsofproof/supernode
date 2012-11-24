@@ -21,19 +21,32 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.kohsuke.args4j.CmdLineException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
-import com.bitsofproof.supernode.main.Main.App;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
-public class Demo implements App
+public class Demo extends Main implements Main.App
 {
 	private static final Logger log = LoggerFactory.getLogger (Demo.class);
 
 	private BitcoinNetwork network;
 
+	public static void main (String[] args) throws Exception
+	{
+		try
+		{
+			loadContext (Profile.DEMO).getBean (App.class).start (args);
+		}
+		catch ( CmdLineException cle )
+		{
+			cle.getParser ().printUsage (System.err);
+		}
+	}
+
+	@Override
 	public void start (String[] args) throws IOException, TransactionValidationException
 	{
 		final CommandLineParser parser = new GnuParser ();

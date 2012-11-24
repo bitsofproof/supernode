@@ -40,7 +40,6 @@ import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.ValidationException;
-import com.bitsofproof.supernode.main.Main.App;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
@@ -53,7 +52,7 @@ import com.bitsofproof.supernode.model.TxOut;
 import com.bitsofproof.supernode.model.UTxOut;
 import com.mysema.query.jpa.impl.JPAQuery;
 
-public class Audit implements App
+public class Audit extends Main implements Main.App
 {
 	private static final Logger log = LoggerFactory.getLogger (Audit.class);
 
@@ -109,6 +108,18 @@ public class Audit implements App
 			}
 
 			return s;
+		}
+	}
+
+	public static void main (String[] args) throws Exception
+	{
+		try
+		{
+			loadContext (Profile.AUDIT).getBean (App.class).start (args);
+		}
+		catch ( CmdLineException cle )
+		{
+			cle.getParser ().printUsage (System.err);
 		}
 	}
 
