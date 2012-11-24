@@ -890,16 +890,19 @@ class JpaBlockStore implements BlockStore
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
 		QUTxOut utxo = QUTxOut.uTxOut;
+		QTxOut txout = QTxOut.txOut;
 		JPAQuery query = new JPAQuery (entityManager);
-		for ( UTxOut u : query.from (utxo).where (utxo.hash.in (needTx)).list (utxo) )
+		for ( Object[] o : query.from (utxo).join (utxo.txout, txout).where (utxo.hash.in (needTx)).list (utxo.hash, txout) )
 		{
-			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (u.getHash ());
+			String hash = (String) o[0];
+			TxOut out = (TxOut) o[1];
+			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (hash);
 			if ( resolved == null )
 			{
 				resolved = new HashMap<Long, TxOut> ();
-				tcontext.resolvedInputs.put (u.getHash (), resolved);
+				tcontext.resolvedInputs.put (hash, resolved);
 			}
-			resolved.put (u.getTxout ().getIx (), u.getTxout ());
+			resolved.put (out.getIx (), out);
 		}
 	}
 
