@@ -17,6 +17,8 @@
 package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.slf4j.Logger;
@@ -51,7 +53,17 @@ public class Main
 
 		try
 		{
-			loadContext (profile).getBean (App.class).start (args);
+			List<String> a = new ArrayList<String> ();
+			boolean first = true;
+			for ( String s : args )
+			{
+				if ( !first )
+				{
+					a.add (s);
+				}
+				first = false;
+			}
+			loadContext (profile).getBean (App.class).start ((String[]) a.toArray ());
 		}
 		catch ( CmdLineException cle )
 		{

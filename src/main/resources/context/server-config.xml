@@ -16,19 +16,27 @@
 	<bean id="application" class="com.bitsofproof.supernode.main.Server">
 		<property name="network" ref="bitcoinNetwork" />
 	</bean>
-	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource"
-		p:portNumber="${port}" p:serverName="${server}" p:databaseName="${database}"
-		p:user="${user}" p:password="${password}" p:createDatabase="create" />
+	
+	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource">
+		<property name="portNumber" value="${port}" />
+		<property name="serverName" value="${server}" />
+		<property name="databaseName" value="${database}" />
+		<property name="user" value="${user}" />
+		<property name="password" value="${password}" />
+		<property name="createDatabase" value="create" />
+	</bean>
 
 	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
 		<property name="dataSource" ref="derbyDataSource" />
 	</bean>
 
-
 	<bean id="jpaVendorAdapter"
-		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"
-		p:showSql="false" p:generateDdl="true" p:database="DERBY" />
-
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+		<property name="showSql" value="false" />
+		<property name="generateDdl" value="true" />
+		<property name="database" value="DERBY" />
+	</bean>
+	
 	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
 		<property name="seedHosts">
 			<list>
