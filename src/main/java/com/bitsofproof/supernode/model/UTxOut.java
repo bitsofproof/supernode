@@ -2,6 +2,7 @@ package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -31,7 +32,7 @@ public class UTxOut implements Serializable
 	private long ix;
 
 	// this is really one/zero-to-one
-	@ManyToOne (fetch = FetchType.LAZY, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, cascade = CascadeType.DETACH, optional = false)
 	private TxOut txout;
 
 	public Long getId ()
