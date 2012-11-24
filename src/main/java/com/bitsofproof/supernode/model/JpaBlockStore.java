@@ -860,20 +860,6 @@ class JpaBlockStore implements BlockStore
 			resolveWithUTXO (tcontext, needTx);
 			checkTxInputsExist (tcontext, t);
 		}
-
-		// if ( tcontext.block != null )
-		// {
-		// // check coinbase spending
-		// for ( int j = 0; j < nr; ++j )
-		// {
-		// TxOut transactionOutput = resolved.get (j);
-		// if ( transactionOutput.getTransaction ().getInputs ().get (0).getSource () == null && transactionOutput.getTransaction ().getBlock () != null
-		// && transactionOutput.getTransaction ().getBlock ().getHeight () > currentHead.getHeight () - 100 )
-		// {
-		// throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
-		// }
-		// }
-		// }
 	}
 
 	private void checkTxInputsExist (TransactionContext tcontext, Tx t) throws ValidationException
@@ -885,10 +871,18 @@ class JpaBlockStore implements BlockStore
 			{
 				throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
 			}
-			if ( resolved.get (i.getIx ()) == null )
+			TxOut out = resolved.get (i.getIx ());
+			if ( out == null )
 			{
 				throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 						+ t.toWireDump ());
+			}
+			if ( tcontext.block != null && out.getTransaction ().getHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				if ( out.getTransaction ().getBlock ().getHeight () > tcontext.block.getHeight () - 100 )
+				{
+					throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+				}
 			}
 		}
 	}
