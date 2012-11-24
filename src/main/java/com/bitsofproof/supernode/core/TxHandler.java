@@ -37,7 +37,6 @@ import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.BlockStore;
-import com.bitsofproof.supernode.model.Owner;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -173,29 +172,67 @@ public class TxHandler implements ChainListener
 			unconfirmed.put (tx.getHash (), tx);
 			for ( TxIn in : tx.getInputs () )
 			{
-				for ( Owner o : in.getSource ().getOwners () )
-				{
-					ArrayList<TxIn> spent = spentByAddress.get (o.getAddress ());
-					if ( spent == null )
-					{
-						spent = new ArrayList<TxIn> ();
-						spentByAddress.put (o.getAddress (), spent);
-					}
-					spent.add (in);
-				}
+				addSpent (in, in.getSource ().getOwner1 ());
+				addSpent (in, in.getSource ().getOwner2 ());
+				addSpent (in, in.getSource ().getOwner3 ());
 			}
 			for ( TxOut out : tx.getOutputs () )
 			{
-				for ( Owner o : out.getOwners () )
-				{
-					ArrayList<TxOut> recd = receivedByAddress.get (o.getAddress ());
-					if ( recd == null )
-					{
-						recd = new ArrayList<TxOut> ();
-						receivedByAddress.put (o.getAddress (), recd);
-					}
-					recd.add (out);
-				}
+				addReceived (out, out.getOwner1 ());
+				addReceived (out, out.getOwner2 ());
+				addReceived (out, out.getOwner3 ());
+			}
+		}
+	}
+
+	private void addReceived (TxOut out, String address)
+	{
+		if ( address != null )
+		{
+			ArrayList<TxOut> recd = receivedByAddress.get (address);
+			if ( recd == null )
+			{
+				recd = new ArrayList<TxOut> ();
+				receivedByAddress.put (address, recd);
+			}
+			recd.add (out);
+		}
+	}
+
+	private void removeReceived (TxOut out, String address)
+	{
+		if ( address != null )
+		{
+			ArrayList<TxOut> recd = receivedByAddress.get (address);
+			if ( recd != null )
+			{
+				recd.remove (out);
+			}
+		}
+	}
+
+	private void addSpent (TxIn in, String address)
+	{
+		if ( address != null )
+		{
+			ArrayList<TxIn> spent = spentByAddress.get (address);
+			if ( spent == null )
+			{
+				spent = new ArrayList<TxIn> ();
+				spentByAddress.put (address, spent);
+			}
+			spent.add (in);
+		}
+	}
+
+	private void removeSpent (TxIn in, String address)
+	{
+		if ( address != null )
+		{
+			ArrayList<TxIn> spent = spentByAddress.get (address);
+			if ( spent != null )
+			{
+				spentByAddress.remove (in);
 			}
 		}
 	}
@@ -218,28 +255,19 @@ public class TxHandler implements ChainListener
 					for ( Tx tx : blk.getTransactions () )
 					{
 						heard.remove (tx.getHash ());
+						Tx cached = unconfirmed.get (tx.getHash ());
 						unconfirmed.remove (tx.getHash ());
-						for ( TxIn in : tx.getInputs () )
+						for ( TxIn in : cached.getInputs () )
 						{
-							for ( Owner o : in.getSource ().getOwners () )
-							{
-								List<TxIn> s = spentByAddress.get (o.getAddress ());
-								if ( s != null )
-								{
-									s.remove (in);
-								}
-							}
+							removeSpent (in, in.getSource ().getOwner1 ());
+							removeSpent (in, in.getSource ().getOwner2 ());
+							removeSpent (in, in.getSource ().getOwner3 ());
 						}
-						for ( TxOut out : tx.getOutputs () )
+						for ( TxOut out : cached.getOutputs () )
 						{
-							for ( Owner o : out.getOwners () )
-							{
-								List<TxOut> s = receivedByAddress.get (o.getAddress ());
-								if ( s != null )
-								{
-									s.remove (out);
-								}
-							}
+							removeReceived (out, out.getOwner1 ());
+							removeReceived (out, out.getOwner2 ());
+							removeReceived (out, out.getOwner3 ());
 						}
 					}
 				}

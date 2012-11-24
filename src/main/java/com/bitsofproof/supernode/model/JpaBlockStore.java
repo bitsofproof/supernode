@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.math.BigInteger;
+import java.security.acl.Owner;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -373,10 +374,10 @@ class JpaBlockStore implements BlockStore
 
 			QTxOut txout = QTxOut.txOut;
 			QTxIn txin = QTxIn.txIn;
-			QOwner owner = QOwner.owner;
 			JPAQuery query = new JPAQuery (entityManager);
 
-			for ( TxIn in : query.from (txin).join (txin.source, txout).join (txout.owners, owner).where (owner.address.in (addresses)).list (txin) )
+			for ( TxIn in : query.from (txin).join (txin.source, txout)
+					.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txin) )
 			{
 				CachedBlock blockOfIn = cachedBlocks.get (in.getTransaction ().getBlock ().getHash ());
 				if ( isBlockOnBranch (blockOfIn, currentHead) )
@@ -402,10 +403,10 @@ class JpaBlockStore implements BlockStore
 			lock.readLock ().lock ();
 
 			QTxOut txout = QTxOut.txOut;
-			QOwner owner = QOwner.owner;
 			JPAQuery query = new JPAQuery (entityManager);
 
-			for ( TxOut out : query.from (txout).join (txout.owners, owner).where (owner.address.in (addresses)).list (txout) )
+			for ( TxOut out : query.from (txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
+					.list (txout) )
 			{
 				CachedBlock blockOfOut = cachedBlocks.get (out.getTransaction ().getBlock ().getHash ());
 				if ( isBlockOnBranch (blockOfOut, currentHead) )
@@ -430,11 +431,11 @@ class JpaBlockStore implements BlockStore
 			lock.readLock ().lock ();
 
 			QTxOut txout = QTxOut.txOut;
-			QOwner owner = QOwner.owner;
 			QUTxOut utxo = QUTxOut.uTxOut;
 			JPAQuery query = new JPAQuery (entityManager);
 
-			return query.from (utxo).join (utxo.txout, txout).join (txout.owners, owner).where (owner.address.in (addresses)).list (txout);
+			return query.from (utxo).join (utxo.txout, txout)
+					.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txout);
 		}
 		finally
 		{
@@ -1124,7 +1125,6 @@ class JpaBlockStore implements BlockStore
 	{
 		List<Owner> owners = new ArrayList<Owner> ();
 		parseOwners (out.getScript (), out, owners);
-		out.setOwners (owners);
 	}
 
 	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws TransactionValidationException
@@ -1136,20 +1136,14 @@ class JpaBlockStore implements BlockStore
 			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG )
 			{
 				// pay to key
-				Owner o = new Owner ();
-				o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), false, chain));
-				o.setOutpoint (out);
-				owners.add (o);
+				out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), false, chain));
 				out.setVotes (1L);
 			}
 			else if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
 					&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
 			{
 				// pay to address
-				Owner o = new Owner ();
-				o.setAddress (AddressConverter.toSatoshiStyle (parsed.get (2).data, false, chain));
-				o.setOutpoint (out);
-				owners.add (o);
+				out.setOwner1 (AddressConverter.toSatoshiStyle (parsed.get (2).data, false, chain));
 				out.setVotes (1L);
 			}
 			else if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
@@ -1159,10 +1153,7 @@ class JpaBlockStore implements BlockStore
 				if ( hash.length == 20 )
 				{
 					// BIP 0013
-					Owner o = new Owner ();
-					o.setAddress (AddressConverter.toSatoshiStyle (hash, true, chain));
-					o.setOutpoint (out);
-					owners.add (o);
+					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, true, chain));
 					out.setVotes (1L);
 				}
 			}
@@ -1177,10 +1168,18 @@ class JpaBlockStore implements BlockStore
 							int nkeys = parsed.get (i - 1).op.ordinal () - Opcode.OP_1.ordinal () + 1;
 							for ( int j = 0; j < nkeys; ++j )
 							{
-								Owner o = new Owner ();
-								o.setAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
-								o.setOutpoint (out);
-								owners.add (o);
+								if ( j == 0 )
+								{
+									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+								}
+								if ( j == 1 )
+								{
+									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+								}
+								if ( j == 2 )
+								{
+									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+								}
 							}
 							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - Opcode.OP_1.ordinal () + 1);
 							return;

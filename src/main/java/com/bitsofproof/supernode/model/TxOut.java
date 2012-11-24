@@ -16,19 +16,19 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -61,8 +61,17 @@ public class TxOut implements Serializable
 
 	private Long votes;
 
-	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-	List<Owner> owners;
+	@Column (length = 40, nullable = true)
+	@Index (name = "addr1index")
+	private String owner1;
+
+	@Column (length = 40, nullable = true)
+	@Index (name = "own2index")
+	private String owner2;
+
+	@Column (length = 40, nullable = true)
+	@Index (name = "own3index")
+	private String owner3;
 
 	public JSONObject toJSON ()
 	{
@@ -157,14 +166,34 @@ public class TxOut implements Serializable
 		this.votes = votes;
 	}
 
-	public List<Owner> getOwners ()
+	public String getOwner1 ()
 	{
-		return owners;
+		return owner1;
 	}
 
-	public void setOwners (List<Owner> owners)
+	public void setOwner1 (String owner1)
 	{
-		this.owners = owners;
+		this.owner1 = owner1;
+	}
+
+	public String getOwner2 ()
+	{
+		return owner2;
+	}
+
+	public void setOwner2 (String owner2)
+	{
+		this.owner2 = owner2;
+	}
+
+	public String getOwner3 ()
+	{
+		return owner3;
+	}
+
+	public void setOwner3 (String owner3)
+	{
+		this.owner3 = owner3;
 	}
 
 	protected TxOut flatCopy (Tx tc)

@@ -51,7 +51,6 @@ import com.bitsofproof.supernode.core.TxHandler;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.Owner;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -216,18 +215,19 @@ public class BCCAPI implements BitcoinClientAPI
 						int confirmations = height - blk.getHeight ();
 						long date = blk.getCreateTime ();
 						StringBuffer addresses = new StringBuffer ();
-						if ( out.getOwners () != null )
+						if ( out.getOwner1 () != null )
 						{
-							boolean first = true;
-							for ( Owner o : out.getOwners () )
-							{
-								addresses.append (o.getAddress ());
-								if ( !first )
-								{
-									addresses.append (" ");
-								}
-								first = false;
-							}
+							addresses.append (out.getOwner1 ());
+						}
+						if ( out.getOwner2 () != null )
+						{
+							addresses.append (" ");
+							addresses.append (out.getOwner2 ());
+						}
+						if ( out.getOwner3 () != null )
+						{
+							addresses.append (" ");
+							addresses.append (out.getOwner3 ());
 						}
 						records.add (new Record (0, confirmations, date, Record.Type.Received, addresses.toString (), out.getValue ()));
 					}
@@ -237,18 +237,20 @@ public class BCCAPI implements BitcoinClientAPI
 						int confirmations = height - blk.getHeight ();
 						long date = blk.getCreateTime ();
 						StringBuffer addresses = new StringBuffer ();
-						if ( in.getSource ().getOwners () != null )
+						TxOut out = in.getSource ();
+						if ( out.getOwner1 () != null )
 						{
-							boolean first = true;
-							for ( Owner o : in.getSource ().getOwners () )
-							{
-								addresses.append (o.getAddress ());
-								if ( !first )
-								{
-									addresses.append (" ");
-								}
-								first = false;
-							}
+							addresses.append (out.getOwner1 ());
+						}
+						if ( out.getOwner2 () != null )
+						{
+							addresses.append (" ");
+							addresses.append (out.getOwner2 ());
+						}
+						if ( out.getOwner3 () != null )
+						{
+							addresses.append (" ");
+							addresses.append (out.getOwner3 ());
 						}
 						Record.Type t = Record.Type.Sent;
 						if ( client.hasAddress (addresses.toString ()) )
