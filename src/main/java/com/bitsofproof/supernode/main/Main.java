@@ -4,16 +4,14 @@
 package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.CmdLineException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.core.io.support.ResourcePropertySource;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Enums;
 
 public class Main
 {
@@ -26,16 +24,29 @@ public class Main
 
     public static void main(String[] args) throws Exception
     {
-        Options options = Options.parse (args);
-        if (options == null)
+        Profile profile = null;
+        if (args.length > 0 && args[0] != "help")
+            profile = Enums.valueOfFunction (Profile.class).apply (args[0].toUpperCase ());
+        
+        if (profile == null) {
+            printUsage ();
             return;
-
-        GenericXmlApplicationContext ctx = loadContext (options.profile);
-        App app = ctx.getBean (App.class);
-        app.start (options.arguments.toArray (new String[0]));
-
+        }
+        
+        try
+        {
+            loadContext (profile).getBean (App.class).start (args);
+        }
+        catch (CmdLineException cle)
+        {
+            cle.getParser ().printUsage (System.err);
+        }
     }
 
+    private static void printUsage() {
+        System.err.println ("Usage: java com.bitsofproof.Supernode < demo | server | audit > [COMMAND ARGS]");
+    }
+    
     private static GenericXmlApplicationContext loadContext(Profile profile) throws IOException
     {
         log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
@@ -62,46 +73,15 @@ public class Main
         String propertiesLocation = String.format ("classpath:etc/supernode-%s.properties", profile.toString ());
         return new ResourcePropertySource (propertiesLocation);
     }
-    
-    
 
     static enum Profile
     {
         DEMO, AUDIT, SERVER;
-        
+
         @Override
         public String toString()
         {
             return super.toString ().toLowerCase ();
         }
     }
-
-    static class Options
-    {
-
-        @Argument(required = true, metaVar = "<COMMAND>", usage = "DEMO or SERVER", index = 0)
-        Profile profile;
-
-        @Argument(required = false, metaVar = "<COMMAND ARGS>", usage = "Command specific arguments", multiValued = true, index = 1)
-        List<String> arguments = Lists.newArrayList ();
-
-        public static Options parse(String[] args)
-        {
-            Options options = new Options ();
-            CmdLineParser parser = new CmdLineParser (options);
-            try
-            {
-                parser.parseArgument (args);
-            }
-            catch (Exception e)
-            {
-                System.err.println ("Usage: java com.bitsofproof.Supernode <COMMAND> [COMMAND ARGS]");
-                parser.printUsage (System.err);
-                return null;
-            }
-            return options;
-        }
-
-    }
-
 }
