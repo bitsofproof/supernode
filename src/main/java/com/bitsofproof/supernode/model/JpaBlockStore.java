@@ -302,15 +302,35 @@ class JpaBlockStore implements BlockStore
 				h.setLast (cb);
 			}
 
+			log.trace ("Read shnapshots...");
+
+			Map<Long, Long> blockToSnap = new HashMap<Long, Long> ();
+			QSnapshot snap = QSnapshot.snapshot;
+			q = new JPAQuery (entityManager);
+			for ( Object[] col : q.from (snap).join (snap.block, block).list (block.id, snap.id) )
+			{
+				blockToSnap.put ((Long) col[0], (Long) col[1]);
+			}
+
+			Snapshot snapshot = null;
 			log.trace ("Cache UTXO...");
 			List<Long> trunkPath = new ArrayList<Long> ();
 			CachedBlock b = currentHead.last;
 			CachedBlock p = b.previous;
 			while ( p != null )
 			{
+				if ( blockToSnap.containsKey (b.getId ()) )
+				{
+					snapshot = entityManager.find (Snapshot.class, blockToSnap.get (b.getId ()));
+					break;
+				}
 				trunkPath.add (b.getId ());
 				b = p;
 				p = b.previous;
+			}
+			if ( snapshot != null )
+			{
+				log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
 			}
 			Collections.reverse (trunkPath);
 			for ( Long id : trunkPath )
@@ -606,25 +626,28 @@ class JpaBlockStore implements BlockStore
 
 	private List<TxOut> retrieveTxOut (Collection<Long> ids)
 	{
+		List<TxOut> outs = new ArrayList<TxOut> ();
 		if ( ids != null && !ids.isEmpty () )
 		{
-			QTxOut txout = QTxOut.txOut;
-			JPAQuery query = new JPAQuery (entityManager);
-			return query.from (txout).where (txout.id.in (ids)).list (txout);
+			for ( Long id : ids )
+			{
+				outs.add (entityManager.find (TxOut.class, id));
+			}
 		}
-		return new ArrayList<TxOut> ();
+		return outs;
 	}
 
 	private List<TxIn> retrieveTxIn (Collection<Long> ids)
 	{
+		List<TxIn> ins = new ArrayList<TxIn> ();
 		if ( ids != null && !ids.isEmpty () )
 		{
-			QTxIn txin = QTxIn.txIn;
-			JPAQuery query = new JPAQuery (entityManager);
-
-			return query.from (txin).where (txin.id.in (ids)).list (txin);
+			for ( Long id : ids )
+			{
+				ins.add (entityManager.find (TxIn.class, id));
+			}
 		}
-		return new ArrayList<TxIn> ();
+		return ins;
 	}
 
 	private static class TransactionContext

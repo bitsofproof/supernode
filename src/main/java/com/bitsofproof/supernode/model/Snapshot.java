@@ -4,11 +4,11 @@ import java.io.Serializable;
 import java.util.List;
 
 import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -22,8 +22,8 @@ public class Snapshot implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	@Column (length = 64, nullable = false, unique = true)
-	private String block;
+	@ManyToOne (fetch = FetchType.LAZY)
+	private Blk block;
 
 	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	private List<TxOut> utxo;
@@ -44,12 +44,12 @@ public class Snapshot implements Serializable
 		this.id = id;
 	}
 
-	public String getBlock ()
+	public Blk getBlock ()
 	{
 		return block;
 	}
 
-	public void setBlock (String block)
+	public void setBlock (Blk block)
 	{
 		this.block = block;
 	}
