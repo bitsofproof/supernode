@@ -61,7 +61,7 @@
 		<constructor-arg>
 			<value>10</value>
 		</constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="discoveryChain" />
+		<property name="discovery" ref="dnsDiscovery" />
 		<property name="chain" ref="${chain}" />
 		<property name="store" ref="${store}" />
 		<property name="peerStore" ref="${peerStore}" />		
