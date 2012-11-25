@@ -1,5 +1,21 @@
 drop table peer;
 
+drop table spent_txin;
+
+drop table recd_txout;
+
+drop table snap_recd;
+
+drop table snap_spent;
+
+drop table spent;
+
+drop table recd;
+
+drop table snap_txout;
+
+drop table snap;
+
 drop table tx_txin;
 
 drop table tx_txout;

@@ -13,8 +13,8 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
-@Table (name = "spent")
-public class Spent implements Serializable
+@Table (name = "utxo")
+public class UTxOut implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
@@ -22,11 +22,11 @@ public class Spent implements Serializable
 	@GeneratedValue
 	private Long id;
 
-	@Column (length = 40, nullable = false)
-	private String address;
+	@Column (length = 64, nullable = false)
+	private String txhash;
 
 	@OneToMany (cascade = CascadeType.DETACH, fetch = FetchType.EAGER)
-	private List<TxIn> inputs;
+	private List<TxOut> outputs;
 
 	public Long getId ()
 	{
@@ -38,24 +38,24 @@ public class Spent implements Serializable
 		this.id = id;
 	}
 
-	public String getAddress ()
+	public List<TxOut> getOutputs ()
 	{
-		return address;
+		return outputs;
 	}
 
-	public void setAddress (String address)
+	public void setOutputs (List<TxOut> outputs)
 	{
-		this.address = address;
+		this.outputs = outputs;
 	}
 
-	public List<TxIn> getInputs ()
+	public String getTxhash ()
 	{
-		return inputs;
+		return txhash;
 	}
 
-	public void setInputs (List<TxIn> inputs)
+	public void setTxhash (String txhash)
 	{
-		this.inputs = inputs;
+		this.txhash = txhash;
 	}
 
 }

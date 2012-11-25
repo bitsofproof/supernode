@@ -26,10 +26,10 @@ public class Snapshot implements Serializable
 	private Blk block;
 
 	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	private List<TxOut> utxo;
+	private List<UTxOut> utxo;
 
 	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	private List<Spent> spendt;
+	private List<Spent> spent;
 
 	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
 	private List<Received> received;
@@ -54,24 +54,24 @@ public class Snapshot implements Serializable
 		this.block = block;
 	}
 
-	public List<TxOut> getUtxo ()
+	public List<UTxOut> getUtxo ()
 	{
 		return utxo;
 	}
 
-	public void setUtxo (List<TxOut> utxo)
+	public void setUtxo (List<UTxOut> utxo)
 	{
 		this.utxo = utxo;
 	}
 
-	public List<Spent> getSpendt ()
+	public List<Spent> getSpent ()
 	{
-		return spendt;
+		return spent;
 	}
 
-	public void setSpendt (List<Spent> spendt)
+	public void setSpent (List<Spent> spent)
 	{
-		this.spendt = spendt;
+		this.spent = spent;
 	}
 
 	public List<Received> getReceived ()

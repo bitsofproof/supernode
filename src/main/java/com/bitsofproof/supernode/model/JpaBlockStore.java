@@ -331,6 +331,30 @@ class JpaBlockStore implements BlockStore
 			if ( snapshot != null )
 			{
 				log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
+				for ( UTxOut utxo : snapshot.getUtxo () )
+				{
+					for ( TxOut out : utxo.getOutputs () )
+					{
+						utxoCache.add (utxo.getTxhash (), out);
+						utxoByAddress.add (out.getOwner1 (), out);
+						utxoByAddress.add (out.getOwner2 (), out);
+						utxoByAddress.add (out.getOwner3 (), out);
+					}
+				}
+				for ( Spent s : snapshot.getSpent () )
+				{
+					for ( TxIn in : s.getInputs () )
+					{
+						spentCache.add (s.getAddress (), in);
+					}
+				}
+				for ( Received s : snapshot.getReceived () )
+				{
+					for ( TxOut out : s.getOutputs () )
+					{
+						receivedCache.add (s.getAddress (), out);
+					}
+				}
 			}
 			Collections.reverse (trunkPath);
 			for ( Long id : trunkPath )

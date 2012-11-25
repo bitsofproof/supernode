@@ -25,7 +25,7 @@ public class Received implements Serializable
 	@Column (length = 40, nullable = false)
 	private String address;
 
-	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@OneToMany (cascade = CascadeType.DETACH, fetch = FetchType.EAGER)
 	private List<TxOut> outputs;
 
 	public Long getId ()
