@@ -58,7 +58,7 @@ public class TxOut implements Serializable, HasId
 	private Tx transaction;
 
 	@Column (nullable = false)
-	private Long ix;
+	private Long ix = new Long (0L);
 
 	private Long votes;
 

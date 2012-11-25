@@ -52,7 +52,7 @@ public class TxIn implements Serializable, Cloneable, HasId
 	private String sourceHash;
 
 	@Column (nullable = false)
-	private Long ix;
+	private Long ix = new Long (0L);
 
 	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
