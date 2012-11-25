@@ -123,7 +123,11 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( key != null )
 			{
-				return cache.get (key);
+				Collection<Long> ids = cache.get (key);
+				if ( ids != null )
+				{
+					return ids;
+				}
 			}
 			return new ArrayList<Long> ();
 		}
@@ -314,7 +318,7 @@ class JpaBlockStore implements BlockStore
 				Blk blk = entityManager.find (Blk.class, id);
 				if ( (blk.getHeight () % 10000) == 0 )
 				{
-					log.trace ("Caching at block " + blk.getHeight ());
+					log.trace ("... at block " + blk.getHeight ());
 				}
 				forwardCache (blk);
 				for ( Tx t : blk.getTransactions () )
