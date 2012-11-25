@@ -85,16 +85,16 @@ class JpaBlockStore implements BlockStore
 
 	private class Cache<T extends HasId>
 	{
-		private final Map<String, HashSet<Long>> cache = new HashMap<String, HashSet<Long>> ();
+		private final Map<String, LinkedList<Long>> cache = new HashMap<String, LinkedList<Long>> ();
 
 		public void add (String key, T out)
 		{
 			if ( key != null )
 			{
-				HashSet<Long> outs = cache.get (key);
+				LinkedList<Long> outs = cache.get (key);
 				if ( outs == null )
 				{
-					outs = new HashSet<Long> ();
+					outs = new LinkedList<Long> ();
 					cache.put (key, outs);
 				}
 				Long id = out.getId ();
@@ -106,7 +106,7 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( key != null )
 			{
-				HashSet<Long> outs = cache.get (key);
+				LinkedList<Long> outs = cache.get (key);
 				if ( outs != null )
 				{
 					Long id = out.getId ();
