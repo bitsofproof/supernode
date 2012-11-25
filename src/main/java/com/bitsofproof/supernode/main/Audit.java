@@ -44,12 +44,10 @@ import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
 import com.bitsofproof.supernode.model.QHead;
-import com.bitsofproof.supernode.model.QUTxOut;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
-import com.bitsofproof.supernode.model.UTxOut;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 public class Audit extends Main implements Main.App
@@ -183,15 +181,6 @@ public class Audit extends Main implements Main.App
 						if ( coinbaseCheck () )
 						{
 							log.info ("Check 5. Passed.");
-						}
-					}
-					if ( passed && from <= 6 && to >= 6 )
-					{
-						log.info ("Check 6. Total coinbase matches sum of unspent output...");
-						utxoSum ();
-						if ( passed )
-						{
-							log.info ("Check 6. Passed.");
 						}
 					}
 					if ( passed )
@@ -425,49 +414,6 @@ public class Audit extends Main implements Main.App
 				log.warn ("Miner destroyed " + (-coinbase) + " satoshi(s) in block " + b.getHash ());
 			}
 			entityManager.detach (b);
-		}
-		return passed;
-	}
-
-	public boolean utxoSum ()
-	{
-		boolean passed = true;
-		QHead head = QHead.head;
-		JPAQuery q = new JPAQuery (entityManager);
-		double maxwork = 0;
-		Head trunk = null;
-		for ( Head h : q.from (head).list (head) )
-		{
-			if ( h.getChainWork () > maxwork )
-			{
-				trunk = h;
-				maxwork = trunk.getChainWork ();
-			}
-		}
-		long coinbaseSum = 0;
-		q = new JPAQuery (entityManager);
-		QBlk blk = QBlk.blk;
-		Blk leaf = q.from (blk).where (blk.hash.eq (trunk.getLeaf ())).uniqueResult (blk);
-		for ( int height = 0; height <= leaf.getHeight (); ++height )
-		{
-			coinbaseSum += ((50L * Tx.COIN) >> (height / 210000L));
-		}
-		long utxosum = 0;
-		QUTxOut utxo = QUTxOut.uTxOut;
-		q = new JPAQuery (entityManager);
-		for ( UTxOut u : q.from (utxo).list (utxo) )
-		{
-			utxosum += u.getTxout ().getValue ();
-			entityManager.detach (u.getTxout ());
-		}
-		if ( coinbaseSum < utxosum )
-		{
-			log.error ("Unspent output exceeds coinbase");
-			passed = false;
-		}
-		if ( coinbaseSum > utxosum )
-		{
-			log.warn ("Expected coinbase exceeds unspent output with " + (coinbaseSum - utxosum) + " satoshis, check Step 6 if miner did it.");
 		}
 		return passed;
 	}

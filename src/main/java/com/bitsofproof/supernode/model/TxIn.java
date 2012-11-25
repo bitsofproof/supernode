@@ -40,7 +40,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "txin")
-public class TxIn implements Serializable, Cloneable
+public class TxIn implements Serializable, Cloneable, HasId
 {
 	private static final long serialVersionUID = 1L;
 
@@ -65,6 +65,7 @@ public class TxIn implements Serializable, Cloneable
 	// scriptSig
 	private byte[] script;
 
+	@Override
 	public Long getId ()
 	{
 		return id;

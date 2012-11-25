@@ -50,7 +50,6 @@ import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.core.ValidationException;
-import com.mysema.query.jpa.impl.JPADeleteClause;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaBlockStore")
@@ -75,8 +74,71 @@ class JpaBlockStore implements BlockStore
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
+	private final Cache<TxOut> utxoCache = new Cache<TxOut> ();
+	private final Cache<TxOut> utxoByAddress = new Cache<TxOut> ();
+	private final Cache<TxIn> spentCache = new Cache<TxIn> ();
+	private final Cache<TxOut> receivedCache = new Cache<TxOut> ();
+
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
+
+	private class Cache<T extends HasId>
+	{
+		private final Map<String, LinkedList<Long>> cache = new HashMap<String, LinkedList<Long>> ();
+
+		public void add (String key, T out)
+		{
+			if ( key != null )
+			{
+				LinkedList<Long> outs = cache.get (out.getId ());
+				if ( outs == null )
+				{
+					outs = new LinkedList<Long> ();
+					cache.put (key, outs);
+				}
+				outs.add (out.getId ());
+			}
+		}
+
+		public void remove (String key, T out)
+		{
+			if ( key != null )
+			{
+				LinkedList<Long> outs = cache.get (key);
+				if ( outs != null )
+				{
+					outs.remove (out.getId ());
+					if ( outs.size () == 0 )
+					{
+						cache.remove (key);
+					}
+				}
+			}
+		}
+
+		public List<Long> get (String key)
+		{
+			if ( key != null )
+			{
+				return cache.get (key);
+			}
+			return new ArrayList<Long> ();
+		}
+
+		public List<Long> get (List<String> keys)
+		{
+			if ( keys != null )
+			{
+				ArrayList<Long> ids = new ArrayList<Long> ();
+				for ( String k : keys )
+				{
+					ids.addAll (get (k));
+				}
+				return ids;
+			}
+			return new ArrayList<Long> ();
+		}
+	}
 
 	private static class CachedHead
 	{
@@ -194,7 +256,7 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.writeLock ().lock ();
 
-			log.trace ("Filling chain cache with heads");
+			log.trace ("Cache heads...");
 			QHead head = QHead.head;
 			JPAQuery q = new JPAQuery (entityManager);
 			for ( Head h : q.from (head).list (head) )
@@ -214,7 +276,7 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 
-			log.trace ("Filling chain cache with stored blocks");
+			log.trace ("Cache chain...");
 			QBlk block = QBlk.blk;
 			q = new JPAQuery (entityManager);
 			for ( Blk b : q.from (block).list (block) )
@@ -233,11 +295,135 @@ class JpaBlockStore implements BlockStore
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
 			}
+
+			log.trace ("Cache UTXO...");
+			List<Long> trunkPath = new ArrayList<Long> ();
+			CachedBlock b = currentHead.last;
+			CachedBlock p = b.previous;
+			while ( p != null )
+			{
+				trunkPath.add (b.getId ());
+				b = p;
+				p = b.previous;
+			}
+			Collections.reverse (trunkPath);
+			for ( Long id : trunkPath )
+			{
+				Blk blk = entityManager.find (Blk.class, id);
+				forwardCache (blk);
+				entityManager.detach (blk);
+			}
+
+			log.trace ("Cache filled.");
 		}
 		finally
 		{
 			lock.writeLock ().unlock ();
 		}
+	}
+
+	private void backwardCache (Blk b)
+	{
+		for ( Tx t : b.getTransactions () )
+		{
+			for ( TxOut out : t.getOutputs () )
+			{
+				utxoCache.remove (t.getHash (), out);
+
+				utxoByAddress.remove (out.getOwner1 (), out);
+				utxoByAddress.remove (out.getOwner2 (), out);
+				utxoByAddress.remove (out.getOwner3 (), out);
+
+				receivedCache.remove (out.getOwner1 (), out);
+				receivedCache.remove (out.getOwner2 (), out);
+				receivedCache.remove (out.getOwner3 (), out);
+			}
+			for ( TxIn in : t.getInputs () )
+			{
+				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+				{
+					utxoCache.add (in.getSourceHash (), in.getSource ());
+
+					utxoByAddress.add (in.getSource ().getOwner1 (), in.getSource ());
+					utxoByAddress.add (in.getSource ().getOwner2 (), in.getSource ());
+					utxoByAddress.add (in.getSource ().getOwner3 (), in.getSource ());
+
+					spentCache.remove (in.getSource ().getOwner1 (), in);
+					spentCache.remove (in.getSource ().getOwner2 (), in);
+					spentCache.remove (in.getSource ().getOwner3 (), in);
+				}
+			}
+		}
+	}
+
+	private void forwardCache (Blk b)
+	{
+		for ( Tx t : b.getTransactions () )
+		{
+			for ( TxOut out : t.getOutputs () )
+			{
+				utxoCache.add (t.getHash (), out);
+
+				utxoByAddress.add (out.getOwner1 (), out);
+				utxoByAddress.add (out.getOwner2 (), out);
+				utxoByAddress.add (out.getOwner3 (), out);
+
+				receivedCache.add (out.getOwner1 (), out);
+				receivedCache.add (out.getOwner2 (), out);
+				receivedCache.add (out.getOwner3 (), out);
+			}
+			for ( TxIn in : t.getInputs () )
+			{
+				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+				{
+					utxoCache.remove (in.getSourceHash (), in.getSource ());
+
+					utxoByAddress.remove (in.getSource ().getOwner1 (), in.getSource ());
+					utxoByAddress.remove (in.getSource ().getOwner2 (), in.getSource ());
+					utxoByAddress.remove (in.getSource ().getOwner3 (), in.getSource ());
+
+					spentCache.add (in.getSource ().getOwner1 (), in);
+					spentCache.add (in.getSource ().getOwner2 (), in);
+					spentCache.add (in.getSource ().getOwner3 (), in);
+				}
+			}
+		}
+	}
+
+	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
+	{
+		for ( String txhash : needTx )
+		{
+			List<Long> ids = utxoCache.get (txhash);
+			if ( !ids.isEmpty () )
+			{
+				QTxOut txout = QTxOut.txOut;
+				JPAQuery query = new JPAQuery (entityManager);
+				for ( TxOut out : query.from (txout).where (txout.id.in (ids)).list (txout) )
+				{
+					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+					if ( resolved == null )
+					{
+						resolved = new HashMap<Long, TxOut> ();
+						tcontext.resolvedInputs.put (txhash, resolved);
+					}
+					resolved.put (out.getIx (), out);
+				}
+			}
+		}
+	}
+
+	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch)
+	{
+		if ( branch.getBlocks ().contains (block) )
+		{
+			return true;
+		}
+		if ( branch.getPrevious () == null )
+		{
+			return false;
+		}
+		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
 	@Override
@@ -367,25 +553,9 @@ class JpaBlockStore implements BlockStore
 	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxIn> getSpent (List<String> addresses)
 	{
-		List<TxIn> spent = new ArrayList<TxIn> ();
 		try
 		{
-			lock.readLock ().lock ();
-
-			QTxOut txout = QTxOut.txOut;
-			QTxIn txin = QTxIn.txIn;
-			JPAQuery query = new JPAQuery (entityManager);
-
-			for ( TxIn in : query.from (txin).join (txin.source, txout)
-					.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txin) )
-			{
-				CachedBlock blockOfIn = cachedBlocks.get (in.getTransaction ().getBlock ().getHash ());
-				if ( isBlockOnBranch (blockOfIn, currentHead) )
-				{
-					spent.add (in);
-				}
-			}
-			return spent;
+			return retrieveTxIn (spentCache.get (addresses));
 		}
 		finally
 		{
@@ -397,24 +567,11 @@ class JpaBlockStore implements BlockStore
 	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxOut> getReceived (List<String> addresses)
 	{
-		List<TxOut> received = new ArrayList<TxOut> ();
 		try
 		{
 			lock.readLock ().lock ();
 
-			QTxOut txout = QTxOut.txOut;
-			JPAQuery query = new JPAQuery (entityManager);
-
-			for ( TxOut out : query.from (txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
-					.list (txout) )
-			{
-				CachedBlock blockOfOut = cachedBlocks.get (out.getTransaction ().getBlock ().getHash ());
-				if ( isBlockOnBranch (blockOfOut, currentHead) )
-				{
-					received.add (out);
-				}
-			}
-			return received;
+			return retrieveTxOut (receivedCache.get (addresses));
 		}
 		finally
 		{
@@ -430,17 +587,36 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
-			QTxOut txout = QTxOut.txOut;
-			QUTxOut utxo = QUTxOut.uTxOut;
-			JPAQuery query = new JPAQuery (entityManager);
-
-			return query.from (utxo).join (utxo.txout, txout)
-					.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txout);
+			return retrieveTxOut (utxoByAddress.get (addresses));
 		}
 		finally
 		{
 			lock.readLock ().unlock ();
 		}
+	}
+
+	private List<TxOut> retrieveTxOut (List<Long> ids)
+	{
+		if ( !ids.isEmpty () )
+		{
+			QTxOut txout = QTxOut.txOut;
+			JPAQuery query = new JPAQuery (entityManager);
+
+			return query.from (txout).where (txout.id.in (ids)).list (txout);
+		}
+		return new ArrayList<TxOut> ();
+	}
+
+	private List<TxIn> retrieveTxIn (List<Long> ids)
+	{
+		if ( !ids.isEmpty () )
+		{
+			QTxIn txin = QTxIn.txIn;
+			JPAQuery query = new JPAQuery (entityManager);
+
+			return query.from (txin).where (txin.id.in (ids)).list (txin);
+		}
+		return new ArrayList<TxIn> ();
 	}
 
 	private static class TransactionContext
@@ -498,6 +674,8 @@ class JpaBlockStore implements BlockStore
 				throw new ValidationException ("Future generation attempt " + b.getHash ());
 			}
 
+			CachedBlock trunkBlock = cachedPrevious;
+
 			Head head;
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
@@ -513,12 +691,10 @@ class JpaBlockStore implements BlockStore
 			{
 				// branching
 				head = new Head ();
-				CachedBlock trunkBlock = cachedPrevious;
 				while ( !isBlockOnBranch (trunkBlock, currentHead) )
 				{
 					trunkBlock = trunkBlock.getPrevious ();
 				}
-				head.setTrunk (trunkBlock.hash);
 				head.setPrevious (prev.getHead ());
 
 				head.setLeaf (b.getHash ());
@@ -716,129 +892,38 @@ class JpaBlockStore implements BlockStore
 			{
 				// we have a new trunk
 				// if branching from main we have to revert, then forward unspent cache
-				if ( isBlockOnBranch (cachedBlocks.get (head.getTrunk ()), currentHead) )
+				CachedBlock p = currentHead.getLast ();
+				CachedBlock q = p.previous;
+				while ( !q.hash.equals (trunkBlock) )
 				{
-					CachedBlock p = currentHead.getLast ();
-					CachedBlock q = p.previous;
-					while ( !q.hash.equals (head.getTrunk ()) )
-					{
-						backwardUTXO (entityManager.find (Blk.class, p.id));
-						p = q;
-						q = p.previous;
-					}
-					List<Long> pathToNewHead = new ArrayList<Long> ();
-					p = cachedBlocks.get (usingHead.getLast ());
+					backwardCache (entityManager.find (Blk.class, p.id));
+					p = q;
 					q = p.previous;
-					while ( !q.hash.equals (head.getTrunk ()) )
-					{
-						pathToNewHead.add (p.getId ());
-					}
-					Collections.reverse (pathToNewHead);
-					// spend what now came to trunk
-					for ( Long id : pathToNewHead )
-					{
-						forwardUTXO (entityManager.find (Blk.class, id));
-					}
+				}
+				List<Long> pathToNewHead = new ArrayList<Long> ();
+				p = cachedBlocks.get (usingHead.getLast ());
+				q = p.previous;
+				while ( !q.hash.equals (trunkBlock) )
+				{
+					pathToNewHead.add (p.getId ());
+				}
+				Collections.reverse (pathToNewHead);
+				// spend what now came to trunk
+				for ( Long id : pathToNewHead )
+				{
+					forwardCache (entityManager.find (Blk.class, id));
 				}
 			}
 			else if ( b.getHead ().getId () == currentHead.getId () )
 			{
 				// spend if on the trunk
-				forwardUTXO (b);
+				forwardCache (b);
 			}
 			// now this is the new trunk
 			currentHead = usingHead;
 
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
-	}
-
-	private void backwardUTXO (Blk b) throws ValidationException
-	{
-		Set<TxOut> sources = new HashSet<TxOut> ();
-		for ( Tx t : b.getTransactions () )
-		{
-			sources.addAll (t.getOutputs ());
-			for ( TxIn in : t.getInputs () )
-			{
-				if ( in.getSource () != null )
-				{
-					if ( !sources.contains (in.getSource ()) )
-					{
-						UTxOut utxo = new UTxOut ();
-						utxo.setHash (in.getSource ().getTransaction ().getHash ());
-						utxo.setIx (in.getSource ().getIx ());
-						utxo.setTxout (in.getSource ());
-						entityManager.persist (utxo);
-					}
-					else
-					{
-						sources.remove (in.getSource ());
-					}
-				}
-			}
-		}
-		if ( !sources.isEmpty () )
-		{
-			QUTxOut utxo = QUTxOut.uTxOut;
-			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
-			if ( d.where (utxo.txout.in (sources)).execute () != sources.size () )
-			{
-				throw new ValidationException ("FATAL Inconsistent UTXO");
-			}
-		}
-	}
-
-	private void forwardUTXO (Blk b) throws ValidationException
-	{
-		Set<TxOut> sources = new HashSet<TxOut> ();
-		for ( Tx t : b.getTransactions () )
-		{
-			for ( TxIn in : t.getInputs () )
-			{
-				if ( in.getSource () != null )
-				{
-					sources.add (in.getSource ());
-				}
-			}
-			for ( TxOut out : t.getOutputs () )
-			{
-				if ( !sources.contains (out) )
-				{
-					UTxOut utxo = new UTxOut ();
-					utxo.setHash (out.getTransaction ().getHash ());
-					utxo.setIx (out.getIx ());
-					utxo.setTxout (out);
-					entityManager.persist (utxo);
-				}
-				else
-				{
-					sources.remove (out);
-				}
-			}
-		}
-		if ( !sources.isEmpty () )
-		{
-			QUTxOut utxo = QUTxOut.uTxOut;
-			JPADeleteClause d = new JPADeleteClause (entityManager, utxo);
-			if ( d.where (utxo.txout.in (sources)).execute () != sources.size () )
-			{
-				throw new ValidationException ("FATAL Inconsistent UTXO");
-			}
-		}
-	}
-
-	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch)
-	{
-		if ( branch.getBlocks ().contains (block) )
-		{
-			return true;
-		}
-		if ( branch.getPrevious () == null )
-		{
-			return false;
-		}
-		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
 	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
@@ -885,25 +970,6 @@ class JpaBlockStore implements BlockStore
 					throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 				}
 			}
-		}
-	}
-
-	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
-	{
-		QUTxOut utxo = QUTxOut.uTxOut;
-		QTxOut txout = QTxOut.txOut;
-		JPAQuery query = new JPAQuery (entityManager);
-		for ( Object[] o : query.from (utxo).join (utxo.txout, txout).where (utxo.hash.in (needTx)).list (utxo.hash, txout) )
-		{
-			String hash = (String) o[0];
-			TxOut out = (TxOut) o[1];
-			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (hash);
-			if ( resolved == null )
-			{
-				resolved = new HashMap<Long, TxOut> ();
-				tcontext.resolvedInputs.put (hash, resolved);
-			}
-			resolved.put (out.getIx (), out);
 		}
 	}
 
@@ -1239,11 +1305,6 @@ class JpaBlockStore implements BlockStore
 		entityManager.persist (h);
 		genesis.setHead (h);
 		entityManager.persist (genesis);
-		UTxOut utxo = new UTxOut ();
-		utxo.setHash (genesis.getTransactions ().get (0).getHash ());
-		utxo.setIx (0);
-		utxo.setTxout (genesis.getTransactions ().get (0).getOutputs ().get (0));
-		entityManager.persist (utxo);
 	}
 
 	@Transactional (propagation = Propagation.MANDATORY)

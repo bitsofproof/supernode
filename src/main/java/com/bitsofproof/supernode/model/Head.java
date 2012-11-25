@@ -42,12 +42,6 @@ public class Head implements Serializable
 	@Column (length = 64, nullable = false)
 	private String leaf;
 
-	@Column (length = 64, nullable = true)
-	private String trunk;
-
-	@Column (length = 64, nullable = true)
-	private String stable;
-
 	public Long getId ()
 	{
 		return id;
@@ -96,15 +90,5 @@ public class Head implements Serializable
 	public void setLeaf (String leaf)
 	{
 		this.leaf = leaf;
-	}
-
-	public String getTrunk ()
-	{
-		return trunk;
-	}
-
-	public void setTrunk (String trunk)
-	{
-		this.trunk = trunk;
 	}
 }
