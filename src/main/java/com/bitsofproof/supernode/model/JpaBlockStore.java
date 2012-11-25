@@ -313,6 +313,13 @@ class JpaBlockStore implements BlockStore
 			{
 				Blk blk = entityManager.find (Blk.class, id);
 				forwardCache (blk);
+				for ( Tx t : blk.getTransactions () )
+				{
+					for ( TxIn in : t.getInputs () )
+					{
+						entityManager.detach (in.getSource ());
+					}
+				}
 				entityManager.detach (blk);
 			}
 
