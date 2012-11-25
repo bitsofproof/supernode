@@ -54,7 +54,7 @@ public class TxIn implements Serializable, Cloneable, HasId
 	@Column (nullable = false)
 	private Long ix = new Long (0L);
 
-	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.DETACH, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
 
 	@OneToOne (fetch = FetchType.LAZY, optional = true)

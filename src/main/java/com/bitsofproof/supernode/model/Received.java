@@ -9,7 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 @Entity
@@ -25,7 +25,7 @@ public class Received implements Serializable
 	@Column (length = 40, nullable = false)
 	private String address;
 
-	@OneToMany (cascade = CascadeType.DETACH, fetch = FetchType.EAGER)
+	@ManyToMany (cascade = { CascadeType.DETACH, CascadeType.REFRESH }, fetch = FetchType.EAGER)
 	private List<TxOut> outputs;
 
 	public Long getId ()

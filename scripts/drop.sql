@@ -12,7 +12,7 @@ drop table spent;
 
 drop table recd;
 
-drop table snap_txout;
+drop table snap_utxo;
 
 drop table snap;
 
@@ -21,6 +21,8 @@ drop table tx_txin;
 drop table tx_txout;
 
 drop table txin;
+
+drop table utxo_txout;
 
 drop table txout;
 

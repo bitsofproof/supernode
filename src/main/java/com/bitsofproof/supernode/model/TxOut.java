@@ -54,7 +54,7 @@ public class TxOut implements Serializable, HasId
 	// scriptPubKey
 	private byte[] script;
 
-	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.DETACH, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
 
 	@Column (nullable = false)

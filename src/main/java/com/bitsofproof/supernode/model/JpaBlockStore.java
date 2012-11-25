@@ -144,6 +144,11 @@ class JpaBlockStore implements BlockStore
 			}
 			return ids;
 		}
+
+		public Collection<String> getKeys ()
+		{
+			return cache.keySet ();
+		}
 	}
 
 	private static class CachedHead
@@ -254,7 +259,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED)
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
 	public void cache ()
 	{
@@ -263,47 +268,14 @@ class JpaBlockStore implements BlockStore
 			lock.writeLock ().lock ();
 
 			log.trace ("Cache heads...");
-			QHead head = QHead.head;
-			JPAQuery q = new JPAQuery (entityManager);
-			for ( Head h : q.from (head).list (head) )
-			{
-				CachedHead sh = new CachedHead ();
-				sh.setId (h.getId ());
-				sh.setChainWork (h.getChainWork ());
-				sh.setHeight (h.getHeight ());
-				if ( h.getPrevious () != null )
-				{
-					sh.setPrevious (cachedHeads.get (h.getId ()));
-				}
-				cachedHeads.put (h.getId (), sh);
-				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
-				{
-					currentHead = sh;
-				}
-			}
+			cacheHeads ();
 
 			log.trace ("Cache chain...");
+			cacheChain ();
+
+			log.trace ("Cache UTXO...");
+			JPAQuery q;
 			QBlk block = QBlk.blk;
-			q = new JPAQuery (entityManager);
-			for ( Blk b : q.from (block).list (block) )
-			{
-				CachedBlock cb = null;
-				if ( b.getPrevious () != null )
-				{
-					cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
-				}
-				else
-				{
-					cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
-				}
-				cachedBlocks.put (b.getHash (), cb);
-				CachedHead h = cachedHeads.get (b.getHead ().getId ());
-				h.getBlocks ().add (cb);
-				h.setLast (cb);
-			}
-
-			log.trace ("Read shnapshots...");
-
 			Map<Long, Long> blockToSnap = new HashMap<Long, Long> ();
 			QSnapshot snap = QSnapshot.snapshot;
 			q = new JPAQuery (entityManager);
@@ -313,7 +285,6 @@ class JpaBlockStore implements BlockStore
 			}
 
 			Snapshot snapshot = null;
-			log.trace ("Cache UTXO...");
 			List<Long> trunkPath = new ArrayList<Long> ();
 			CachedBlock b = currentHead.last;
 			CachedBlock p = b.previous;
@@ -331,33 +302,7 @@ class JpaBlockStore implements BlockStore
 			if ( snapshot != null )
 			{
 				log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
-				for ( UTxOut utxo : snapshot.getUtxo () )
-				{
-					for ( TxOut out : utxo.getOutputs () )
-					{
-						utxoCache.add (utxo.getTxhash (), out);
-						utxoByAddress.add (out.getOwner1 (), out);
-						utxoByAddress.add (out.getOwner2 (), out);
-						utxoByAddress.add (out.getOwner3 (), out);
-					}
-					entityManager.detach (utxo);
-				}
-				for ( Spent s : snapshot.getSpent () )
-				{
-					for ( TxIn in : s.getInputs () )
-					{
-						spentCache.add (s.getAddress (), in);
-					}
-					entityManager.detach (s);
-				}
-				for ( Received r : snapshot.getReceived () )
-				{
-					for ( TxOut out : r.getOutputs () )
-					{
-						receivedCache.add (r.getAddress (), out);
-					}
-					entityManager.detach (r);
-				}
+				readSnapshot (snapshot);
 			}
 			Collections.reverse (trunkPath);
 			for ( Long id : trunkPath )
@@ -377,12 +322,205 @@ class JpaBlockStore implements BlockStore
 				}
 				entityManager.detach (blk);
 			}
-
 			log.trace ("Cache filled.");
 		}
 		finally
 		{
 			lock.writeLock ().unlock ();
+		}
+	}
+
+	private void cacheChain ()
+	{
+		JPAQuery q;
+		QBlk block = QBlk.blk;
+		q = new JPAQuery (entityManager);
+		for ( Blk b : q.from (block).list (block) )
+		{
+			CachedBlock cb = null;
+			if ( b.getPrevious () != null )
+			{
+				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
+			}
+			else
+			{
+				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
+			}
+			cachedBlocks.put (b.getHash (), cb);
+			CachedHead h = cachedHeads.get (b.getHead ().getId ());
+			h.getBlocks ().add (cb);
+			h.setLast (cb);
+		}
+	}
+
+	private void cacheHeads ()
+	{
+		QHead head = QHead.head;
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( Head h : q.from (head).list (head) )
+		{
+			CachedHead sh = new CachedHead ();
+			sh.setId (h.getId ());
+			sh.setChainWork (h.getChainWork ());
+			sh.setHeight (h.getHeight ());
+			if ( h.getPrevious () != null )
+			{
+				sh.setPrevious (cachedHeads.get (h.getId ()));
+			}
+			cachedHeads.put (h.getId (), sh);
+			if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
+			{
+				currentHead = sh;
+			}
+		}
+	}
+
+	@Transactional (propagation = Propagation.REQUIRED)
+	@Override
+	public void createSnapshot (int height)
+	{
+		log.trace ("Cache heads...");
+		cacheHeads ();
+
+		log.trace ("Cache chain...");
+		cacheChain ();
+
+		log.trace ("Create snapshot at height " + height);
+		Map<Long, Long> blockToSnap = new HashMap<Long, Long> ();
+		QSnapshot snap = QSnapshot.snapshot;
+		QBlk block = QBlk.blk;
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( Object[] col : q.from (snap).join (snap.block, block).list (block.id, snap.id) )
+		{
+			blockToSnap.put ((Long) col[0], (Long) col[1]);
+		}
+
+		Snapshot snapshot = null;
+		List<Long> trunkPath = new ArrayList<Long> ();
+		CachedBlock b = currentHead.last;
+		CachedBlock p = b.previous;
+		while ( p != null )
+		{
+			if ( blockToSnap.containsKey (b.getId ()) )
+			{
+				snapshot = entityManager.find (Snapshot.class, blockToSnap.get (b.getId ()));
+				break;
+			}
+			trunkPath.add (b.getId ());
+			b = p;
+			p = b.previous;
+		}
+		if ( snapshot != null )
+		{
+			if ( snapshot.getBlock ().getHeight () > height )
+			{
+				log.trace ("Longer snapshot exist for " + snapshot.getBlock ().getHeight ());
+				return;
+			}
+			log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
+			readSnapshot (snapshot);
+		}
+		Collections.reverse (trunkPath);
+		log.trace ("Compute changes until height " + height);
+		Blk blk = null;
+		for ( Long id : trunkPath )
+		{
+			blk = entityManager.find (Blk.class, id);
+			forwardCache (blk);
+			for ( Tx t : blk.getTransactions () )
+			{
+				for ( TxIn in : t.getInputs () )
+				{
+					entityManager.detach (in.getSource ());
+				}
+			}
+			if ( blk.getHeight () == height )
+			{
+				break;
+			}
+			entityManager.detach (blk);
+		}
+
+		log.trace ("Storing snapshot ...");
+		if ( blk != null )
+		{
+			snapshot = new Snapshot ();
+			snapshot.setBlock (blk);
+
+			List<UTxOut> ul = new ArrayList<UTxOut> ();
+			snapshot.setUtxo (ul);
+			for ( String k : utxoCache.getKeys () )
+			{
+				UTxOut u = new UTxOut ();
+				u.setTxhash (k);
+				u.setOutputs (retrieveTxOut (utxoCache.get (k)));
+				ul.add (u);
+				for ( TxOut out : u.getOutputs () )
+				{
+					entityManager.detach (out);
+				}
+			}
+
+			List<Received> rl = new ArrayList<Received> ();
+			snapshot.setReceived (rl);
+			for ( String k : receivedCache.getKeys () )
+			{
+				Received r = new Received ();
+				r.setAddress (k);
+				r.setOutputs (retrieveTxOut (receivedCache.get (k)));
+				rl.add (r);
+				for ( TxOut out : r.getOutputs () )
+				{
+					entityManager.detach (out);
+				}
+			}
+
+			List<Spent> sl = new ArrayList<Spent> ();
+			snapshot.setSpent (sl);
+			for ( String k : spentCache.getKeys () )
+			{
+				Spent s = new Spent ();
+				s.setAddress (k);
+				s.setInputs (retrieveTxIn (spentCache.get (k)));
+				sl.add (s);
+				for ( TxIn in : s.getInputs () )
+				{
+					entityManager.detach (in);
+				}
+			}
+			entityManager.persist (snapshot);
+			log.trace ("Stored snapshot");
+		}
+	}
+
+	private void readSnapshot (Snapshot snapshot)
+	{
+		for ( UTxOut utxo : snapshot.getUtxo () )
+		{
+			for ( TxOut out : utxo.getOutputs () )
+			{
+				utxoCache.add (utxo.getTxhash (), out);
+				utxoByAddress.add (out.getOwner1 (), out);
+				utxoByAddress.add (out.getOwner2 (), out);
+				utxoByAddress.add (out.getOwner3 (), out);
+			}
+			entityManager.detach (utxo);
+		}
+		for ( Spent s : snapshot.getSpent () )
+		{
+			for ( TxIn in : s.getInputs () )
+			{
+				spentCache.add (s.getAddress (), in);
+			}
+			entityManager.detach (s);
+		}
+		for ( Received r : snapshot.getReceived () )
+		{
+			for ( TxOut out : r.getOutputs () )
+			{
+				receivedCache.add (r.getAddress (), out);
+			}
+			entityManager.detach (r);
 		}
 	}
 
@@ -977,10 +1115,11 @@ class JpaBlockStore implements BlockStore
 				// spend if on the trunk
 				forwardCache (b);
 			}
+			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
+
 			// now this is the new trunk
 			currentHead = usingHead;
 
-			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 		}
 	}
 
