@@ -57,7 +57,8 @@ public class TxOut implements Serializable, HasId
 	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
 
-	private long ix;
+	@Column (nullable = false)
+	private Long ix;
 
 	private Long votes;
 
@@ -147,12 +148,12 @@ public class TxOut implements Serializable, HasId
 		this.transaction = transaction;
 	}
 
-	public long getIx ()
+	public Long getIx ()
 	{
 		return ix;
 	}
 
-	public void setIx (long ix)
+	public void setIx (Long ix)
 	{
 		this.ix = ix;
 	}

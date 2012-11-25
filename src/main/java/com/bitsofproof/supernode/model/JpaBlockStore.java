@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.model;
 import java.math.BigInteger;
 import java.security.acl.Owner;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -84,19 +85,20 @@ class JpaBlockStore implements BlockStore
 
 	private class Cache<T extends HasId>
 	{
-		private final Map<String, LinkedList<Long>> cache = new HashMap<String, LinkedList<Long>> ();
+		private final Map<String, HashSet<Long>> cache = new HashMap<String, HashSet<Long>> ();
 
 		public void add (String key, T out)
 		{
 			if ( key != null )
 			{
-				LinkedList<Long> outs = cache.get (out.getId ());
+				HashSet<Long> outs = cache.get (key);
 				if ( outs == null )
 				{
-					outs = new LinkedList<Long> ();
+					outs = new HashSet<Long> ();
 					cache.put (key, outs);
 				}
-				outs.add (out.getId ());
+				Long id = out.getId ();
+				outs.add (id);
 			}
 		}
 
@@ -104,10 +106,11 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( key != null )
 			{
-				LinkedList<Long> outs = cache.get (key);
+				HashSet<Long> outs = cache.get (key);
 				if ( outs != null )
 				{
-					outs.remove (out.getId ());
+					Long id = out.getId ();
+					outs.remove (id);
 					if ( outs.size () == 0 )
 					{
 						cache.remove (key);
@@ -116,7 +119,7 @@ class JpaBlockStore implements BlockStore
 			}
 		}
 
-		public List<Long> get (String key)
+		public Collection<Long> get (String key)
 		{
 			if ( key != null )
 			{
@@ -125,18 +128,17 @@ class JpaBlockStore implements BlockStore
 			return new ArrayList<Long> ();
 		}
 
-		public List<Long> get (List<String> keys)
+		public Collection<Long> get (Collection<String> keys)
 		{
+			HashSet<Long> ids = new HashSet<Long> ();
 			if ( keys != null )
 			{
-				ArrayList<Long> ids = new ArrayList<Long> ();
 				for ( String k : keys )
 				{
 					ids.addAll (get (k));
 				}
-				return ids;
 			}
-			return new ArrayList<Long> ();
+			return ids;
 		}
 	}
 
@@ -394,21 +396,15 @@ class JpaBlockStore implements BlockStore
 	{
 		for ( String txhash : needTx )
 		{
-			List<Long> ids = utxoCache.get (txhash);
-			if ( !ids.isEmpty () )
+			for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
 			{
-				QTxOut txout = QTxOut.txOut;
-				JPAQuery query = new JPAQuery (entityManager);
-				for ( TxOut out : query.from (txout).where (txout.id.in (ids)).list (txout) )
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+				if ( resolved == null )
 				{
-					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-					if ( resolved == null )
-					{
-						resolved = new HashMap<Long, TxOut> ();
-						tcontext.resolvedInputs.put (txhash, resolved);
-					}
-					resolved.put (out.getIx (), out);
+					resolved = new HashMap<Long, TxOut> ();
+					tcontext.resolvedInputs.put (txhash, resolved);
 				}
+				resolved.put (out.getIx (), out);
 			}
 		}
 	}
@@ -595,21 +591,20 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private List<TxOut> retrieveTxOut (List<Long> ids)
+	private List<TxOut> retrieveTxOut (Collection<Long> ids)
 	{
-		if ( !ids.isEmpty () )
+		if ( ids != null && !ids.isEmpty () )
 		{
 			QTxOut txout = QTxOut.txOut;
 			JPAQuery query = new JPAQuery (entityManager);
-
 			return query.from (txout).where (txout.id.in (ids)).list (txout);
 		}
 		return new ArrayList<TxOut> ();
 	}
 
-	private List<TxIn> retrieveTxIn (List<Long> ids)
+	private List<TxIn> retrieveTxIn (Collection<Long> ids)
 	{
-		if ( !ids.isEmpty () )
+		if ( ids != null && !ids.isEmpty () )
 		{
 			QTxIn txin = QTxIn.txIn;
 			JPAQuery query = new JPAQuery (entityManager);

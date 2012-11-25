@@ -239,7 +239,7 @@ public class Tx implements Serializable
 		if ( nout > 0 )
 		{
 			outputs = new ArrayList<TxOut> ();
-			for ( int i = 0; i < nout; ++i )
+			for ( long i = 0; i < nout; ++i )
 			{
 				TxOut output = new TxOut ();
 				output.fromWire (reader);

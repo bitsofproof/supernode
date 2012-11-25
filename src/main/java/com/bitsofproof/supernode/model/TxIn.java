@@ -50,7 +50,9 @@ public class TxIn implements Serializable, Cloneable, HasId
 
 	@Column (length = 64)
 	private String sourceHash;
-	private long ix;
+
+	@Column (nullable = false)
+	private Long ix;
 
 	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.MERGE, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.REFRESH }, optional = false)
 	private Tx transaction;
@@ -76,12 +78,12 @@ public class TxIn implements Serializable, Cloneable, HasId
 		this.id = id;
 	}
 
-	public long getIx ()
+	public Long getIx ()
 	{
 		return ix;
 	}
 
-	public void setIx (long ix)
+	public void setIx (Long ix)
 	{
 		this.ix = ix;
 	}
