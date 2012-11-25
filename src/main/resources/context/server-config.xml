@@ -71,7 +71,7 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
-		<property name="timeout" value="60" />
+		<property name="timeout" value="180" />
 	</bean>
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
 		<constructor-arg>
@@ -87,8 +87,8 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
-		<property name="delay" value="60" />
-		<property name="timeout" value="60" />
+		<property name="delay" value="180" />
+		<property name="timeout" value="180" />
 	</bean>
 	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
 		<constructor-arg>
