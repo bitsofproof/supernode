@@ -340,6 +340,7 @@ class JpaBlockStore implements BlockStore
 						utxoByAddress.add (out.getOwner2 (), out);
 						utxoByAddress.add (out.getOwner3 (), out);
 					}
+					entityManager.detach (utxo);
 				}
 				for ( Spent s : snapshot.getSpent () )
 				{
@@ -347,13 +348,15 @@ class JpaBlockStore implements BlockStore
 					{
 						spentCache.add (s.getAddress (), in);
 					}
+					entityManager.detach (s);
 				}
-				for ( Received s : snapshot.getReceived () )
+				for ( Received r : snapshot.getReceived () )
 				{
-					for ( TxOut out : s.getOutputs () )
+					for ( TxOut out : r.getOutputs () )
 					{
-						receivedCache.add (s.getAddress (), out);
+						receivedCache.add (r.getAddress (), out);
 					}
+					entityManager.detach (r);
 				}
 			}
 			Collections.reverse (trunkPath);
