@@ -312,6 +312,10 @@ class JpaBlockStore implements BlockStore
 			for ( Long id : trunkPath )
 			{
 				Blk blk = entityManager.find (Blk.class, id);
+				if ( (blk.getHeight () % 10000) == 0 )
+				{
+					log.trace ("Caching at block " + blk.getHeight ());
+				}
 				forwardCache (blk);
 				for ( Tx t : blk.getTransactions () )
 				{
@@ -401,18 +405,16 @@ class JpaBlockStore implements BlockStore
 
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		for ( String txhash : needTx )
+		for ( TxOut out : retrieveTxOut (utxoCache.get (needTx)) )
 		{
-			for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
+			String txhash = out.getTransaction ().getHash ();
+			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+			if ( resolved == null )
 			{
-				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-				if ( resolved == null )
-				{
-					resolved = new HashMap<Long, TxOut> ();
-					tcontext.resolvedInputs.put (txhash, resolved);
-				}
-				resolved.put (out.getIx (), out);
+				resolved = new HashMap<Long, TxOut> ();
+				tcontext.resolvedInputs.put (txhash, resolved);
 			}
+			resolved.put (out.getIx (), out);
 		}
 	}
 
