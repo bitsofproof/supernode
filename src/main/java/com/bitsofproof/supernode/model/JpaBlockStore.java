@@ -1007,7 +1007,7 @@ class JpaBlockStore implements BlockStore
 
 			if ( currentHead == usingHead && (b.getHeight () % SNAPSHOT_FREQUENCY) == 0 )
 			{
-				System.out.println ("creating snapshot at height " + b.getHeight () + " UTXO: " + utxoCache.size () + "A: " + utxoByAddress.size ());
+				System.out.println ("creating snapshot at height " + b.getHeight () + " UTXO: " + utxoCache.size () + " A: " + utxoByAddress.size ());
 				entityManager.persist (createSnapshot (b));
 			}
 			// now this is the new trunk
