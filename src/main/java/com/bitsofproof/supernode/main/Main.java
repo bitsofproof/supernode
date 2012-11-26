@@ -100,7 +100,7 @@ public class Main
 
 	protected static enum Profile
 	{
-		DEMO, AUDIT, SERVER, SNAPSHOT;
+		DEMO, AUDIT, SERVER;
 
 		@Override
 		public String toString ()
