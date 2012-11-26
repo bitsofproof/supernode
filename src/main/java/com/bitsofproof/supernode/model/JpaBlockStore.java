@@ -532,6 +532,18 @@ class JpaBlockStore implements BlockStore
 	{
 		for ( Tx t : b.getTransactions () )
 		{
+			for ( TxOut out : t.getOutputs () )
+			{
+				utxoCache.remove (t.getHash (), out);
+
+				utxoByAddress.remove (out.getOwner1 (), out);
+				utxoByAddress.remove (out.getOwner2 (), out);
+				utxoByAddress.remove (out.getOwner3 (), out);
+
+				receivedCache.remove (out.getOwner1 (), out);
+				receivedCache.remove (out.getOwner2 (), out);
+				receivedCache.remove (out.getOwner3 (), out);
+			}
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -546,18 +558,6 @@ class JpaBlockStore implements BlockStore
 					spentCache.remove (in.getSource ().getOwner2 (), in);
 					spentCache.remove (in.getSource ().getOwner3 (), in);
 				}
-			}
-			for ( TxOut out : t.getOutputs () )
-			{
-				utxoCache.remove (t.getHash (), out);
-
-				utxoByAddress.remove (out.getOwner1 (), out);
-				utxoByAddress.remove (out.getOwner2 (), out);
-				utxoByAddress.remove (out.getOwner3 (), out);
-
-				receivedCache.remove (out.getOwner1 (), out);
-				receivedCache.remove (out.getOwner2 (), out);
-				receivedCache.remove (out.getOwner3 (), out);
 			}
 		}
 	}
