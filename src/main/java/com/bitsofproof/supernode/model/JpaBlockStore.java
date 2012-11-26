@@ -91,6 +91,11 @@ class JpaBlockStore implements BlockStore
 	{
 		private Map<String, ArrayList<Long>> cache = new HashMap<String, ArrayList<Long>> ();
 
+		public int size ()
+		{
+			return cache.size ();
+		}
+
 		public void add (String key, T out)
 		{
 			if ( key != null )
@@ -318,7 +323,7 @@ class JpaBlockStore implements BlockStore
 			for ( Long id : trunkPath )
 			{
 				Blk blk = entityManager.find (Blk.class, id);
-				if ( (blk.getHeight () % 10000) == 0 )
+				if ( (blk.getHeight () % (SNAPSHOT_FREQUENCY / 10)) == 0 )
 				{
 					log.trace ("... at block " + blk.getHeight ());
 				}
@@ -1002,7 +1007,7 @@ class JpaBlockStore implements BlockStore
 
 			if ( currentHead == usingHead && (b.getHeight () % SNAPSHOT_FREQUENCY) == 0 )
 			{
-				System.out.println ("creating snapshot at height " + b.getHeight ());
+				System.out.println ("creating snapshot at height " + b.getHeight () + " UTXO: " + utxoCache.size () + "A: " + utxoByAddress.size ());
 				entityManager.persist (createSnapshot (b));
 			}
 			// now this is the new trunk
