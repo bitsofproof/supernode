@@ -62,6 +62,8 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
+	private static final int SNAPSHOT_FREQUENCY = 500;
+
 	@Autowired
 	private Chain chain;
 
@@ -380,83 +382,6 @@ class JpaBlockStore implements BlockStore
 			{
 				currentHead = sh;
 			}
-		}
-	}
-
-	@Transactional (propagation = Propagation.REQUIRED)
-	@Override
-	public void createSnapshot (int height)
-	{
-		log.trace ("Cache heads...");
-		cacheHeads ();
-
-		log.trace ("Cache chain...");
-		cacheChain ();
-
-		log.trace ("Create snapshot at height " + height);
-		Map<Long, Long> blockToSnap = new HashMap<Long, Long> ();
-		QSnapshot snap = QSnapshot.snapshot;
-		QBlk block = QBlk.blk;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( Object[] col : q.from (snap).join (snap.block, block).list (block.id, snap.id) )
-		{
-			blockToSnap.put ((Long) col[0], (Long) col[1]);
-		}
-
-		Snapshot snapshot = null;
-		List<Long> trunkPath = new ArrayList<Long> ();
-		CachedBlock b = currentHead.last;
-		CachedBlock p = b.previous;
-		while ( p != null )
-		{
-			if ( blockToSnap.containsKey (b.getId ()) )
-			{
-				snapshot = entityManager.find (Snapshot.class, blockToSnap.get (b.getId ()));
-				break;
-			}
-			trunkPath.add (b.getId ());
-			b = p;
-			p = b.previous;
-		}
-		if ( snapshot != null )
-		{
-			if ( snapshot.getBlock ().getHeight () > height )
-			{
-				log.trace ("Longer snapshot exist for " + snapshot.getBlock ().getHeight ());
-				return;
-			}
-			log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
-			readSnapshot (snapshot);
-		}
-		Collections.reverse (trunkPath);
-		log.trace ("Compute changes until height " + height);
-		Blk blk = null;
-		for ( Long id : trunkPath )
-		{
-			blk = entityManager.find (Blk.class, id);
-			forwardCache (blk);
-			if ( (id % 1000) == 0 )
-			{
-				log.trace ("... at block " + id);
-			}
-			for ( Tx t : blk.getTransactions () )
-			{
-				for ( TxIn in : t.getInputs () )
-				{
-					entityManager.detach (in.getSource ());
-				}
-			}
-			if ( blk.getHeight () == height )
-			{
-				break;
-			}
-			entityManager.detach (blk);
-		}
-
-		log.trace ("Storing snapshot ...");
-		if ( blk != null )
-		{
-			createSnapshot (blk);
 		}
 	}
 
@@ -1075,7 +1000,7 @@ class JpaBlockStore implements BlockStore
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
-			if ( currentHead == usingHead && (b.getHeight () % 100) == 0 )
+			if ( currentHead == usingHead && (b.getHeight () % SNAPSHOT_FREQUENCY) == 0 )
 			{
 				System.out.println ("creating snapshot at height " + b.getHeight ());
 				entityManager.persist (createSnapshot (b));
