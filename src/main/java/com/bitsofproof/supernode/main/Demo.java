@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Demo extends Main implements Main.App
@@ -67,8 +68,15 @@ public class Demo extends Main implements Main.App
 		{
 			network.getStore ().resetStore (network.getChain ());
 		}
-		network.getStore ().cache ();
-		network.start ();
+		try
+		{
+			network.getStore ().cache ();
+			network.start ();
+		}
+		catch ( ValidationException e )
+		{
+			log.error ("Cache read failed", e);
+		}
 	}
 
 	public void setNetwork (BitcoinNetwork network)

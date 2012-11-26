@@ -22,7 +22,7 @@ import com.bitsofproof.supernode.core.ValidationException;
 
 public interface BlockStore
 {
-	public void cache ();
+	public void cache () throws ValidationException;
 
 	public Blk getGenesisBlock ();
 

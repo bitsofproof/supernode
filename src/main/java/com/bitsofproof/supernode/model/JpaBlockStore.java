@@ -15,6 +15,11 @@
  */
 package com.bitsofproof.supernode.model;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.acl.Owner;
 import java.util.ArrayList;
@@ -32,6 +37,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -154,15 +161,42 @@ class JpaBlockStore implements BlockStore
 			return ids;
 		}
 
-		public byte[] toByteArray ()
+		public byte[] toByteArray () throws ValidationException
 		{
-			return BSON.encode (new BasicBSONObject (cache));
+			try
+			{
+				ByteArrayOutputStream bs = new ByteArrayOutputStream ();
+				OutputStream out = new GZIPOutputStream (bs);
+				out.write (BSON.encode (new BasicBSONObject (cache)));
+				out.flush ();
+				out.close ();
+				return bs.toByteArray ();
+			}
+			catch ( IOException e )
+			{
+				throw new ValidationException (e);
+			}
 		}
 
 		@SuppressWarnings ("unchecked")
-		public void fromByteArray (byte[] a)
+		public void fromByteArray (byte[] a) throws ValidationException
 		{
-			cache = BSON.decode (a).toMap ();
+			try
+			{
+				InputStream in = new GZIPInputStream (new ByteArrayInputStream (a));
+				ByteArrayOutputStream out = new ByteArrayOutputStream ();
+				byte[] buf = new byte[1024];
+				int len;
+				while ( (len = in.read (buf)) > 0 )
+				{
+					out.write (buf, 0, len);
+				}
+				cache = BSON.decode (out.toByteArray ()).toMap ();
+			}
+			catch ( IOException e )
+			{
+				throw new ValidationException (e);
+			}
 		}
 	}
 
@@ -276,7 +310,7 @@ class JpaBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
-	public void cache ()
+	public void cache () throws ValidationException
 	{
 		try
 		{
@@ -390,7 +424,7 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private Snapshot createSnapshot (Blk blk)
+	private Snapshot createSnapshot (Blk blk) throws ValidationException
 	{
 		Snapshot snapshot = new Snapshot ();
 		snapshot.setBlock (blk);
@@ -402,7 +436,7 @@ class JpaBlockStore implements BlockStore
 		return snapshot;
 	}
 
-	private void readSnapshot (Snapshot snapshot)
+	private void readSnapshot (Snapshot snapshot) throws ValidationException
 	{
 		utxoCache.fromByteArray (snapshot.getUtxo ());
 		utxoByAddress.fromByteArray (snapshot.getSpendable ());
