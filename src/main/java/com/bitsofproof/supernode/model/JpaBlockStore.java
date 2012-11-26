@@ -144,11 +144,6 @@ class JpaBlockStore implements BlockStore
 			}
 			return ids;
 		}
-
-		public Collection<String> getKeys ()
-		{
-			return cache.keySet ();
-		}
 	}
 
 	private static class CachedHead
@@ -451,47 +446,6 @@ class JpaBlockStore implements BlockStore
 			snapshot = new Snapshot ();
 			snapshot.setBlock (blk);
 
-			List<UTxOut> ul = new ArrayList<UTxOut> ();
-			snapshot.setUtxo (ul);
-			for ( String k : utxoCache.getKeys () )
-			{
-				UTxOut u = new UTxOut ();
-				u.setTxhash (k);
-				u.setOutputs (retrieveTxOut (utxoCache.get (k)));
-				ul.add (u);
-				for ( TxOut out : u.getOutputs () )
-				{
-					entityManager.detach (out);
-				}
-			}
-
-			List<Received> rl = new ArrayList<Received> ();
-			snapshot.setReceived (rl);
-			for ( String k : receivedCache.getKeys () )
-			{
-				Received r = new Received ();
-				r.setAddress (k);
-				r.setOutputs (retrieveTxOut (receivedCache.get (k)));
-				rl.add (r);
-				for ( TxOut out : r.getOutputs () )
-				{
-					entityManager.detach (out);
-				}
-			}
-
-			List<Spent> sl = new ArrayList<Spent> ();
-			snapshot.setSpent (sl);
-			for ( String k : spentCache.getKeys () )
-			{
-				Spent s = new Spent ();
-				s.setAddress (k);
-				s.setInputs (retrieveTxIn (spentCache.get (k)));
-				sl.add (s);
-				for ( TxIn in : s.getInputs () )
-				{
-					entityManager.detach (in);
-				}
-			}
 			entityManager.persist (snapshot);
 			log.trace ("Stored snapshot");
 		}
@@ -499,33 +453,6 @@ class JpaBlockStore implements BlockStore
 
 	private void readSnapshot (Snapshot snapshot)
 	{
-		for ( UTxOut utxo : snapshot.getUtxo () )
-		{
-			for ( TxOut out : utxo.getOutputs () )
-			{
-				utxoCache.add (utxo.getTxhash (), out);
-				utxoByAddress.add (out.getOwner1 (), out);
-				utxoByAddress.add (out.getOwner2 (), out);
-				utxoByAddress.add (out.getOwner3 (), out);
-			}
-			entityManager.detach (utxo);
-		}
-		for ( Spent s : snapshot.getSpent () )
-		{
-			for ( TxIn in : s.getInputs () )
-			{
-				spentCache.add (s.getAddress (), in);
-			}
-			entityManager.detach (s);
-		}
-		for ( Received r : snapshot.getReceived () )
-		{
-			for ( TxOut out : r.getOutputs () )
-			{
-				receivedCache.add (r.getAddress (), out);
-			}
-			entityManager.detach (r);
-		}
 	}
 
 	private void backwardCache (Blk b)

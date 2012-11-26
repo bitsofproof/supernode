@@ -1,15 +1,14 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.util.List;
 
-import javax.persistence.CascadeType;
+import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
@@ -25,14 +24,17 @@ public class Snapshot implements Serializable
 	@ManyToOne (fetch = FetchType.LAZY)
 	private Blk block;
 
-	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	private List<UTxOut> utxo;
+	@Lob
+	@Basic (fetch = FetchType.LAZY)
+	private byte[] utxo;
 
-	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	private List<Spent> spent;
+	@Lob
+	@Basic (fetch = FetchType.LAZY)
+	private byte[] spent;
 
-	@OneToMany (cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-	private List<Received> received;
+	@Lob
+	@Basic (fetch = FetchType.LAZY)
+	private byte[] received;
 
 	public Long getId ()
 	{
@@ -54,32 +56,32 @@ public class Snapshot implements Serializable
 		this.block = block;
 	}
 
-	public List<UTxOut> getUtxo ()
+	public byte[] getUtxo ()
 	{
 		return utxo;
 	}
 
-	public void setUtxo (List<UTxOut> utxo)
+	public void setUtxo (byte[] utxo)
 	{
 		this.utxo = utxo;
 	}
 
-	public List<Spent> getSpent ()
+	public byte[] getSpent ()
 	{
 		return spent;
 	}
 
-	public void setSpent (List<Spent> spent)
+	public void setSpent (byte[] spent)
 	{
 		this.spent = spent;
 	}
 
-	public List<Received> getReceived ()
+	public byte[] getReceived ()
 	{
 		return received;
 	}
 
-	public void setReceived (List<Received> received)
+	public void setReceived (byte[] received)
 	{
 		this.received = received;
 	}
