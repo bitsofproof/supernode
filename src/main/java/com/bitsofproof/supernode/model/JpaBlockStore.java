@@ -594,16 +594,18 @@ class JpaBlockStore implements BlockStore
 
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		for ( TxOut out : retrieveTxOut (utxoCache.get (needTx)) )
+		for ( String txhash : needTx )
 		{
-			String txhash = out.getTransaction ().getHash ();
-			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-			if ( resolved == null )
+			for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
 			{
-				resolved = new HashMap<Long, TxOut> ();
-				tcontext.resolvedInputs.put (txhash, resolved);
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+				if ( resolved == null )
+				{
+					resolved = new HashMap<Long, TxOut> ();
+					tcontext.resolvedInputs.put (txhash, resolved);
+				}
+				resolved.put (out.getIx (), out);
 			}
-			resolved.put (out.getIx (), out);
 		}
 	}
 
