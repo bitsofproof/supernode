@@ -30,6 +30,10 @@ public class Snapshot implements Serializable
 
 	@Lob
 	@Basic (fetch = FetchType.LAZY)
+	private byte[] spendable;
+
+	@Lob
+	@Basic (fetch = FetchType.LAZY)
 	private byte[] spent;
 
 	@Lob
@@ -54,6 +58,16 @@ public class Snapshot implements Serializable
 	public void setBlock (Blk block)
 	{
 		this.block = block;
+	}
+
+	public byte[] getSpendable ()
+	{
+		return spendable;
+	}
+
+	public void setSpendable (byte[] spendable)
+	{
+		this.spendable = spendable;
 	}
 
 	public byte[] getUtxo ()

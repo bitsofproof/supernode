@@ -36,6 +36,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
+import org.bson.BSON;
+import org.bson.BasicBSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,16 +87,16 @@ class JpaBlockStore implements BlockStore
 
 	private class Cache<T extends HasId>
 	{
-		private final Map<String, LinkedList<Long>> cache = new HashMap<String, LinkedList<Long>> ();
+		private Map<String, ArrayList<Long>> cache = new HashMap<String, ArrayList<Long>> ();
 
 		public void add (String key, T out)
 		{
 			if ( key != null )
 			{
-				LinkedList<Long> outs = cache.get (key);
+				ArrayList<Long> outs = cache.get (key);
 				if ( outs == null )
 				{
-					outs = new LinkedList<Long> ();
+					outs = new ArrayList<Long> ();
 					cache.put (key, outs);
 				}
 				Long id = out.getId ();
@@ -106,7 +108,7 @@ class JpaBlockStore implements BlockStore
 		{
 			if ( key != null )
 			{
-				LinkedList<Long> outs = cache.get (key);
+				ArrayList<Long> outs = cache.get (key);
 				if ( outs != null )
 				{
 					Long id = out.getId ();
@@ -143,6 +145,17 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 			return ids;
+		}
+
+		public byte[] toByteArray ()
+		{
+			return BSON.encode (new BasicBSONObject (cache));
+		}
+
+		@SuppressWarnings ("unchecked")
+		public void fromByteArray (byte[] a)
+		{
+			cache = BSON.decode (a).toMap ();
 		}
 	}
 
@@ -443,16 +456,28 @@ class JpaBlockStore implements BlockStore
 		log.trace ("Storing snapshot ...");
 		if ( blk != null )
 		{
-			snapshot = new Snapshot ();
-			snapshot.setBlock (blk);
-
-			entityManager.persist (snapshot);
-			log.trace ("Stored snapshot");
+			createSnapshot (blk);
 		}
+	}
+
+	private Snapshot createSnapshot (Blk blk)
+	{
+		Snapshot snapshot = new Snapshot ();
+		snapshot.setBlock (blk);
+
+		snapshot.setUtxo (utxoCache.toByteArray ());
+		snapshot.setSpendable (utxoByAddress.toByteArray ());
+		snapshot.setReceived (receivedCache.toByteArray ());
+		snapshot.setSpent (spentCache.toByteArray ());
+		return snapshot;
 	}
 
 	private void readSnapshot (Snapshot snapshot)
 	{
+		utxoCache.fromByteArray (snapshot.getUtxo ());
+		utxoByAddress.fromByteArray (snapshot.getSpendable ());
+		receivedCache.fromByteArray (snapshot.getReceived ());
+		spentCache.fromByteArray (snapshot.getSpent ());
 	}
 
 	private void backwardCache (Blk b)
@@ -1050,6 +1075,11 @@ class JpaBlockStore implements BlockStore
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
+			if ( currentHead == usingHead && (b.getHeight () % 100) == 0 )
+			{
+				System.out.println ("creating snapshot at height " + b.getHeight ());
+				entityManager.persist (createSnapshot (b));
+			}
 			// now this is the new trunk
 			currentHead = usingHead;
 
