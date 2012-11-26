@@ -427,6 +427,10 @@ class JpaBlockStore implements BlockStore
 		{
 			blk = entityManager.find (Blk.class, id);
 			forwardCache (blk);
+			if ( (id % 1000) == 0 )
+			{
+				log.trace ("... at block " + id);
+			}
 			for ( Tx t : blk.getTransactions () )
 			{
 				for ( TxIn in : t.getInputs () )

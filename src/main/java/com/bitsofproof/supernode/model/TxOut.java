@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.model;
 import java.io.Serializable;
 
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -54,7 +53,7 @@ public class TxOut implements Serializable, HasId
 	// scriptPubKey
 	private byte[] script;
 
-	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.DETACH, CascadeType.REFRESH }, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Tx transaction;
 
 	@Column (nullable = false)

@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.model;
 import java.io.Serializable;
 
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -54,7 +53,7 @@ public class TxIn implements Serializable, Cloneable, HasId
 	@Column (nullable = false)
 	private Long ix = new Long (0L);
 
-	@ManyToOne (fetch = FetchType.LAZY, cascade = { CascadeType.DETACH, CascadeType.REFRESH }, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Tx transaction;
 
 	@OneToOne (fetch = FetchType.LAZY, optional = true)
