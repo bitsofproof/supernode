@@ -38,7 +38,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "tx")
-public class Tx implements Serializable, HasId
+public class Tx implements Serializable, HasToWire
 {
 	private static final long serialVersionUID = 1L;
 
@@ -52,6 +52,8 @@ public class Tx implements Serializable, HasId
 	private long version = 1;
 
 	private long lockTime = 0;
+
+	private long ix = 0;
 
 	// this is not unique since a transaction copy might be on different branches.
 	@Column (length = 64, nullable = false)
@@ -67,7 +69,6 @@ public class Tx implements Serializable, HasId
 	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Blk block;
 
-	@Override
 	public Long getId ()
 	{
 		return id;
@@ -155,6 +156,16 @@ public class Tx implements Serializable, HasId
 		this.block = block;
 	}
 
+	public Long getIx ()
+	{
+		return ix;
+	}
+
+	public void setIx (Long ix)
+	{
+		this.ix = ix;
+	}
+
 	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
@@ -182,6 +193,7 @@ public class Tx implements Serializable, HasId
 		return o;
 	}
 
+	@Override
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);

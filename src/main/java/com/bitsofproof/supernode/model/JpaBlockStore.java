@@ -15,15 +15,9 @@
  */
 package com.bitsofproof.supernode.model;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.math.BigInteger;
 import java.security.acl.Owner;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,14 +31,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
-import org.bson.BSON;
-import org.bson.BasicBSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +50,7 @@ import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.core.ValidationException;
+import com.bitsofproof.supernode.core.WireFormat;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaBlockStore")
@@ -87,119 +78,47 @@ class JpaBlockStore implements BlockStore
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
 	// NOTE: that these are not sufficiently narrow, since pointing to Tx not TxOut or TxIn
-	private final Cache<Tx> utxoCache = new Cache<Tx> ();
-	private final Cache<Tx> utxoByAddress = new Cache<Tx> ();
-	private final Cache<Tx> spentCache = new Cache<Tx> ();
-	private final Cache<Tx> receivedCache = new Cache<Tx> ();
+	private final Cache utxoCache = new Cache ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
-	private class Cache<T extends HasId>
+	private class Cache
 	{
-		private Map<String, ArrayList<Long>> cache = new HashMap<String, ArrayList<Long>> ();
+		private final Map<String, BigInteger> cache = new HashMap<String, BigInteger> ();
 
 		public int size ()
 		{
 			return cache.size ();
 		}
 
-		public void add (String key, T out)
+		public void remove (String key, BigInteger c)
 		{
-			if ( key != null )
+			BigInteger mask = cache.get (key);
+			if ( mask != null )
 			{
-				ArrayList<Long> outs = cache.get (key);
-				if ( outs == null )
-				{
-					outs = new ArrayList<Long> ();
-					cache.put (key, outs);
-				}
-				// note that duplicates are allowed
-				Long id = out.getId ();
-				outs.add (id);
+				cache.put (key, mask.xor (c));
 			}
 		}
 
-		public void remove (String key, T out)
+		public void add (String key, BigInteger c)
 		{
-			if ( key != null )
+			BigInteger mask = cache.get (key);
+			if ( mask == null )
 			{
-				ArrayList<Long> outs = cache.get (key);
-				if ( outs != null )
-				{
-					Long id = out.getId ();
-					// removes first instance for duplicates
-					outs.remove (id);
-					if ( outs.size () == 0 )
-					{
-						cache.remove (key);
-					}
-				}
+				mask = BigInteger.ZERO;
 			}
+			cache.put (key, mask.or (c));
 		}
 
-		public Collection<Long> get (String key)
+		public boolean contains (String key, long ix)
 		{
-			if ( key != null )
+			BigInteger mask = cache.get (key);
+			if ( mask == null )
 			{
-				Collection<Long> ids = cache.get (key);
-				if ( ids != null )
-				{
-					return ids;
-				}
+				return false;
 			}
-			return new ArrayList<Long> ();
-		}
-
-		public Collection<Long> get (Collection<String> keys)
-		{
-			HashSet<Long> ids = new HashSet<Long> ();
-			if ( keys != null )
-			{
-				for ( String k : keys )
-				{
-					ids.addAll (get (k));
-				}
-			}
-			return ids;
-		}
-
-		public byte[] toByteArray () throws ValidationException
-		{
-			try
-			{
-				ByteArrayOutputStream bs = new ByteArrayOutputStream ();
-				OutputStream out = new GZIPOutputStream (bs);
-				out.write (BSON.encode (new BasicBSONObject (cache)));
-				out.flush ();
-				out.close ();
-				return bs.toByteArray ();
-			}
-			catch ( IOException e )
-			{
-				throw new ValidationException (e);
-			}
-		}
-
-		@SuppressWarnings ("unchecked")
-		public void fromByteArray (byte[] a) throws ValidationException
-		{
-			try
-			{
-				InputStream in = new GZIPInputStream (new ByteArrayInputStream (a));
-				ByteArrayOutputStream out = new ByteArrayOutputStream ();
-				byte[] buf = new byte[1024];
-				int len;
-				while ( (len = in.read (buf)) > 0 )
-				{
-					out.write (buf, 0, len);
-				}
-				cache = BSON.decode (out.toByteArray ()).toMap ();
-			}
-			catch ( IOException e )
-			{
-				throw new ValidationException (e);
-			}
+			return mask.testBit ((int) ix);
 		}
 	}
 
@@ -326,41 +245,20 @@ class JpaBlockStore implements BlockStore
 			cacheChain ();
 
 			log.trace ("Cache UTXO...");
-			JPAQuery q;
-			QBlk block = QBlk.blk;
-			Map<Long, Long> blockToSnap = new HashMap<Long, Long> ();
-			QSnapshot snap = QSnapshot.snapshot;
-			q = new JPAQuery (entityManager);
-			for ( Object[] col : q.from (snap).join (snap.block, block).list (block.id, snap.id) )
-			{
-				blockToSnap.put ((Long) col[0], (Long) col[1]);
-			}
-
-			Snapshot snapshot = null;
 			List<Long> trunkPath = new ArrayList<Long> ();
 			CachedBlock b = currentHead.last;
 			CachedBlock p = b.previous;
 			while ( p != null )
 			{
-				if ( blockToSnap.containsKey (b.getId ()) )
-				{
-					snapshot = entityManager.find (Snapshot.class, blockToSnap.get (b.getId ()));
-					break;
-				}
 				trunkPath.add (b.getId ());
 				b = p;
 				p = b.previous;
-			}
-			if ( snapshot != null )
-			{
-				log.trace ("Reading snapshot at height " + snapshot.getBlock ().getHeight () + " " + snapshot.getBlock ().getHash () + " ...");
-				readSnapshot (snapshot);
 			}
 			Collections.reverse (trunkPath);
 			for ( Long id : trunkPath )
 			{
 				Blk blk = entityManager.find (Blk.class, id);
-				if ( (blk.getHeight () % (SNAPSHOT_FREQUENCY / 10)) == 0 )
+				if ( (blk.getHeight () % 10000) == 0 )
 				{
 					log.trace ("... at block " + blk.getHeight ());
 				}
@@ -427,109 +325,70 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private Snapshot createSnapshot (Blk blk) throws ValidationException
-	{
-		Snapshot snapshot = new Snapshot ();
-		snapshot.setBlock (blk);
-
-		snapshot.setUtxo (utxoCache.toByteArray ());
-		snapshot.setSpendable (utxoByAddress.toByteArray ());
-		snapshot.setReceived (receivedCache.toByteArray ());
-		snapshot.setSpent (spentCache.toByteArray ());
-		return snapshot;
-	}
-
-	private void readSnapshot (Snapshot snapshot) throws ValidationException
-	{
-		utxoCache.fromByteArray (snapshot.getUtxo ());
-		utxoByAddress.fromByteArray (snapshot.getSpendable ());
-		receivedCache.fromByteArray (snapshot.getReceived ());
-		spentCache.fromByteArray (snapshot.getSpent ());
-	}
-
 	private void backwardCache (Blk b)
 	{
-		for ( Tx t : b.getTransactions () )
+		if ( b.getUtxoDelta () != null )
 		{
-			for ( TxOut out : t.getOutputs () )
+			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
+			long nin = reader.readVarInt ();
+			for ( long i = 0; i < nin; ++i )
 			{
-				utxoCache.remove (t.getHash (), t);
-
-				utxoByAddress.remove (out.getOwner1 (), t);
-				utxoByAddress.remove (out.getOwner2 (), t);
-				utxoByAddress.remove (out.getOwner3 (), t);
-
-				receivedCache.remove (out.getOwner1 (), t);
-				receivedCache.remove (out.getOwner2 (), t);
-				receivedCache.remove (out.getOwner3 (), t);
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.add (hash, mask);
 			}
-			for ( TxIn in : t.getInputs () )
+
+			long nout = reader.readVarInt ();
+			for ( long i = 0; i < nout; ++i )
 			{
-				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-				{
-					Tx st = in.getSource ().getTransaction ();
-					utxoCache.add (in.getSourceHash (), st);
-
-					utxoByAddress.add (in.getSource ().getOwner1 (), st);
-					utxoByAddress.add (in.getSource ().getOwner2 (), st);
-					utxoByAddress.add (in.getSource ().getOwner3 (), st);
-
-					spentCache.remove (in.getSource ().getOwner1 (), t);
-					spentCache.remove (in.getSource ().getOwner2 (), t);
-					spentCache.remove (in.getSource ().getOwner3 (), t);
-				}
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.remove (hash, mask);
 			}
 		}
 	}
 
 	private void forwardCache (Blk b)
 	{
-		for ( Tx t : b.getTransactions () )
+		if ( b.getUtxoDelta () != null )
 		{
-			for ( TxOut out : t.getOutputs () )
+			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
+			long nin = reader.readVarInt ();
+			for ( long i = 0; i < nin; ++i )
 			{
-				utxoCache.add (t.getHash (), t);
-
-				utxoByAddress.add (out.getOwner1 (), t);
-				utxoByAddress.add (out.getOwner2 (), t);
-				utxoByAddress.add (out.getOwner3 (), t);
-
-				receivedCache.add (out.getOwner1 (), t);
-				receivedCache.add (out.getOwner2 (), t);
-				receivedCache.add (out.getOwner3 (), t);
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.remove (hash, mask);
 			}
-			for ( TxIn in : t.getInputs () )
+
+			long nout = reader.readVarInt ();
+			for ( long i = 0; i < nout; ++i )
 			{
-				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-				{
-					Tx st = in.getSource ().getTransaction ();
-					utxoCache.remove (in.getSourceHash (), st);
-
-					utxoByAddress.remove (in.getSource ().getOwner1 (), st);
-					utxoByAddress.remove (in.getSource ().getOwner2 (), st);
-					utxoByAddress.remove (in.getSource ().getOwner3 (), st);
-
-					spentCache.add (in.getSource ().getOwner1 (), t);
-					spentCache.add (in.getSource ().getOwner2 (), t);
-					spentCache.add (in.getSource ().getOwner3 (), t);
-				}
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.add (hash, mask);
 			}
 		}
 	}
 
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		for ( String txhash : needTx )
+		QTx tx = QTx.tx;
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( Tx t : q.from (tx).where (tx.hash.in (needTx)).list (tx) )
 		{
-			for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
+			for ( TxOut out : t.getOutputs () )
 			{
-				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-				if ( resolved == null )
+				if ( utxoCache.contains (t.getHash (), out.getIx ()) )
 				{
-					resolved = new HashMap<Long, TxOut> ();
-					tcontext.resolvedInputs.put (txhash, resolved);
+					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (t.getHash ());
+					if ( resolved == null )
+					{
+						resolved = new HashMap<Long, TxOut> ();
+						tcontext.resolvedInputs.put (t.getHash (), resolved);
+					}
+					resolved.put (out.getIx (), out);
 				}
-				resolved.put (out.getIx (), out);
 			}
 		}
 	}
@@ -676,7 +535,7 @@ class JpaBlockStore implements BlockStore
 	{
 		try
 		{
-			return retrieveTxIn (spentCache.get (addresses));
+			return null;
 		}
 		finally
 		{
@@ -692,7 +551,7 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
-			return retrieveTxOut (receivedCache.get (addresses));
+			return null;
 		}
 		finally
 		{
@@ -708,64 +567,12 @@ class JpaBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
-			return retrieveTxOut (utxoByAddress.get (addresses));
+			return null;
 		}
 		finally
 		{
 			lock.readLock ().unlock ();
 		}
-	}
-
-	private List<TxOut> retrieveTxOut (Collection<Long> ids)
-	{
-		List<TxOut> outs = new ArrayList<TxOut> ();
-		if ( ids != null && !ids.isEmpty () )
-		{
-			if ( ids.size () < 5 )
-			{
-				for ( Long id : ids )
-				{
-					outs.addAll (entityManager.find (Tx.class, id).getOutputs ());
-				}
-			}
-			else
-			{
-				QTx tx = QTx.tx;
-				QTxOut txout = QTxOut.txOut;
-				JPAQuery q = new JPAQuery (entityManager);
-				for ( TxOut out : q.from (tx).join (tx.outputs, txout).where (tx.id.in (ids)).list (txout) )
-				{
-					outs.add (out);
-				}
-			}
-		}
-		return outs;
-	}
-
-	private List<TxIn> retrieveTxIn (Collection<Long> ids)
-	{
-		List<TxIn> ins = new ArrayList<TxIn> ();
-		if ( ids != null && !ids.isEmpty () )
-		{
-			if ( ids.size () < 5 )
-			{
-				for ( Long id : ids )
-				{
-					ins.addAll (entityManager.find (Tx.class, id).getInputs ());
-				}
-			}
-			else
-			{
-				QTx tx = QTx.tx;
-				QTxIn txin = QTxIn.txIn;
-				JPAQuery q = new JPAQuery (entityManager);
-				for ( TxIn in : q.from (tx).join (tx.inputs, txin).where (tx.id.in (ids)).list (txin) )
-				{
-					ins.add (in);
-				}
-			}
-		}
-		return ins;
 	}
 
 	private static class TransactionContext
@@ -1020,6 +827,8 @@ class JpaBlockStore implements BlockStore
 				}
 			}
 
+			b.computeUTXODelta ();
+
 			log.trace ("storing block " + b.getHash ());
 			entityManager.persist (b);
 
@@ -1070,11 +879,6 @@ class JpaBlockStore implements BlockStore
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
-			if ( currentHead == usingHead && (b.getHeight () % SNAPSHOT_FREQUENCY) == 0 )
-			{
-				System.out.println ("creating snapshot at height " + b.getHeight () + " UTXO: " + utxoCache.size () + " A: " + utxoByAddress.size ());
-				entityManager.persist (createSnapshot (b));
-			}
 			// now this is the new trunk
 			currentHead = usingHead;
 

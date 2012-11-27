@@ -38,7 +38,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "txout")
-public class TxOut implements Serializable, HasId
+public class TxOut implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
@@ -106,7 +106,6 @@ public class TxOut implements Serializable, HasId
 		script = reader.readVarBytes ();
 	}
 
-	@Override
 	public Long getId ()
 	{
 		return id;

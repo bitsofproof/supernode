@@ -16,17 +16,23 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
+import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -74,6 +80,13 @@ public class Blk implements Serializable
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
+
+	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	private List<TxArchive> archive;
+
+	@Lob
+	@Basic (fetch = FetchType.LAZY)
+	private byte[] utxoDelta;
 
 	public JSONObject toJSON ()
 	{
@@ -239,10 +252,27 @@ public class Blk implements Serializable
 		parseTransactions ();
 
 		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
+
 		// Start by adding all the hashes of the transactions as leaves of the tree.
-		for ( Tx t : transactions )
+		if ( archive != null && archive.size () > 0 )
 		{
-			tree.add (new Hash (t.getHash ()).toByteArray ());
+			TreeMap<Long, byte[]> hashes = new TreeMap<Long, byte[]> ();
+			for ( Tx t : transactions )
+			{
+				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
+			}
+			for ( TxArchive t : archive )
+			{
+				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
+			}
+			tree.addAll (hashes.values ());
+		}
+		else
+		{
+			for ( Tx t : transactions )
+			{
+				tree.add (new Hash (t.getHash ()).toByteArray ());
+			}
 		}
 		int levelOffset = 0; // Offset in the list where the currently processed level starts.
 		try
@@ -274,6 +304,21 @@ public class Blk implements Serializable
 		return new Hash (tree.get (tree.size () - 1)).toString ();
 	}
 
+	public List<TxArchive> getArchive ()
+	{
+		return archive;
+	}
+
+	public void setArchive (List<TxArchive> archive)
+	{
+		this.archive = archive;
+	}
+
+	public byte[] getUtxoDelta ()
+	{
+		return utxoDelta;
+	}
+
 	public String toWireDump ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
@@ -298,17 +343,30 @@ public class Blk implements Serializable
 		}
 		else
 		{
-			if ( transactions != null )
+			if ( archive != null && archive.size () > 0 )
 			{
-				writer.writeVarInt (transactions.size ());
+				writer.writeVarInt (transactions.size () + archive.size ());
+				TreeMap<Long, HasToWire> txs = new TreeMap<Long, HasToWire> ();
 				for ( Tx t : transactions )
+				{
+					txs.put (t.getIx (), t);
+				}
+				for ( TxArchive t : archive )
+				{
+					txs.put (t.getIx (), t);
+				}
+				for ( HasToWire t : txs.values () )
 				{
 					t.toWire (writer);
 				}
 			}
 			else
 			{
-				writer.writeVarInt (0);
+				writer.writeVarInt (transactions.size ());
+				for ( Tx t : transactions )
+				{
+					t.toWire (writer);
+				}
 			}
 		}
 	}
@@ -379,6 +437,52 @@ public class Blk implements Serializable
 		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
 
 		hash = reader.hash ().toString ();
+	}
+
+	public void computeUTXODelta ()
+	{
+		Map<String, BigInteger> ins = new HashMap<String, BigInteger> ();
+		Map<String, BigInteger> outs = new HashMap<String, BigInteger> ();
+
+		boolean coinbase = true;
+		for ( Tx t : transactions )
+		{
+			outs.put (t.getHash (), BigInteger.ZERO.setBit (t.getOutputs ().size ()).subtract (BigInteger.ONE));
+
+			for ( TxIn in : t.getInputs () )
+			{
+				if ( coinbase )
+				{
+					coinbase = false;
+				}
+				else
+				{
+					BigInteger mask = ins.get (in.getSourceHash ());
+					if ( mask == null )
+					{
+						mask = BigInteger.ZERO;
+					}
+					ins.put (in.getSourceHash (), mask.setBit (in.getIx ().intValue ()));
+				}
+			}
+		}
+
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeVarInt (ins.size ());
+		for ( Map.Entry<String, BigInteger> e : ins.entrySet () )
+		{
+			writer.writeHash (new Hash (e.getKey ()));
+			writer.writeVarBytes (e.getValue ().toByteArray ());
+		}
+
+		writer.writeVarInt (outs.size ());
+		for ( Map.Entry<String, BigInteger> e : outs.entrySet () )
+		{
+			writer.writeHash (new Hash (e.getKey ()));
+			writer.writeVarBytes (e.getValue ().toByteArray ());
+		}
+
+		utxoDelta = writer.toByteArray ();
 	}
 
 	public void toWireHeaderOnly (WireFormat.Writer writer)
