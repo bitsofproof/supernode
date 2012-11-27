@@ -263,14 +263,6 @@ class JpaBlockStore implements BlockStore
 					log.trace ("... at block " + blk.getHeight ());
 				}
 				forwardCache (blk);
-				for ( Tx t : blk.getTransactions () )
-				{
-					for ( TxIn in : t.getInputs () )
-					{
-						entityManager.detach (in.getSource ());
-					}
-				}
-				entityManager.detach (blk);
 			}
 			log.trace ("Cache filled.");
 		}
