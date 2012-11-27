@@ -85,7 +85,7 @@ public class Blk implements Serializable
 	private List<TxArchive> archive;
 
 	@Lob
-	@Basic (fetch = FetchType.LAZY)
+	@Basic (fetch = FetchType.EAGER)
 	private byte[] utxoDelta;
 
 	public JSONObject toJSON ()
