@@ -277,7 +277,7 @@ class JpaBlockStore implements BlockStore
 		JPAQuery q;
 		QBlk block = QBlk.blk;
 		q = new JPAQuery (entityManager);
-		for ( Blk b : q.from (block).list (block) )
+		for ( Blk b : q.from (block).orderBy (block.id.asc ()).list (block) )
 		{
 			CachedBlock cb = null;
 			if ( b.getPrevious () != null )
