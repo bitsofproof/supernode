@@ -38,7 +38,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "tx")
-public class Tx implements Serializable
+public class Tx implements Serializable, HasId
 {
 	private static final long serialVersionUID = 1L;
 
@@ -67,6 +67,7 @@ public class Tx implements Serializable
 	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Blk block;
 
+	@Override
 	public Long getId ()
 	{
 		return id;

@@ -86,10 +86,11 @@ class JpaBlockStore implements BlockStore
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
-	private final Cache<TxOut> utxoCache = new Cache<TxOut> ();
-	private final Cache<TxOut> utxoByAddress = new Cache<TxOut> ();
-	private final Cache<TxIn> spentCache = new Cache<TxIn> ();
-	private final Cache<TxOut> receivedCache = new Cache<TxOut> ();
+	// NOTE: that these are not sufficiently narrow, since pointing to Tx not TxOut or TxIn
+	private final Cache<Tx> utxoCache = new Cache<Tx> ();
+	private final Cache<Tx> utxoByAddress = new Cache<Tx> ();
+	private final Cache<Tx> spentCache = new Cache<Tx> ();
+	private final Cache<Tx> receivedCache = new Cache<Tx> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -113,6 +114,7 @@ class JpaBlockStore implements BlockStore
 					outs = new ArrayList<Long> ();
 					cache.put (key, outs);
 				}
+				// note that duplicates are allowed
 				Long id = out.getId ();
 				outs.add (id);
 			}
@@ -126,6 +128,7 @@ class JpaBlockStore implements BlockStore
 				if ( outs != null )
 				{
 					Long id = out.getId ();
+					// removes first instance for duplicates
 					outs.remove (id);
 					if ( outs.size () == 0 )
 					{
@@ -450,29 +453,30 @@ class JpaBlockStore implements BlockStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				utxoCache.remove (t.getHash (), out);
+				utxoCache.remove (t.getHash (), t);
 
-				utxoByAddress.remove (out.getOwner1 (), out);
-				utxoByAddress.remove (out.getOwner2 (), out);
-				utxoByAddress.remove (out.getOwner3 (), out);
+				utxoByAddress.remove (out.getOwner1 (), t);
+				utxoByAddress.remove (out.getOwner2 (), t);
+				utxoByAddress.remove (out.getOwner3 (), t);
 
-				receivedCache.remove (out.getOwner1 (), out);
-				receivedCache.remove (out.getOwner2 (), out);
-				receivedCache.remove (out.getOwner3 (), out);
+				receivedCache.remove (out.getOwner1 (), t);
+				receivedCache.remove (out.getOwner2 (), t);
+				receivedCache.remove (out.getOwner3 (), t);
 			}
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					utxoCache.add (in.getSourceHash (), in.getSource ());
+					Tx st = in.getSource ().getTransaction ();
+					utxoCache.add (in.getSourceHash (), st);
 
-					utxoByAddress.add (in.getSource ().getOwner1 (), in.getSource ());
-					utxoByAddress.add (in.getSource ().getOwner2 (), in.getSource ());
-					utxoByAddress.add (in.getSource ().getOwner3 (), in.getSource ());
+					utxoByAddress.add (in.getSource ().getOwner1 (), st);
+					utxoByAddress.add (in.getSource ().getOwner2 (), st);
+					utxoByAddress.add (in.getSource ().getOwner3 (), st);
 
-					spentCache.remove (in.getSource ().getOwner1 (), in);
-					spentCache.remove (in.getSource ().getOwner2 (), in);
-					spentCache.remove (in.getSource ().getOwner3 (), in);
+					spentCache.remove (in.getSource ().getOwner1 (), t);
+					spentCache.remove (in.getSource ().getOwner2 (), t);
+					spentCache.remove (in.getSource ().getOwner3 (), t);
 				}
 			}
 		}
@@ -484,29 +488,30 @@ class JpaBlockStore implements BlockStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				utxoCache.add (t.getHash (), out);
+				utxoCache.add (t.getHash (), t);
 
-				utxoByAddress.add (out.getOwner1 (), out);
-				utxoByAddress.add (out.getOwner2 (), out);
-				utxoByAddress.add (out.getOwner3 (), out);
+				utxoByAddress.add (out.getOwner1 (), t);
+				utxoByAddress.add (out.getOwner2 (), t);
+				utxoByAddress.add (out.getOwner3 (), t);
 
-				receivedCache.add (out.getOwner1 (), out);
-				receivedCache.add (out.getOwner2 (), out);
-				receivedCache.add (out.getOwner3 (), out);
+				receivedCache.add (out.getOwner1 (), t);
+				receivedCache.add (out.getOwner2 (), t);
+				receivedCache.add (out.getOwner3 (), t);
 			}
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					utxoCache.remove (in.getSourceHash (), in.getSource ());
+					Tx st = in.getSource ().getTransaction ();
+					utxoCache.remove (in.getSourceHash (), st);
 
-					utxoByAddress.remove (in.getSource ().getOwner1 (), in.getSource ());
-					utxoByAddress.remove (in.getSource ().getOwner2 (), in.getSource ());
-					utxoByAddress.remove (in.getSource ().getOwner3 (), in.getSource ());
+					utxoByAddress.remove (in.getSource ().getOwner1 (), st);
+					utxoByAddress.remove (in.getSource ().getOwner2 (), st);
+					utxoByAddress.remove (in.getSource ().getOwner3 (), st);
 
-					spentCache.add (in.getSource ().getOwner1 (), in);
-					spentCache.add (in.getSource ().getOwner2 (), in);
-					spentCache.add (in.getSource ().getOwner3 (), in);
+					spentCache.add (in.getSource ().getOwner1 (), t);
+					spentCache.add (in.getSource ().getOwner2 (), t);
+					spentCache.add (in.getSource ().getOwner3 (), t);
 				}
 			}
 		}
@@ -716,9 +721,22 @@ class JpaBlockStore implements BlockStore
 		List<TxOut> outs = new ArrayList<TxOut> ();
 		if ( ids != null && !ids.isEmpty () )
 		{
-			for ( Long id : ids )
+			if ( ids.size () < 5 )
 			{
-				outs.add (entityManager.find (TxOut.class, id));
+				for ( Long id : ids )
+				{
+					outs.addAll (entityManager.find (Tx.class, id).getOutputs ());
+				}
+			}
+			else
+			{
+				QTx tx = QTx.tx;
+				QTxOut txout = QTxOut.txOut;
+				JPAQuery q = new JPAQuery (entityManager);
+				for ( TxOut out : q.from (tx).join (tx.outputs, txout).where (tx.id.in (ids)).list (txout) )
+				{
+					outs.add (out);
+				}
 			}
 		}
 		return outs;
@@ -729,9 +747,22 @@ class JpaBlockStore implements BlockStore
 		List<TxIn> ins = new ArrayList<TxIn> ();
 		if ( ids != null && !ids.isEmpty () )
 		{
-			for ( Long id : ids )
+			if ( ids.size () < 5 )
 			{
-				ins.add (entityManager.find (TxIn.class, id));
+				for ( Long id : ids )
+				{
+					ins.addAll (entityManager.find (Tx.class, id).getInputs ());
+				}
+			}
+			else
+			{
+				QTx tx = QTx.tx;
+				QTxIn txin = QTxIn.txIn;
+				JPAQuery q = new JPAQuery (entityManager);
+				for ( TxIn in : q.from (tx).join (tx.inputs, txin).where (tx.id.in (ids)).list (txin) )
+				{
+					ins.add (in);
+				}
 			}
 		}
 		return ins;
