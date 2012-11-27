@@ -514,10 +514,17 @@ class JpaBlockStore implements BlockStore
 
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		for ( String txhash : needTx )
+		Collection<Long> ids = utxoCache.get (needTx);
+		if ( ids.size () > 10 )
 		{
-			for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
+			QTx tx = QTx.tx;
+			QTxOut txout = QTxOut.txOut;
+			JPAQuery q = new JPAQuery (entityManager);
+			for ( Object[] cols : q.from (txout).join (txout.transaction, tx).where (txout.id.in (ids)).list (tx.hash, txout) )
 			{
+				String txhash = (String) cols[0];
+				TxOut out = (TxOut) cols[1];
+
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
 				if ( resolved == null )
 				{
@@ -525,6 +532,22 @@ class JpaBlockStore implements BlockStore
 					tcontext.resolvedInputs.put (txhash, resolved);
 				}
 				resolved.put (out.getIx (), out);
+			}
+		}
+		else
+		{
+			for ( String txhash : needTx )
+			{
+				for ( TxOut out : retrieveTxOut (utxoCache.get (txhash)) )
+				{
+					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+					if ( resolved == null )
+					{
+						resolved = new HashMap<Long, TxOut> ();
+						tcontext.resolvedInputs.put (txhash, resolved);
+					}
+					resolved.put (out.getIx (), out);
+				}
 			}
 		}
 	}
