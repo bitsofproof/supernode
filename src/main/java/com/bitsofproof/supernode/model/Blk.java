@@ -20,6 +20,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -247,16 +248,28 @@ public class Blk implements Serializable
 		this.previousHash = previousHash;
 	}
 
+	private static final Comparator<Long> ascending = new Comparator<Long> ()
+	{
+		@Override
+		public int compare (Long arg0, Long arg1)
+		{
+			return arg0 < arg1 ? -1 : (arg0 > arg1 ? 1 : 0);
+		}
+	};
+
 	private String computeMerkleRoot ()
 	{
 		parseTransactions ();
 
 		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
+		int nt = transactions.size ();
 
 		// Start by adding all the hashes of the transactions as leaves of the tree.
 		if ( archive != null && archive.size () > 0 )
 		{
-			TreeMap<Long, byte[]> hashes = new TreeMap<Long, byte[]> ();
+			nt += archive.size ();
+
+			TreeMap<Long, byte[]> hashes = new TreeMap<Long, byte[]> (ascending);
 			for ( Tx t : transactions )
 			{
 				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
@@ -274,13 +287,13 @@ public class Blk implements Serializable
 				tree.add (new Hash (t.getHash ()).toByteArray ());
 			}
 		}
-		int levelOffset = 0; // Offset in the list where the currently processed level starts.
+		int levelOffset = 0;
 		try
 		{
 			MessageDigest digest = MessageDigest.getInstance ("SHA-256");
 
 			// Step through each level, stopping when we reach the root (levelSize == 1).
-			for ( int levelSize = transactions.size (); levelSize > 1; levelSize = (levelSize + 1) / 2 )
+			for ( int levelSize = nt; levelSize > 1; levelSize = (levelSize + 1) / 2 )
 			{
 				// For each pair of nodes on that level:
 				for ( int left = 0; left < levelSize; left += 2 )
@@ -346,7 +359,7 @@ public class Blk implements Serializable
 			if ( archive != null && archive.size () > 0 )
 			{
 				writer.writeVarInt (transactions.size () + archive.size ());
-				TreeMap<Long, HasToWire> txs = new TreeMap<Long, HasToWire> ();
+				TreeMap<Long, HasToWire> txs = new TreeMap<Long, HasToWire> (ascending);
 				for ( Tx t : transactions )
 				{
 					txs.put (t.getIx (), t);
@@ -404,6 +417,7 @@ public class Blk implements Serializable
 		{
 			Tx t = new Tx ();
 			t.fromWire (reader);
+			t.setIx (i);
 			transactions.add (t);
 		}
 		wireTransactions = null;

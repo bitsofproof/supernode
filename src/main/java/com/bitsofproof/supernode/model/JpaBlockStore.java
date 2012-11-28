@@ -40,8 +40,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.Chain;
@@ -71,6 +74,7 @@ class JpaBlockStore implements BlockStore
 	@Autowired
 	private PlatformTransactionManager transactionManager;
 
+	// note: the lock protects the caches (currentHead, cachedBlocks, cachedHeads, utxoCache) not the database
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private CachedHead currentHead = null;
@@ -83,7 +87,7 @@ class JpaBlockStore implements BlockStore
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
-	private class Cache
+	private static class Cache
 	{
 		private final Map<String, BigInteger> cache = new HashMap<String, BigInteger> ();
 
@@ -109,6 +113,11 @@ class JpaBlockStore implements BlockStore
 				mask = BigInteger.ZERO;
 			}
 			cache.put (key, mask.or (c));
+		}
+
+		public boolean isFullySpent (String key)
+		{
+			return cache.get (key).equals (BigInteger.ZERO);
 		}
 
 		public boolean contains (String key, long ix)
@@ -403,61 +412,155 @@ class JpaBlockStore implements BlockStore
 		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
-	@Override
-	public void archive () throws ValidationException
+	private void archiveBlock (Blk b)
 	{
-		try
+		boolean hasFullySpent = false;
+
+		if ( b.getUtxoDelta () != null )
 		{
-			lock.writeLock ().lock ();
-
-			log.trace ("Archiving...");
-			JPAQuery q = new JPAQuery (entityManager);
-			QTxArchive txa = QTxArchive.txArchive;
-
-			Set<String> archived = new HashSet<String> ();
-			for ( String a : q.from (txa).list (txa.hash) )
+			// scan utxo delta for output fully spent
+			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
+			long nin = reader.readVarInt ();
+			for ( long i = 0; i < nin; ++i )
 			{
-				archived.add (a);
+				reader.readHash ();
+				reader.readVarBytes ();
 			}
-			log.trace ("Found " + archived.size () + " transactions in archive.");
 
-			Set<String> toArchive = new HashSet<String> ();
-			int utxo = 0;
-			for ( Map.Entry<String, BigInteger> have : utxoCache.entrySet () )
+			long nout = reader.readVarInt ();
+			for ( long i = 0; i < nout; ++i )
 			{
-				if ( have.getValue ().equals (BigInteger.ZERO) )
+				String hash = reader.readHash ().toString ();
+				try
 				{
-					if ( !archived.contains (have.getKey ()) )
+					lock.readLock ().lock ();
+
+					if ( utxoCache.isFullySpent (hash) )
 					{
-						toArchive.add (have.getKey ());
+						hasFullySpent = true;
+						break;
 					}
 				}
-				else
+				finally
 				{
-					++utxo;
+					lock.readLock ().unlock ();
+				}
+				reader.readVarBytes ();
+			}
+		}
+
+		if ( hasFullySpent )
+		{
+			List<Tx> archived = new ArrayList<Tx> ();
+			for ( Tx t : b.getTransactions () )
+			{
+				try
+				{
+					lock.readLock ().lock ();
+
+					if ( utxoCache.isFullySpent (t.getHash ()) )
+					{
+						TxArchive ta = new TxArchive ();
+						ta.setIx (t.getIx ());
+						ta.setHash (t.getHash ());
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						t.toWire (writer);
+						ta.setWire (writer.toByteArray ());
+						if ( b.getArchive () == null )
+						{
+							b.setArchive (new ArrayList<TxArchive> ());
+						}
+						b.getArchive ().add (ta);
+
+						archived.add (t);
+					}
+				}
+				finally
+				{
+					lock.readLock ().unlock ();
 				}
 			}
-			log.trace ("Found " + toArchive.size () + " new fully spent and " + utxo + " open transactions...");
-			QTx tx = QTx.tx;
-			QBlk blk = QBlk.blk;
-			q = new JPAQuery (entityManager);
-			List<String> old =
-					q.from (tx).join (tx.block, blk).where (tx.hash.in (toArchive).and (blk.height.lt (currentHead.getHeight () - ARCHIVE_EXCLUDE)))
-							.list (tx.hash);
-			log.trace ("... " + old.size () + " transactions are old enough for archive, " + (utxo + toArchive.size () - old.size ())
-					+ " will remain in active store");
-
-			log.trace ("Done archiving...");
+			for ( Tx t : archived )
+			{
+				log.trace ("Archived transaction " + t.getHash ());
+				b.getTransactions ().remove (t);
+			}
+			entityManager.merge (b);
 		}
-		catch ( Exception e )
+	}
+
+	private void archivePass ()
+	{
+		List<Long> trunkPath = new ArrayList<Long> ();
+		try
 		{
-			throw new ValidationException ("OTHER exception ", e);
+			lock.readLock ().lock ();
+
+			CachedBlock b = currentHead.last;
+			CachedBlock p = b.previous;
+			int n = 0;
+			while ( p != null )
+			{
+				if ( n++ > ARCHIVE_EXCLUDE )
+				{
+					trunkPath.add (b.getId ());
+				}
+				b = p;
+				p = b.previous;
+			}
+			log.trace ("Acrhiver will work on " + trunkPath.size () + " blocks.");
 		}
 		finally
 		{
-			lock.writeLock ().unlock ();
+			lock.readLock ().unlock ();
 		}
+
+		for ( final Long bid : trunkPath )
+		{
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			{
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus arg0)
+				{
+					archiveBlock (entityManager.find (Blk.class, bid));
+				}
+			});
+		}
+	}
+
+	@Override
+	public void startArchiver ()
+	{
+		Thread archiver = new Thread (new Runnable ()
+		{
+			@Override
+			public void run ()
+			{
+				long height = currentHead.height;
+
+				while ( true )
+				{
+					archivePass ();
+					try
+					{
+						synchronized ( currentHead )
+						{
+							while ( currentHead.height < height + 10 )
+							{
+								currentHead.wait ();
+							}
+							height = currentHead.height;
+						}
+					}
+					catch ( InterruptedException e )
+					{
+					}
+				}
+			}
+		});
+		archiver.setName ("Archiver");
+		archiver.setPriority (Thread.MIN_PRIORITY);
+		archiver.start ();
 	}
 
 	@Override
@@ -934,7 +1037,13 @@ class JpaBlockStore implements BlockStore
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
 			// now this is the new trunk
-			currentHead = usingHead;
+			synchronized ( currentHead )
+			{
+				currentHead = usingHead;
+
+				// notify the archiver
+				currentHead.notify ();
+			}
 
 		}
 	}

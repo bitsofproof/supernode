@@ -45,9 +45,6 @@ import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
 import com.bitsofproof.supernode.model.QHead;
 import com.bitsofproof.supernode.model.TransactionValidationException;
-import com.bitsofproof.supernode.model.Tx;
-import com.bitsofproof.supernode.model.TxIn;
-import com.bitsofproof.supernode.model.TxOut;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 public class Audit extends Main implements Main.App
@@ -173,14 +170,6 @@ public class Audit extends Main implements Main.App
 						if ( passed )
 						{
 							log.info ("Check 4. Passed.");
-						}
-					}
-					if ( passed && from <= 5 && to >= 5 )
-					{
-						log.info ("Check 5. Block reward amount correct for all blocks...");
-						if ( coinbaseCheck () )
-						{
-							log.info ("Check 5. Passed.");
 						}
 					}
 					if ( passed )
@@ -359,61 +348,6 @@ public class Audit extends Main implements Main.App
 				log.error ("Failed. Block " + b.getHash () + " has incorrect merkle root");
 				passed = false;
 			}
-		}
-		return passed;
-	}
-
-	public boolean coinbaseCheck ()
-	{
-		boolean passed = true;
-		QBlk blk = QBlk.blk;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( Blk b : q.from (blk).list (blk) )
-		{
-			boolean first = true;
-			long coinbase = 0;
-			for ( Tx t : b.getTransactions () )
-			{
-				long txinSum = 0;
-				long txoutSum = 0;
-				if ( first )
-				{
-					for ( TxOut out : t.getOutputs () )
-					{
-						coinbase += out.getValue ();
-					}
-					first = false;
-				}
-				else
-				{
-					for ( TxOut out : t.getOutputs () )
-					{
-						txoutSum += out.getValue ();
-					}
-					for ( TxIn in : t.getInputs () )
-					{
-						txinSum += in.getSource ().getValue ();
-						entityManager.detach (in.getSource ());
-					}
-					if ( txoutSum > txinSum )
-					{
-						log.error ("Transaction out > transaction in for " + t.getHash ());
-						passed = false;
-					}
-					coinbase -= txinSum - txoutSum;
-				}
-			}
-			coinbase -= ((50L * Tx.COIN) >> (b.getHeight () / 210000L));
-			if ( coinbase > 0 )
-			{
-				log.error ("Incorrect block reward for " + b.getHash ());
-				passed = false;
-			}
-			if ( coinbase < 0 )
-			{
-				log.warn ("Miner destroyed " + (-coinbase) + " satoshi(s) in block " + b.getHash ());
-			}
-			entityManager.detach (b);
 		}
 		return passed;
 	}

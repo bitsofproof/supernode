@@ -12,7 +12,7 @@ drop table blk_tx;
 
 drop table tx;
 
-drop table blk_txa
+drop table blk_txa;
 
 drop table txa;
 

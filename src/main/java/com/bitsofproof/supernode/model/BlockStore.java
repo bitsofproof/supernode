@@ -52,5 +52,5 @@ public interface BlockStore
 
 	List<String> getInventory (List<String> locator, String last, int limit);
 
-	void archive () throws ValidationException;
+	void startArchiver ();
 }
