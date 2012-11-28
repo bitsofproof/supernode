@@ -51,4 +51,6 @@ public interface BlockStore
 	boolean isEmpty ();
 
 	List<String> getInventory (List<String> locator, String last, int limit);
+
+	void archive () throws ValidationException;
 }

@@ -60,7 +60,7 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
-	private static final int SNAPSHOT_FREQUENCY = 500;
+	private static final int ARCHIVE_EXCLUDE = 500;
 
 	@Autowired
 	private Chain chain;
@@ -119,6 +119,11 @@ class JpaBlockStore implements BlockStore
 				return false;
 			}
 			return mask.testBit ((int) ix);
+		}
+
+		public Set<Map.Entry<String, BigInteger>> entrySet ()
+		{
+			return cache.entrySet ();
 		}
 	}
 
@@ -396,6 +401,63 @@ class JpaBlockStore implements BlockStore
 			return false;
 		}
 		return isBlockOnBranch (block, branch.getPrevious ());
+	}
+
+	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+	@Override
+	public void archive () throws ValidationException
+	{
+		try
+		{
+			lock.writeLock ().lock ();
+
+			log.trace ("Archiving...");
+			JPAQuery q = new JPAQuery (entityManager);
+			QTxArchive txa = QTxArchive.txArchive;
+
+			Set<String> archived = new HashSet<String> ();
+			for ( String a : q.from (txa).list (txa.hash) )
+			{
+				archived.add (a);
+			}
+			log.trace ("Found " + archived.size () + " transactions in archive.");
+
+			Set<String> toArchive = new HashSet<String> ();
+			int utxo = 0;
+			for ( Map.Entry<String, BigInteger> have : utxoCache.entrySet () )
+			{
+				if ( have.getValue ().equals (BigInteger.ZERO) )
+				{
+					if ( !archived.contains (have.getKey ()) )
+					{
+						toArchive.add (have.getKey ());
+					}
+				}
+				else
+				{
+					++utxo;
+				}
+			}
+			log.trace ("Found " + toArchive.size () + " new fully spent and " + utxo + " open transactions...");
+			QTx tx = QTx.tx;
+			QBlk blk = QBlk.blk;
+			q = new JPAQuery (entityManager);
+			List<String> old =
+					q.from (tx).join (tx.block, blk).where (tx.hash.in (toArchive).and (blk.height.lt (currentHead.getHeight () - ARCHIVE_EXCLUDE)))
+							.list (tx.hash);
+			log.trace ("... " + old.size () + " transactions are old enough for archive, " + (utxo + toArchive.size () - old.size ())
+					+ " will remain in active store");
+
+			log.trace ("Done archiving...");
+		}
+		catch ( Exception e )
+		{
+			throw new ValidationException ("OTHER exception ", e);
+		}
+		finally
+		{
+			lock.writeLock ().unlock ();
+		}
 	}
 
 	@Override
