@@ -482,15 +482,16 @@ public class Blk implements Serializable
 		}
 
 		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeVarInt (ins.size ());
-		for ( Map.Entry<String, BigInteger> e : ins.entrySet () )
+
+		writer.writeVarInt (outs.size ());
+		for ( Map.Entry<String, BigInteger> e : outs.entrySet () )
 		{
 			writer.writeHash (new Hash (e.getKey ()));
 			writer.writeVarBytes (e.getValue ().toByteArray ());
 		}
 
-		writer.writeVarInt (outs.size ());
-		for ( Map.Entry<String, BigInteger> e : outs.entrySet () )
+		writer.writeVarInt (ins.size ());
+		for ( Map.Entry<String, BigInteger> e : ins.entrySet () )
 		{
 			writer.writeHash (new Hash (e.getKey ()));
 			writer.writeVarBytes (e.getValue ().toByteArray ());

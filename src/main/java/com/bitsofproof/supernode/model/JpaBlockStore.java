@@ -81,7 +81,6 @@ class JpaBlockStore implements BlockStore
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
-	// NOTE: that these are not sufficiently narrow, since pointing to Tx not TxOut or TxIn
 	private final Cache utxoCache = new Cache ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -90,11 +89,6 @@ class JpaBlockStore implements BlockStore
 	private static class Cache
 	{
 		private final Map<String, BigInteger> cache = new HashMap<String, BigInteger> ();
-
-		public int size ()
-		{
-			return cache.size ();
-		}
 
 		public void remove (String key, BigInteger c)
 		{
@@ -128,11 +122,6 @@ class JpaBlockStore implements BlockStore
 				return false;
 			}
 			return mask.testBit ((int) ix);
-		}
-
-		public Set<Map.Entry<String, BigInteger>> entrySet ()
-		{
-			return cache.entrySet ();
 		}
 	}
 
@@ -336,20 +325,20 @@ class JpaBlockStore implements BlockStore
 		if ( b.getUtxoDelta () != null )
 		{
 			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nin = reader.readVarInt ();
-			for ( long i = 0; i < nin; ++i )
-			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.add (hash, mask);
-			}
-
 			long nout = reader.readVarInt ();
 			for ( long i = 0; i < nout; ++i )
 			{
 				String hash = reader.readHash ().toString ();
 				BigInteger mask = new BigInteger (reader.readVarBytes ());
 				utxoCache.remove (hash, mask);
+			}
+
+			long nin = reader.readVarInt ();
+			for ( long i = 0; i < nin; ++i )
+			{
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.add (hash, mask);
 			}
 		}
 	}
@@ -359,20 +348,19 @@ class JpaBlockStore implements BlockStore
 		if ( b.getUtxoDelta () != null )
 		{
 			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nin = reader.readVarInt ();
-			for ( long i = 0; i < nin; ++i )
-			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.remove (hash, mask);
-			}
-
 			long nout = reader.readVarInt ();
 			for ( long i = 0; i < nout; ++i )
 			{
 				String hash = reader.readHash ().toString ();
 				BigInteger mask = new BigInteger (reader.readVarBytes ());
 				utxoCache.add (hash, mask);
+			}
+			long nin = reader.readVarInt ();
+			for ( long i = 0; i < nin; ++i )
+			{
+				String hash = reader.readHash ().toString ();
+				BigInteger mask = new BigInteger (reader.readVarBytes ());
+				utxoCache.remove (hash, mask);
 			}
 		}
 	}
@@ -420,13 +408,6 @@ class JpaBlockStore implements BlockStore
 		{
 			// scan utxo delta for output fully spent
 			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nin = reader.readVarInt ();
-			for ( long i = 0; i < nin; ++i )
-			{
-				reader.readHash ();
-				reader.readVarBytes ();
-			}
-
 			long nout = reader.readVarInt ();
 			for ( long i = 0; i < nout; ++i )
 			{
@@ -479,7 +460,10 @@ class JpaBlockStore implements BlockStore
 			{
 				b.getTransactions ().remove (t);
 			}
-			log.trace ("Archived " + archived.size () + " transactions.");
+			if ( archived.size () > 0 )
+			{
+				log.trace ("Archived " + archived.size () + " transactions.");
+			}
 			entityManager.merge (b);
 		}
 	}
