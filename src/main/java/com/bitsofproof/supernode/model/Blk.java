@@ -83,7 +83,7 @@ public class Blk implements Serializable
 	private List<Tx> transactions;
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-	private List<TxArchive> archive;
+	private List<TxA> archive;
 
 	@Lob
 	@Basic (fetch = FetchType.LAZY)
@@ -274,7 +274,7 @@ public class Blk implements Serializable
 			{
 				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
 			}
-			for ( TxArchive t : archive )
+			for ( TxA t : archive )
 			{
 				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
 			}
@@ -317,12 +317,12 @@ public class Blk implements Serializable
 		return new Hash (tree.get (tree.size () - 1)).toString ();
 	}
 
-	public List<TxArchive> getArchive ()
+	public List<TxA> getArchive ()
 	{
 		return archive;
 	}
 
-	public void setArchive (List<TxArchive> archive)
+	public void setArchive (List<TxA> archive)
 	{
 		this.archive = archive;
 	}
@@ -364,7 +364,7 @@ public class Blk implements Serializable
 				{
 					txs.put (t.getIx (), t);
 				}
-				for ( TxArchive t : archive )
+				for ( TxA t : archive )
 				{
 					txs.put (t.getIx (), t);
 				}

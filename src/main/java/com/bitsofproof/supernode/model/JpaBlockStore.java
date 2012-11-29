@@ -460,18 +460,13 @@ class JpaBlockStore implements BlockStore
 
 					if ( utxoCache.isFullySpent (t.getHash ()) )
 					{
-						TxArchive ta = new TxArchive ();
+						TxA ta = new TxA ();
 						ta.setIx (t.getIx ());
-						ta.setHash (t.getHash ());
 						WireFormat.Writer writer = new WireFormat.Writer ();
 						t.toWire (writer);
-						ta.setWire (writer.toByteArray ());
-						if ( b.getArchive () == null )
-						{
-							b.setArchive (new ArrayList<TxArchive> ());
-						}
+						ta.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						ta.setBlock (t.getBlock ());
 						b.getArchive ().add (ta);
-
 						archived.add (t);
 					}
 				}
@@ -482,9 +477,9 @@ class JpaBlockStore implements BlockStore
 			}
 			for ( Tx t : archived )
 			{
-				log.trace ("Archived transaction " + t.getHash ());
 				b.getTransactions ().remove (t);
 			}
+			log.trace ("Archived " + archived.size () + " transactions.");
 			entityManager.merge (b);
 		}
 	}
