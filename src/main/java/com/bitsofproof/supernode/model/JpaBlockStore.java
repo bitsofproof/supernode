@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -82,12 +83,15 @@ class JpaBlockStore implements BlockStore
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
 	private final Cache utxoCache = new Cache ();
-
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
 	private static class Cache
 	{
+		private static final int OPPCACHE_SIZE = 100000;
+		// opportunistic cache
+		private final Map<String, Tx> oppCache = new HashMap<String, Tx> ();
+
 		private final Map<String, BigInteger> cache = new HashMap<String, BigInteger> ();
 
 		public void remove (String key, BigInteger c)
@@ -95,7 +99,13 @@ class JpaBlockStore implements BlockStore
 			BigInteger mask = cache.get (key);
 			if ( mask != null )
 			{
-				cache.put (key, mask.xor (c));
+				mask = mask.xor (c);
+				cache.put (key, mask);
+
+				if ( mask.equals (BigInteger.ZERO) )
+				{
+					oppCache.remove (key);
+				}
 			}
 		}
 
@@ -107,6 +117,33 @@ class JpaBlockStore implements BlockStore
 				mask = BigInteger.ZERO;
 			}
 			cache.put (key, mask.or (c));
+		}
+
+		public void addOppCache (Tx t)
+		{
+			if ( oppCache.size () > OPPCACHE_SIZE )
+			{
+				// just remove one, this is opportunistic cache
+				oppCache.remove (oppCache.keySet ().iterator ().next ());
+			}
+			oppCache.put (t.getHash (), t);
+		}
+
+		public List<TxOut> tryGet (String txhash)
+		{
+			List<TxOut> outs = new ArrayList<TxOut> ();
+			Tx cached = oppCache.get (txhash);
+			if ( cached != null )
+			{
+				for ( TxOut out : cached.getOutputs () )
+				{
+					if ( contains (txhash, out.getIx ()) )
+					{
+						outs.add (out);
+					}
+				}
+			}
+			return outs;
 		}
 
 		public boolean isFullySpent (String key)
@@ -365,24 +402,57 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
+	private void fillOppCache (Blk b)
+	{
+		for ( Tx t : b.getTransactions () )
+		{
+			utxoCache.addOppCache (t);
+		}
+	}
+
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		QTx tx = QTx.tx;
-		QTxOut txout = QTxOut.txOut;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (tx).join (tx.outputs, txout).where (tx.hash.in (needTx)).list (tx.hash, txout) )
+		Iterator<String> i = needTx.iterator ();
+		while ( i.hasNext () )
 		{
-			String txhash = (String) o[0];
-			TxOut out = (TxOut) o[1];
-			if ( utxoCache.contains (txhash, out.getIx ()) )
+			String txhash = i.next ();
+			List<TxOut> outs = utxoCache.tryGet (txhash);
+			if ( !outs.isEmpty () )
 			{
+				i.remove ();
+
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
 				if ( resolved == null )
 				{
 					resolved = new HashMap<Long, TxOut> ();
 					tcontext.resolvedInputs.put (txhash, resolved);
 				}
-				resolved.put (out.getIx (), out);
+
+				for ( TxOut o : outs )
+				{
+					resolved.put (o.getIx (), o);
+				}
+			}
+		}
+		if ( !needTx.isEmpty () )
+		{
+			QTx tx = QTx.tx;
+			QTxOut txout = QTxOut.txOut;
+			JPAQuery q = new JPAQuery (entityManager);
+			for ( Object[] o : q.from (tx).join (tx.outputs, txout).where (tx.hash.in (needTx)).list (tx.hash, txout) )
+			{
+				String txhash = (String) o[0];
+				TxOut out = (TxOut) o[1];
+				if ( utxoCache.contains (txhash, out.getIx ()) )
+				{
+					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
+					if ( resolved == null )
+					{
+						resolved = new HashMap<Long, TxOut> ();
+						tcontext.resolvedInputs.put (txhash, resolved);
+					}
+					resolved.put (out.getIx (), out);
+				}
 			}
 		}
 	}
@@ -1011,6 +1081,7 @@ class JpaBlockStore implements BlockStore
 			{
 				// spend if on the trunk
 				forwardCache (b);
+				fillOppCache (b);
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
