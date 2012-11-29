@@ -286,6 +286,10 @@ public class ChainLoader
 				{
 					gdm.getBlocks ().add (new Hash (b.hash).toByteArray ());
 					requests.get (peer).add (b.hash);
+					if ( gdm.getBlocks ().size () > 100 )
+					{
+						break;
+					}
 				}
 			}
 			knownInventory.get (peer).clear ();
