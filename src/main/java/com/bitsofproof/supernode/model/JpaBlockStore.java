@@ -538,7 +538,6 @@ class JpaBlockStore implements BlockStore
 			}
 		});
 		archiver.setName ("Archiver");
-		archiver.setPriority (Thread.MIN_PRIORITY);
 		archiver.start ();
 	}
 
