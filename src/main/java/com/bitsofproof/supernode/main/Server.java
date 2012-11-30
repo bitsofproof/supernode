@@ -71,7 +71,6 @@ public class Server extends Main implements Main.App
 		try
 		{
 			network.getStore ().cache ();
-			network.getStore ().startArchiver ();
 			network.start ();
 		}
 		catch ( ValidationException e )

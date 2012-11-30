@@ -194,7 +194,7 @@ public class TxIn implements Serializable, Cloneable
 	protected TxIn flatCopy (Tx tc)
 	{
 		TxIn c = new TxIn ();
-
+		c.id = id;
 		c.ix = ix;
 		c.script = script;
 		c.sequence = sequence;

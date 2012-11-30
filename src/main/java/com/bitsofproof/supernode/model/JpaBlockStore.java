@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -41,11 +40,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.Chain;
@@ -63,8 +59,6 @@ class JpaBlockStore implements BlockStore
 	private static final Logger log = LoggerFactory.getLogger (JpaBlockStore.class);
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
-
-	private static final int ARCHIVE_EXCLUDE = 500;
 
 	@Autowired
 	private Chain chain;
@@ -86,53 +80,41 @@ class JpaBlockStore implements BlockStore
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
-	private static class Cache
+	private class Cache
 	{
-		private static final int OPPCACHE_SIZE = 100000;
-		// opportunistic cache
-		private final Map<String, Tx> oppCache = new HashMap<String, Tx> ();
+		private final Map<String, Tx> txCache = new HashMap<String, Tx> ();
 
-		private final Map<String, BigInteger> cache = new HashMap<String, BigInteger> ();
+		private final Map<String, BigInteger> outputs = new HashMap<String, BigInteger> ();
 
 		public void remove (String key, BigInteger c)
 		{
-			BigInteger mask = cache.get (key);
+			BigInteger mask = outputs.get (key);
 			if ( mask != null )
 			{
 				mask = mask.xor (c);
-				cache.put (key, mask);
+				outputs.put (key, mask);
 
 				if ( mask.equals (BigInteger.ZERO) )
 				{
-					oppCache.remove (key);
+					txCache.remove (key);
 				}
 			}
 		}
 
 		public void add (String key, BigInteger c)
 		{
-			BigInteger mask = cache.get (key);
+			BigInteger mask = outputs.get (key);
 			if ( mask == null )
 			{
 				mask = BigInteger.ZERO;
 			}
-			cache.put (key, mask.or (c));
+			outputs.put (key, mask.or (c));
 		}
 
-		public void addOppCache (Tx t)
-		{
-			if ( oppCache.size () > OPPCACHE_SIZE )
-			{
-				// just remove one, this is opportunistic cache
-				oppCache.remove (oppCache.keySet ().iterator ().next ());
-			}
-			oppCache.put (t.getHash (), t);
-		}
-
-		public List<TxOut> tryGet (String txhash)
+		public List<TxOut> get (String txhash)
 		{
 			List<TxOut> outs = new ArrayList<TxOut> ();
-			Tx cached = oppCache.get (txhash);
+			Tx cached = txCache.get (txhash);
 			if ( cached != null )
 			{
 				for ( TxOut out : cached.getOutputs () )
@@ -146,19 +128,47 @@ class JpaBlockStore implements BlockStore
 			return outs;
 		}
 
-		public boolean isFullySpent (String key)
-		{
-			return cache.get (key).equals (BigInteger.ZERO);
-		}
-
 		public boolean contains (String key, long ix)
 		{
-			BigInteger mask = cache.get (key);
+			BigInteger mask = outputs.get (key);
 			if ( mask == null )
 			{
 				return false;
 			}
 			return mask.testBit ((int) ix);
+		}
+
+		public void update (Blk b)
+		{
+			for ( Tx t : b.getTransactions () )
+			{
+				if ( outputs.containsKey (t.getHash ()) )
+				{
+					txCache.put (t.getHash (), t.flatCopy ());
+				}
+				for ( TxIn in : t.getInputs () )
+				{
+					if ( !outputs.containsKey (in.getSourceHash ()) )
+					{
+						txCache.remove (in.getSourceHash ());
+					}
+				}
+			}
+		}
+
+		public void cacheUTXO ()
+		{
+			if ( !outputs.keySet ().isEmpty () )
+			{
+				QTx tx = QTx.tx;
+				JPAQuery q = new JPAQuery (entityManager);
+				for ( Tx t : q.from (tx).where (tx.hash.in (outputs.keySet ())).list (tx) )
+				{
+					txCache.put (t.getHash (), t.flatCopy ());
+
+					entityManager.detach (t);
+				}
+			}
 		}
 	}
 
@@ -284,7 +294,7 @@ class JpaBlockStore implements BlockStore
 			log.trace ("Cache chain...");
 			cacheChain ();
 
-			log.trace ("Cache UTXO...");
+			log.trace ("Compute UTXO...");
 			List<Long> trunkPath = new ArrayList<Long> ();
 			CachedBlock b = currentHead.last;
 			CachedBlock p = b.previous;
@@ -304,6 +314,8 @@ class JpaBlockStore implements BlockStore
 				}
 				forwardCache (blk);
 			}
+			log.trace ("Fetching UTXO set...");
+			utxoCache.cacheUTXO ();
 			log.trace ("Cache filled.");
 		}
 		finally
@@ -402,25 +414,13 @@ class JpaBlockStore implements BlockStore
 		}
 	}
 
-	private void fillOppCache (Blk b)
-	{
-		for ( Tx t : b.getTransactions () )
-		{
-			utxoCache.addOppCache (t);
-		}
-	}
-
 	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
 	{
-		Iterator<String> i = needTx.iterator ();
-		while ( i.hasNext () )
+		for ( String txhash : needTx )
 		{
-			String txhash = i.next ();
-			List<TxOut> outs = utxoCache.tryGet (txhash);
+			List<TxOut> outs = utxoCache.get (txhash);
 			if ( !outs.isEmpty () )
 			{
-				i.remove ();
-
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
 				if ( resolved == null )
 				{
@@ -431,27 +431,6 @@ class JpaBlockStore implements BlockStore
 				for ( TxOut o : outs )
 				{
 					resolved.put (o.getIx (), o);
-				}
-			}
-		}
-		if ( !needTx.isEmpty () )
-		{
-			QTx tx = QTx.tx;
-			QTxOut txout = QTxOut.txOut;
-			JPAQuery q = new JPAQuery (entityManager);
-			for ( Object[] o : q.from (tx).join (tx.outputs, txout).where (tx.hash.in (needTx)).list (tx.hash, txout) )
-			{
-				String txhash = (String) o[0];
-				TxOut out = (TxOut) o[1];
-				if ( utxoCache.contains (txhash, out.getIx ()) )
-				{
-					HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-					if ( resolved == null )
-					{
-						resolved = new HashMap<Long, TxOut> ();
-						tcontext.resolvedInputs.put (txhash, resolved);
-					}
-					resolved.put (out.getIx (), out);
 				}
 			}
 		}
@@ -468,147 +447,6 @@ class JpaBlockStore implements BlockStore
 			return false;
 		}
 		return isBlockOnBranch (block, branch.getPrevious ());
-	}
-
-	private void archiveBlock (Blk b)
-	{
-		boolean hasFullySpent = false;
-
-		if ( b.getUtxoDelta () != null )
-		{
-			// scan utxo delta for output fully spent
-			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nout = reader.readVarInt ();
-			for ( long i = 0; i < nout; ++i )
-			{
-				String hash = reader.readHash ().toString ();
-				try
-				{
-					lock.readLock ().lock ();
-
-					if ( utxoCache.isFullySpent (hash) )
-					{
-						hasFullySpent = true;
-						break;
-					}
-				}
-				finally
-				{
-					lock.readLock ().unlock ();
-				}
-				reader.readVarBytes ();
-			}
-		}
-
-		if ( hasFullySpent )
-		{
-			List<Tx> archived = new ArrayList<Tx> ();
-			for ( Tx t : b.getTransactions () )
-			{
-				try
-				{
-					lock.readLock ().lock ();
-
-					if ( utxoCache.isFullySpent (t.getHash ()) )
-					{
-						TxA ta = new TxA ();
-						ta.setIx (t.getIx ());
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						t.toWire (writer);
-						ta.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-						ta.setBlock (t.getBlock ());
-						b.getArchive ().add (ta);
-						archived.add (t);
-					}
-				}
-				finally
-				{
-					lock.readLock ().unlock ();
-				}
-			}
-			for ( Tx t : archived )
-			{
-				b.getTransactions ().remove (t);
-			}
-			if ( archived.size () > 0 )
-			{
-				log.trace ("Archived " + archived.size () + " transactions.");
-			}
-			entityManager.merge (b);
-		}
-	}
-
-	private void archivePass ()
-	{
-		List<Long> trunkPath = new ArrayList<Long> ();
-		try
-		{
-			lock.readLock ().lock ();
-
-			CachedBlock b = currentHead.last;
-			CachedBlock p = b.previous;
-			int n = 0;
-			while ( p != null )
-			{
-				if ( n++ > ARCHIVE_EXCLUDE )
-				{
-					trunkPath.add (b.getId ());
-				}
-				b = p;
-				p = b.previous;
-			}
-			log.trace ("Acrhiver will work on " + trunkPath.size () + " blocks.");
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-
-		for ( final Long bid : trunkPath )
-		{
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus arg0)
-				{
-					archiveBlock (entityManager.find (Blk.class, bid));
-				}
-			});
-		}
-	}
-
-	@Override
-	public void startArchiver ()
-	{
-		Thread archiver = new Thread (new Runnable ()
-		{
-			@Override
-			public void run ()
-			{
-				long height = currentHead.height;
-
-				while ( true )
-				{
-					archivePass ();
-					try
-					{
-						synchronized ( currentHead )
-						{
-							while ( currentHead.height < height + 10 )
-							{
-								currentHead.wait ();
-							}
-							height = currentHead.height;
-						}
-					}
-					catch ( InterruptedException e )
-					{
-					}
-				}
-			}
-		});
-		archiver.setName ("Archiver");
-		archiver.start ();
 	}
 
 	@Override
@@ -1023,7 +861,15 @@ class JpaBlockStore implements BlockStore
 				{
 					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 					{
-						i.setSource (tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()));
+						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+						if ( source.getId () == null )
+						{
+							i.setSource (source);
+						}
+						else
+						{
+							i.setSource (entityManager.getReference (TxOut.class, source.getId ()));
+						}
 					}
 				}
 				for ( TxOut o : t.getOutputs () )
@@ -1081,19 +927,13 @@ class JpaBlockStore implements BlockStore
 			{
 				// spend if on the trunk
 				forwardCache (b);
-				fillOppCache (b);
+				utxoCache.update (b);
+
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
 			// now this is the new trunk
-			synchronized ( currentHead )
-			{
-				currentHead = usingHead;
-
-				// notify the archiver
-				currentHead.notify ();
-			}
-
+			currentHead = usingHead;
 		}
 	}
 
@@ -1287,9 +1127,8 @@ class JpaBlockStore implements BlockStore
 					}
 				}
 
-				// this needs to be reset since looping gain over txin
-				i.setSource (tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()));
-				sumIn += i.getSource ().getValue ();
+				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+				sumIn += source.getValue ();
 
 				final int nr = inNumber;
 				callables.add (new Callable<TransactionValidationException> ()
@@ -1299,14 +1138,14 @@ class JpaBlockStore implements BlockStore
 					{
 						try
 						{
-							if ( !new Script (t, nr).evaluate (chain.isProduction ()) )
+							if ( !new Script (t, nr, source).evaluate (chain.isProduction ()) )
 							{
 								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
 							}
 
 							synchronized ( tcontext )
 							{
-								tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (i.getSource ().getValue ()));
+								tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (source.getValue ()));
 							}
 						}
 						catch ( Exception e )

@@ -199,6 +199,7 @@ public class TxOut implements Serializable
 	protected TxOut flatCopy (Tx tc)
 	{
 		TxOut c = new TxOut ();
+		c.id = id;
 		c.ix = ix;
 		c.script = script;
 		c.transaction = tc;

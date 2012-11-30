@@ -274,7 +274,7 @@ public class Tx implements Serializable, HasToWire
 	public Tx flatCopy ()
 	{
 		Tx c = new Tx ();
-
+		c.id = id;
 		c.hash = hash;
 		c.lockTime = lockTime;
 		c.version = version;

@@ -29,12 +29,14 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class Script
 {
 	private Stack<byte[]> stack = new Stack<byte[]> ();
 	private final Stack<byte[]> alt = new Stack<byte[]> ();
 	private final Tx tx;
+	private TxOut source;
 	private int inr;
 
 	@SuppressWarnings ("unused")
@@ -475,6 +477,14 @@ public class Script
 	{
 		this.tx = tx;
 		this.inr = inr;
+		this.source = tx.getInputs ().get (inr).getSource ();
+	}
+
+	public Script (Tx tx, int inr, TxOut source)
+	{
+		this.tx = tx;
+		this.inr = inr;
+		this.source = source;
 	}
 
 	public static byte[] fromReadable (String s)
@@ -768,7 +778,7 @@ public class Script
 		StringBuffer b = new StringBuffer ();
 
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
-		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+		byte[] s2 = source.getScript ();
 
 		b.append (Script.toReadable (s1));
 		b.append (" | ");
@@ -779,7 +789,7 @@ public class Script
 	public String dumpConnected ()
 	{
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
-		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+		byte[] s2 = source.getScript ();
 		byte[] c = new byte[s1.length + s2.length];
 		System.arraycopy (s1, 0, c, 0, s1.length);
 		System.arraycopy (s2, 0, c, s1.length, s2.length);
@@ -792,7 +802,7 @@ public class Script
 		Stack<byte[]> copy = new Stack<byte[]> ();
 
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
-		byte[] s2 = tx.getInputs ().get (inr).getSource ().getScript ();
+		byte[] s2 = source.getScript ();
 
 		if ( !evaluateSingleScript (s1) )
 		{

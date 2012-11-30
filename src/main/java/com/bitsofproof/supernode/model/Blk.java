@@ -20,11 +20,9 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
@@ -81,9 +79,6 @@ public class Blk implements Serializable
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
-
-	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-	private List<TxA> archive;
 
 	@Lob
 	@Basic (fetch = FetchType.LAZY)
@@ -248,15 +243,6 @@ public class Blk implements Serializable
 		this.previousHash = previousHash;
 	}
 
-	private static final Comparator<Long> ascending = new Comparator<Long> ()
-	{
-		@Override
-		public int compare (Long arg0, Long arg1)
-		{
-			return arg0 < arg1 ? -1 : (arg0 > arg1 ? 1 : 0);
-		}
-	};
-
 	private String computeMerkleRoot ()
 	{
 		parseTransactions ();
@@ -265,27 +251,9 @@ public class Blk implements Serializable
 		int nt = transactions.size ();
 
 		// Start by adding all the hashes of the transactions as leaves of the tree.
-		if ( archive != null && archive.size () > 0 )
+		for ( Tx t : transactions )
 		{
-			nt += archive.size ();
-
-			TreeMap<Long, byte[]> hashes = new TreeMap<Long, byte[]> (ascending);
-			for ( Tx t : transactions )
-			{
-				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
-			}
-			for ( TxA t : archive )
-			{
-				hashes.put (t.getIx (), new Hash (t.getHash ()).toByteArray ());
-			}
-			tree.addAll (hashes.values ());
-		}
-		else
-		{
-			for ( Tx t : transactions )
-			{
-				tree.add (new Hash (t.getHash ()).toByteArray ());
-			}
+			tree.add (new Hash (t.getHash ()).toByteArray ());
 		}
 		int levelOffset = 0;
 		try
@@ -317,16 +285,6 @@ public class Blk implements Serializable
 		return new Hash (tree.get (tree.size () - 1)).toString ();
 	}
 
-	public List<TxA> getArchive ()
-	{
-		return archive;
-	}
-
-	public void setArchive (List<TxA> archive)
-	{
-		this.archive = archive;
-	}
-
 	public byte[] getUtxoDelta ()
 	{
 		return utxoDelta;
@@ -356,30 +314,10 @@ public class Blk implements Serializable
 		}
 		else
 		{
-			if ( archive != null && archive.size () > 0 )
+			writer.writeVarInt (transactions.size ());
+			for ( Tx t : transactions )
 			{
-				writer.writeVarInt (transactions.size () + archive.size ());
-				TreeMap<Long, HasToWire> txs = new TreeMap<Long, HasToWire> (ascending);
-				for ( Tx t : transactions )
-				{
-					txs.put (t.getIx (), t);
-				}
-				for ( TxA t : archive )
-				{
-					txs.put (t.getIx (), t);
-				}
-				for ( HasToWire t : txs.values () )
-				{
-					t.toWire (writer);
-				}
-			}
-			else
-			{
-				writer.writeVarInt (transactions.size ());
-				for ( Tx t : transactions )
-				{
-					t.toWire (writer);
-				}
+				t.toWire (writer);
 			}
 		}
 	}
