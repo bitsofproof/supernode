@@ -138,7 +138,7 @@ class JpaBlockStore implements BlockStore
 			return mask.testBit ((int) ix);
 		}
 
-		public void update (Blk b)
+		public void add (Blk b)
 		{
 			for ( Tx t : b.getTransactions () )
 			{
@@ -151,6 +151,24 @@ class JpaBlockStore implements BlockStore
 					if ( !outputs.containsKey (in.getSourceHash ()) )
 					{
 						txCache.remove (in.getSourceHash ());
+					}
+				}
+			}
+		}
+
+		public void remove (Blk b)
+		{
+			for ( Tx t : b.getTransactions () )
+			{
+				if ( !outputs.containsKey (t.getHash ()) )
+				{
+					txCache.remove (t.getHash ());
+				}
+				for ( TxIn in : t.getInputs () )
+				{
+					if ( outputs.containsKey (in.getSourceHash ()) )
+					{
+						txCache.put (in.getSourceHash (), in.getSource ().getTransaction ().flatCopy ());
 					}
 				}
 			}
@@ -905,7 +923,9 @@ class JpaBlockStore implements BlockStore
 				CachedBlock q = p.previous;
 				while ( !q.hash.equals (trunkBlock) )
 				{
-					backwardCache (entityManager.find (Blk.class, p.id));
+					Blk block = entityManager.find (Blk.class, p.id);
+					backwardCache (block);
+					utxoCache.remove (block);
 					p = q;
 					q = p.previous;
 				}
@@ -920,14 +940,16 @@ class JpaBlockStore implements BlockStore
 				// spend what now came to trunk
 				for ( Long id : pathToNewHead )
 				{
-					forwardCache (entityManager.find (Blk.class, id));
+					Blk block = entityManager.find (Blk.class, id);
+					forwardCache (block);
+					utxoCache.add (block);
 				}
 			}
 			else if ( b.getHead ().getId () == currentHead.getId () )
 			{
 				// spend if on the trunk
 				forwardCache (b);
-				utxoCache.update (b);
+				utxoCache.add (b);
 
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
