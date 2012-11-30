@@ -1,6 +1,5 @@
 /*
  * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
- * Contributor: 2012 Tamas Bartfai bartfaitamas@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +27,9 @@ import org.springframework.core.io.support.ResourcePropertySource;
 
 import com.google.common.base.Enums;
 
+/**
+ * @author Bártfai Tamás <bartfaitamas@gmail.com>
+ */
 public class Main
 {
 	protected interface App
