@@ -406,7 +406,7 @@ class JpaBlockStore implements BlockStore
 	{
 		for ( Tx t : b.getTransactions () )
 		{
-			utxoCache.addOppCache (t);
+			utxoCache.addOppCache (t.flatCopy ());
 		}
 	}
 
