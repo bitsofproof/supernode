@@ -183,8 +183,6 @@ class JpaBlockStore implements BlockStore
 				for ( Tx t : q.from (tx).where (tx.hash.in (outputs.keySet ())).list (tx) )
 				{
 					txCache.put (t.getHash (), t.flatCopy ());
-
-					entityManager.detach (t);
 				}
 			}
 		}
