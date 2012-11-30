@@ -179,10 +179,17 @@ class JpaBlockStore implements BlockStore
 			if ( !outputs.keySet ().isEmpty () )
 			{
 				QTx tx = QTx.tx;
-				JPAQuery q = new JPAQuery (entityManager);
-				for ( Tx t : q.from (tx).where (tx.hash.in (outputs.keySet ())).list (tx) )
+				List<String> txs = new ArrayList<String> ();
+				txs.addAll (outputs.keySet ());
+				for ( int i = 0; i < txs.size (); i += 1000 )
 				{
-					txCache.put (t.getHash (), t.flatCopy ());
+					int end = Math.min (i + 1000, txs.size ());
+					JPAQuery q = new JPAQuery (entityManager);
+					for ( Tx t : q.from (tx).where (tx.hash.in (txs.subList (i, end))).list (tx) )
+					{
+						txCache.put (t.getHash (), t.flatCopy ());
+					}
+					log.trace ("... read " + end);
 				}
 			}
 		}
