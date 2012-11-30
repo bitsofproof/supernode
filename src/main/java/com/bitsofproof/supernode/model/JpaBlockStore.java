@@ -181,6 +181,7 @@ class JpaBlockStore implements BlockStore
 				QTx tx = QTx.tx;
 				List<String> txs = new ArrayList<String> ();
 				txs.addAll (outputs.keySet ());
+				log.trace ("... total " + txs.size ());
 				for ( int i = 0; i < txs.size (); i += 1000 )
 				{
 					int end = Math.min (i + 1000, txs.size ());
