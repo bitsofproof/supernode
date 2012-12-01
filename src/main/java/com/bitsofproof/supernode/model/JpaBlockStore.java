@@ -116,9 +116,13 @@ class JpaBlockStore implements BlockStore
 		public void cacheUTXO ()
 		{
 			QUTxOut utxo = QUTxOut.uTxOut;
+			QTxOut txout = QTxOut.txOut;
 			JPAQuery q = new JPAQuery (entityManager);
-			for ( UTxOut u : q.from (utxo).list (utxo) )
+			for ( Object[] o : q.from (utxo).join (utxo.txOut, txout).list (utxo, txout) )
 			{
+				UTxOut u = (UTxOut) o[0];
+				TxOut out = (TxOut) o[1];
+				u.setTxOut (out);
 				HashMap<Long, UTxOut> outs = outputs.get (u.getHash ());
 				if ( outs == null )
 				{

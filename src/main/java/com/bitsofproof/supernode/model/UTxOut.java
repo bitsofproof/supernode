@@ -30,7 +30,7 @@ public class UTxOut implements Serializable
 
 	private long height;
 
-	@ManyToOne (fetch = FetchType.EAGER, optional = false)
+	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private TxOut txOut;
 
 	public Long getId ()
