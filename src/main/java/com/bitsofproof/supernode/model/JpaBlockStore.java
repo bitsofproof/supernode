@@ -184,16 +184,13 @@ class JpaBlockStore implements BlockStore
 				log.trace ("... total " + txs.size ());
 				JPAQuery q = new JPAQuery (entityManager);
 				int n = 0;
-				for ( Tx t : q.from (tx).list (tx) )
+				for ( Tx t : q.from (tx).where (tx.hash.in (txs)).list (tx) )
 				{
-					if ( outputs.containsKey (t.getHash ()) )
+					txCache.put (t.getHash (), t.flatCopy ());
+					entityManager.detach (t);
+					if ( ++n % 10000 == 0 )
 					{
-						txCache.put (t.getHash (), t.flatCopy ());
-						entityManager.detach (t);
-						if ( ++n % 10000 == 0 )
-						{
-							log.trace ("... read " + n);
-						}
+						log.trace ("... read " + n);
 					}
 				}
 			}
