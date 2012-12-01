@@ -16,22 +16,17 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -79,10 +74,6 @@ public class Blk implements Serializable
 
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
-
-	@Lob
-	@Basic (fetch = FetchType.LAZY)
-	private byte[] utxoDelta;
 
 	public JSONObject toJSON ()
 	{
@@ -285,11 +276,6 @@ public class Blk implements Serializable
 		return new Hash (tree.get (tree.size () - 1)).toString ();
 	}
 
-	public byte[] getUtxoDelta ()
-	{
-		return utxoDelta;
-	}
-
 	public String toWireDump ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
@@ -356,6 +342,13 @@ public class Blk implements Serializable
 			Tx t = new Tx ();
 			t.fromWire (reader);
 			t.setIx (i);
+			if ( i == 0 )
+			{
+				for ( TxOut out : t.getOutputs () )
+				{
+					out.setCoinbase (true);
+				}
+			}
 			transactions.add (t);
 		}
 		wireTransactions = null;
@@ -389,53 +382,6 @@ public class Blk implements Serializable
 		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
 
 		hash = reader.hash ().toString ();
-	}
-
-	public void computeUTXODelta ()
-	{
-		Map<String, BigInteger> ins = new HashMap<String, BigInteger> ();
-		Map<String, BigInteger> outs = new HashMap<String, BigInteger> ();
-
-		boolean coinbase = true;
-		for ( Tx t : transactions )
-		{
-			outs.put (t.getHash (), BigInteger.ZERO.setBit (t.getOutputs ().size ()).subtract (BigInteger.ONE));
-
-			for ( TxIn in : t.getInputs () )
-			{
-				if ( coinbase )
-				{
-					coinbase = false;
-				}
-				else
-				{
-					BigInteger mask = ins.get (in.getSourceHash ());
-					if ( mask == null )
-					{
-						mask = BigInteger.ZERO;
-					}
-					ins.put (in.getSourceHash (), mask.setBit (in.getIx ().intValue ()));
-				}
-			}
-		}
-
-		WireFormat.Writer writer = new WireFormat.Writer ();
-
-		writer.writeVarInt (outs.size ());
-		for ( Map.Entry<String, BigInteger> e : outs.entrySet () )
-		{
-			writer.writeHash (new Hash (e.getKey ()));
-			writer.writeVarBytes (e.getValue ().toByteArray ());
-		}
-
-		writer.writeVarInt (ins.size ());
-		for ( Map.Entry<String, BigInteger> e : ins.entrySet () )
-		{
-			writer.writeHash (new Hash (e.getKey ()));
-			writer.writeVarBytes (e.getValue ().toByteArray ());
-		}
-
-		utxoDelta = writer.toByteArray ();
 	}
 
 	public void toWireHeaderOnly (WireFormat.Writer writer)

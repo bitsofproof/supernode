@@ -61,8 +61,10 @@ public class TxOut implements Serializable
 
 	private Long votes;
 
+	private boolean coinbase = false;
+
 	@Column (length = 40, nullable = true)
-	@Index (name = "addr1index")
+	@Index (name = "own1index")
 	private String owner1;
 
 	@Column (length = 40, nullable = true)
@@ -194,6 +196,16 @@ public class TxOut implements Serializable
 	public void setOwner3 (String owner3)
 	{
 		this.owner3 = owner3;
+	}
+
+	public boolean isCoinbase ()
+	{
+		return coinbase;
+	}
+
+	public void setCoinbase (boolean coinbase)
+	{
+		this.coinbase = coinbase;
 	}
 
 	protected TxOut flatCopy (Tx tc)

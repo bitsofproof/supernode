@@ -50,7 +50,7 @@ import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.core.ValidationException;
-import com.bitsofproof.supernode.core.WireFormat;
+import com.mysema.query.jpa.impl.JPADeleteClause;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaBlockStore")
@@ -75,124 +75,58 @@ class JpaBlockStore implements BlockStore
 	private CachedHead currentHead = null;
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-
 	private final Cache utxoCache = new Cache ();
+
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
 	private class Cache
 	{
-		private final Map<String, Tx> txCache = new HashMap<String, Tx> ();
+		private final Map<String, HashMap<Long, UTxOut>> outputs = new HashMap<String, HashMap<Long, UTxOut>> ();
 
-		private final Map<String, BigInteger> outputs = new HashMap<String, BigInteger> ();
-
-		public void remove (String key, BigInteger c)
+		public void remove (String txhash, long ix)
 		{
-			BigInteger mask = outputs.get (key);
-			if ( mask != null )
+			HashMap<Long, UTxOut> outs = outputs.get (txhash);
+			if ( outs != null )
 			{
-				mask = mask.xor (c);
-				outputs.put (key, mask);
-
-				if ( mask.equals (BigInteger.ZERO) )
+				outs.remove (ix);
+				if ( outs.size () == 0 )
 				{
-					txCache.remove (key);
+					outputs.remove (txhash);
 				}
 			}
 		}
 
-		public void add (String key, BigInteger c)
+		public void add (String txhash, UTxOut out)
 		{
-			BigInteger mask = outputs.get (key);
-			if ( mask == null )
+			HashMap<Long, UTxOut> outs = outputs.get (txhash);
+			if ( outs == null )
 			{
-				mask = BigInteger.ZERO;
+				outs = new HashMap<Long, UTxOut> ();
+				outputs.put (txhash, outs);
 			}
-			outputs.put (key, mask.or (c));
+			outs.put (out.getIx (), out);
 		}
 
-		public List<TxOut> get (String txhash)
+		public HashMap<Long, UTxOut> get (String txhash)
 		{
-			List<TxOut> outs = new ArrayList<TxOut> ();
-			Tx cached = txCache.get (txhash);
-			if ( cached != null )
-			{
-				for ( TxOut out : cached.getOutputs () )
-				{
-					if ( contains (txhash, out.getIx ()) )
-					{
-						outs.add (out);
-					}
-				}
-			}
-			return outs;
-		}
-
-		public boolean contains (String key, long ix)
-		{
-			BigInteger mask = outputs.get (key);
-			if ( mask == null )
-			{
-				return false;
-			}
-			return mask.testBit ((int) ix);
-		}
-
-		public void add (Blk b)
-		{
-			for ( Tx t : b.getTransactions () )
-			{
-				if ( outputs.containsKey (t.getHash ()) )
-				{
-					txCache.put (t.getHash (), t.flatCopy ());
-				}
-				for ( TxIn in : t.getInputs () )
-				{
-					if ( !outputs.containsKey (in.getSourceHash ()) )
-					{
-						txCache.remove (in.getSourceHash ());
-					}
-				}
-			}
-		}
-
-		public void remove (Blk b)
-		{
-			for ( Tx t : b.getTransactions () )
-			{
-				if ( !outputs.containsKey (t.getHash ()) )
-				{
-					txCache.remove (t.getHash ());
-				}
-				for ( TxIn in : t.getInputs () )
-				{
-					if ( outputs.containsKey (in.getSourceHash ()) )
-					{
-						txCache.put (in.getSourceHash (), in.getSource ().getTransaction ().flatCopy ());
-					}
-				}
-			}
+			return outputs.get (txhash);
 		}
 
 		public void cacheUTXO ()
 		{
-			if ( !outputs.keySet ().isEmpty () )
+			QUTxOut utxo = QUTxOut.uTxOut;
+			JPAQuery q = new JPAQuery (entityManager);
+			for ( UTxOut u : q.from (utxo).list (utxo) )
 			{
-				QTx tx = QTx.tx;
-				List<String> txs = new ArrayList<String> ();
-				txs.addAll (outputs.keySet ());
-				log.trace ("... total " + txs.size ());
-				int step = 10000;
-				for ( int i = 0; i < txs.size (); i += step )
+				HashMap<Long, UTxOut> outs = outputs.get (u.getHash ());
+				if ( outs == null )
 				{
-					JPAQuery q = new JPAQuery (entityManager);
-					for ( Tx t : q.from (tx).where (tx.hash.in (txs.subList (i, Math.min (i + step, txs.size ())))).list (tx) )
-					{
-						txCache.put (t.getHash (), t.flatCopy ());
-						entityManager.detach (t);
-					}
-					log.trace ("... read " + (i + step));
+					outs = new HashMap<Long, UTxOut> ();
+					outputs.put (u.getHash (), outs);
 				}
+				outs.put (u.getIx (), u);
+				entityManager.detach (u);
 			}
 		}
 	}
@@ -319,28 +253,9 @@ class JpaBlockStore implements BlockStore
 			log.trace ("Cache chain...");
 			cacheChain ();
 
-			log.trace ("Compute UTXO...");
-			List<Long> trunkPath = new ArrayList<Long> ();
-			CachedBlock b = currentHead.last;
-			CachedBlock p = b.previous;
-			while ( p != null )
-			{
-				trunkPath.add (b.getId ());
-				b = p;
-				p = b.previous;
-			}
-			Collections.reverse (trunkPath);
-			for ( Long id : trunkPath )
-			{
-				Blk blk = entityManager.find (Blk.class, id);
-				if ( (blk.getHeight () % 10000) == 0 )
-				{
-					log.trace ("... at block " + blk.getHeight ());
-				}
-				forwardCache (blk);
-			}
-			log.trace ("Fetching UTXO set...");
+			log.trace ("Cache UTXO set ...");
 			utxoCache.cacheUTXO ();
+
 			log.trace ("Cache filled.");
 		}
 		finally
@@ -396,66 +311,57 @@ class JpaBlockStore implements BlockStore
 
 	private void backwardCache (Blk b)
 	{
-		if ( b.getUtxoDelta () != null )
+		for ( Tx t : b.getTransactions () )
 		{
-			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nout = reader.readVarInt ();
-			for ( long i = 0; i < nout; ++i )
+			for ( TxOut out : t.getOutputs () )
 			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.remove (hash, mask);
+				utxoCache.remove (t.getHash (), out.getIx ());
 			}
+			QUTxOut utxo = QUTxOut.uTxOut;
+			JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
+			q.where (utxo.hash.eq (t.getHash ())).execute ();
 
-			long nin = reader.readVarInt ();
-			for ( long i = 0; i < nin; ++i )
+			for ( TxIn in : t.getInputs () )
 			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.add (hash, mask);
+				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+				{
+					UTxOut u = new UTxOut ();
+					u.setHash (t.getHash ());
+					u.setIx (in.getIx ());
+					u.setTxOut (in.getSource ().flatCopy (null));
+					u.setHeight (b.getHeight ());
+					entityManager.persist (u);
+
+					utxoCache.add (in.getSourceHash (), u);
+				}
 			}
 		}
 	}
 
 	private void forwardCache (Blk b)
 	{
-		if ( b.getUtxoDelta () != null )
+		for ( Tx t : b.getTransactions () )
 		{
-			WireFormat.Reader reader = new WireFormat.Reader (b.getUtxoDelta ());
-			long nout = reader.readVarInt ();
-			for ( long i = 0; i < nout; ++i )
+			for ( TxOut out : t.getOutputs () )
 			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.add (hash, mask);
-			}
-			long nin = reader.readVarInt ();
-			for ( long i = 0; i < nin; ++i )
-			{
-				String hash = reader.readHash ().toString ();
-				BigInteger mask = new BigInteger (reader.readVarBytes ());
-				utxoCache.remove (hash, mask);
-			}
-		}
-	}
+				UTxOut utxo = new UTxOut ();
+				utxo.setHash (t.getHash ());
+				utxo.setIx (out.getIx ());
+				utxo.setTxOut (out.flatCopy (null));
+				utxo.setHeight (b.getHeight ());
+				entityManager.persist (utxo);
 
-	private void resolveWithUTXO (TransactionContext tcontext, Set<String> needTx)
-	{
-		for ( String txhash : needTx )
-		{
-			List<TxOut> outs = utxoCache.get (txhash);
-			if ( !outs.isEmpty () )
+				utxoCache.add (t.getHash (), utxo);
+			}
+			for ( TxIn in : t.getInputs () )
 			{
-				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (txhash);
-				if ( resolved == null )
+				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					resolved = new HashMap<Long, TxOut> ();
-					tcontext.resolvedInputs.put (txhash, resolved);
-				}
+					QUTxOut utxo = QUTxOut.uTxOut;
+					JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
+					q.where (utxo.hash.eq (in.getSourceHash ()).and (utxo.ix.eq (in.getIx ()))).execute ();
 
-				for ( TxOut o : outs )
-				{
-					resolved.put (o.getIx (), o);
+					utxoCache.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
 		}
@@ -650,7 +556,7 @@ class JpaBlockStore implements BlockStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
+		Map<String, HashMap<Long, UTxOut>> resolvedInputs = new HashMap<String, HashMap<Long, UTxOut>> ();
 	}
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
@@ -774,42 +680,24 @@ class JpaBlockStore implements BlockStore
 			tcontext.block = b;
 
 			log.trace ("resolving inputs for block " + b.getHash ());
-			Set<String> needTx = new HashSet<String> ();
 			for ( Tx t : b.getTransactions () )
 			{
-				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (t.getHash ());
+				HashMap<Long, UTxOut> outs = tcontext.resolvedInputs.get (t.getHash ());
 				if ( outs == null )
 				{
-					outs = new HashMap<Long, TxOut> ();
+					outs = new HashMap<Long, UTxOut> ();
 					tcontext.resolvedInputs.put (t.getHash (), outs);
 				}
 				for ( TxOut o : t.getOutputs () )
 				{
-					outs.put (o.getIx (), o);
+					UTxOut u = new UTxOut ();
+					u.setHash (t.getHash ());
+					u.setIx (o.getIx ());
+					u.setHeight (b.getHeight ());
+					u.setTxOut (o);
+					outs.put (o.getIx (), u);
 				}
-				for ( TxIn i : t.getInputs () )
-				{
-					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-					{
-						needTx.add (i.getSourceHash ());
-					}
-				}
-			}
-			if ( !needTx.isEmpty () )
-			{
-				resolveWithUTXO (tcontext, needTx);
-			}
-			boolean skip = true;
-			for ( Tx t : b.getTransactions () )
-			{
-				if ( skip ) // skip coinbase
-				{
-					skip = false;
-				}
-				else
-				{
-					checkTxInputsExist (tcontext, t);
-				}
+				resolveInputs (tcontext, t);
 			}
 			log.trace ("validating block " + b.getHash ());
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
@@ -886,7 +774,7 @@ class JpaBlockStore implements BlockStore
 				{
 					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 					{
-						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()).getTxOut ();
 						if ( source.getId () == null )
 						{
 							i.setSource (source);
@@ -902,8 +790,6 @@ class JpaBlockStore implements BlockStore
 					addOwners (o);
 				}
 			}
-
-			b.computeUTXODelta ();
 
 			log.trace ("storing block " + b.getHash ());
 			entityManager.persist (b);
@@ -932,7 +818,6 @@ class JpaBlockStore implements BlockStore
 				{
 					Blk block = entityManager.find (Blk.class, p.id);
 					backwardCache (block);
-					utxoCache.remove (block);
 					p = q;
 					q = p.previous;
 				}
@@ -949,15 +834,12 @@ class JpaBlockStore implements BlockStore
 				{
 					Blk block = entityManager.find (Blk.class, id);
 					forwardCache (block);
-					utxoCache.add (block);
 				}
 			}
 			else if ( b.getHead ().getId () == currentHead.getId () )
 			{
 				// spend if on the trunk
 				forwardCache (b);
-				utxoCache.add (b);
-
 			}
 			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
 
@@ -968,46 +850,32 @@ class JpaBlockStore implements BlockStore
 
 	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
 	{
-		Set<String> needTx = new HashSet<String> ();
 		for ( final TxIn i : t.getInputs () )
 		{
-			HashMap<Long, TxOut> resolved;
-			if ( (resolved = tcontext.resolvedInputs.get (i.getSourceHash ())) == null )
+			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				resolved = new HashMap<Long, TxOut> ();
-				tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
-
-				needTx.add (i.getSourceHash ());
-			}
-		}
-
-		if ( !needTx.isEmpty () )
-		{
-			resolveWithUTXO (tcontext, needTx);
-			checkTxInputsExist (tcontext, t);
-		}
-	}
-
-	private void checkTxInputsExist (TransactionContext tcontext, Tx t) throws ValidationException
-	{
-		for ( final TxIn i : t.getInputs () )
-		{
-			HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
-			if ( resolved == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
-			}
-			TxOut out = resolved.get (i.getIx ());
-			if ( out == null )
-			{
-				throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
-						+ t.toWireDump ());
-			}
-			if ( tcontext.block != null && out.getTransaction ().getHash ().equals (Hash.ZERO_HASH_STRING) )
-			{
-				if ( out.getTransaction ().getBlock ().getHeight () > tcontext.block.getHeight () - 100 )
+				HashMap<Long, UTxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
+				if ( resolved == null )
 				{
-					throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+					resolved = utxoCache.get (i.getSourceHash ());
+					if ( resolved == null )
+					{
+						throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
+					}
+					tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
+				}
+				UTxOut out = resolved.get (i.getIx ());
+				if ( out == null )
+				{
+					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
+							+ t.toWireDump ());
+				}
+				if ( tcontext.block != null && out.getTxOut ().isCoinbase () )
+				{
+					if ( out.getHeight () > tcontext.block.getHeight () - 100 )
+					{
+						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+					}
 				}
 			}
 		}
@@ -1156,7 +1024,7 @@ class JpaBlockStore implements BlockStore
 					}
 				}
 
-				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()).getTxOut ();
 				sumIn += source.getValue ();
 
 				final int nr = inNumber;
