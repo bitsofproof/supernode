@@ -131,6 +131,7 @@ class JpaBlockStore implements BlockStore
 				}
 				outs.put (u.getIx (), u);
 				entityManager.detach (u);
+				entityManager.detach (out);
 			}
 		}
 	}
