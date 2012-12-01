@@ -183,15 +183,15 @@ class JpaBlockStore implements BlockStore
 				txs.addAll (outputs.keySet ());
 				log.trace ("... total " + txs.size ());
 				JPAQuery q = new JPAQuery (entityManager);
-				int n = 0;
-				for ( Tx t : q.from (tx).where (tx.hash.in (txs)).list (tx) )
+				int step = 10000;
+				for ( int i = 0; i < txs.size (); i += step )
 				{
-					txCache.put (t.getHash (), t.flatCopy ());
-					entityManager.detach (t);
-					if ( ++n % 10000 == 0 )
+					for ( Tx t : q.from (tx).where (tx.hash.in (txs.subList (i, Math.min (i + step, txs.size ())))).list (tx) )
 					{
-						log.trace ("... read " + n);
+						txCache.put (t.getHash (), t.flatCopy ());
+						entityManager.detach (t);
 					}
+					log.trace ("... read " + (i + step));
 				}
 			}
 		}
