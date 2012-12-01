@@ -512,46 +512,31 @@ class JpaBlockStore implements BlockStore
 	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxIn> getSpent (List<String> addresses)
 	{
-		try
-		{
-			return null;
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
+		QTxOut txout = QTxOut.txOut;
+		QTxIn txin = QTxIn.txIn;
+		JPAQuery q = new JPAQuery (entityManager);
+		return q.from (txin).join (txin.source, txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
+				.list (txin);
 	}
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxOut> getReceived (List<String> addresses)
 	{
-		try
-		{
-			lock.readLock ().lock ();
-
-			return null;
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
+		QTxOut txout = QTxOut.txOut;
+		JPAQuery q = new JPAQuery (entityManager);
+		return q.from (txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txout);
 	}
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY)
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
-		try
-		{
-			lock.readLock ().lock ();
-
-			return null;
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
+		QTxOut txout = QTxOut.txOut;
+		QUTxOut utxo = QUTxOut.uTxOut;
+		JPAQuery q = new JPAQuery (entityManager);
+		return q.from (utxo).join (utxo.txOut, txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
+				.list (txout);
 	}
 
 	private static class TransactionContext

@@ -179,7 +179,6 @@ public class BCCAPI implements BitcoinClientAPI
 					for ( TxIn in : txhandler.getSpentByAddress (client.getAddresses ()) )
 					{
 
-						// TODO: need to rewrite, this is now transient
 						estimate -= in.getSource ().getValue ();
 					}
 					for ( TxOut out : txhandler.getReceivedByAddress (client.getAddresses ()) )
@@ -239,7 +238,6 @@ public class BCCAPI implements BitcoinClientAPI
 						int confirmations = height - blk.getHeight ();
 						long date = blk.getCreateTime ();
 						StringBuffer addresses = new StringBuffer ();
-						// TODO: need to rewrite this is now transient
 						TxOut out = in.getSource ();
 						if ( out.getOwner1 () != null )
 						{
