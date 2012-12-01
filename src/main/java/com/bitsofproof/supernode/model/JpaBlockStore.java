@@ -358,16 +358,27 @@ class JpaBlockStore implements BlockStore
 
 				utxoCache.add (t.getHash (), utxo);
 			}
+			Map<Long, ArrayList<String>> tuples = new HashMap<Long, ArrayList<String>> ();
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					QUTxOut utxo = QUTxOut.uTxOut;
-					JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
-					q.where (utxo.hash.eq (in.getSourceHash ()).and (utxo.ix.eq (in.getIx ()))).execute ();
+					ArrayList<String> txs = tuples.get (in.getIx ());
+					if ( txs == null )
+					{
+						txs = new ArrayList<String> ();
+						tuples.put (in.getIx (), txs);
+					}
+					txs.add (in.getSourceHash ());
 
 					utxoCache.remove (in.getSourceHash (), in.getIx ());
 				}
+			}
+			for ( Long ix : tuples.keySet () )
+			{
+				QUTxOut utxo = QUTxOut.uTxOut;
+				JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
+				q.where (utxo.hash.in (tuples.get (ix)).and (utxo.ix.eq (ix))).execute ();
 			}
 		}
 	}
