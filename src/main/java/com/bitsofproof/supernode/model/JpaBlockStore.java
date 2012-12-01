@@ -60,6 +60,9 @@ class JpaBlockStore implements BlockStore
 
 	private static final long MAX_BLOCK_SIGOPS = 20000;
 
+	// not allowed to branch further back on trunk
+	private static final int FORCE_TRUNK = 100;
+
 	@Autowired
 	private Chain chain;
 
@@ -397,24 +400,6 @@ class JpaBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.MANDATORY)
-	public Blk getGenesisBlock ()
-	{
-		try
-		{
-			lock.readLock ().lock ();
-
-			QBlk block = QBlk.blk;
-			JPAQuery q = new JPAQuery (entityManager);
-			return q.from (block).orderBy (block.id.asc ()).limit (1).uniqueResult (block);
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-	}
-
-	@Override
 	public boolean isStoredBlock (String hash)
 	{
 		try
@@ -622,8 +607,13 @@ class JpaBlockStore implements BlockStore
 			{
 				// branching
 				head = new Head ();
+				int n = 0;
 				while ( !isBlockOnBranch (trunkBlock, currentHead) )
 				{
+					if ( ++n > FORCE_TRUNK )
+					{
+						throw new ValidationException ("Attempt to branch too far back in history " + b.getHash ());
+					}
 					trunkBlock = trunkBlock.getPrevious ();
 				}
 				head.setPrevious (prev.getHead ());

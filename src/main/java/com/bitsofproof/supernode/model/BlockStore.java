@@ -24,8 +24,6 @@ public interface BlockStore
 {
 	public void cache () throws ValidationException;
 
-	public Blk getGenesisBlock ();
-
 	public List<String> getLocator ();
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
