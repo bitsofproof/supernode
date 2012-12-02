@@ -73,6 +73,7 @@
 		</constructor-arg>
 		<property name="timeout" value="180" />
 	</bean>
+
 	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />

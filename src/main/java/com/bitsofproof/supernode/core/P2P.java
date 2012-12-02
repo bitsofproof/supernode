@@ -149,20 +149,20 @@ public abstract class P2P
 			this.address = address;
 		}
 
-		private void connect ()
+		private void connect () throws IOException
 		{
-			try
-			{
-				channel = SocketChannel.open ();
-				channel.configureBlocking (false);
-				channel.connect (address);
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT, this));
-				selector.wakeup ();
-				log.trace ("Trying to connect " + address);
-			}
-			catch ( IOException e )
-			{
-			}
+			channel = SocketChannel.open ();
+			channel.configureBlocking (false);
+
+			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT, this));
+			selector.wakeup ();
+		}
+
+		public void doConnect () throws IOException
+		{
+			log.trace ("Trying to connect " + address);
+
+			channel.connect (address);
 		}
 
 		@Override
@@ -314,10 +314,13 @@ public abstract class P2P
 
 	protected void addPeer (InetAddress addr, int port)
 	{
-		InetSocketAddress address = new InetSocketAddress (addr, port);
-		if ( !runqueue.contains (address) )
+		if ( !addr.isAnyLocalAddress () )
 		{
-			runqueue.add (address);
+			InetSocketAddress address = new InetSocketAddress (addr, port);
+			if ( !runqueue.contains (address) )
+			{
+				runqueue.add (address);
+			}
 		}
 	}
 
@@ -372,10 +375,10 @@ public abstract class P2P
 		public static final int STOP = 3;
 		public static final int CANCEL = 4;
 
-		public SelectableChannel socket;
-		public int type;
-		public int ops;
-		public Peer peer;
+		public final SelectableChannel socket;
+		public final int type;
+		public final int ops;
+		public final Peer peer;
 
 		public ChangeRequest (SelectableChannel socket, int type, int ops, Peer peer)
 		{
@@ -455,9 +458,17 @@ public abstract class P2P
 								try
 								{
 									SelectionKey key = cr.socket.register (selector, cr.ops);
-									key.attach (cr.peer);
+									if ( (cr.ops & SelectionKey.OP_ACCEPT) == 0 )
+									{
+										key.attach (cr.peer);
+										cr.peer.doConnect ();
+									}
 								}
 								catch ( ClosedChannelException e )
+								{
+									continue;
+								}
+								catch ( IOException e )
 								{
 									continue;
 								}
@@ -509,8 +520,8 @@ public abstract class P2P
 												peer = createPeer (address, false);
 												peer.channel = client;
 												peer.unsolicited = true;
-												client.register (selector, SelectionKey.OP_READ);
-												key.attach (peer);
+												SelectionKey reg = client.register (selector, SelectionKey.OP_READ);
+												reg.attach (peer);
 												openConnections.incrementAndGet ();
 												scheduler.schedule (new Runnable ()
 												{
@@ -651,6 +662,7 @@ public abstract class P2P
 						{
 							log.trace ("Need to discover new adresses.");
 							discover ();
+							log.trace ("Runqueue size " + runqueue.size ());
 						}
 
 						final Peer peer = createPeer (address, true);
