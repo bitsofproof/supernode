@@ -233,7 +233,7 @@ public abstract class P2P
 				reads.clear ();
 				reads.add (closedMark);
 				channel.close ();
-
+				openConnections.decrementAndGet ();
 				connectSlot.release ();
 				if ( unsolicited )
 				{
