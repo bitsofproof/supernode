@@ -663,7 +663,7 @@ public abstract class P2P
 				{
 					try
 					{
-						connectSlot.acquireUninterruptibly ();
+						connectSlot.acquire ();
 
 						InetSocketAddress address = null;
 						while ( (address = runqueue.poll ()) == null )
