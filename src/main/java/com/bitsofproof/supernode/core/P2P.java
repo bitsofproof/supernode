@@ -156,10 +156,9 @@ public abstract class P2P
 			try
 			{
 				channel = SocketChannel.open ();
-				connectedPeers.put (channel, this);
 				channel.configureBlocking (false);
 				channel.connect (address);
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT));
+				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.REGISTER, SelectionKey.OP_CONNECT, this));
 				selector.wakeup ();
 				log.trace ("Trying to connect " + address);
 			}
@@ -227,10 +226,6 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
-			if ( !connectedPeers.containsKey (channel) )
-			{
-				return;
-			}
 			try
 			{
 				// note that no other reference to peer is stored here
@@ -239,12 +234,12 @@ public abstract class P2P
 				writes.clear ();
 				reads.clear ();
 				reads.add (closedMark);
-				connectedPeers.remove (channel);
 				channel.close ();
 
 				connectSlot.release ();
 				if ( unsolicitedPeers.containsKey (channel) )
 				{
+					unsolicitedPeers.remove (channel);
 					unsolicitedConnectSlot.release ();
 				}
 				peerThreads.execute (new Runnable ()
@@ -255,7 +250,7 @@ public abstract class P2P
 						onDisconnect (timeout, bannedFor, reason);
 					}
 				});
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT));
+				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
 				selector.wakeup ();
 			}
 			catch ( IOException e )
@@ -296,7 +291,7 @@ public abstract class P2P
 		public void send (Message m)
 		{
 			writes.add (m.toByteArray ());
-			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ));
+			selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CHANGEOPS, SelectionKey.OP_WRITE | SelectionKey.OP_READ, null));
 			selector.wakeup ();
 		}
 
@@ -327,12 +322,12 @@ public abstract class P2P
 
 	public int getNumberOfConnections ()
 	{
-		return connectedPeers.size ();
+		return openConnections.get ();
 	}
 
+	private final AtomicInteger openConnections = new AtomicInteger (0);
+
 	// peers connected
-	@SuppressWarnings ({ "rawtypes", "unchecked" })
-	private final Map<SocketChannel, Peer> connectedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
 	@SuppressWarnings ({ "rawtypes", "unchecked" })
 	private final Map<SocketChannel, Peer> unsolicitedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
 
@@ -383,12 +378,14 @@ public abstract class P2P
 		public SelectableChannel socket;
 		public int type;
 		public int ops;
+		public Peer peer;
 
-		public ChangeRequest (SelectableChannel socket, int type, int ops)
+		public ChangeRequest (SelectableChannel socket, int type, int ops, Peer peer)
 		{
 			this.socket = socket;
 			this.type = type;
 			this.ops = ops;
+			this.peer = peer;
 		}
 	}
 
@@ -460,7 +457,8 @@ public abstract class P2P
 							{
 								try
 								{
-									cr.socket.register (selector, cr.ops);
+									SelectionKey key = cr.socket.register (selector, cr.ops);
+									key.attach (cr.peer);
 								}
 								catch ( ClosedChannelException e )
 								{
@@ -494,6 +492,7 @@ public abstract class P2P
 							{
 								if ( !key.isValid () )
 								{
+									key.attach (null);
 									continue;
 								}
 								if ( key.isAcceptable () )
@@ -513,7 +512,8 @@ public abstract class P2P
 												peer = createPeer (address, false);
 												peer.channel = client;
 												client.register (selector, SelectionKey.OP_READ);
-												connectedPeers.put (client, peer);
+												key.attach (peer);
+												openConnections.incrementAndGet ();
 												unsolicitedPeers.put (client, peer);
 												scheduler.schedule (new Runnable ()
 												{
@@ -541,12 +541,7 @@ public abstract class P2P
 								}
 								else
 								{
-									final Peer peer = connectedPeers.get (key.channel ());
-									if ( peer == null )
-									{
-										key.cancel ();
-										continue;
-									}
+									final Peer peer = (Peer) key.attachment ();
 									if ( key.isConnectable () )
 									{
 										// we asked for connection here
@@ -566,9 +561,9 @@ public abstract class P2P
 										}
 										catch ( IOException e )
 										{
-											connectedPeers.remove (peer.channel);
 											connectSlot.release ();
 											key.cancel ();
+											key.attach (null);
 										}
 									}
 									else
@@ -622,7 +617,7 @@ public abstract class P2P
 							}
 							catch ( CancelledKeyException e )
 							{
-								final Peer peer = connectedPeers.get (key.channel ());
+								final Peer peer = (Peer) key.attachment ();
 								if ( peer != null )
 								{
 									peer.disconnect ();
@@ -673,7 +668,7 @@ public abstract class P2P
 						}
 						else
 						{
-							if ( connectedPeers.size () < desiredConnections )
+							if ( openConnections.get () < desiredConnections )
 							{
 								log.trace ("Need to discover new adresses.");
 								discover ();
@@ -685,7 +680,7 @@ public abstract class P2P
 							}
 							else
 							{
-								log.trace ("No peer in run queue, but " + connectedPeers.size () + " connected.");
+								log.trace ("No peer in run queue, but " + openConnections.get () + " connected.");
 								Thread.sleep (60 * 1000);
 							}
 						}
@@ -704,7 +699,7 @@ public abstract class P2P
 	public void stop ()
 	{
 		peerThreads.shutdown ();
-		selectorChanges.add (new ChangeRequest (null, ChangeRequest.STOP, SelectionKey.OP_ACCEPT));
+		selectorChanges.add (new ChangeRequest (null, ChangeRequest.STOP, SelectionKey.OP_ACCEPT, null));
 		selector.wakeup ();
 	}
 
@@ -714,7 +709,7 @@ public abstract class P2P
 		serverChannel.socket ().bind (new InetSocketAddress (port));
 		serverChannel.configureBlocking (false);
 
-		selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT));
+		selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT, null));
 
 		selectorThread.start ();
 
