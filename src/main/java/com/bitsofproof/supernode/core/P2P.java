@@ -237,13 +237,6 @@ public abstract class P2P
 				}
 				else if ( channel.isConnected () )
 				{
-					channel.close ();
-
-					writes.clear ();
-					reads.clear ();
-					reads.add (closedMark);
-
-					openConnections.decrementAndGet ();
 					if ( unsolicited )
 					{
 						unsolicitedConnectSlot.release ();
@@ -252,6 +245,12 @@ public abstract class P2P
 					{
 						connectSlot.release ();
 					}
+
+					writes.clear ();
+					reads.clear ();
+					reads.add (closedMark);
+					openConnections.decrementAndGet ();
+
 					peerThreads.execute (new Runnable ()
 					{
 						@Override
@@ -260,6 +259,8 @@ public abstract class P2P
 							onDisconnect (timeout, bannedFor, reason);
 						}
 					});
+
+					channel.close ();
 				}
 			}
 			catch ( IOException e )
