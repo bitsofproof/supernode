@@ -224,6 +224,10 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
+			if ( !channel.isConnected () )
+			{
+				return;
+			}
 			try
 			{
 				// note that no other reference to peer is stored here
