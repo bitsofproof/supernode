@@ -649,7 +649,7 @@ public abstract class P2P
 							connectSlot.acquireUninterruptibly ();
 
 							final Peer peer = createPeer (address, true);
-							peer.unsolicited = true;
+							peer.unsolicited = false;
 							peer.connect ();
 							scheduler.schedule (new Runnable ()
 							{
