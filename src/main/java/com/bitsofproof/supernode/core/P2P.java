@@ -28,10 +28,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -60,6 +57,7 @@ public abstract class P2P
 	{
 		private final InetSocketAddress address;
 		private SocketChannel channel;
+		private boolean unsolicited;
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
@@ -237,9 +235,8 @@ public abstract class P2P
 				channel.close ();
 
 				connectSlot.release ();
-				if ( unsolicitedPeers.containsKey (channel) )
+				if ( unsolicited )
 				{
-					unsolicitedPeers.remove (channel);
 					unsolicitedConnectSlot.release ();
 				}
 				peerThreads.execute (new Runnable ()
@@ -304,7 +301,6 @@ public abstract class P2P
 		protected abstract void onDisconnect (long timeout, long bannedForSeconds, String reason);
 
 		protected abstract boolean isHandshakeSuccessful ();
-
 	}
 
 	protected abstract Peer createPeer (InetSocketAddress address, boolean active);
@@ -326,10 +322,6 @@ public abstract class P2P
 	}
 
 	private final AtomicInteger openConnections = new AtomicInteger (0);
-
-	// peers connected
-	@SuppressWarnings ({ "rawtypes", "unchecked" })
-	private final Map<SocketChannel, Peer> unsolicitedPeers = new ConcurrentHashMap (new HashMap<SocketChannel, Peer> ());
 
 	// peers waiting to be connected
 	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress> ();
@@ -511,10 +503,10 @@ public abstract class P2P
 												final Peer peer;
 												peer = createPeer (address, false);
 												peer.channel = client;
+												peer.unsolicited = true;
 												client.register (selector, SelectionKey.OP_READ);
 												key.attach (peer);
 												openConnections.incrementAndGet ();
-												unsolicitedPeers.put (client, peer);
 												scheduler.schedule (new Runnable ()
 												{
 													@Override
@@ -652,6 +644,7 @@ public abstract class P2P
 							connectSlot.acquireUninterruptibly ();
 
 							final Peer peer = createPeer (address, true);
+							peer.unsolicited = true;
 							peer.connect ();
 							scheduler.schedule (new Runnable ()
 							{
