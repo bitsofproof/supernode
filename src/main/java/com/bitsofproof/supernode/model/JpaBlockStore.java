@@ -510,9 +510,34 @@ class JpaBlockStore implements BlockStore
 	{
 		QTxOut txout = QTxOut.txOut;
 		QTxIn txin = QTxIn.txIn;
+		QTx tx = QTx.tx;
+		QBlk blk = QBlk.blk;
 		JPAQuery q = new JPAQuery (entityManager);
-		return q.from (txin).join (txin.source, txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
-				.list (txin);
+		List<Object[]> rows =
+				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txin);
+
+		ArrayList<TxIn> spent = new ArrayList<TxIn> ();
+		try
+		{
+			lock.readLock ().lock ();
+
+			for ( Object[] cols : rows )
+			{
+				String blockHash = (String) cols[0];
+				TxIn in = (TxIn) cols[1];
+				CachedBlock block = cachedBlocks.get (blockHash);
+				if ( isBlockOnBranch (block, currentHead) )
+				{
+					spent.add (in);
+				}
+			}
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+		return spent;
 	}
 
 	@Override
@@ -521,7 +546,32 @@ class JpaBlockStore implements BlockStore
 	{
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		return q.from (txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txout);
+		QTx tx = QTx.tx;
+		QBlk blk = QBlk.blk;
+		List<Object[]> rows =
+				q.from (txout).join (txout.transaction, tx).join (tx.block, blk)
+						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txout);
+		ArrayList<TxOut> recvd = new ArrayList<TxOut> ();
+		try
+		{
+			lock.readLock ().lock ();
+
+			for ( Object[] cols : rows )
+			{
+				String blockHash = (String) cols[0];
+				TxOut in = (TxOut) cols[1];
+				CachedBlock block = cachedBlocks.get (blockHash);
+				if ( isBlockOnBranch (block, currentHead) )
+				{
+					recvd.add (in);
+				}
+			}
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+		return recvd;
 	}
 
 	@Override
