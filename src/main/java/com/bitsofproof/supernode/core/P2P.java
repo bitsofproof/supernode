@@ -224,7 +224,7 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
-			if ( !channel.isConnected () )
+			if ( !channel.isConnected () && !channel.isConnectionPending () )
 			{
 				return;
 			}
@@ -545,6 +545,7 @@ public abstract class P2P
 										{
 											SocketChannel client = (SocketChannel) key.channel ();
 											client.finishConnect ();
+											openConnections.incrementAndGet ();
 											key.interestOps (SelectionKey.OP_READ);
 											peerThreads.execute (new Runnable ()
 											{
