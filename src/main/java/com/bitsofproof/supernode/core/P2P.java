@@ -244,10 +244,13 @@ public abstract class P2P
 					reads.add (closedMark);
 
 					openConnections.decrementAndGet ();
-					connectSlot.release ();
 					if ( unsolicited )
 					{
 						unsolicitedConnectSlot.release ();
+					}
+					else
+					{
+						connectSlot.release ();
 					}
 					peerThreads.execute (new Runnable ()
 					{
