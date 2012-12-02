@@ -224,36 +224,40 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
-			if ( !channel.isRegistered () )
-			{
-				return;
-			}
 			try
 			{
-				// note that no other reference to peer is stored here
-				// it might be garbage collected
-				// somebody else however might have retained a reference, so reduce size.
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
-				selector.wakeup ();
-
-				writes.clear ();
-				reads.clear ();
-				reads.add (closedMark);
-				channel.close ();
-				openConnections.decrementAndGet ();
-				connectSlot.release ();
-				if ( unsolicited )
+				if ( channel.isRegistered () )
 				{
-					unsolicitedConnectSlot.release ();
+					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
+					selector.wakeup ();
 				}
-				peerThreads.execute (new Runnable ()
+				if ( channel.isConnectionPending () )
 				{
-					@Override
-					public void run ()
+					connectSlot.release ();
+				}
+				else if ( channel.isConnected () )
+				{
+					channel.close ();
+
+					writes.clear ();
+					reads.clear ();
+					reads.add (closedMark);
+
+					openConnections.decrementAndGet ();
+					connectSlot.release ();
+					if ( unsolicited )
 					{
-						onDisconnect (timeout, bannedFor, reason);
+						unsolicitedConnectSlot.release ();
 					}
-				});
+					peerThreads.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							onDisconnect (timeout, bannedFor, reason);
+						}
+					});
+				}
 			}
 			catch ( IOException e )
 			{
