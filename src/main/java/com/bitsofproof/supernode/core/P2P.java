@@ -224,7 +224,7 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
-			if ( !channel.isConnected () && !channel.isConnectionPending () )
+			if ( !channel.isRegistered () )
 			{
 				return;
 			}
@@ -233,6 +233,9 @@ public abstract class P2P
 				// note that no other reference to peer is stored here
 				// it might be garbage collected
 				// somebody else however might have retained a reference, so reduce size.
+				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
+				selector.wakeup ();
+
 				writes.clear ();
 				reads.clear ();
 				reads.add (closedMark);
@@ -251,8 +254,6 @@ public abstract class P2P
 						onDisconnect (timeout, bannedFor, reason);
 					}
 				});
-				selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
-				selector.wakeup ();
 			}
 			catch ( IOException e )
 			{
