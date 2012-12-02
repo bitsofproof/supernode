@@ -346,7 +346,7 @@ public abstract class P2P
 	private static final int CONNECTIONTIMEOUT = 5;
 
 	// number of seconds to wait until giving up on connections
-	private static final int READTIMEOUT = 60; // seconds
+	private static final int READTIMEOUT = 5; // seconds
 
 	// keep track of connections we asked for
 	private final Semaphore connectSlot;
