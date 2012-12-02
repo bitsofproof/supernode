@@ -329,7 +329,7 @@ public abstract class P2P
 	private final AtomicInteger openConnections = new AtomicInteger (0);
 
 	// peers waiting to be connected
-	private final LinkedBlockingQueue<InetSocketAddress> runqueue = new LinkedBlockingQueue<InetSocketAddress> ();
+	private final ConcurrentLinkedQueue<InetSocketAddress> runqueue = new ConcurrentLinkedQueue<InetSocketAddress> ();
 
 	// number of connections we try to maintain
 	private final int desiredConnections;
@@ -641,48 +641,33 @@ public abstract class P2P
 			public void run ()
 			{
 				while ( true )
-				{ // forever
+				{
 					try
 					{
-						InetSocketAddress address = runqueue.poll ();
-						if ( address != null )
-						{
-							connectSlot.acquireUninterruptibly ();
+						connectSlot.acquireUninterruptibly ();
 
-							final Peer peer = createPeer (address, true);
-							peer.unsolicited = false;
-							peer.connect ();
-							scheduler.schedule (new Runnable ()
-							{
-								@Override
-								public void run ()
-								{
-									if ( peer.channel.isConnectionPending () )
-									{
-										log.trace ("Give up connect on " + peer.channel);
-										peer.disconnect (Integer.MAX_VALUE, 0, null);
-									}
-								}
-							}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
-						}
-						else
+						InetSocketAddress address = null;
+						while ( (address = runqueue.poll ()) == null )
 						{
-							if ( openConnections.get () < desiredConnections )
+							log.trace ("Need to discover new adresses.");
+							discover ();
+						}
+
+						final Peer peer = createPeer (address, true);
+						peer.unsolicited = false;
+						peer.connect ();
+						scheduler.schedule (new Runnable ()
+						{
+							@Override
+							public void run ()
 							{
-								log.trace ("Need to discover new adresses.");
-								discover ();
-								if ( runqueue.size () == 0 )
+								if ( peer.channel.isConnectionPending () )
 								{
-									log.trace ("Can not find new adresses");
-									Thread.sleep (60 * 1000);
+									log.trace ("Give up connect on " + peer.channel);
+									peer.disconnect (Integer.MAX_VALUE, 0, null);
 								}
 							}
-							else
-							{
-								log.trace ("No peer in run queue, but " + openConnections.get () + " connected.");
-								Thread.sleep (60 * 1000);
-							}
-						}
+						}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
 					}
 					catch ( Exception e )
 					{
