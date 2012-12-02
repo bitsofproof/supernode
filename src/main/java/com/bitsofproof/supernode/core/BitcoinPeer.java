@@ -379,7 +379,10 @@ public class BitcoinPeer extends P2P.Peer
 
 				m.fromWire (new WireFormat.Reader (buf));
 			}
-			lastSpoken = System.currentTimeMillis () / 1000;
+			if ( command.equals ("inv") || command.equals ("tx") || command.equals ("block") )
+			{
+				lastSpoken = System.currentTimeMillis () / 1000;
+			}
 			trafficIn += length;
 			return m;
 		}

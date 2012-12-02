@@ -56,12 +56,19 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 	@Override
 	public void run ()
 	{
-		for ( final BitcoinPeer peer : network.getConnectPeers () )
+		try
 		{
-			if ( peer.getLastSpoken () < (System.currentTimeMillis () / 1000 - delay) )
+			for ( final BitcoinPeer peer : network.getConnectPeers () )
 			{
-				ping (peer);
+				if ( peer.getLastSpoken () < (System.currentTimeMillis () / 1000 - delay) )
+				{
+					ping (peer);
+				}
 			}
+		}
+		catch ( Exception e )
+		{
+			log.trace ("Exception in heatbeat thread ", e);
 		}
 	}
 
