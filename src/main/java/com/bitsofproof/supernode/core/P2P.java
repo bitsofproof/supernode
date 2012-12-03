@@ -544,11 +544,6 @@ public abstract class P2P
 												}, CONNECTIONTIMEOUT, TimeUnit.SECONDS);
 											}
 										}
-										else
-										{
-											key.channel ().close ();
-											key.cancel ();
-										}
 									}
 									catch ( IOException e )
 									{
@@ -578,7 +573,6 @@ public abstract class P2P
 										}
 										catch ( IOException e )
 										{
-											connectSlot.release ();
 											key.cancel ();
 											key.attach (null);
 										}
@@ -597,7 +591,7 @@ public abstract class P2P
 													peer.process (readBuffer, len);
 													readBuffer.clear ();
 												}
-												else
+												if ( len < 0 )
 												{
 													peer.disconnect ();
 												}
