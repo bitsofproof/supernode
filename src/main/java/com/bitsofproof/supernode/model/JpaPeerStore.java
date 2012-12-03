@@ -15,6 +15,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bitsofproof.supernode.core.StoredPeerDiscovery;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaPeerStore")

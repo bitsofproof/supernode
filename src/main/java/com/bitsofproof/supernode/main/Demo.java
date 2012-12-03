@@ -26,8 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.core.BitcoinNetwork;
+import com.bitsofproof.supernode.core.TransactionValidationException;
 import com.bitsofproof.supernode.core.ValidationException;
-import com.bitsofproof.supernode.model.TransactionValidationException;
 
 public class Demo extends Main implements Main.App
 {

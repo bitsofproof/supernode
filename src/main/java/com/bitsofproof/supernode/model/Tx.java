@@ -38,7 +38,7 @@ import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "tx")
-public class Tx implements Serializable, HasToWire
+public class Tx implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
@@ -193,7 +193,6 @@ public class Tx implements Serializable, HasToWire
 		return o;
 	}
 
-	@Override
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);

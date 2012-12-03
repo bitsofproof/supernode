@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
-import com.bitsofproof.supernode.model.BlockStore;
 
 public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage>
 {

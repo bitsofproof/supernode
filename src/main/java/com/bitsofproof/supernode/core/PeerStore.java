@@ -1,7 +1,9 @@
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
 import java.util.List;
+
+import com.bitsofproof.supernode.model.KnownPeer;
 
 public interface PeerStore
 {

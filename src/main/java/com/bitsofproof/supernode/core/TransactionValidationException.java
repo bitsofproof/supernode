@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.core.ValidationException;
+import com.bitsofproof.supernode.model.Tx;
 
 public class TransactionValidationException extends ValidationException
 {

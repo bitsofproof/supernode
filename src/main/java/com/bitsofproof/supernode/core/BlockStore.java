@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.core;
 
 import java.util.List;
 
-import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.core.ValidationException;
+import com.bitsofproof.supernode.model.Blk;
+import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 public interface BlockStore
 {

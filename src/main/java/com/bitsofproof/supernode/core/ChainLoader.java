@@ -36,7 +36,6 @@ import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.BlockStore;
 
 public class ChainLoader
 {

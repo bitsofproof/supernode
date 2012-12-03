@@ -32,8 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
-import com.bitsofproof.supernode.model.BlockStore;
-import com.bitsofproof.supernode.model.PeerStore;
 
 public class BitcoinNetwork extends P2P
 {

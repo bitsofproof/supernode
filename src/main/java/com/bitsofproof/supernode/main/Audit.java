@@ -39,12 +39,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.TransactionValidationException;
 import com.bitsofproof.supernode.core.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.QBlk;
 import com.bitsofproof.supernode.model.QHead;
-import com.bitsofproof.supernode.model.TransactionValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 public class Audit extends Main implements Main.App

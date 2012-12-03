@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 import java.security.acl.Owner;
@@ -38,15 +38,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.core.AddressConverter;
-import com.bitsofproof.supernode.core.Chain;
-import com.bitsofproof.supernode.core.Difficulty;
-import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.Script;
 import com.bitsofproof.supernode.core.Script.Opcode;
-import com.bitsofproof.supernode.core.ValidationException;
+import com.bitsofproof.supernode.model.Blk;
+import com.bitsofproof.supernode.model.Head;
+import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
+import com.bitsofproof.supernode.model.UTxOut;
 
-abstract class CachedBlockStore implements BlockStore
+public abstract class CachedBlockStore implements BlockStore
 {
 	private static final Logger log = LoggerFactory.getLogger (CachedBlockStore.class);
 
@@ -136,6 +136,10 @@ abstract class CachedBlockStore implements BlockStore
 		private long height;
 		private CachedHead previous;
 		private final Set<CachedBlock> blocks = new HashSet<CachedBlock> ();
+
+		public CachedHead ()
+		{
+		}
 
 		public Long getId ()
 		{

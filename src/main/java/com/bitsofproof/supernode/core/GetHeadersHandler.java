@@ -29,7 +29,6 @@ import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetHeadersMessage;
 import com.bitsofproof.supernode.messages.HeadersMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.BlockStore;
 
 public class GetHeadersHandler implements BitcoinMessageListener<GetHeadersMessage>
 {

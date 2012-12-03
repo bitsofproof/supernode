@@ -27,7 +27,6 @@ import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.BlockStore;
 import com.bitsofproof.supernode.model.Tx;
 
 public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>

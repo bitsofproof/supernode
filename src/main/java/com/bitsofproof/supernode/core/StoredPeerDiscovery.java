@@ -1,4 +1,4 @@
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -8,9 +8,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.Discovery;
+import com.bitsofproof.supernode.model.KnownPeer;
 
-abstract class StoredPeerDiscovery implements Discovery, PeerStore
+public abstract class StoredPeerDiscovery implements Discovery, PeerStore
 {
 	private static final Logger log = LoggerFactory.getLogger (StoredPeerDiscovery.class);
 
