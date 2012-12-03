@@ -226,16 +226,11 @@ public abstract class P2P
 		{
 			try
 			{
-				if ( channel.isRegistered () )
-				{
-					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
-					selector.wakeup ();
-				}
 				if ( channel.isConnectionPending () )
 				{
 					connectSlot.release ();
 				}
-				else if ( channel.isConnected () )
+				else
 				{
 					if ( unsolicited )
 					{
@@ -261,6 +256,11 @@ public abstract class P2P
 					});
 
 					channel.close ();
+				}
+				if ( channel.isRegistered () )
+				{
+					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
+					selector.wakeup ();
 				}
 			}
 			catch ( IOException e )
