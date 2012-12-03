@@ -78,64 +78,59 @@ class JpaBlockStore implements BlockStore
 	private CachedHead currentHead = null;
 	private final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	private final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	private final Cache utxoCache = new Cache ();
+	private final Map<String, HashMap<Long, UTxOut>> cachedUTXO = new HashMap<String, HashMap<Long, UTxOut>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
-	private class Cache
+	public void removeUTXO (String txhash, long ix)
 	{
-		private final Map<String, HashMap<Long, UTxOut>> outputs = new HashMap<String, HashMap<Long, UTxOut>> ();
-
-		public void remove (String txhash, long ix)
+		HashMap<Long, UTxOut> outs = cachedUTXO.get (txhash);
+		if ( outs != null )
 		{
-			HashMap<Long, UTxOut> outs = outputs.get (txhash);
-			if ( outs != null )
+			outs.remove (ix);
+			if ( outs.size () == 0 )
 			{
-				outs.remove (ix);
-				if ( outs.size () == 0 )
-				{
-					outputs.remove (txhash);
-				}
+				cachedUTXO.remove (txhash);
 			}
 		}
+	}
 
-		public void add (String txhash, UTxOut out)
+	public void addUTXO (String txhash, UTxOut out)
+	{
+		HashMap<Long, UTxOut> outs = cachedUTXO.get (txhash);
+		if ( outs == null )
 		{
-			HashMap<Long, UTxOut> outs = outputs.get (txhash);
+			outs = new HashMap<Long, UTxOut> ();
+			cachedUTXO.put (txhash, outs);
+		}
+		outs.put (out.getIx (), out);
+	}
+
+	public HashMap<Long, UTxOut> getUTXO (String txhash)
+	{
+		return cachedUTXO.get (txhash);
+	}
+
+	public void cacheUTXO ()
+	{
+		QUTxOut utxo = QUTxOut.uTxOut;
+		QTxOut txout = QTxOut.txOut;
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (utxo).join (utxo.txOut, txout).list (utxo, txout) )
+		{
+			UTxOut u = (UTxOut) o[0];
+			TxOut out = (TxOut) o[1];
+			u.setTxOut (out);
+			HashMap<Long, UTxOut> outs = cachedUTXO.get (u.getHash ());
 			if ( outs == null )
 			{
 				outs = new HashMap<Long, UTxOut> ();
-				outputs.put (txhash, outs);
+				cachedUTXO.put (u.getHash (), outs);
 			}
-			outs.put (out.getIx (), out);
-		}
-
-		public HashMap<Long, UTxOut> get (String txhash)
-		{
-			return outputs.get (txhash);
-		}
-
-		public void cacheUTXO ()
-		{
-			QUTxOut utxo = QUTxOut.uTxOut;
-			QTxOut txout = QTxOut.txOut;
-			JPAQuery q = new JPAQuery (entityManager);
-			for ( Object[] o : q.from (utxo).join (utxo.txOut, txout).list (utxo, txout) )
-			{
-				UTxOut u = (UTxOut) o[0];
-				TxOut out = (TxOut) o[1];
-				u.setTxOut (out);
-				HashMap<Long, UTxOut> outs = outputs.get (u.getHash ());
-				if ( outs == null )
-				{
-					outs = new HashMap<Long, UTxOut> ();
-					outputs.put (u.getHash (), outs);
-				}
-				outs.put (u.getIx (), u);
-				entityManager.detach (u);
-				entityManager.detach (out);
-			}
+			outs.put (u.getIx (), u);
+			entityManager.detach (u);
+			entityManager.detach (out);
 		}
 	}
 
@@ -262,7 +257,7 @@ class JpaBlockStore implements BlockStore
 			cacheChain ();
 
 			log.trace ("Cache UTXO set ...");
-			utxoCache.cacheUTXO ();
+			cacheUTXO ();
 
 			log.trace ("Cache filled.");
 		}
@@ -323,7 +318,7 @@ class JpaBlockStore implements BlockStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				utxoCache.remove (t.getHash (), out.getIx ());
+				removeUTXO (t.getHash (), out.getIx ());
 			}
 			QUTxOut utxo = QUTxOut.uTxOut;
 			JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
@@ -340,7 +335,7 @@ class JpaBlockStore implements BlockStore
 					u.setHeight (b.getHeight ());
 					entityManager.persist (u);
 
-					utxoCache.add (in.getSourceHash (), u);
+					addUTXO (in.getSourceHash (), u);
 				}
 			}
 		}
@@ -359,7 +354,7 @@ class JpaBlockStore implements BlockStore
 				utxo.setHeight (b.getHeight ());
 				entityManager.persist (utxo);
 
-				utxoCache.add (t.getHash (), utxo);
+				addUTXO (t.getHash (), utxo);
 			}
 			Map<Long, ArrayList<String>> tuples = new HashMap<Long, ArrayList<String>> ();
 			for ( TxIn in : t.getInputs () )
@@ -374,7 +369,7 @@ class JpaBlockStore implements BlockStore
 					}
 					txs.add (in.getSourceHash ());
 
-					utxoCache.remove (in.getSourceHash (), in.getIx ());
+					removeUTXO (in.getSourceHash (), in.getIx ());
 				}
 			}
 			for ( Long ix : tuples.keySet () )
@@ -898,7 +893,7 @@ class JpaBlockStore implements BlockStore
 				HashMap<Long, UTxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
 				if ( resolved == null )
 				{
-					resolved = utxoCache.get (i.getSourceHash ());
+					resolved = getUTXO (i.getSourceHash ());
 					if ( resolved == null )
 					{
 						throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());

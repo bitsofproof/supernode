@@ -46,7 +46,7 @@ public interface BlockStore
 
 	public long getChainHeight ();
 
-	boolean isEmpty ();
+	public boolean isEmpty ();
 
-	List<String> getInventory (List<String> locator, String last, int limit);
+	public List<String> getInventory (List<String> locator, String last, int limit);
 }
