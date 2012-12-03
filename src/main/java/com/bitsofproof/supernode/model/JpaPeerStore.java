@@ -1,8 +1,6 @@
 package com.bitsofproof.supernode.model;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -17,11 +15,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.core.Discovery;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaPeerStore")
-public class JpaPeerStore implements Discovery, PeerStore
+public class JpaPeerStore extends StoredPeerDiscovery
 {
 	private static final Logger log = LoggerFactory.getLogger (JpaPeerStore.class);
 
@@ -32,6 +29,7 @@ public class JpaPeerStore implements Discovery, PeerStore
 	private PlatformTransactionManager transactionManager;
 
 	@Override
+	@Transactional (propagation = Propagation.REQUIRED)
 	public List<KnownPeer> getConnectablePeers ()
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
@@ -69,24 +67,5 @@ public class JpaPeerStore implements Discovery, PeerStore
 			log.trace ("Retrieved peer " + peer.getAddress ());
 		}
 		return peer;
-	}
-
-	@Override
-	@Transactional (propagation = Propagation.REQUIRED)
-	public List<InetAddress> discover ()
-	{
-		log.trace ("Discovering stored peers");
-		List<InetAddress> peers = new ArrayList<InetAddress> ();
-		for ( KnownPeer kp : getConnectablePeers () )
-		{
-			try
-			{
-				peers.add (InetAddress.getByName (kp.getAddress ()));
-			}
-			catch ( UnknownHostException e )
-			{
-			}
-		}
-		return peers;
 	}
 }
