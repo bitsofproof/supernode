@@ -226,41 +226,44 @@ public abstract class P2P
 		{
 			try
 			{
+				if ( channel.isRegistered () )
+				{
+					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
+					selector.wakeup ();
+				}
 				if ( channel.isConnectionPending () )
 				{
 					connectSlot.release ();
 				}
 				else
 				{
-					if ( unsolicited )
+					if ( channel.isConnected () )
 					{
-						unsolicitedConnectSlot.release ();
-					}
-					else
-					{
-						connectSlot.release ();
-					}
-
-					writes.clear ();
-					reads.clear ();
-					reads.add (closedMark);
-					openConnections.decrementAndGet ();
-
-					peerThreads.execute (new Runnable ()
-					{
-						@Override
-						public void run ()
+						if ( unsolicited )
 						{
-							onDisconnect (timeout, bannedFor, reason);
+							unsolicitedConnectSlot.release ();
 						}
-					});
+						else
+						{
+							connectSlot.release ();
+						}
 
-					channel.close ();
-				}
-				if ( channel.isRegistered () )
-				{
-					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
-					selector.wakeup ();
+						writes.clear ();
+						reads.clear ();
+						reads.add (closedMark);
+						openConnections.decrementAndGet ();
+
+						peerThreads.execute (new Runnable ()
+						{
+							@Override
+							public void run ()
+							{
+								onDisconnect (timeout, bannedFor, reason);
+							}
+						});
+
+						channel.close ();
+					}
 				}
 			}
 			catch ( IOException e )
@@ -455,6 +458,7 @@ public abstract class P2P
 						{
 							if ( cr.type == ChangeRequest.STOP )
 							{
+								log.trace ("Seclector was asked to stop.");
 								return;
 							}
 							if ( cr.socket == null )
@@ -573,8 +577,6 @@ public abstract class P2P
 										}
 										catch ( IOException e )
 										{
-											key.cancel ();
-											key.attach (null);
 										}
 									}
 									else
