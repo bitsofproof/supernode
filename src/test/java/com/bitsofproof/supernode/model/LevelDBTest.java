@@ -109,13 +109,13 @@ public class LevelDBTest
 	}
 
 	@Test
-	public void iteratorTest () throws UnsupportedEncodingException
+	public void iteratorTest () throws UnsupportedEncodingException, IOException
 	{
 		DBIterator iterator = db.iterator ();
 		doIterate (iterator);
 	}
 
-	private void doIterate (DBIterator iterator) throws UnsupportedEncodingException
+	private void doIterate (DBIterator iterator) throws UnsupportedEncodingException, IOException
 	{
 		try
 		{
@@ -139,7 +139,7 @@ public class LevelDBTest
 	}
 
 	@Test
-	public void snapshotTest () throws UnsupportedEncodingException
+	public void snapshotTest () throws UnsupportedEncodingException, IOException
 	{
 		ReadOptions ro = new ReadOptions ();
 		ro.snapshot (db.getSnapshot ());
