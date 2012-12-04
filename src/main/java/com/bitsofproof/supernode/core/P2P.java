@@ -670,12 +670,15 @@ public abstract class P2P
 						connectSlot.acquire ();
 
 						InetSocketAddress address = null;
-						while ( (address = runqueue.poll ()) == null )
+						do
 						{
-							log.trace ("Need to discover new adresses.");
-							discover ();
-							log.trace ("Runqueue size " + runqueue.size ());
-						}
+							while ( (address = runqueue.poll ()) == null )
+							{
+								log.trace ("Need to discover new adresses.");
+								discover ();
+								log.trace ("Runqueue size " + runqueue.size ());
+							}
+						} while ( !address.getAddress ().isReachable (500) );
 
 						final Peer peer = createPeer (address, true);
 						peer.unsolicited = false;
@@ -685,7 +688,7 @@ public abstract class P2P
 							@Override
 							public void run ()
 							{
-								if ( peer.channel.isConnectionPending () )
+								if ( !peer.channel.isConnected () )
 								{
 									log.trace ("Give up connect on " + peer.channel);
 									peer.disconnect (Integer.MAX_VALUE, 0, null);
@@ -696,6 +699,7 @@ public abstract class P2P
 					catch ( Exception e )
 					{
 						log.debug ("Unhandled exception in peer queue", e);
+						connectSlot.release ();
 					}
 				}
 			}
