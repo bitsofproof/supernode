@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
-import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBComparator;
 import org.iq80.leveldb.DBException;
@@ -70,7 +69,6 @@ public class LevelDBTest
 		options.comparator (comparator);
 		options.logger (logger);
 		options.cacheSize (100 * 1048576); // 100MB cache
-		JniDBFactory.pushMemoryPool (100 * 1048576);
 		options.createIfMissing (true);
 		db = factory.open (new File (testdb), options);
 	}
@@ -83,7 +81,6 @@ public class LevelDBTest
 		db.close ();
 		Options options = new Options ();
 		factory.destroy (new File (testdb), options);
-		JniDBFactory.popMemoryPool ();
 	}
 
 	@Test
