@@ -54,7 +54,9 @@ public class Blk implements Serializable
 
 	long version;
 
+	@Column (length = 64, nullable = false)
 	private String previousHash;
+
 	transient private byte[] wireTransactions;
 
 	@Column (length = 64, nullable = false)
