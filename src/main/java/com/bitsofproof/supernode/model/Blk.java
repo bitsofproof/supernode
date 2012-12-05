@@ -54,11 +54,8 @@ public class Blk implements Serializable
 
 	long version;
 
-	transient private String previousHash;
+	private String previousHash;
 	transient private byte[] wireTransactions;
-
-	@ManyToOne (targetEntity = Blk.class, fetch = FetchType.LAZY, optional = true)
-	private Blk previous;
 
 	@Column (length = 64, nullable = false)
 	private String merkleRoot;
@@ -75,6 +72,40 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
+	private transient ArrayList<byte[]> txHashes;
+
+	public static Blk fromLevelDB (byte[] data, boolean head)
+	{
+		Blk b = new Blk ();
+		WireFormat.Reader reader = new WireFormat.Reader (data);
+		b.version = reader.readUint32 ();
+
+		b.previousHash = reader.readHash ().toString ();
+		b.merkleRoot = reader.readHash ().toString ();
+		b.createTime = reader.readUint32 ();
+		b.difficultyTarget = reader.readUint32 ();
+		b.nonce = reader.readUint32 ();
+		long nt = reader.readVarInt ();
+		b.txHashes = new ArrayList<byte[]> ((int) nt);
+		for ( long i = 0; i < nt; ++i )
+		{
+			b.txHashes.add (reader.readHash ().toByteArray ());
+		}
+		return b;
+	}
+
+	public byte[] toLevelDB ()
+	{
+		// TODO: unfinished
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		return writer.toByteArray ();
+	}
+
+	public ArrayList<byte[]> getTxHashes ()
+	{
+		return txHashes;
+	}
+
 	public JSONObject toJSON ()
 	{
 		parseTransactions ();
@@ -84,7 +115,7 @@ public class Blk implements Serializable
 		{
 			o.put ("hash", hash);
 			o.put ("version", version);
-			o.put ("previous", (previousHash != null ? previousHash : previous.getHash ()));
+			o.put ("previous", previousHash);
 			o.put ("merkleRoot", merkleRoot);
 			o.put ("createTime", createTime);
 			o.put ("difficultyTarget", difficultyTarget);
@@ -132,16 +163,6 @@ public class Blk implements Serializable
 	public void setVersion (long version)
 	{
 		this.version = version;
-	}
-
-	public Blk getPrevious ()
-	{
-		return previous;
-	}
-
-	public void setPrevious (Blk previous)
-	{
-		this.previous = previous;
 	}
 
 	public String getMerkleRoot ()
@@ -314,8 +335,6 @@ public class Blk implements Serializable
 		version = reader.readUint32 ();
 
 		previousHash = reader.readHash ().toString ();
-		previous = null;
-
 		merkleRoot = reader.readHash ().toString ();
 		createTime = reader.readUint32 ();
 		difficultyTarget = reader.readUint32 ();
@@ -387,18 +406,7 @@ public class Blk implements Serializable
 	public void toWireHeaderOnly (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);
-		if ( previous != null )
-		{
-			writer.writeHash (new Hash (previous.getHash ()));
-		}
-		else if ( previousHash != null )
-		{
-			writer.writeHash (new Hash (previousHash));
-		}
-		else
-		{
-			writer.writeHash (Hash.ZERO_HASH);
-		}
+		writer.writeHash (new Hash (previousHash));
 		writer.writeHash (new Hash (merkleRoot));
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);

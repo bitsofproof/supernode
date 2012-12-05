@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Chain;
+import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
@@ -86,7 +87,7 @@ public class TestChain implements Chain
 		block.setCreateTime (1296688602L);
 		block.setDifficultyTarget (0x1d00ffffL);
 		block.setNonce (414098458L);
-		block.setPrevious (null);
+		block.setPreviousHash (Hash.ZERO_HASH_STRING);
 
 		List<Tx> transactions = new ArrayList<Tx> ();
 		block.setTransactions (transactions);

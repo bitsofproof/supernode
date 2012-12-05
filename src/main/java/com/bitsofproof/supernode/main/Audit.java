@@ -201,10 +201,11 @@ public class Audit extends Main implements Main.App
 			QBlk blk = QBlk.blk;
 			q = new JPAQuery (entityManager);
 			Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
-			while ( b.getPrevious () != null && !checked.contains (b.getHash ()) )
+			while ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) && !checked.contains (b.getHash ()) )
 			{
 				checked.add (b.getHash ());
-				b = b.getPrevious ();
+				q = new JPAQuery (entityManager);
+				b = q.from (blk).where (blk.hash.eq (b.getPreviousHash ())).uniqueResult (blk);
 			}
 			if ( !b.getHash ().equals (genesisHash) && !checked.contains (b.getHash ()) )
 			{
@@ -228,10 +229,11 @@ public class Audit extends Main implements Main.App
 			QBlk blk = QBlk.blk;
 			q = new JPAQuery (entityManager);
 			Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
-			while ( b.getPrevious () != null && !reachable.contains (b.getHash ()) )
+			while ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) && !reachable.contains (b.getHash ()) )
 			{
 				reachable.add (b.getHash ());
-				b = b.getPrevious ();
+				q = new JPAQuery (entityManager);
+				b = q.from (blk).where (blk.hash.eq (b.getPreviousHash ())).uniqueResult (blk);
 			}
 		}
 		QBlk blk = QBlk.blk;
@@ -259,10 +261,11 @@ public class Audit extends Main implements Main.App
 			QBlk blk = QBlk.blk;
 			q = new JPAQuery (entityManager);
 			Blk b = q.from (blk).where (blk.hash.eq (h.getLeaf ())).uniqueResult (blk);
-			while ( b.getPrevious () != null )
+			while ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
 				path.add (b.getId ());
-				b = b.getPrevious ();
+				q = new JPAQuery (entityManager);
+				b = q.from (blk).where (blk.hash.eq (b.getPreviousHash ())).uniqueResult (blk);
 			}
 			Collections.reverse (path);
 
@@ -283,11 +286,13 @@ public class Audit extends Main implements Main.App
 					if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
 					{
 						Blk c = null;
-						Blk p = b.getPrevious ();
+						q = new JPAQuery (entityManager);
+						Blk p = q.from (blk).where (blk.hash.eq (b.getPreviousHash ())).uniqueResult (blk);
 						for ( int i = 0; i < chain.getDifficultyReviewBlocks () - 1; ++i )
 						{
 							c = p;
-							p = c.getPrevious ();
+							q = new JPAQuery (entityManager);
+							p = q.from (blk).where (blk.hash.eq (c.getPreviousHash ())).uniqueResult (blk);
 						}
 						difficultyTarget =
 								Difficulty.getNextTarget (prev.getCreateTime () - p.getCreateTime (), prev.getDifficultyTarget (), chain.getTargetBlockTime ());

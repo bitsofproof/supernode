@@ -90,6 +90,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlock (CachedBlock cached);
 
+	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
+
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY)
 	public abstract List<TxOut> getUnspentOutput (List<String> addresses);
@@ -487,8 +489,7 @@ public abstract class CachedBlockStore implements BlockStore
 		if ( cachedPrevious != null )
 		{
 			Blk prev = null;
-			prev = retrieveBlock (cachedPrevious);
-			b.setPrevious (prev);
+			prev = retrieveBlockHeader (cachedPrevious);
 
 			if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
 			{
@@ -691,7 +692,7 @@ public abstract class CachedBlockStore implements BlockStore
 			insertBlock (b);
 
 			// modify transient caches only after persistent changes
-			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
+			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
 			cachedBlocks.put (b.getHash (), m);
 
 			CachedHead usingHead = cachedHeads.get (head.getId ());

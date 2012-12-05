@@ -99,7 +99,7 @@ public class SatoshiChain implements Chain
 		block.setCreateTime (1231006505L);
 		block.setDifficultyTarget (0x1d00ffffL);
 		block.setNonce (2083236893);
-		block.setPrevious (null);
+		block.setPreviousHash (Hash.ZERO_HASH_STRING);
 
 		List<Tx> transactions = new ArrayList<Tx> ();
 		block.setTransactions (transactions);

@@ -73,9 +73,9 @@ public class JpaBlockStore extends CachedBlockStore
 		for ( Blk b : q.from (block).orderBy (block.id.asc ()).list (block) )
 		{
 			CachedBlock cb = null;
-			if ( b.getPrevious () != null )
+			if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPrevious ().getHash ()), b.getCreateTime ());
+				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
 			}
 			else
 			{
@@ -131,10 +131,11 @@ public class JpaBlockStore extends CachedBlockStore
 					UTxOut u = new UTxOut ();
 					u.setHash (t.getHash ());
 					u.setIx (in.getIx ());
-					u.setTxOut (in.getSource ().flatCopy (null));
+					u.setTxOut (in.getSource ());
 					u.setHeight (b.getHeight ());
 					entityManager.persist (u);
 
+					u.setTxOut (in.getSource ().flatCopy (null));
 					addUTXO (in.getSourceHash (), u);
 				}
 			}
@@ -151,10 +152,11 @@ public class JpaBlockStore extends CachedBlockStore
 				UTxOut utxo = new UTxOut ();
 				utxo.setHash (t.getHash ());
 				utxo.setIx (out.getIx ());
-				utxo.setTxOut (out.flatCopy (null));
+				utxo.setTxOut (out);
 				utxo.setHeight (b.getHeight ());
 				entityManager.persist (utxo);
 
+				utxo.setTxOut (out.flatCopy (null));
 				addUTXO (t.getHash (), utxo);
 			}
 			Map<Long, ArrayList<String>> tuples = new HashMap<Long, ArrayList<String>> ();
@@ -221,6 +223,12 @@ public class JpaBlockStore extends CachedBlockStore
 
 	@Override
 	protected Blk retrieveBlock (CachedBlock cached)
+	{
+		return entityManager.find (Blk.class, cached.getId ());
+	}
+
+	@Override
+	protected Blk retrieveBlockHeader (CachedBlock cached)
 	{
 		return entityManager.find (Blk.class, cached.getId ());
 	}

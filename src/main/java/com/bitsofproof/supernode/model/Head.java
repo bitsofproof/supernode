@@ -25,6 +25,9 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import com.bitsofproof.supernode.core.Hash;
+import com.bitsofproof.supernode.core.WireFormat;
+
 @Entity
 @Table (name = "head")
 public class Head implements Serializable
@@ -41,6 +44,27 @@ public class Head implements Serializable
 
 	@Column (length = 64, nullable = false)
 	private String leaf;
+
+	public static Head fromLevelDB (byte[] data)
+	{
+		Head h = new Head ();
+		WireFormat.Reader reader = new WireFormat.Reader (data);
+		h.id = reader.readUint64 ();
+		h.chainWork = Double.longBitsToDouble (reader.readUint64 ());
+		h.height = (int) reader.readUint32 ();
+		h.leaf = reader.readHash ().toString ();
+		return h;
+	}
+
+	public byte[] toLevelDB ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeUint64 (id);
+		writer.writeUint64 (Double.doubleToLongBits (chainWork));
+		writer.writeUint32 (height);
+		writer.writeHash (new Hash (leaf));
+		return writer.toByteArray ();
+	}
 
 	public Long getId ()
 	{
