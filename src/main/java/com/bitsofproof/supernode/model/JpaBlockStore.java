@@ -15,10 +15,8 @@
  */
 package com.bitsofproof.supernode.model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -29,7 +27,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Hash;
-import com.mysema.query.jpa.impl.JPADeleteClause;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 @Component ("jpaBlockStore")
@@ -44,23 +41,19 @@ public class JpaBlockStore extends CachedBlockStore
 	@Override
 	protected void cacheUTXO ()
 	{
-		QUTxOut utxo = QUTxOut.uTxOut;
 		QTxOut txout = QTxOut.txOut;
+		QTx tx = QTx.tx;
 		JPAQuery q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (utxo).join (utxo.txOut, txout).list (utxo, txout) )
+		for ( Object[] o : q.from (txout).join (txout.transaction, tx).where (txout.available.eq (true)).list (txout, tx.hash) )
 		{
-			UTxOut u = (UTxOut) o[0];
-			TxOut out = (TxOut) o[1];
-			u.setTxOut (out);
-			HashMap<Long, UTxOut> outs = cachedUTXO.get (u.getHash ());
+			HashMap<Long, TxOut> outs = cachedUTXO.get (o[1]);
 			if ( outs == null )
 			{
-				outs = new HashMap<Long, UTxOut> ();
-				cachedUTXO.put (u.getHash (), outs);
+				outs = new HashMap<Long, TxOut> ();
+				cachedUTXO.put ((String) o[1], outs);
 			}
-			outs.put (u.getIx (), u);
-			entityManager.detach (u);
-			entityManager.detach (out);
+			outs.put (((TxOut) o[0]).getIx (), ((TxOut) o[0]).flatCopy (null));
+			entityManager.detach (o[0]);
 		}
 	}
 
@@ -118,28 +111,21 @@ public class JpaBlockStore extends CachedBlockStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
+				out.setAvailable (false);
 				removeUTXO (t.getHash (), out.getIx ());
 			}
-			QUTxOut utxo = QUTxOut.uTxOut;
-			JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
-			q.where (utxo.hash.eq (t.getHash ())).execute ();
 
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					UTxOut u = new UTxOut ();
-					u.setHash (t.getHash ());
-					u.setIx (in.getIx ());
-					u.setTxOut (in.getSource ());
-					u.setHeight (b.getHeight ());
-					entityManager.persist (u);
-
-					u.setTxOut (in.getSource ().flatCopy (null));
-					addUTXO (in.getSourceHash (), u);
+					TxOut source = in.getSource ();
+					source.setAvailable (true);
+					addUTXO (in.getSourceHash (), source.flatCopy (null));
 				}
 			}
 		}
+		entityManager.merge (b);
 	}
 
 	@Override
@@ -149,39 +135,20 @@ public class JpaBlockStore extends CachedBlockStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				UTxOut utxo = new UTxOut ();
-				utxo.setHash (t.getHash ());
-				utxo.setIx (out.getIx ());
-				utxo.setTxOut (out);
-				utxo.setHeight (b.getHeight ());
-				entityManager.persist (utxo);
-
-				utxo.setTxOut (out.flatCopy (null));
-				addUTXO (t.getHash (), utxo);
+				out.setAvailable (true);
+				addUTXO (t.getHash (), out.flatCopy (null));
 			}
-			Map<Long, ArrayList<String>> tuples = new HashMap<Long, ArrayList<String>> ();
+
 			for ( TxIn in : t.getInputs () )
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					ArrayList<String> txs = tuples.get (in.getIx ());
-					if ( txs == null )
-					{
-						txs = new ArrayList<String> ();
-						tuples.put (in.getIx (), txs);
-					}
-					txs.add (in.getSourceHash ());
-
+					in.getSource ().setAvailable (false);
 					removeUTXO (in.getSourceHash (), in.getIx ());
 				}
 			}
-			for ( Long ix : tuples.keySet () )
-			{
-				QUTxOut utxo = QUTxOut.uTxOut;
-				JPADeleteClause q = new JPADeleteClause (entityManager, utxo);
-				q.where (utxo.hash.in (tuples.get (ix)).and (utxo.ix.eq (ix))).execute ();
-			}
 		}
+		entityManager.merge (b);
 	}
 
 	@Override
@@ -215,9 +182,9 @@ public class JpaBlockStore extends CachedBlockStore
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
 		QTxOut txout = QTxOut.txOut;
-		QUTxOut utxo = QUTxOut.uTxOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		return q.from (utxo).join (utxo.txOut, txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses)))
+		return q.from (txout)
+				.where (txout.available.eq (true).and (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))))
 				.list (txout);
 	}
 

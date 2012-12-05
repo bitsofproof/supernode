@@ -44,7 +44,6 @@ import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
-import com.bitsofproof.supernode.model.UTxOut;
 
 public abstract class CachedBlockStore implements BlockStore
 {
@@ -63,7 +62,7 @@ public abstract class CachedBlockStore implements BlockStore
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	protected final Map<String, HashMap<Long, UTxOut>> cachedUTXO = new HashMap<String, HashMap<Long, UTxOut>> ();
+	protected final Map<String, HashMap<Long, TxOut>> cachedUTXO = new HashMap<String, HashMap<Long, TxOut>> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -103,7 +102,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	public void removeUTXO (String txhash, long ix)
 	{
-		HashMap<Long, UTxOut> outs = cachedUTXO.get (txhash);
+		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
 		if ( outs != null )
 		{
 			outs.remove (ix);
@@ -114,18 +113,18 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	public void addUTXO (String txhash, UTxOut out)
+	public void addUTXO (String txhash, TxOut out)
 	{
-		HashMap<Long, UTxOut> outs = cachedUTXO.get (txhash);
+		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
 		if ( outs == null )
 		{
-			outs = new HashMap<Long, UTxOut> ();
+			outs = new HashMap<Long, TxOut> ();
 			cachedUTXO.put (txhash, outs);
 		}
 		outs.put (out.getIx (), out);
 	}
 
-	public HashMap<Long, UTxOut> getUTXO (String txhash)
+	public HashMap<Long, TxOut> getUTXO (String txhash)
 	{
 		return cachedUTXO.get (txhash);
 	}
@@ -449,7 +448,7 @@ public abstract class CachedBlockStore implements BlockStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		Map<String, HashMap<Long, UTxOut>> resolvedInputs = new HashMap<String, HashMap<Long, UTxOut>> ();
+		Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
 	}
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
@@ -579,20 +578,15 @@ public abstract class CachedBlockStore implements BlockStore
 			log.trace ("resolving inputs for block " + b.getHash ());
 			for ( Tx t : b.getTransactions () )
 			{
-				HashMap<Long, UTxOut> outs = tcontext.resolvedInputs.get (t.getHash ());
+				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (t.getHash ());
 				if ( outs == null )
 				{
-					outs = new HashMap<Long, UTxOut> ();
+					outs = new HashMap<Long, TxOut> ();
 					tcontext.resolvedInputs.put (t.getHash (), outs);
 				}
 				for ( TxOut o : t.getOutputs () )
 				{
-					UTxOut u = new UTxOut ();
-					u.setHash (t.getHash ());
-					u.setIx (o.getIx ());
-					u.setHeight (b.getHeight ());
-					u.setTxOut (o);
-					outs.put (o.getIx (), u);
+					outs.put (o.getIx (), o);
 				}
 				resolveInputs (tcontext, t);
 			}
@@ -671,7 +665,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 					{
-						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()).getTxOut ();
+						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
 						if ( source.getId () == null )
 						{
 							i.setSource (source);
@@ -751,7 +745,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, UTxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
 				if ( resolved == null )
 				{
 					resolved = getUTXO (i.getSourceHash ());
@@ -761,18 +755,20 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 					tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
 				}
-				UTxOut out = resolved.get (i.getIx ());
+				TxOut out = resolved.get (i.getIx ());
 				if ( out == null )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 							+ t.toWireDump ());
 				}
-				if ( tcontext.block != null && out.getTxOut ().isCoinbase () )
+				if ( tcontext.block != null && out.isCoinbase () )
 				{
-					if ( out.getHeight () > tcontext.block.getHeight () - 100 )
-					{
-						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
-					}
+					/*
+					 * TODO: rewrite
+					 * 
+					 * if ( out.getHeight () > tcontext.block.getHeight () - 100 ) { throw new ValidationException ("coinbase spent too early " + t.toWireDump
+					 * ()); }
+					 */
 				}
 			}
 		}
@@ -921,7 +917,7 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 				}
 
-				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ()).getTxOut ();
+				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
 				sumIn += source.getValue ();
 
 				final int nr = inNumber;

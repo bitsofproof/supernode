@@ -63,6 +63,7 @@ public class TxOut implements Serializable
 
 	private boolean coinbase = false;
 
+	// these are denormalized since only 3 owner allowed at the moment
 	@Column (length = 40, nullable = true)
 	@Index (name = "own1index")
 	private String owner1;
@@ -74,6 +75,9 @@ public class TxOut implements Serializable
 	@Column (length = 40, nullable = true)
 	@Index (name = "own3index")
 	private String owner3;
+
+	// indicate if available (UTXO)
+	private boolean available = true;
 
 	public JSONObject toJSON ()
 	{
@@ -220,4 +224,13 @@ public class TxOut implements Serializable
 		return c;
 	}
 
+	public boolean isAvailable ()
+	{
+		return available;
+	}
+
+	public void setAvailable (boolean available)
+	{
+		this.available = available;
+	}
 }
