@@ -6,8 +6,6 @@ drop table tx_txout;
 
 drop table txin;
 
-drop table utxo;
-
 drop table txout;
 
 drop table blk_tx;

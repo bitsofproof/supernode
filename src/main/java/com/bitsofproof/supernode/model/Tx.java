@@ -256,6 +256,7 @@ public class Tx implements Serializable
 				TxOut output = new TxOut ();
 				output.fromWire (reader);
 				output.setTransaction (this);
+				output.setTxHash (hash);
 				output.setIx (i);
 				outputs.add (output);
 			}

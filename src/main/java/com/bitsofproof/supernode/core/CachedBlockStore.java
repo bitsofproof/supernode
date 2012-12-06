@@ -679,6 +679,7 @@ public abstract class CachedBlockStore implements BlockStore
 				for ( TxOut o : t.getOutputs () )
 				{
 					addOwners (o);
+					o.setTxHash (t.getHash ());
 				}
 			}
 

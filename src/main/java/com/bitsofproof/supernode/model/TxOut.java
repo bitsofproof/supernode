@@ -79,6 +79,10 @@ public class TxOut implements Serializable
 	// indicate if available (UTXO)
 	private boolean available = true;
 
+	// this is redundant but saves a join at cacheing
+	@Column (length = 64, nullable = false)
+	private String txHash;
+
 	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
@@ -219,6 +223,7 @@ public class TxOut implements Serializable
 		c.ix = ix;
 		c.script = script;
 		c.transaction = tc;
+		c.txHash = txHash;
 		c.value = value;
 
 		return c;
@@ -233,4 +238,15 @@ public class TxOut implements Serializable
 	{
 		this.available = available;
 	}
+
+	public String getTxHash ()
+	{
+		return txHash;
+	}
+
+	public void setTxHash (String txHash)
+	{
+		this.txHash = txHash;
+	}
+
 }

@@ -30,7 +30,7 @@ public class KnownPeer implements Serializable
 	@Column (length = 256, nullable = true)
 	private String name;
 
-	@Column (length = 32, nullable = true)
+	@Column (length = 64, nullable = true)
 	private String agent;
 
 	private long responseTime;
