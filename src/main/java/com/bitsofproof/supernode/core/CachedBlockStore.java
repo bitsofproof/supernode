@@ -766,9 +766,13 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				else
 				{
-					for ( Map.Entry<Long, TxOut> e : getUTXO (i.getSourceHash ()).entrySet () )
+					HashMap<Long, TxOut> utxo = getUTXO (i.getSourceHash ());
+					if ( utxo != null )
 					{
-						resolved.put (e.getKey (), e.getValue ());
+						for ( Map.Entry<Long, TxOut> e : utxo.entrySet () )
+						{
+							resolved.put (e.getKey (), e.getValue ());
+						}
 					}
 				}
 			}
