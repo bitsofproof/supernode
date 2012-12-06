@@ -235,7 +235,7 @@ public abstract class P2P
 				}
 				if ( channel.isConnectionPending () )
 				{
-					log.trace ("Release connection slot of ");
+					log.trace ("Release connection slot of " + channel);
 					connectSlot.release ();
 				}
 				else
@@ -463,50 +463,56 @@ public abstract class P2P
 						ChangeRequest cr;
 						while ( (cr = selectorChanges.poll ()) != null )
 						{
-							if ( cr.type == ChangeRequest.STOP )
+							try
 							{
-								log.trace ("Seclector was asked to stop.");
-								return;
-							}
-							if ( cr.socket == null )
-							{
-								continue;
-							}
-							if ( cr.type == ChangeRequest.REGISTER )
-							{
-								try
+								if ( cr.type == ChangeRequest.STOP )
 								{
-									SelectionKey key = cr.socket.register (selector, cr.ops);
-									if ( (cr.ops & SelectionKey.OP_ACCEPT) == 0 )
+									log.trace ("Seclector was asked to stop.");
+									return;
+								}
+								if ( cr.socket == null )
+								{
+									continue;
+								}
+								if ( cr.type == ChangeRequest.REGISTER )
+								{
+									try
 									{
-										key.attach (cr.peer);
-										cr.peer.doConnect ();
+										SelectionKey key = cr.socket.register (selector, cr.ops);
+										if ( (cr.ops & SelectionKey.OP_ACCEPT) == 0 )
+										{
+											key.attach (cr.peer);
+											cr.peer.doConnect ();
+										}
+									}
+									catch ( ClosedChannelException e )
+									{
+										continue;
+									}
+									catch ( IOException e )
+									{
+										continue;
 									}
 								}
-								catch ( ClosedChannelException e )
+								else if ( cr.type == ChangeRequest.CHANGEOPS )
 								{
-									continue;
+									SelectionKey key = cr.socket.keyFor (selector);
+									if ( key != null )
+									{
+										key.interestOps (cr.ops);
+									}
 								}
-								catch ( IOException e )
+								else if ( cr.type == ChangeRequest.CANCEL )
 								{
-									continue;
+									SelectionKey key = cr.socket.keyFor (selector);
+									if ( key != null )
+									{
+										key.cancel ();
+									}
 								}
 							}
-							else if ( cr.type == ChangeRequest.CHANGEOPS )
+							catch ( CancelledKeyException e )
 							{
-								SelectionKey key = cr.socket.keyFor (selector);
-								if ( key != null )
-								{
-									key.interestOps (cr.ops);
-								}
-							}
-							else if ( cr.type == ChangeRequest.CANCEL )
-							{
-								SelectionKey key = cr.socket.keyFor (selector);
-								if ( key != null )
-								{
-									key.cancel ();
-								}
 							}
 						}
 						selector.select ();
