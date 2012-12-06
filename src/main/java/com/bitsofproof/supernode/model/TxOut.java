@@ -81,7 +81,11 @@ public class TxOut implements Serializable
 
 	// this is redundant but saves a join at cacheing
 	@Column (length = 64, nullable = false)
+	@Index (name = "outhash")
 	private String txHash;
+
+	// this is redundant for a check
+	private long height;
 
 	public JSONObject toJSON ()
 	{
@@ -249,4 +253,13 @@ public class TxOut implements Serializable
 		this.txHash = txHash;
 	}
 
+	public long getHeight ()
+	{
+		return height;
+	}
+
+	public void setHeight (long height)
+	{
+		this.height = height;
+	}
 }

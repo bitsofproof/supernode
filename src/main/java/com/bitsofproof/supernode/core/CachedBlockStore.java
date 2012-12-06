@@ -680,6 +680,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					addOwners (o);
 					o.setTxHash (t.getHash ());
+					o.setHeight (b.getHeight ());
 				}
 			}
 
@@ -764,12 +765,10 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				if ( tcontext.block != null && out.isCoinbase () )
 				{
-					/*
-					 * TODO: rewrite
-					 * 
-					 * if ( out.getHeight () > tcontext.block.getHeight () - 100 ) { throw new ValidationException ("coinbase spent too early " + t.toWireDump
-					 * ()); }
-					 */
+					if ( out.getHeight () > tcontext.block.getHeight () - 100 )
+					{
+						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
+					}
 				}
 			}
 		}
