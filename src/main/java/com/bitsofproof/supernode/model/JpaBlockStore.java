@@ -15,8 +15,8 @@
  */
 package com.bitsofproof.supernode.model;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -168,7 +168,7 @@ public class JpaBlockStore extends CachedBlockStore
 	}
 
 	@Override
-	protected List<TxOut> findTxOuts (Map<Long, ArrayList<String>> need)
+	protected List<TxOut> findTxOuts (Map<Long, HashSet<String>> need)
 	{
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
@@ -181,11 +181,11 @@ public class JpaBlockStore extends CachedBlockStore
 			}
 			else
 			{
-				exp = exp.or (txout.ix.eq (ix)).and (txout.txHash.in (need.get (ix)));
+				exp = BooleanExpression.anyOf (exp, BooleanExpression.allOf (txout.ix.eq (ix)).and (txout.txHash.in (need.get (ix))));
 			}
 		}
 
-		return q.from (txout).where (exp).list (txout);
+		return q.from (txout).where (BooleanExpression.allOf (exp, txout.available.eq (true))).list (txout);
 	}
 
 	@Override

@@ -73,7 +73,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheUTXO ();
 
-	protected abstract List<TxOut> findTxOuts (Map<Long, ArrayList<String>> need);
+	protected abstract List<TxOut> findTxOuts (Map<Long, HashSet<String>> need);
 
 	protected abstract void backwardCache (Blk b);
 
@@ -759,21 +759,10 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
-				if ( resolved == null )
+				HashMap<Long, TxOut> utxo = getUTXO (i.getSourceHash ());
+				if ( utxo != null )
 				{
-					resolved = getUTXO (i.getSourceHash ());
-				}
-				else
-				{
-					HashMap<Long, TxOut> utxo = getUTXO (i.getSourceHash ());
-					if ( utxo != null )
-					{
-						for ( Map.Entry<Long, TxOut> e : utxo.entrySet () )
-						{
-							resolved.put (e.getKey (), e.getValue ());
-						}
-					}
+					tcontext.resolvedInputs.put (i.getSourceHash (), utxo);
 				}
 			}
 		}
@@ -781,7 +770,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void resolveInputsUsingDB (TransactionContext tcontext, Tx t) throws ValidationException
 	{
-		Map<Long, ArrayList<String>> need = new HashMap<Long, ArrayList<String>> ();
+		Map<Long, HashSet<String>> need = new HashMap<Long, HashSet<String>> ();
 		for ( final TxIn i : t.getInputs () )
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -789,10 +778,10 @@ public abstract class CachedBlockStore implements BlockStore
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
 				if ( resolved == null || !resolved.containsKey (i.getIx ()) )
 				{
-					ArrayList<String> hashes = need.get (i.getIx ());
+					HashSet<String> hashes = need.get (i.getIx ());
 					if ( hashes == null )
 					{
-						hashes = new ArrayList<String> ();
+						hashes = new HashSet<String> ();
 						need.put (i.getIx (), hashes);
 					}
 					hashes.add (i.getSourceHash ());
