@@ -4,6 +4,7 @@ import static org.fusesource.leveldbjni.JniDBFactory.factory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -168,7 +169,13 @@ public class lvlBlockStore extends CachedBlockStore
 	protected void forwardCache (Blk b)
 	{
 		// TODO Auto-generated method stub
+	}
 
+	@Override
+	protected List<TxOut> findTxOuts (Map<Long, ArrayList<String>> need)
+	{
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override

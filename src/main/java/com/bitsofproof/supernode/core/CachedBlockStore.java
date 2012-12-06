@@ -73,6 +73,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheUTXO ();
 
+	protected abstract List<TxOut> findTxOuts (Map<Long, ArrayList<String>> need);
+
 	protected abstract void backwardCache (Blk b);
 
 	protected abstract void forwardCache (Blk b);
@@ -243,7 +245,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
-	public void cache () throws ValidationException
+	public void cache (boolean utxo) throws ValidationException
 	{
 		try
 		{
@@ -255,8 +257,11 @@ public abstract class CachedBlockStore implements BlockStore
 			log.trace ("Cache chain...");
 			cacheChain ();
 
-			log.trace ("Cache UTXO set ...");
-			cacheUTXO ();
+			if ( utxo )
+			{
+				log.trace ("Cache UTXO set ...");
+				cacheUTXO ();
+			}
 
 			log.trace ("Cache filled.");
 		}
@@ -743,6 +748,13 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
 	{
+		resolveInputsUsingUTXOCache (tcontext, t);
+		resolveInputsUsingDB (tcontext, t);
+		checkInputResolution (tcontext, t);
+	}
+
+	private void resolveInputsUsingUTXOCache (TransactionContext tcontext, Tx t) throws ValidationException
+	{
 		for ( final TxIn i : t.getInputs () )
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -751,18 +763,65 @@ public abstract class CachedBlockStore implements BlockStore
 				if ( resolved == null )
 				{
 					resolved = getUTXO (i.getSourceHash ());
-					if ( resolved == null )
-					{
-						throw new ValidationException ("Transaction refers to unknown or spent transaction " + i.getSourceHash () + " " + t.toWireDump ());
-					}
-					tcontext.resolvedInputs.put (i.getSourceHash (), resolved);
 				}
-				TxOut out = resolved.get (i.getIx ());
-				if ( out == null )
+				else
+				{
+					for ( Map.Entry<Long, TxOut> e : getUTXO (i.getSourceHash ()).entrySet () )
+					{
+						resolved.put (e.getKey (), e.getValue ());
+					}
+				}
+			}
+		}
+	}
+
+	private void resolveInputsUsingDB (TransactionContext tcontext, Tx t) throws ValidationException
+	{
+		Map<Long, ArrayList<String>> need = new HashMap<Long, ArrayList<String>> ();
+		for ( final TxIn i : t.getInputs () )
+		{
+			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
+				if ( resolved == null || !resolved.containsKey (i.getIx ()) )
+				{
+					ArrayList<String> hashes = need.get (i.getIx ());
+					if ( hashes == null )
+					{
+						hashes = new ArrayList<String> ();
+						need.put (i.getIx (), hashes);
+					}
+					hashes.add (i.getSourceHash ());
+				}
+			}
+		}
+		if ( !need.isEmpty () )
+		{
+			for ( TxOut o : findTxOuts (need) )
+			{
+				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (o.getTxHash ());
+				if ( outs == null )
+				{
+					outs = new HashMap<Long, TxOut> ();
+					tcontext.resolvedInputs.put (o.getTxHash (), outs);
+				}
+				outs.put (o.getIx (), o);
+			}
+		}
+	}
+
+	private void checkInputResolution (TransactionContext tcontext, Tx t) throws ValidationException
+	{
+		for ( final TxIn i : t.getInputs () )
+		{
+			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				if ( !tcontext.resolvedInputs.containsKey (i.getSourceHash ()) || !tcontext.resolvedInputs.get (i.getSourceHash ()).containsKey (i.getIx ()) )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 							+ t.toWireDump ());
 				}
+				TxOut out = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
 				if ( tcontext.block != null && out.isCoinbase () )
 				{
 					if ( out.getHeight () > tcontext.block.getHeight () - 100 )

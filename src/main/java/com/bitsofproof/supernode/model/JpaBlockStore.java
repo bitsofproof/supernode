@@ -15,8 +15,10 @@
  */
 package com.bitsofproof.supernode.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -28,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Hash;
 import com.mysema.query.jpa.impl.JPAQuery;
+import com.mysema.query.types.expr.BooleanExpression;
 
 @Component ("jpaBlockStore")
 public class JpaBlockStore extends CachedBlockStore
@@ -162,6 +165,27 @@ public class JpaBlockStore extends CachedBlockStore
 				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txin);
 		return rows;
+	}
+
+	@Override
+	protected List<TxOut> findTxOuts (Map<Long, ArrayList<String>> need)
+	{
+		QTxOut txout = QTxOut.txOut;
+		JPAQuery q = new JPAQuery (entityManager);
+		BooleanExpression exp = null;
+		for ( Long ix : need.keySet () )
+		{
+			if ( exp == null )
+			{
+				exp = txout.ix.eq (ix).and (txout.txHash.in (need.get (ix)));
+			}
+			else
+			{
+				exp = exp.or (txout.ix.eq (ix)).and (txout.txHash.in (need.get (ix)));
+			}
+		}
+
+		return q.from (txout).where (exp).list (txout);
 	}
 
 	@Override

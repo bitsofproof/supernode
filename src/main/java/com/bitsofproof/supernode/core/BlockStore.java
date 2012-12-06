@@ -24,7 +24,7 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public interface BlockStore
 {
-	public void cache () throws ValidationException;
+	public void cache (boolean utxo) throws ValidationException;
 
 	public List<String> getLocator ();
 

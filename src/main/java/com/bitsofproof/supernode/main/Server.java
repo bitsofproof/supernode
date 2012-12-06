@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.main;
 
 import java.io.IOException;
 
+import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -53,10 +54,12 @@ public class Server extends Main implements Main.App
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
+		gnuOptions.addOption ("c", "cache", false, "Cache UTXO");
 
+		CommandLine cl = null;
 		try
 		{
-			parser.parse (gnuOptions, args);
+			cl = parser.parse (gnuOptions, args);
 		}
 		catch ( ParseException e1 )
 		{
@@ -70,7 +73,7 @@ public class Server extends Main implements Main.App
 		}
 		try
 		{
-			network.getStore ().cache ();
+			network.getStore ().cache (cl.hasOption ('c'));
 			network.start ();
 		}
 		catch ( ValidationException e )
