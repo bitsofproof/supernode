@@ -233,43 +233,32 @@ public abstract class P2P
 					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
 					selector.wakeup ();
 				}
-				if ( channel.isConnectionPending () )
+				if ( channel.isOpen () )
 				{
-					log.trace ("Release connection slot of " + channel);
-					connectSlot.release ();
-				}
-				else
-				{
-					if ( channel.isConnected () )
+					if ( unsolicited )
 					{
-						if ( unsolicited )
-						{
-							log.trace ("Release unsolicited connection slot of ");
-							unsolicitedConnectSlot.release ();
-						}
-						else
-						{
-							log.trace ("Release connection slot of ");
-							connectSlot.release ();
-						}
-
-						channel.close ();
-						writes.clear ();
-						reads.clear ();
-						reads.add (closedMark);
-						openConnections.decrementAndGet ();
-						log.trace ("Number of connections is now " + openConnections.get ());
-
-						peerThreads.execute (new Runnable ()
-						{
-							@Override
-							public void run ()
-							{
-								onDisconnect (timeout, bannedFor, reason);
-							}
-						});
-
+						log.trace ("Release unsolicited connection slot of ");
+						unsolicitedConnectSlot.release ();
 					}
+					else
+					{
+						log.trace ("Release connection slot of " + channel);
+						connectSlot.release ();
+					}
+					channel.close ();
+					writes.clear ();
+					reads.clear ();
+					reads.add (closedMark);
+					openConnections.decrementAndGet ();
+					log.trace ("Number of connections is now " + openConnections.get ());
+					peerThreads.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							onDisconnect (timeout, bannedFor, reason);
+						}
+					});
 				}
 			}
 			catch ( IOException e )
