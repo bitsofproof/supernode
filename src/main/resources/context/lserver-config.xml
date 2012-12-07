@@ -37,8 +37,7 @@
 		</constructor-arg>		
 	</bean>
 
-	<bean id="lvlBlockStore" class="com.bitsofproof.supernode.model.LvlBlockStore"/>
-	<bean id="lvlPeerStore" class="com.bitsofproof.supernode.model.LvlPeerStore"/>
+	<bean id="lvlStore" class="com.bitsofproof.supernode.model.LvlStore"/>
 	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>

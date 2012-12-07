@@ -110,8 +110,8 @@ public class TxOut implements Serializable
 
 	public void toWire (WireFormat.Writer writer)
 	{
-		writer.writeUint64 (getValue ());
-		writer.writeVarBytes (getScript ());
+		writer.writeUint64 (value);
+		writer.writeVarBytes (script);
 	}
 
 	public void fromWire (WireFormat.Reader reader)

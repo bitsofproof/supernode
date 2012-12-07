@@ -76,12 +76,11 @@ public class Blk implements Serializable
 
 	private transient ArrayList<byte[]> txHashes;
 
-	public static Blk fromLevelDB (byte[] data, boolean head)
+	public static Blk fromLevelDB (byte[] data)
 	{
 		Blk b = new Blk ();
 		WireFormat.Reader reader = new WireFormat.Reader (data);
 		b.version = reader.readUint32 ();
-
 		b.previousHash = reader.readHash ().toString ();
 		b.merkleRoot = reader.readHash ().toString ();
 		b.createTime = reader.readUint32 ();
@@ -98,8 +97,18 @@ public class Blk implements Serializable
 
 	public byte[] toLevelDB ()
 	{
-		// TODO: unfinished
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeUint32 (version);
+		writer.writeHash (new Hash (previousHash));
+		writer.writeHash (new Hash (merkleRoot));
+		writer.writeUint32 (createTime);
+		writer.writeUint32 (difficultyTarget);
+		writer.writeUint32 (nonce);
+		writer.writeVarInt (transactions.size ());
+		for ( long i = 0; i < transactions.size (); ++i )
+		{
+			writer.writeHash (new Hash (transactions.get ((int) i).getHash ()));
+		}
 		return writer.toByteArray ();
 	}
 

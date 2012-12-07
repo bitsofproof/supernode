@@ -125,7 +125,6 @@ public class JpaBlockStore extends CachedBlockStore
 				}
 			}
 		}
-		entityManager.merge (b);
 	}
 
 	@Override
@@ -148,7 +147,6 @@ public class JpaBlockStore extends CachedBlockStore
 				}
 			}
 		}
-		entityManager.merge (b);
 	}
 
 	@Override
@@ -166,20 +164,20 @@ public class JpaBlockStore extends CachedBlockStore
 	}
 
 	@Override
-	protected List<TxOut> findTxOuts (Map<Long, HashSet<String>> need)
+	protected List<TxOut> findTxOuts (Map<String, HashSet<Long>> need)
 	{
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
 		BooleanExpression exp = null;
-		for ( Long ix : need.keySet () )
+		for ( String hash : need.keySet () )
 		{
 			if ( exp == null )
 			{
-				exp = txout.ix.eq (ix).and (txout.txHash.in (need.get (ix)));
+				exp = txout.txHash.eq (hash).and (txout.ix.in (need.get (hash)));
 			}
 			else
 			{
-				exp = BooleanExpression.anyOf (exp, BooleanExpression.allOf (txout.ix.eq (ix)).and (txout.txHash.in (need.get (ix))));
+				exp = BooleanExpression.anyOf (exp, BooleanExpression.allOf (txout.txHash.eq (hash)).and (txout.ix.in (need.get (hash))));
 			}
 		}
 

@@ -34,6 +34,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
@@ -129,6 +130,81 @@ public class Tx implements Serializable
 			hash = reader.hash ().toString ();
 		}
 		return hash;
+	}
+
+	public static Tx fromLevelDB (byte[] data)
+	{
+		WireFormat.Reader reader = new WireFormat.Reader (data);
+		Tx t = new Tx ();
+
+		t.version = reader.readUint32 ();
+		t.lockTime = reader.readUint32 ();
+		t.ix = reader.readUint32 ();
+		t.hash = reader.readHash ().toString ();
+		int n = (int) reader.readVarInt ();
+		t.setInputs (new ArrayList<TxIn> (n));
+		for ( int i = 0; i < n; ++i )
+		{
+			TxIn in = new TxIn ();
+			in.setIx (reader.readUint32 ());
+			in.setSourceHash (reader.readHash ().toString ());
+			in.setScript (reader.readVarBytes ());
+			in.setSequence (reader.readUint32 ());
+			t.getInputs ().add (in);
+		}
+
+		n = (int) reader.readVarInt ();
+		t.setOutputs (new ArrayList<TxOut> ());
+		for ( int i = 0; i < n; ++i )
+		{
+			TxOut o = new TxOut ();
+			o.setValue (reader.readUint64 ());
+			o.setScript (reader.readVarBytes ());
+			o.setIx (reader.readUint32 ());
+			o.setVotes (reader.readUint32 ());
+			o.setCoinbase (reader.readByte () != 0);
+			o.setOwner1 (reader.readString ());
+			o.setOwner2 (reader.readString ());
+			o.setOwner3 (reader.readString ());
+			o.setAvailable (reader.readByte () != 0);
+			o.setTxHash (reader.readHash ().toString ());
+			o.setHeight (reader.readUint32 ());
+			t.getOutputs ().add (o);
+		}
+		return t;
+	}
+
+	public byte[] toLevelDB ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeUint32 (version);
+		writer.writeUint32 (lockTime);
+		writer.writeUint32 (ix);
+		writer.writeHash (new Hash (hash));
+		writer.writeVarInt (inputs.size ());
+		for ( TxIn in : inputs )
+		{
+			writer.writeUint32 (in.getIx ());
+			writer.writeHash (new Hash (in.getSourceHash ()));
+			writer.writeBytes (in.getScript ());
+			writer.writeUint32 (in.getSequence ());
+		}
+		writer.writeVarInt (outputs.size ());
+		for ( TxOut o : outputs )
+		{
+			writer.writeUint64 (o.getValue ());
+			writer.writeBytes (o.getScript ());
+			writer.writeUint32 (o.getIx ());
+			writer.writeUint32 (o.getVotes ());
+			writer.writeByte (o.isCoinbase () ? 1 : 0);
+			writer.writeString (o.getOwner1 ());
+			writer.writeString (o.getOwner2 ());
+			writer.writeString (o.getOwner3 ());
+			writer.writeByte (o.isAvailable () ? 1 : 0);
+			writer.writeHash (new Hash (o.getTxHash ()));
+			writer.writeUint32 (o.getHeight ());
+		}
+		return writer.toByteArray ();
 	}
 
 	public String toWireDump ()

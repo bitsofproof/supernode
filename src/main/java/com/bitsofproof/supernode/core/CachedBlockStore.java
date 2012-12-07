@@ -73,7 +73,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheUTXO ();
 
-	protected abstract List<TxOut> findTxOuts (Map<Long, HashSet<String>> need);
+	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
 	protected abstract void backwardCache (Blk b);
 
@@ -769,7 +769,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void resolveInputsUsingDB (TransactionContext tcontext, Tx t) throws ValidationException
 	{
-		Map<Long, HashSet<String>> need = new HashMap<Long, HashSet<String>> ();
+		Map<String, HashSet<Long>> need = new HashMap<String, HashSet<Long>> ();
 		for ( final TxIn i : t.getInputs () )
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -777,13 +777,13 @@ public abstract class CachedBlockStore implements BlockStore
 				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
 				if ( resolved == null || !resolved.containsKey (i.getIx ()) )
 				{
-					HashSet<String> hashes = need.get (i.getIx ());
-					if ( hashes == null )
+					HashSet<Long> ixs = need.get (i.getSourceHash ());
+					if ( ixs == null )
 					{
-						hashes = new HashSet<String> ();
-						need.put (i.getIx (), hashes);
+						ixs = new HashSet<Long> ();
+						need.put (i.getSourceHash (), ixs);
 					}
-					hashes.add (i.getSourceHash ());
+					ixs.add (i.getIx ());
 				}
 			}
 		}
