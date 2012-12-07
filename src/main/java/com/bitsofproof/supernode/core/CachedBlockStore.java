@@ -94,7 +94,6 @@ public abstract class CachedBlockStore implements BlockStore
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
 	@Override
-	@Transactional (propagation = Propagation.MANDATORY)
 	public abstract List<TxOut> getUnspentOutput (List<String> addresses);
 
 	protected abstract List<Object[]> getSpendList (List<String> addresses);
@@ -243,8 +242,8 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public void cache (boolean utxo) throws ValidationException
 	{
 		try
@@ -390,7 +389,7 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public List<TxIn> getSpent (List<String> addresses)
 	{
 		List<Object[]> rows = getSpendList (addresses);
@@ -419,7 +418,7 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public List<TxOut> getReceived (List<String> addresses)
 	{
 		List<Object[]> rows = getReceivedList (addresses);
@@ -1142,7 +1141,7 @@ public abstract class CachedBlockStore implements BlockStore
 		insertBlock (genesis);
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY)
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
 	public Blk getBlock (String hash)
 	{
@@ -1164,7 +1163,7 @@ public abstract class CachedBlockStore implements BlockStore
 		return retrieveBlock (cached);
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED)
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
 	public void validateTransaction (Tx t) throws ValidationException
 	{

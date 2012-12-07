@@ -17,10 +17,6 @@ package com.bitsofproof.supernode.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
@@ -35,8 +31,6 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 	private final BlockStore store;
 	private TxHandler txHandler;
-
-	private PlatformTransactionManager transactionManager;
 
 	public GetDataHandler (BitcoinNetwork network)
 	{
@@ -62,24 +56,15 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 		for ( final byte[] h : m.getBlocks () )
 		{
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			final Blk b = store.getBlock (new Hash (h).toString ());
+			if ( b != null )
 			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
-				{
-					status.setRollbackOnly ();
+				final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
 
-					final Blk b = store.getBlock (new Hash (h).toString ());
-					if ( b != null )
-					{
-						final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
-
-						bm.setBlock (b);
-						peer.send (bm);
-					}
-					log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
-				}
-			});
+				bm.setBlock (b);
+				peer.send (bm);
+			}
+			log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 		}
 	}
 
@@ -87,10 +72,4 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 	{
 		this.txHandler = txHandler;
 	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
-	}
-
 }

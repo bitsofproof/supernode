@@ -24,7 +24,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.bitsofproof.supernode.core.CachedBlockStore;
@@ -32,7 +31,6 @@ import com.bitsofproof.supernode.core.Hash;
 import com.mysema.query.jpa.impl.JPAQuery;
 import com.mysema.query.types.expr.BooleanExpression;
 
-@Component ("jpaBlockStore")
 public class JpaBlockStore extends CachedBlockStore
 {
 	@PersistenceContext

@@ -75,7 +75,7 @@ public class Main
 
 	protected static void printUsage ()
 	{
-		System.err.println ("Usage: java com.bitsofproof.Supernode < demo | server | audit > [COMMAND ARGS]");
+		System.err.println ("Usage: java com.bitsofproof.Supernode < demo | server | lserver | audit > [COMMAND ARGS]");
 	}
 
 	protected static GenericXmlApplicationContext loadContext (Profile profile) throws IOException
@@ -102,7 +102,7 @@ public class Main
 
 	protected static enum Profile
 	{
-		DEMO, AUDIT, SERVER, ARCHIVE;
+		DEMO, AUDIT, SERVER, LSERVER, ARCHIVE;
 
 		@Override
 		public String toString ()

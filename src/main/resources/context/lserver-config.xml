@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans profile="server"  
+<beans profile="lserver"  
     xmlns="http://www.springframework.org/schema/beans"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
@@ -16,48 +16,6 @@
 	<bean id="application" class="com.bitsofproof.supernode.main.Server">
 		<property name="network" ref="bitcoinNetwork" />
 	</bean>
-	
-	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource">
-		<property name="portNumber" value="${port}" />
-		<property name="serverName" value="${server}" />
-		<property name="databaseName" value="${database}" />
-		<property name="user" value="${user}" />
-		<property name="password" value="${password}" />
-		<property name="createDatabase" value="create" />
-	</bean>
-
-	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
-		<property name="dataSource" ref="derbyDataSource" />
-	</bean>
-
-	<bean id="entityManagerFactory"
-		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
-		<property name="persistenceXmlLocation" value="classpath:/etc/persistence-${spring.profiles.active:demo}.xml" />
-		<property name="jpaVendorAdapter" ref="jpaVendorAdapter" />
-		<property name="dataSource" ref="dataSource" />
-		<property name="jpaProperties">
-			<props>
-				<prop key="hibernate.dialect">org.hibernate.dialect.DerbyDialect</prop>
-				<prop key="hibernate.cache.provider_class">org.hibernate.cache.HashtableCacheProvider</prop>
-			</props>
-		</property>
-	</bean>
-
-	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
-		<property name="entityManagerFactory" ref="entityManagerFactory"/>
-	</bean>
-
-	<tx:annotation-driven transaction-manager="transactionManager" />
-
-	<bean id="jpaVendorAdapter"
-		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
-		<property name="showSql" value="false" />
-		<property name="generateDdl" value="true" />
-		<property name="database" value="DERBY" />
-	</bean>
-	
-	<bean id="jpaBlockStore" class="com.bitsofproof.supernode.model.JpaBlockStore" />
-	<bean id="jpaPeerStore" class="com.bitsofproof.supernode.model.JpaPeerStore" />
 	
 	<bean id="dnsDiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
 		<property name="seedHosts">
@@ -79,6 +37,9 @@
 		</constructor-arg>		
 	</bean>
 
+	<bean id="lvlBlockStore" class="com.bitsofproof.supernode.model.LvlBlockStore"/>
+	<bean id="lvlPeerStore" class="com.bitsofproof.supernode.model.LvlPeerStore"/>
+	
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>
 			<value>10</value>

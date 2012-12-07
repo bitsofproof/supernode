@@ -16,26 +16,4 @@
 
 	<alias name="${chain}" alias="chain" />
 
-	<bean id="dataSource" abstract="true"/>
-	<bean id="jpaVendorAdapter" abstract="true" />
-
-	<bean id="entityManagerFactory"
-		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
-		<property name="persistenceXmlLocation" value="classpath:/etc/persistence-${spring.profiles.active:demo}.xml" />
-		<property name="jpaVendorAdapter" ref="jpaVendorAdapter" />
-		<property name="dataSource" ref="dataSource" />
-		<property name="jpaProperties">
-			<props>
-				<prop key="hibernate.dialect">org.hibernate.dialect.DerbyDialect</prop>
-				<prop key="hibernate.cache.provider_class">org.hibernate.cache.HashtableCacheProvider</prop>
-			</props>
-		</property>
-	</bean>
-
-	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
-		<property name="entityManagerFactory" ref="entityManagerFactory"/>
-	</bean>
-
-	<tx:annotation-driven transaction-manager="transactionManager" />
-
 </beans>

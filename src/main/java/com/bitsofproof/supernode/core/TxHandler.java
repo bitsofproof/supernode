@@ -25,11 +25,6 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
@@ -43,8 +38,6 @@ import com.bitsofproof.supernode.model.TxOut;
 public class TxHandler implements ChainListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TxHandler.class);
-
-	private PlatformTransactionManager transactionManager;
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
@@ -89,27 +82,10 @@ public class TxHandler implements ChainListener
 				heard.remove (txm.getTx ().getHash ());
 				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) && !loader.isBehind () )
 				{
-					if ( new TransactionTemplate (transactionManager).execute (new TransactionCallback<Boolean> ()
+					try
 					{
-						@Override
-						public Boolean doInTransaction (TransactionStatus status)
-						{
-							status.setRollbackOnly ();
-							try
-							{
-								store.validateTransaction (txm.getTx ());
-								cacheTransaction (txm.getTx ());
-								return true;
-							}
-							catch ( ValidationException e )
-							{
-								peer.error ("Received invalid transaction", 50);
-								log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress (), e);
-							}
-							return false;
-						}
-					}).booleanValue () )
-					{
+						store.validateTransaction (txm.getTx ());
+						cacheTransaction (txm.getTx ());
 						for ( BitcoinPeer p : network.getConnectPeers () )
 						{
 							if ( p != peer )
@@ -119,6 +95,11 @@ public class TxHandler implements ChainListener
 								p.send (tm);
 							}
 						}
+					}
+					catch ( ValidationException e )
+					{
+						peer.error ("Received invalid transaction", 50);
+						log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress (), e);
 					}
 				}
 			}
@@ -156,11 +137,6 @@ public class TxHandler implements ChainListener
 	public Tx getTransaction (String hash)
 	{
 		return unconfirmed.get (hash);
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
 	}
 
 	public void cacheTransaction (Tx tx)
@@ -239,38 +215,30 @@ public class TxHandler implements ChainListener
 	@Override
 	public void blockAdded (final Blk blk)
 	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		synchronized ( unconfirmed )
 		{
-
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			if ( unconfirmed.isEmpty () )
 			{
-				synchronized ( unconfirmed )
+				return;
+			}
+			for ( Tx tx : blk.getTransactions () )
+			{
+				heard.remove (tx.getHash ());
+				Tx cached = unconfirmed.get (tx.getHash ());
+				unconfirmed.remove (tx.getHash ());
+				for ( TxIn in : cached.getInputs () )
 				{
-					if ( unconfirmed.isEmpty () )
-					{
-						return;
-					}
-					for ( Tx tx : blk.getTransactions () )
-					{
-						heard.remove (tx.getHash ());
-						Tx cached = unconfirmed.get (tx.getHash ());
-						unconfirmed.remove (tx.getHash ());
-						for ( TxIn in : cached.getInputs () )
-						{
-							removeSpent (in, in.getSource ().getOwner1 ());
-							removeSpent (in, in.getSource ().getOwner2 ());
-							removeSpent (in, in.getSource ().getOwner3 ());
-						}
-						for ( TxOut out : cached.getOutputs () )
-						{
-							removeReceived (out, out.getOwner1 ());
-							removeReceived (out, out.getOwner2 ());
-							removeReceived (out, out.getOwner3 ());
-						}
-					}
+					removeSpent (in, in.getSource ().getOwner1 ());
+					removeSpent (in, in.getSource ().getOwner2 ());
+					removeSpent (in, in.getSource ().getOwner3 ());
+				}
+				for ( TxOut out : cached.getOutputs () )
+				{
+					removeReceived (out, out.getOwner1 ());
+					removeReceived (out, out.getOwner2 ());
+					removeReceived (out, out.getOwner3 ());
 				}
 			}
-		});
+		}
 	}
 }

@@ -18,9 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.bitsofproof.supernode.core.CachedBlockStore;
 
-public class lvlBlockStore extends CachedBlockStore
+public class LvlBlockStore extends CachedBlockStore
 {
-	private static final Logger log = LoggerFactory.getLogger (lvlBlockStore.class);
+	private static final Logger log = LoggerFactory.getLogger (LvlBlockStore.class);
 
 	private String database = "data";
 	private long cacheSize = 100;
@@ -54,7 +54,7 @@ public class lvlBlockStore extends CachedBlockStore
 		}
 	}
 
-	public lvlBlockStore ()
+	public LvlBlockStore ()
 	{
 		org.iq80.leveldb.Logger logger = new org.iq80.leveldb.Logger ()
 		{
@@ -71,12 +71,12 @@ public class lvlBlockStore extends CachedBlockStore
 		try
 		{
 			db = factory.open (new File (database), options);
+			log.trace (db.getProperty ("leveldb.stats"));
 		}
 		catch ( IOException e )
 		{
 			log.error ("Error opening LevelDB ", e);
 		}
-		log.trace (db.getProperty ("leveldb.stats"));
 	}
 
 	public void setDatabase (String database)
