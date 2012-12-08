@@ -231,11 +231,15 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					TxOut source = in.getSource (); // TODO: wrong
+					Tx sourceTx = readTx (new Hash (in.getSourceHash ()).toByteArray ());
+					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
 					source.setAvailable (true);
+					writeTx (sourceTx);
+
 					addUTXO (in.getSourceHash (), source.flatCopy (null));
 				}
 			}
+			writeTx (t);
 		}
 	}
 
@@ -254,7 +258,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					in.getSource ().setAvailable (false);
+					Tx sourceTx = readTx (new Hash (in.getSourceHash ()).toByteArray ());
+					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
+					source.setAvailable (false);
+					writeTx (sourceTx);
+
 					removeUTXO (in.getSourceHash (), in.getIx ());
 				}
 			}
@@ -287,10 +295,25 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (List<String> addresses)
+	protected List<Object[]> getReceivedList (final List<String> addresses)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		final List<Object[]> result = new ArrayList<Object[]> ();
+		forAll (KeyType.TX, new DataProcessor ()
+		{
+			@Override
+			public void process (byte[] data)
+			{
+				Tx t = Tx.fromLevelDB (data);
+				for ( TxOut o : t.getOutputs () )
+				{
+					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
+					{
+						result.add (new Object[] { t.getBlockHash (), o });
+					}
+				}
+			}
+		});
+		return result;
 	}
 
 	@Override

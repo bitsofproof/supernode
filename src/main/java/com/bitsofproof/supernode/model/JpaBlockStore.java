@@ -44,15 +44,18 @@ public class JpaBlockStore extends CachedBlockStore
 	{
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		for ( TxOut o : q.from (txout).where (txout.available.eq (true)).list (txout) )
+		for ( TxOut o : q.from (txout).list (txout) )
 		{
-			HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
-			if ( outs == null )
+			if ( o.isAvailable () )
 			{
-				outs = new HashMap<Long, TxOut> ();
-				cachedUTXO.put (o.getTxHash (), outs);
+				HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
+				if ( outs == null )
+				{
+					outs = new HashMap<Long, TxOut> ();
+					cachedUTXO.put (o.getTxHash (), outs);
+				}
+				outs.put (o.getIx (), o.flatCopy (null));
 			}
-			outs.put (o.getIx (), o.flatCopy (null));
 			entityManager.detach (o);
 		}
 	}

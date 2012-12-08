@@ -70,6 +70,8 @@ public class Tx implements Serializable
 	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Blk block;
 
+	private transient String blockHash;
+
 	public Long getId ()
 	{
 		return id;
@@ -137,10 +139,11 @@ public class Tx implements Serializable
 		WireFormat.Reader reader = new WireFormat.Reader (data);
 		Tx t = new Tx ();
 
+		t.blockHash = reader.readHash ().toString ();
+		t.hash = reader.readHash ().toString ();
 		t.version = reader.readUint32 ();
 		t.lockTime = reader.readUint32 ();
 		t.ix = reader.readUint32 ();
-		t.hash = reader.readHash ().toString ();
 		int n = (int) reader.readVarInt ();
 		t.setInputs (new ArrayList<TxIn> (n));
 		for ( int i = 0; i < n; ++i )
@@ -177,10 +180,11 @@ public class Tx implements Serializable
 	public byte[] toLevelDB ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeHash (new Hash (blockHash));
+		writer.writeHash (new Hash (hash));
 		writer.writeUint32 (version);
 		writer.writeUint32 (lockTime);
 		writer.writeUint32 (ix);
-		writer.writeHash (new Hash (hash));
 		writer.writeVarInt (inputs.size ());
 		for ( TxIn in : inputs )
 		{
@@ -366,5 +370,15 @@ public class Tx implements Serializable
 		}
 
 		return c;
+	}
+
+	public String getBlockHash ()
+	{
+		return blockHash;
+	}
+
+	public void setBlockHash (String blockHash)
+	{
+		this.blockHash = blockHash;
 	}
 }
