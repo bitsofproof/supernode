@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +23,7 @@ import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.PeerStore;
+import com.bitsofproof.supernode.core.WireFormat;
 
 public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 {
@@ -30,6 +32,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	private String database = "data";
 	private long cacheSize = 100;
 	private static DB db;
+	private final SecureRandom rnd = new SecureRandom ();
 
 	private static enum KeyType
 	{
@@ -40,9 +43,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		public static byte[] createKey (KeyType kt, byte[] key)
 		{
-			byte[] k = new byte[key.length];
+			byte[] k = new byte[key.length + 1];
 			k[0] = (byte) kt.ordinal ();
-			System.arraycopy (key, 1, k, 0, key.length);
+			System.arraycopy (key, 0, k, 1, key.length);
 			return k;
 		}
 
@@ -121,9 +124,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 	}
 
-	private Tx readTx (byte[] hash)
+	private Tx readTx (String hash)
 	{
-		byte[] data = db.get (Key.createKey (KeyType.TX, hash));
+		byte[] data = db.get (Key.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
 			return Tx.fromLevelDB (data);
@@ -134,6 +137,48 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	private void writeTx (Tx t)
 	{
 		db.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+	}
+
+	private Head readHead (Long id)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeUint64 (id);
+		return Head.fromLevelDB (db.get (Key.createKey (KeyType.HEAD, writer.toByteArray ())));
+	}
+
+	private void writeHead (Head h)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeUint64 (h.getId ());
+		db.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
+	}
+
+	private Blk readBlk (String hash, boolean full)
+	{
+		byte[] data = db.get (Key.createKey (KeyType.BLOCK, new Hash (hash).toByteArray ()));
+		if ( data != null )
+		{
+			Blk b = Blk.fromLevelDB (data);
+			if ( full )
+			{
+				b.setTransactions (new ArrayList<Tx> ());
+				for ( String txhash : b.getTxHashes () )
+				{
+					b.getTransactions ().add (readTx (txhash));
+				}
+			}
+			return b;
+		}
+		return null;
+	}
+
+	private void writeBlk (Blk b)
+	{
+		db.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
+		for ( Tx t : b.getTransactions () )
+		{
+			writeTx (t);
+		}
 	}
 
 	@Override
@@ -155,10 +200,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
 				}
 				cachedBlocks.put (b.getHash (), cb);
+				b.setHead (readHead (b.getHeadId ()));
 				CachedHead h = cachedHeads.get (b.getHead ().getId ());
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
-
 			}
 		});
 	}
@@ -231,7 +276,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					Tx sourceTx = readTx (new Hash (in.getSourceHash ()).toByteArray ());
+					Tx sourceTx = readTx (in.getSourceHash ());
 					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
 					source.setAvailable (true);
 					writeTx (sourceTx);
@@ -258,7 +303,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					Tx sourceTx = readTx (new Hash (in.getSourceHash ()).toByteArray ());
+					Tx sourceTx = readTx (in.getSourceHash ());
 					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
 					source.setAvailable (false);
 					writeTx (sourceTx);
@@ -277,7 +322,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 		for ( String hash : need.keySet () )
 		{
-			Tx t = readTx (new Hash (hash).toByteArray ());
+			Tx t = readTx (hash);
 			if ( t != null )
 			{
 				for ( Long ix : need.get (hash) )
@@ -319,41 +364,39 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected TxOut getSourceReference (TxOut source)
 	{
-		return readTx (new Hash (source.getTxHash ()).toByteArray ()).getOutputs ().get (source.getIx ().intValue ());
+		return readTx (source.getTxHash ()).getOutputs ().get (source.getIx ().intValue ());
 	}
 
 	@Override
 	protected void insertBlock (Blk b)
 	{
-		// TODO Auto-generated method stub
-
+		writeBlk (b);
 	}
 
 	@Override
 	protected void insertHead (Head head)
 	{
-		// TODO Auto-generated method stub
-
+		head.setId (rnd.nextLong ());
+		writeHead (head);
 	}
 
 	@Override
 	protected Head updateHead (Head head)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		writeHead (head);
+		return head;
 	}
 
 	@Override
 	protected Blk retrieveBlock (CachedBlock cached)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return readBlk (cached.getHash (), true);
 	}
 
 	@Override
 	protected Blk retrieveBlockHeader (CachedBlock cached)
 	{
-		return null;
+		return readBlk (cached.getHash (), false);
 	}
 
 	@Override

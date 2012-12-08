@@ -180,6 +180,10 @@ public class Tx implements Serializable
 	public byte[] toLevelDB ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		if ( blockHash == null )
+		{
+			blockHash = block.getHash ();
+		}
 		writer.writeHash (new Hash (blockHash));
 		writer.writeHash (new Hash (hash));
 		writer.writeUint32 (version);

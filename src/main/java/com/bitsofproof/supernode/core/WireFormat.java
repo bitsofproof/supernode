@@ -125,8 +125,11 @@ public class WireFormat
 		public byte[] readBytes (int length)
 		{
 			byte[] b = new byte[length];
-			System.arraycopy (bytes, cursor, b, 0, length);
-			cursor += length;
+			if ( length > 0 )
+			{
+				System.arraycopy (bytes, cursor, b, 0, length);
+				cursor += length;
+			}
 			return b;
 		}
 
@@ -324,7 +327,10 @@ public class WireFormat
 			writeVarInt (b.length);
 			try
 			{
-				bs.write (b);
+				if ( b.length > 0 )
+				{
+					bs.write (b);
+				}
 			}
 			catch ( IOException e )
 			{
@@ -335,7 +341,14 @@ public class WireFormat
 		{
 			try
 			{
-				writeVarBytes (s.getBytes ("UTF-8"));
+				if ( s != null )
+				{
+					writeVarBytes (s.getBytes ("UTF-8"));
+				}
+				else
+				{
+					writeVarBytes (new byte[0]);
+				}
 			}
 			catch ( UnsupportedEncodingException e )
 			{

@@ -102,6 +102,8 @@ public class TestChain implements Chain
 		input.setTransaction (t);
 		inputs.add (input);
 		input.setSource (null);
+		input.setSourceHash (Hash.ZERO_HASH_STRING);
+		input.setIx (0L);
 		input.setSequence (0xFFFFFFFFL);
 		input.setScript (ByteUtils.fromHex ("04" + "ffff001d" + // difficulty target
 				"010445" +

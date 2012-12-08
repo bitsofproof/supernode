@@ -74,23 +74,26 @@ public class Blk implements Serializable
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
-	private transient ArrayList<byte[]> txHashes;
+	private transient ArrayList<String> txHashes;
+	private transient Long headId;
 
 	public static Blk fromLevelDB (byte[] data)
 	{
 		Blk b = new Blk ();
 		WireFormat.Reader reader = new WireFormat.Reader (data);
+		b.hash = reader.readHash ().toString ();
 		b.version = reader.readUint32 ();
 		b.previousHash = reader.readHash ().toString ();
 		b.merkleRoot = reader.readHash ().toString ();
 		b.createTime = reader.readUint32 ();
 		b.difficultyTarget = reader.readUint32 ();
 		b.nonce = reader.readUint32 ();
+		b.headId = reader.readUint64 ();
 		long nt = reader.readVarInt ();
-		b.txHashes = new ArrayList<byte[]> ((int) nt);
+		b.txHashes = new ArrayList<String> ((int) nt);
 		for ( long i = 0; i < nt; ++i )
 		{
-			b.txHashes.add (reader.readHash ().toByteArray ());
+			b.txHashes.add (reader.readHash ().toString ());
 		}
 		return b;
 	}
@@ -98,12 +101,14 @@ public class Blk implements Serializable
 	public byte[] toLevelDB ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeHash (new Hash (hash));
 		writer.writeUint32 (version);
 		writer.writeHash (new Hash (previousHash));
 		writer.writeHash (new Hash (merkleRoot));
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
+		writer.writeUint64 (headId = head.getId ());
 		writer.writeVarInt (transactions.size ());
 		for ( long i = 0; i < transactions.size (); ++i )
 		{
@@ -112,7 +117,7 @@ public class Blk implements Serializable
 		return writer.toByteArray ();
 	}
 
-	public ArrayList<byte[]> getTxHashes ()
+	public ArrayList<String> getTxHashes ()
 	{
 		return txHashes;
 	}
@@ -423,4 +428,15 @@ public class Blk implements Serializable
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
 	}
+
+	public Long getHeadId ()
+	{
+		return headId;
+	}
+
+	public void setHeadId (Long headId)
+	{
+		this.headId = headId;
+	}
+
 }
