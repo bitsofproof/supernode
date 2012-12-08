@@ -308,7 +308,7 @@ public class BitcoinPeer extends P2P.Peer
 	protected void onDisconnect (long timeout, long bannedForSeconds, String reason)
 	{
 		network.notifyPeerRemoved (this);
-		log.info ("Disconnected '" + getAgent () + "' at " + getAddress () + ". Open connections: " + getNetwork ().getNumberOfConnections ());
+		log.info ("Disconnected '" + getAgent () + "' at " + getAddress ());
 		if ( network.getPeerStore () != null )
 		{
 			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());

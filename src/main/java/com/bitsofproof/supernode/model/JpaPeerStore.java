@@ -49,10 +49,33 @@ public class JpaPeerStore implements Discovery, PeerStore
 	{
 		try
 		{
-			entityManager.merge (peer);
-			log.trace ("Stored peer " + peer.getAddress ());
+			KnownPeer stored;
+			if ( (stored = findPeer (InetAddress.getByName (peer.getAddress ()))) == null )
+			{
+				entityManager.persist (peer);
+			}
+			else
+			{
+				stored.setAgent (peer.getAgent ());
+				stored.setBanned (peer.getBanned ());
+				stored.setBanReason (peer.getBanReason ());
+				stored.setConnected (peer.getConnected ());
+				stored.setDisconnected (peer.getDisconnected ());
+				stored.setHeight (peer.getHeight ());
+				stored.setName (peer.getName ());
+				stored.setPreference (peer.getPreference ());
+				stored.setResponseTime (peer.getResponseTime ());
+				stored.setServices (peer.getServices ());
+				stored.setTrafficIn (peer.getTrafficIn ());
+				stored.setTrafficOut (peer.getTrafficOut ());
+				stored.setVersion (peer.getVersion ());
+				entityManager.merge (stored);
+			}
 		}
 		catch ( ConstraintViolationException e )
+		{
+		}
+		catch ( UnknownHostException e )
 		{
 		}
 	}
@@ -63,12 +86,7 @@ public class JpaPeerStore implements Discovery, PeerStore
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);
-		KnownPeer peer = q.from (kp).where (kp.address.eq (address.getHostAddress ())).uniqueResult (kp);
-		if ( peer != null )
-		{
-			log.trace ("Retrieved peer " + peer.getAddress ());
-		}
-		return peer;
+		return q.from (kp).where (kp.address.eq (address.getHostAddress ())).uniqueResult (kp);
 	}
 
 	@Override

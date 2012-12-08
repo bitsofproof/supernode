@@ -58,6 +58,7 @@ public abstract class P2P
 		private final InetSocketAddress address;
 		private SocketChannel channel;
 		private boolean unsolicited;
+		private final Semaphore connected = new Semaphore (0);
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
@@ -224,33 +225,33 @@ public abstract class P2P
 
 		protected void disconnect (final long timeout, final long bannedFor, final String reason)
 		{
-			log.trace ("Disconnect " + channel);
 			try
 			{
 				if ( channel.isRegistered () )
 				{
-					log.trace ("Deregistering " + channel + " from selector");
 					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
 					selector.wakeup ();
 				}
-				if ( channel.isOpen () )
+				if ( connected.tryAcquire () )
 				{
+					log.trace ("Disconnect " + channel);
+
+					openConnections.decrementAndGet ();
+					log.trace ("Number of channels is now " + openConnections.get ());
+
 					if ( unsolicited )
 					{
-						log.trace ("Release unsolicited connection slot of ");
 						unsolicitedConnectSlot.release ();
 					}
 					else
 					{
-						log.trace ("Release connection slot of " + channel);
 						connectSlot.release ();
 					}
 					channel.close ();
 					writes.clear ();
 					reads.clear ();
 					reads.add (closedMark);
-					openConnections.decrementAndGet ();
-					log.trace ("Number of connections is now " + openConnections.get ());
+
 					peerThreads.execute (new Runnable ()
 					{
 						@Override
@@ -537,6 +538,7 @@ public abstract class P2P
 												SelectionKey reg = client.register (selector, SelectionKey.OP_READ);
 												reg.attach (peer);
 												openConnections.incrementAndGet ();
+												peer.connected.release ();
 												scheduler.schedule (new Runnable ()
 												{
 													@Override
@@ -565,17 +567,24 @@ public abstract class P2P
 										try
 										{
 											SocketChannel client = (SocketChannel) key.channel ();
-											client.finishConnect ();
-											openConnections.incrementAndGet ();
-											key.interestOps (SelectionKey.OP_READ);
-											peerThreads.execute (new Runnable ()
+											if ( client.finishConnect () )
 											{
-												@Override
-												public void run ()
+												openConnections.incrementAndGet ();
+												key.interestOps (SelectionKey.OP_READ);
+												peer.connected.release ();
+												peerThreads.execute (new Runnable ()
 												{
-													peer.onConnect ();
-												}
-											});
+													@Override
+													public void run ()
+													{
+														peer.onConnect ();
+													}
+												});
+											}
+											else
+											{
+												peer.disconnect ();
+											}
 										}
 										catch ( IOException e )
 										{
