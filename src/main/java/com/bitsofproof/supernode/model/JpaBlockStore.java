@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,7 +30,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Hash;
 import com.mysema.query.jpa.impl.JPAQuery;
-import com.mysema.query.types.expr.BooleanExpression;
 
 public class JpaBlockStore extends CachedBlockStore
 {
@@ -166,22 +166,17 @@ public class JpaBlockStore extends CachedBlockStore
 	@Override
 	protected List<TxOut> findTxOuts (Map<String, HashSet<Long>> need)
 	{
+		List<TxOut> fromDB = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		BooleanExpression exp = null;
-		for ( String hash : need.keySet () )
+		for ( TxOut o : q.from (txout).where (txout.txHash.in (need.keySet ())).list (txout) )
 		{
-			if ( exp == null )
+			if ( o.isAvailable () && need.get (o.getTxHash ()).contains (o.getIx ()) )
 			{
-				exp = txout.txHash.eq (hash).and (txout.ix.in (need.get (hash)));
-			}
-			else
-			{
-				exp = BooleanExpression.anyOf (exp, BooleanExpression.allOf (txout.txHash.eq (hash)).and (txout.ix.in (need.get (hash))));
+				fromDB.add (o);
 			}
 		}
-
-		return q.from (txout).where (BooleanExpression.allOf (exp, txout.available.eq (true))).list (txout);
+		return fromDB;
 	}
 
 	@Override
