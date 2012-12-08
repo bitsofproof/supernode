@@ -247,11 +247,9 @@ public abstract class P2P
 					{
 						connectSlot.release ();
 					}
-					channel.close ();
 					writes.clear ();
 					reads.clear ();
 					reads.add (closedMark);
-
 					peerThreads.execute (new Runnable ()
 					{
 						@Override
@@ -260,6 +258,10 @@ public abstract class P2P
 							onDisconnect (timeout, bannedFor, reason);
 						}
 					});
+				}
+				if ( channel.isConnected () )
+				{
+					channel.close ();
 				}
 			}
 			catch ( IOException e )
