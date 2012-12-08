@@ -259,7 +259,7 @@ public abstract class P2P
 						}
 					});
 				}
-				if ( channel.isConnected () )
+				if ( channel.isOpen () )
 				{
 					channel.close ();
 				}
