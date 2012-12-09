@@ -610,67 +610,69 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				resolveInputs (tcontext, t);
 			}
-			log.trace ("validating block " + b.getHash ());
-			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
-			for ( final Tx t : b.getTransactions () )
+			if ( b.getHeight () > chain.getValidateFrom () )
 			{
-				if ( tcontext.coinbase )
+				log.trace ("validating block " + b.getHash ());
+				List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
+				for ( final Tx t : b.getTransactions () )
 				{
-					try
+					if ( tcontext.coinbase )
 					{
-						validateTransaction (tcontext, t);
-					}
-					catch ( TransactionValidationException e )
-					{
-						throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
-					}
-				}
-				else
-				{
-					callables.add (new Callable<TransactionValidationException> ()
-					{
-						@Override
-						public TransactionValidationException call ()
+						try
 						{
-							try
-							{
-								validateTransaction (tcontext, t);
-							}
-							catch ( TransactionValidationException e )
-							{
-								return e;
-							}
-							catch ( Exception e )
-							{
-								return new TransactionValidationException (e, t);
-							}
-							return null;
+							validateTransaction (tcontext, t);
 						}
-					});
-				}
-			}
-			try
-			{
-				for ( Future<TransactionValidationException> e : transactionsProcessor.invokeAll (callables) )
-				{
-					try
-					{
-						if ( e.get () != null )
+						catch ( TransactionValidationException e )
 						{
-							throw new ValidationException (e.get ().getMessage () + " " + e.get ().getTx ().toWireDump (), e.get ());
+							throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
 						}
 					}
-					catch ( ExecutionException e1 )
+					else
 					{
-						throw new ValidationException ("corrupted transaction processor", e1);
+						callables.add (new Callable<TransactionValidationException> ()
+						{
+							@Override
+							public TransactionValidationException call ()
+							{
+								try
+								{
+									validateTransaction (tcontext, t);
+								}
+								catch ( TransactionValidationException e )
+								{
+									return e;
+								}
+								catch ( Exception e )
+								{
+									return new TransactionValidationException (e, t);
+								}
+								return null;
+							}
+						});
 					}
 				}
+				try
+				{
+					for ( Future<TransactionValidationException> e : transactionsProcessor.invokeAll (callables) )
+					{
+						try
+						{
+							if ( e.get () != null )
+							{
+								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getTx ().toWireDump (), e.get ());
+							}
+						}
+						catch ( ExecutionException e1 )
+						{
+							throw new ValidationException ("corrupted transaction processor", e1);
+						}
+					}
+				}
+				catch ( InterruptedException e1 )
+				{
+					throw new ValidationException ("interrupted", e1);
+				}
 			}
-			catch ( InterruptedException e1 )
-			{
-				throw new ValidationException ("interrupted", e1);
-			}
-
 			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
 			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
 			{

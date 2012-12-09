@@ -38,4 +38,6 @@ public interface Chain
 	public int getAddressFlag ();
 
 	public int getMultisigAddressFlag ();
+
+	public int getValidateFrom ();
 }
