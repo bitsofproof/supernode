@@ -37,6 +37,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	private long cacheSize = 100;
 	private static DB db;
 	private final SecureRandom rnd = new SecureRandom ();
+	private WriteBatch batch = null;
 
 	private static enum KeyType
 	{
@@ -175,7 +176,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writeTx (Tx t)
 	{
-		db.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+		if ( batch != null )
+		{
+			batch.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+		}
+		else
+		{
+			db.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+		}
 	}
 
 	private Head readHead (Long id)
@@ -189,7 +197,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (h.getId ());
-		db.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
+		if ( batch != null )
+		{
+			batch.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
+		}
+		else
+		{
+			db.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
+		}
 	}
 
 	private Blk readBlk (String hash, boolean full)
@@ -214,7 +229,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writeBlk (Blk b)
 	{
-		db.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
+		if ( batch != null )
+		{
+			batch.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
+		}
+		else
+		{
+			db.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
+		}
 		for ( Tx t : b.getTransactions () )
 		{
 			writeTx (t);
@@ -223,7 +245,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writePeer (KnownPeer p)
 	{
-		db.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
+		if ( batch != null )
+		{
+			batch.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
+		}
+		else
+		{
+			db.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
+		}
 	}
 
 	private KnownPeer readPeer (String address)
@@ -450,24 +479,30 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected Object startBatch ()
+	protected void startBatch ()
 	{
-		return db.createWriteBatch ();
+		batch = db.createWriteBatch ();
 	}
 
 	@Override
-	protected void endBatch (Object o)
+	protected void endBatch ()
 	{
-		WriteBatch b = (WriteBatch) o;
-		db.write (b);
-		b.close ();
+		if ( batch != null )
+		{
+			db.write (batch);
+			batch.close ();
+			batch = null;
+		}
 	}
 
 	@Override
-	protected void cancelBatch (Object o)
+	protected void cancelBatch ()
 	{
-		WriteBatch b = (WriteBatch) o;
-		b.close ();
+		if ( batch != null )
+		{
+			batch.close ();
+			batch = null;
+		}
 	}
 
 	@Override
