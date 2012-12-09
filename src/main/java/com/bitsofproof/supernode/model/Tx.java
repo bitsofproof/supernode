@@ -203,7 +203,7 @@ public class Tx implements Serializable
 			writer.writeUint64 (o.getValue ());
 			writer.writeVarBytes (o.getScript ());
 			writer.writeUint32 (o.getIx ());
-			writer.writeUint32 (o.getVotes ());
+			writer.writeUint32 (o.getVotes () == null ? 0 : o.getVotes ().longValue ());
 			writer.writeByte (o.isCoinbase () ? 1 : 0);
 			writer.writeString (o.getOwner1 ());
 			writer.writeString (o.getOwner2 ());
