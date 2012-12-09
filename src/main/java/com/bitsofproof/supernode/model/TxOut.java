@@ -84,7 +84,8 @@ public class TxOut implements Serializable
 	@Index (name = "outhash")
 	private String txHash;
 
-	// this is redundant for a check
+	// this is redundant for a check and quick cache load
+	@Index (name = "heightix")
 	private long height;
 
 	public JSONObject toJSON ()
