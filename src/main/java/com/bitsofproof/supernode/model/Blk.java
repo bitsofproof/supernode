@@ -77,11 +77,12 @@ public class Blk implements Serializable
 	private transient ArrayList<String> txHashes;
 	private transient Long headId;
 
-	public static Blk fromLevelDB (byte[] data)
+	public static Blk fromLevelDB (byte[] data, boolean txhashes)
 	{
 		Blk b = new Blk ();
 		WireFormat.Reader reader = new WireFormat.Reader (data);
 		b.hash = reader.readHash ().toString ();
+		b.height = (int) reader.readUint32 ();
 		b.version = reader.readUint32 ();
 		b.previousHash = reader.readHash ().toString ();
 		b.merkleRoot = reader.readHash ().toString ();
@@ -89,11 +90,14 @@ public class Blk implements Serializable
 		b.difficultyTarget = reader.readUint32 ();
 		b.nonce = reader.readUint32 ();
 		b.headId = reader.readUint64 ();
-		long nt = reader.readVarInt ();
-		b.txHashes = new ArrayList<String> ((int) nt);
-		for ( long i = 0; i < nt; ++i )
+		if ( txhashes )
 		{
-			b.txHashes.add (reader.readHash ().toString ());
+			long nt = reader.readVarInt ();
+			b.txHashes = new ArrayList<String> ((int) nt);
+			for ( long i = 0; i < nt; ++i )
+			{
+				b.txHashes.add (reader.readHash ().toString ());
+			}
 		}
 		return b;
 	}
@@ -102,6 +106,7 @@ public class Blk implements Serializable
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeHash (new Hash (hash));
+		writer.writeUint32 (height);
 		writer.writeUint32 (version);
 		writer.writeHash (new Hash (previousHash));
 		writer.writeHash (new Hash (merkleRoot));

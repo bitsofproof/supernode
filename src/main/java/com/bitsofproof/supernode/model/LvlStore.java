@@ -8,6 +8,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -195,7 +197,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		byte[] data = db.get (Key.createKey (KeyType.BLOCK, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
-			Blk b = Blk.fromLevelDB (data);
+			Blk b = Blk.fromLevelDB (data, true);
 			b.setHead (readHead (b.getHeadId ()));
 			if ( full )
 			{
@@ -222,29 +224,42 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void cacheChain ()
 	{
+		final List<Blk> blocks = new ArrayList<Blk> ();
 		forAll (KeyType.BLOCK, new DataProcessor ()
 		{
 			@Override
 			public boolean process (byte[] data)
 			{
-				Blk b = Blk.fromLevelDB (data);
-				CachedBlock cb = null;
-				if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
-				{
-					cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
-				}
-				else
-				{
-					cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
-				}
-				cachedBlocks.put (b.getHash (), cb);
-				b.setHead (readHead (b.getHeadId ()));
-				CachedHead h = cachedHeads.get (b.getHead ().getId ());
-				h.getBlocks ().add (cb);
-				h.setLast (cb);
+				Blk b = Blk.fromLevelDB (data, false);
+				blocks.add (b);
 				return true;
 			}
 		});
+		Collections.sort (blocks, new Comparator<Blk> ()
+		{
+			@Override
+			public int compare (Blk arg0, Blk arg1)
+			{
+				return arg0.getHeight () - arg1.getHeight ();
+			}
+		});
+		for ( Blk b : blocks )
+		{
+			CachedBlock cb = null;
+			if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
+			}
+			else
+			{
+				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
+			}
+			cachedBlocks.put (b.getHash (), cb);
+			b.setHead (readHead (b.getHeadId ()));
+			CachedHead h = cachedHeads.get (b.getHead ().getId ());
+			h.getBlocks ().add (cb);
+			h.setLast (cb);
+		}
 	}
 
 	@Override
@@ -289,7 +304,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					return false;
 				}
 
-				Blk b = Blk.fromLevelDB (data);
+				Blk b = Blk.fromLevelDB (data, true);
 				for ( String txHash : b.getTxHashes () )
 				{
 					Tx t = readTx (txHash);
@@ -424,6 +439,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		WriteBatch batch = db.createWriteBatch ();
 
+		writeHead (b.getHead ());
 		writeBlk (b);
 
 		db.write (batch);
