@@ -232,20 +232,24 @@ public abstract class P2P
 					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
 					selector.wakeup ();
 				}
-				if ( connected.tryAcquire () )
+				if ( channel.isOpen () )
 				{
+					channel.close ();
 					log.trace ("Disconnect " + channel);
 
-					openConnections.decrementAndGet ();
-					log.trace ("Number of channels is now " + openConnections.get ());
+					if ( connected.tryAcquire () )
+					{
+						openConnections.decrementAndGet ();
+						log.trace ("Number of connections is now " + openConnections.get ());
 
-					if ( unsolicited )
-					{
-						unsolicitedConnectSlot.release ();
-					}
-					else
-					{
-						connectSlot.release ();
+						if ( unsolicited )
+						{
+							unsolicitedConnectSlot.release ();
+						}
+						else
+						{
+							connectSlot.release ();
+						}
 					}
 					writes.clear ();
 					reads.clear ();
@@ -258,10 +262,6 @@ public abstract class P2P
 							onDisconnect (timeout, bannedFor, reason);
 						}
 					});
-				}
-				if ( channel.isOpen () )
-				{
-					channel.close ();
 				}
 			}
 			catch ( IOException e )
