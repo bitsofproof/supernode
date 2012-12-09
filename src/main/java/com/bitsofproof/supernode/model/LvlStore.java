@@ -221,6 +221,21 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 	}
 
+	private void writePeer (KnownPeer p)
+	{
+		db.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
+	}
+
+	private KnownPeer readPeer (String address)
+	{
+		byte[] data = db.get (Key.createKey (KeyType.PEER, address.getBytes ()));
+		if ( data != null )
+		{
+			return KnownPeer.fromLevelDB (data);
+		}
+		return null;
+	}
+
 	@Override
 	protected void cacheChain ()
 	{
@@ -435,14 +450,31 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
+	protected Object startBatch ()
+	{
+		return db.createWriteBatch ();
+	}
+
+	@Override
+	protected void endBatch (Object o)
+	{
+		WriteBatch b = (WriteBatch) o;
+		db.write (b);
+		b.close ();
+	}
+
+	@Override
+	protected void cancelBatch (Object o)
+	{
+		WriteBatch b = (WriteBatch) o;
+		b.close ();
+	}
+
+	@Override
 	protected void insertBlock (Blk b)
 	{
-		WriteBatch batch = db.createWriteBatch ();
-
 		writeHead (b.getHead ());
 		writeBlk (b);
-
-		db.write (batch);
 	}
 
 	@Override
@@ -506,22 +538,51 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	public List<KnownPeer> getConnectablePeers ()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		final List<KnownPeer> peers = new ArrayList<KnownPeer> ();
+		forAll (KeyType.TX, new DataProcessor ()
+		{
+			@Override
+			public boolean process (byte[] data)
+			{
+				KnownPeer p = KnownPeer.fromLevelDB (data);
+				if ( p.getBanned () < System.currentTimeMillis () / 1000 )
+				{
+					peers.add (p);
+				}
+				return true;
+			}
+		});
+		Collections.sort (peers, new Comparator<KnownPeer> ()
+		{
+
+			@Override
+			public int compare (KnownPeer o1, KnownPeer o2)
+			{
+				if ( o1.getPreference () != o2.getPreference () )
+				{
+					return (int) (o1.getPreference () - o2.getPreference ());
+				}
+				if ( o1.getResponseTime () != o2.getResponseTime () )
+				{
+					return (int) (o1.getResponseTime () - o2.getResponseTime ());
+				}
+				return 0;
+			}
+		});
+
+		return peers;
 	}
 
 	@Override
 	public void store (KnownPeer peer)
 	{
-		// TODO Auto-generated method stub
-
+		writePeer (peer);
 	}
 
 	@Override
 	public KnownPeer findPeer (InetAddress address)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return readPeer (address.getHostName ());
 	}
 
 	@Override

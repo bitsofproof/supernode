@@ -8,6 +8,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import com.bitsofproof.supernode.core.WireFormat;
+
 @Entity
 @Table (name = "peer")
 public class KnownPeer implements Serializable
@@ -45,6 +47,45 @@ public class KnownPeer implements Serializable
 
 	@Column (length = 256, nullable = true)
 	private String banReason;
+
+	public byte[] toLevelDB ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeString (address);
+		writer.writeUint64 (version);
+		writer.writeUint64 (services);
+		writer.writeUint64 (height);
+		writer.writeString (name);
+		writer.writeString (agent);
+		writer.writeUint64 (responseTime);
+		writer.writeUint64 (connected);
+		writer.writeUint64 (disconnected);
+		writer.writeUint64 (trafficIn);
+		writer.writeUint64 (trafficOut);
+		writer.writeUint64 (banned);
+		writer.writeString (banReason);
+		return writer.toByteArray ();
+	}
+
+	public static KnownPeer fromLevelDB (byte[] data)
+	{
+		WireFormat.Reader reader = new WireFormat.Reader (data);
+		KnownPeer p = new KnownPeer ();
+		p.address = reader.readString ();
+		p.version = reader.readUint64 ();
+		p.services = reader.readUint64 ();
+		p.height = reader.readUint64 ();
+		p.name = reader.readString ();
+		p.agent = reader.readString ();
+		p.responseTime = reader.readUint64 ();
+		p.connected = reader.readUint64 ();
+		p.disconnected = reader.readUint64 ();
+		p.trafficIn = reader.readUint64 ();
+		p.trafficOut = reader.readUint64 ();
+		p.banned = reader.readUint64 ();
+		p.banReason = reader.readString ();
+		return p;
+	}
 
 	public long getConnected ()
 	{

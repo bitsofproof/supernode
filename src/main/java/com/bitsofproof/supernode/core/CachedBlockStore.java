@@ -67,6 +67,19 @@ public abstract class CachedBlockStore implements BlockStore
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
+	protected Object startBatch ()
+	{
+		return null;
+	};
+
+	protected void endBatch (Object o)
+	{
+	};
+
+	protected void cancelBatch (Object o)
+	{
+	};
+
 	protected abstract void cacheChain ();
 
 	protected abstract void cacheHeads ();
@@ -459,18 +472,22 @@ public abstract class CachedBlockStore implements BlockStore
 	@Override
 	public void storeBlock (Blk b) throws ValidationException
 	{
+		Object batch = startBatch ();
 		try
 		{
 			lock.writeLock ().lock ();
 
 			lockedStoreBlock (b);
+			endBatch (batch);
 		}
 		catch ( ValidationException e )
 		{
+			cancelBatch (batch);
 			throw e;
 		}
 		catch ( Exception e )
 		{
+			cancelBatch (batch);
 			throw new ValidationException ("OTHER exception " + b.toWireDump (), e);
 		}
 		finally
