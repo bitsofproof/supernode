@@ -237,19 +237,19 @@ public abstract class P2P
 					channel.close ();
 					log.trace ("Disconnect " + channel);
 
+					if ( unsolicited )
+					{
+						unsolicitedConnectSlot.release ();
+					}
+					else
+					{
+						connectSlot.release ();
+					}
+
 					if ( connected.tryAcquire () )
 					{
 						openConnections.decrementAndGet ();
 						log.trace ("Number of connections is now " + openConnections.get ());
-
-						if ( unsolicited )
-						{
-							unsolicitedConnectSlot.release ();
-						}
-						else
-						{
-							connectSlot.release ();
-						}
 					}
 					writes.clear ();
 					reads.clear ();
