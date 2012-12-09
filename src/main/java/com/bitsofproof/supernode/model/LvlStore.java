@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -53,6 +54,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			byte[] k = new byte[1];
 			k[0] = (byte) kt.ordinal ();
+			return k;
+		}
+
+		private static byte[] afterLAstKey (KeyType kt)
+		{
+			byte[] k = new byte[1];
+			k[0] = (byte) (kt.ordinal () + 1);
 			return k;
 		}
 
@@ -99,7 +107,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private abstract static class DataProcessor
 	{
-		public abstract void process (byte[] data);
+		public abstract boolean process (byte[] data);
 	}
 
 	private void forAll (KeyType t, DataProcessor processor)
@@ -115,7 +123,35 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					break;
 				}
-				processor.process (entry.getValue ());
+				if ( !processor.process (entry.getValue ()) )
+				{
+					break;
+				}
+			}
+		}
+		finally
+		{
+			iterator.close ();
+		}
+	}
+
+	private void forAllBackward (KeyType t, DataProcessor processor)
+	{
+		DBIterator iterator = db.iterator ();
+		try
+		{
+			iterator.seek (Key.afterLAstKey (t));
+			while ( iterator.hasPrev () )
+			{
+				Map.Entry<byte[], byte[]> entry = iterator.prev ();
+				if ( !Key.hasType (t, entry.getKey ()) )
+				{
+					break;
+				}
+				if ( !processor.process (entry.getValue ()) )
+				{
+					break;
+				}
 			}
 		}
 		finally
@@ -187,7 +223,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.BLOCK, new DataProcessor ()
 		{
 			@Override
-			public void process (byte[] data)
+			public boolean process (byte[] data)
 			{
 				Blk b = Blk.fromLevelDB (data);
 				CachedBlock cb = null;
@@ -204,6 +240,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				CachedHead h = cachedHeads.get (b.getHead ().getId ());
 				h.getBlocks ().add (cb);
 				h.setLast (cb);
+				return true;
 			}
 		});
 	}
@@ -214,7 +251,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.HEAD, new DataProcessor ()
 		{
 			@Override
-			public void process (byte[] data)
+			public boolean process (byte[] data)
 			{
 				Head h = Head.fromLevelDB (data);
 
@@ -231,18 +268,25 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					currentHead = sh;
 				}
+				return true;
 			}
 		});
 	}
 
 	@Override
-	protected void cacheUTXO ()
+	protected void cacheUTXO (final int after)
 	{
-		forAll (KeyType.TX, new DataProcessor ()
+		final AtomicInteger n = new AtomicInteger (0);
+		forAllBackward (KeyType.TX, new DataProcessor ()
 		{
 			@Override
-			public void process (byte[] data)
+			public boolean process (byte[] data)
 			{
+				if ( n.incrementAndGet () > after )
+				{
+					return false;
+				}
+
 				Tx t = Tx.fromLevelDB (data);
 				for ( TxOut o : t.getOutputs () )
 				{
@@ -257,6 +301,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 						outs.put (o.getIx (), o.flatCopy (null));
 					}
 				}
+				return true;
 			}
 		});
 	}
@@ -346,7 +391,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.TX, new DataProcessor ()
 		{
 			@Override
-			public void process (byte[] data)
+			public boolean process (byte[] data)
 			{
 				Tx t = Tx.fromLevelDB (data);
 				for ( TxOut o : t.getOutputs () )
@@ -356,6 +401,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 						result.add (new Object[] { t.getBlockHash (), o });
 					}
 				}
+				return true;
 			}
 		});
 		return result;

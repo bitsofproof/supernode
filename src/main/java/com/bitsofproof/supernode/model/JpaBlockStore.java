@@ -40,11 +40,12 @@ public class JpaBlockStore extends CachedBlockStore
 	private PlatformTransactionManager transactionManager;
 
 	@Override
-	protected void cacheUTXO ()
+	protected void cacheUTXO (int lookback)
 	{
+		long after = Math.max (currentHead.getHeight () - lookback, 0L);
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		for ( TxOut o : q.from (txout).where (txout.available.eq (true)).list (txout) )
+		for ( TxOut o : q.from (txout).where (txout.available.eq (true).and (txout.height.gt (after))).list (txout) )
 		{
 			HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
 			if ( outs == null )

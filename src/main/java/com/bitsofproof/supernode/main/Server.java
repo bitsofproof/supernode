@@ -54,12 +54,18 @@ public class Server extends Main implements Main.App
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
-		gnuOptions.addOption ("c", "cache", false, "Cache UTXO");
+		gnuOptions.addOption ("c", "cache", true, "Cache UTXO for the last n blocks");
+
+		int cacheSize = 1000;
 
 		CommandLine cl = null;
 		try
 		{
 			cl = parser.parse (gnuOptions, args);
+			if ( cl.hasOption ('c') )
+			{
+				cacheSize = Integer.parseInt (cl.getOptionValue ('c'));
+			}
 		}
 		catch ( ParseException e1 )
 		{
@@ -73,7 +79,7 @@ public class Server extends Main implements Main.App
 		}
 		try
 		{
-			network.getStore ().cache (cl.hasOption ('c'));
+			network.getStore ().cache (cacheSize);
 			network.start ();
 		}
 		catch ( ValidationException e )

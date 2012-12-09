@@ -71,7 +71,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheHeads ();
 
-	protected abstract void cacheUTXO ();
+	protected abstract void cacheUTXO (int lookback);
 
 	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
@@ -244,7 +244,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
-	public void cache (boolean utxo) throws ValidationException
+	public void cache (int size) throws ValidationException
 	{
 		try
 		{
@@ -256,10 +256,10 @@ public abstract class CachedBlockStore implements BlockStore
 			log.trace ("Cache chain...");
 			cacheChain ();
 
-			if ( utxo )
+			if ( size > 0 )
 			{
 				log.trace ("Cache UTXO set ...");
-				cacheUTXO ();
+				cacheUTXO (size);
 			}
 
 			log.trace ("Cache filled.");

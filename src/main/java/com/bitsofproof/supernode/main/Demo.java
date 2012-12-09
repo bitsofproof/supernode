@@ -70,7 +70,7 @@ public class Demo extends Main implements Main.App
 		}
 		try
 		{
-			network.getStore ().cache (false);
+			network.getStore ().cache (0);
 			network.start ();
 		}
 		catch ( ValidationException e )
