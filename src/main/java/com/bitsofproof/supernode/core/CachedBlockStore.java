@@ -847,10 +847,7 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
-			if ( t.getInputs ().size () != 1
-					|| !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ())
-					|| (chain.isProduction () && tcontext.block.getHeight () > 209378 && (t.getInputs ().get (0).getIx () != 0 || t.getInputs ().get (0)
-							.getSequence () != 0xFFFFFFFFL)) )
+			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
 			{
 				throw new TransactionValidationException ("first transaction must be coinbase ", t);
 			}
