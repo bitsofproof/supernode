@@ -47,8 +47,11 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 			if ( network.getPeerStore () != null )
 			{
 				KnownPeer p = network.getPeerStore ().findPeer (peer.getAddress ().getAddress ());
-				p.setResponseTime (System.currentTimeMillis () - n.sent);
-				network.getPeerStore ().store (p);
+				if ( p != null )
+				{
+					p.setResponseTime (System.currentTimeMillis () - n.sent);
+					network.getPeerStore ().store (p);
+				}
 			}
 		}
 	}

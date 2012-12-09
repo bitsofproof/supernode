@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
+import org.iq80.leveldb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -195,6 +196,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		if ( data != null )
 		{
 			Blk b = Blk.fromLevelDB (data);
+			b.setHead (readHead (b.getHeadId ()));
 			if ( full )
 			{
 				b.setTransactions (new ArrayList<Tx> ());
@@ -277,7 +279,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	protected void cacheUTXO (final int after)
 	{
 		final AtomicInteger n = new AtomicInteger (0);
-		forAllBackward (KeyType.TX, new DataProcessor ()
+		forAllBackward (KeyType.BLOCK, new DataProcessor ()
 		{
 			@Override
 			public boolean process (byte[] data)
@@ -287,18 +289,22 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					return false;
 				}
 
-				Tx t = Tx.fromLevelDB (data);
-				for ( TxOut o : t.getOutputs () )
+				Blk b = Blk.fromLevelDB (data);
+				for ( String txHash : b.getTxHashes () )
 				{
-					if ( o.isAvailable () )
+					Tx t = readTx (txHash);
+					for ( TxOut o : t.getOutputs () )
 					{
-						HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
-						if ( outs == null )
+						if ( o.isAvailable () )
 						{
-							outs = new HashMap<Long, TxOut> ();
-							cachedUTXO.put (o.getTxHash (), outs);
+							HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
+							if ( outs == null )
+							{
+								outs = new HashMap<Long, TxOut> ();
+								cachedUTXO.put (o.getTxHash (), outs);
+							}
+							outs.put (o.getIx (), o.flatCopy (null));
 						}
-						outs.put (o.getIx (), o.flatCopy (null));
 					}
 				}
 				return true;
@@ -416,7 +422,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void insertBlock (Blk b)
 	{
+		WriteBatch batch = db.createWriteBatch ();
+
 		writeBlk (b);
+
+		db.write (batch);
 	}
 
 	@Override

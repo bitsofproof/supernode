@@ -194,14 +194,14 @@ public class Tx implements Serializable
 		{
 			writer.writeUint32 (in.getIx ());
 			writer.writeHash (new Hash (in.getSourceHash ()));
-			writer.writeBytes (in.getScript ());
+			writer.writeVarBytes (in.getScript ());
 			writer.writeUint32 (in.getSequence ());
 		}
 		writer.writeVarInt (outputs.size ());
 		for ( TxOut o : outputs )
 		{
 			writer.writeUint64 (o.getValue ());
-			writer.writeBytes (o.getScript ());
+			writer.writeVarBytes (o.getScript ());
 			writer.writeUint32 (o.getIx ());
 			writer.writeUint32 (o.getVotes ());
 			writer.writeByte (o.isCoinbase () ? 1 : 0);
