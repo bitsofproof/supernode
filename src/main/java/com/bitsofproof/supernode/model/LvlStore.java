@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.bitsofproof.supernode.model;
 
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
@@ -41,7 +56,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private static enum KeyType
 	{
-		TX, BLOCK, HEAD, PEER;
+		TX, BLOCK, HEAD, PEER, ATX;
 	}
 
 	public static class Key
@@ -111,7 +126,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private abstract static class DataProcessor
 	{
-		public abstract boolean process (byte[] data);
+		public abstract boolean process (byte[] key, byte[] data);
 	}
 
 	private void forAll (KeyType t, DataProcessor processor)
@@ -127,7 +142,40 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					break;
 				}
-				if ( !processor.process (entry.getValue ()) )
+				if ( !processor.process (entry.getKey (), entry.getValue ()) )
+				{
+					break;
+				}
+			}
+		}
+		finally
+		{
+			iterator.close ();
+		}
+	}
+
+	private void forAll (KeyType t, byte[] partialKey, DataProcessor processor)
+	{
+		DBIterator iterator = db.iterator ();
+		try
+		{
+			iterator.seek (Key.createKey (t, partialKey));
+			while ( iterator.hasNext () )
+			{
+				Map.Entry<byte[], byte[]> entry = iterator.next ();
+				byte[] key = entry.getKey ();
+				if ( !Key.hasType (t, key) )
+				{
+					break;
+				}
+				for ( int i = 0; i < partialKey.length; ++i )
+				{
+					if ( key[i + 1] != partialKey[i] )
+					{
+						break;
+					}
+				}
+				if ( !processor.process (entry.getKey (), entry.getValue ()) )
 				{
 					break;
 				}
@@ -152,7 +200,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					break;
 				}
-				if ( !processor.process (entry.getValue ()) )
+				if ( !processor.process (entry.getKey (), entry.getValue ()) )
 				{
 					break;
 				}
@@ -161,6 +209,23 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		finally
 		{
 			iterator.close ();
+		}
+	}
+
+	private void writeAtx (String address, String hash)
+	{
+		byte[] a = address.getBytes ();
+		byte[] h = address.getBytes ();
+		byte[] k = new byte[a.length + h.length];
+		System.arraycopy (a, 0, k, 0, a.length);
+		System.arraycopy (h, 0, k, a.length, h.length);
+		if ( batch != null )
+		{
+			batch.put (Key.createKey (KeyType.ATX, k), new byte[1]);
+		}
+		else
+		{
+			db.put (Key.createKey (KeyType.ATX, k), new byte[1]);
 		}
 	}
 
@@ -183,6 +248,21 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		else
 		{
 			db.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+		}
+		for ( TxOut o : t.getOutputs () )
+		{
+			if ( o.getOwner1 () != null )
+			{
+				writeAtx (o.getOwner1 (), t.getHash ());
+			}
+			if ( o.getOwner2 () != null )
+			{
+				writeAtx (o.getOwner2 (), t.getHash ());
+			}
+			if ( o.getOwner3 () != null )
+			{
+				writeAtx (o.getOwner3 (), t.getHash ());
+			}
 		}
 	}
 
@@ -272,7 +352,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.BLOCK, new DataProcessor ()
 		{
 			@Override
-			public boolean process (byte[] data)
+			public boolean process (byte[] key, byte[] data)
 			{
 				Blk b = Blk.fromLevelDB (data, false);
 				blocks.add (b);
@@ -312,7 +392,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.HEAD, new DataProcessor ()
 		{
 			@Override
-			public boolean process (byte[] data)
+			public boolean process (byte[] key, byte[] data)
 			{
 				Head h = Head.fromLevelDB (data);
 
@@ -341,7 +421,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAllBackward (KeyType.BLOCK, new DataProcessor ()
 		{
 			@Override
-			public boolean process (byte[] data)
+			public boolean process (byte[] key, byte[] data)
 			{
 				if ( n.incrementAndGet () > after )
 				{
@@ -449,26 +529,39 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		return outs;
 	}
 
+	private List<Tx> readRelatedTx (List<String> addresses)
+	{
+		final List<Tx> result = new ArrayList<Tx> ();
+		for ( String address : addresses )
+		{
+			final byte[] pk = address.getBytes ();
+			forAll (KeyType.ATX, pk, new DataProcessor ()
+			{
+				@Override
+				public boolean process (byte[] key, byte[] data)
+				{
+					byte[] h = new byte[key.length - pk.length - 1];
+					System.arraycopy (key, pk.length + 1, h, 0, key.length - pk.length - 1);
+					result.add (readTx (new Hash (h).toString ()));
+					return true;
+				}
+			});
+		}
+		return result;
+	}
+
 	@Override
 	protected List<Object[]> getReceivedList (final List<String> addresses)
 	{
-		final List<Object[]> result = new ArrayList<Object[]> ();
-		forAll (KeyType.TX, new DataProcessor ()
+		List<Object[]> result = new ArrayList<Object[]> ();
+		List<Tx> related = readRelatedTx (addresses);
+		for ( Tx t : related )
 		{
-			@Override
-			public boolean process (byte[] data)
+			for ( TxOut o : t.getOutputs () )
 			{
-				Tx t = Tx.fromLevelDB (data);
-				for ( TxOut o : t.getOutputs () )
-				{
-					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
-					{
-						result.add (new Object[] { t.getBlockHash (), o });
-					}
-				}
-				return true;
+				result.add (new Object[] { t.getBlockHash (), o });
 			}
-		});
+		}
 		return result;
 	}
 
@@ -541,8 +634,19 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		List<TxOut> result = new ArrayList<TxOut> ();
+		List<Tx> related = readRelatedTx (addresses);
+		for ( Tx t : related )
+		{
+			for ( TxOut o : t.getOutputs () )
+			{
+				if ( o.isAvailable () )
+				{
+					result.add (o);
+				}
+			}
+		}
+		return result;
 	}
 
 	@Override
@@ -577,7 +681,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		forAll (KeyType.TX, new DataProcessor ()
 		{
 			@Override
-			public boolean process (byte[] data)
+			public boolean process (byte[] key, byte[] data)
 			{
 				KnownPeer p = KnownPeer.fromLevelDB (data);
 				if ( p.getBanned () < System.currentTimeMillis () / 1000 )
