@@ -59,6 +59,7 @@ public abstract class P2P
 		private SocketChannel channel;
 		private boolean unsolicited;
 		private final Semaphore connected = new Semaphore (0);
+		private final Semaphore hasConnectionSlot = new Semaphore (0);
 
 		private final LinkedBlockingQueue<byte[]> writes = new LinkedBlockingQueue<byte[]> ();
 		private final LinkedBlockingQueue<byte[]> reads = new LinkedBlockingQueue<byte[]> ();
@@ -152,6 +153,8 @@ public abstract class P2P
 
 		private void connect () throws IOException
 		{
+			hasConnectionSlot.release ();
+
 			channel = SocketChannel.open ();
 			channel.configureBlocking (false);
 
@@ -227,6 +230,22 @@ public abstract class P2P
 		{
 			try
 			{
+				if ( hasConnectionSlot.tryAcquire () )
+				{
+					if ( unsolicited )
+					{
+						unsolicitedConnectSlot.release ();
+					}
+					else
+					{
+						connectSlot.release ();
+					}
+				}
+				if ( connected.tryAcquire () )
+				{
+					openConnections.decrementAndGet ();
+					log.trace ("Number of connections is now " + openConnections.get ());
+				}
 				if ( channel.isRegistered () )
 				{
 					selectorChanges.add (new ChangeRequest (channel, ChangeRequest.CANCEL, SelectionKey.OP_ACCEPT, null));
@@ -237,20 +256,6 @@ public abstract class P2P
 					channel.close ();
 					log.trace ("Disconnect " + channel);
 
-					if ( unsolicited )
-					{
-						unsolicitedConnectSlot.release ();
-					}
-					else
-					{
-						connectSlot.release ();
-					}
-
-					if ( connected.tryAcquire () )
-					{
-						openConnections.decrementAndGet ();
-						log.trace ("Number of connections is now " + openConnections.get ());
-					}
 					writes.clear ();
 					reads.clear ();
 					reads.add (closedMark);
