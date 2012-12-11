@@ -161,6 +161,10 @@ public class JpaBlockStore extends CachedBlockStore
 		List<Object[]> rows =
 				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txin);
+		for ( Object[] o : rows )
+		{
+			entityManager.detach (o[1]);
+		}
 		return rows;
 	}
 
@@ -190,6 +194,10 @@ public class JpaBlockStore extends CachedBlockStore
 		List<Object[]> rows =
 				q.from (txout).join (txout.transaction, tx).join (tx.block, blk)
 						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txout);
+		for ( Object[] o : rows )
+		{
+			entityManager.detach (o[1]);
+		}
 		return rows;
 	}
 

@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
-import java.security.acl.Owner;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -700,7 +699,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				for ( TxOut o : t.getOutputs () )
 				{
-					addOwners (o);
+					parseOwners (o);
 					o.setTxHash (t.getHash ());
 					o.setHeight (b.getHeight ());
 				}
@@ -1053,13 +1052,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void addOwners (TxOut out) throws TransactionValidationException
-	{
-		List<Owner> owners = new ArrayList<Owner> ();
-		parseOwners (out.getScript (), out, owners);
-	}
-
-	private void parseOwners (byte[] script, TxOut out, List<Owner> owners) throws TransactionValidationException
+	private void parseOwners (TxOut out) throws TransactionValidationException
 	{
 		List<Script.Token> parsed;
 		try
@@ -1146,7 +1139,8 @@ public abstract class CachedBlockStore implements BlockStore
 	public void resetStore (Chain chain) throws TransactionValidationException
 	{
 		Blk genesis = chain.getGenesis ();
-		addOwners (genesis.getTransactions ().get (0).getOutputs ().get (0));
+		TxOut out = genesis.getTransactions ().get (0).getOutputs ().get (0);
+		parseOwners (out);
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);
