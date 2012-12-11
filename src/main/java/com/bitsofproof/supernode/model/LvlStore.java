@@ -264,6 +264,30 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				writeAtx (o.getOwner3 (), t.getHash ());
 			}
 		}
+		for ( TxIn i : t.getInputs () )
+		{
+			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				TxOut o = i.getSource ();
+				if ( o == null )
+				{
+					Tx out = readTx (i.getSourceHash ());
+					o = out.getOutputs ().get (i.getIx ().intValue ());
+				}
+				if ( o.getOwner1 () != null )
+				{
+					writeAtx (o.getOwner1 (), t.getHash ());
+				}
+				if ( o.getOwner2 () != null )
+				{
+					writeAtx (o.getOwner2 (), t.getHash ());
+				}
+				if ( o.getOwner3 () != null )
+				{
+					writeAtx (o.getOwner3 (), t.getHash ());
+				}
+			}
+		}
 	}
 
 	private Head readHead (Long id)
@@ -640,7 +664,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			for ( TxOut o : t.getOutputs () )
 			{
-				if ( o.isAvailable () )
+				if ( o.isAvailable () && addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
 				{
 					result.add (o);
 				}
@@ -652,8 +676,19 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected List<Object[]> getSpendList (List<String> addresses)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		List<Object[]> result = new ArrayList<Object[]> ();
+		List<Tx> related = readRelatedTx (addresses);
+		for ( Tx t : related )
+		{
+			for ( TxIn i : t.getInputs () )
+			{
+				Tx s = readTx (i.getSourceHash ());
+				TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
+
+				result.add (new Object[] { t.getBlockHash (), spend });
+			}
+		}
+		return result;
 	}
 
 	@Override
