@@ -632,7 +632,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void insertHead (Head head)
 	{
-		head.setId (rnd.nextLong ());
+		long id = rnd.nextLong ();
+		while ( readHead (id) != null )
+		{
+			id = rnd.nextLong ();
+		}
+		head.setId (id);
 		writeHead (head);
 	}
 
