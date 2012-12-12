@@ -750,7 +750,7 @@ public abstract class CachedBlockStore implements BlockStore
 					forwardCache (block);
 				}
 			}
-			else if ( b.getHead ().getId () == currentHead.getId () )
+			else if ( b.getHead ().getId ().longValue () == currentHead.getId ().longValue () )
 			{
 				// spend if on the trunk
 				forwardCache (b);
