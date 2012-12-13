@@ -54,7 +54,6 @@ public class BitcoinNetwork extends P2P
 	private final Set<BitcoinPeer> connectedPeers = new CopyOnWriteArraySet<BitcoinPeer> ();
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
-	private static final Map<Long, Runnable> jobs = Collections.synchronizedMap (new HashMap<Long, Runnable> ());
 
 	@Override
 	public void start () throws IOException
@@ -65,59 +64,76 @@ public class BitcoinNetwork extends P2P
 		super.start ();
 	}
 
-	private static class WrappedRunnable implements Runnable
+	static class JobWrapper
 	{
-		private final Long nr = new SecureRandom ().nextLong ();
-		private final Runnable job;
-		private final boolean single;
 
-		WrappedRunnable (Runnable job, boolean single)
+		private static final Map<Long, Runnable> jobs = Collections.synchronizedMap (new HashMap<Long, Runnable> ());
+
+		static class WrappedRunnable implements Runnable
 		{
-			this.job = job;
-			jobs.put (nr, this);
-			this.single = single;
-		}
+			private final Long nr = new SecureRandom ().nextLong ();
+			private final Runnable job;
+			private final boolean single;
 
-		@Override
-		public void run ()
+			WrappedRunnable (Runnable job, boolean single)
+			{
+				this.job = job;
+				jobs.put (nr, this);
+				this.single = single;
+			}
+
+			@Override
+			public void run ()
+			{
+				if (jobs.containsKey (nr))
+				{
+					if (single)
+					{
+						jobs.remove (nr);
+					}
+					try
+					{
+						job.run ();
+					}
+					catch (Exception e)
+					{
+						log.debug ("Exception in scheduled job. The job will not be rescheduled.", e);
+						jobs.remove (this);
+					}
+				}
+			}
+		}
+		
+		public WrappedRunnable wrap(Runnable job, boolean single)
 		{
-			if ( single )
-			{
-				jobs.remove (this);
-			}
-			if ( jobs.containsKey (nr) )
-			{
-				try
-				{
-					job.run ();
-				}
-				catch ( Exception e )
-				{
-					log.debug ("Exception in scheduled job. The job will not be rescheduled.", e);
-					jobs.remove (this);
-				}
-			}
+			return new WrappedRunnable(job, single);
 		}
-
+		
+		public void cancelJob(long id)
+		{
+			jobs.remove (id);
+		}
 	}
-
+	
+	private static JobWrapper jobWrapper = new JobWrapper();
+	
 	public long scheduleJob (final Runnable job, int delay, TimeUnit unit)
 	{
-		WrappedRunnable runnable = new WrappedRunnable (job, true);
+		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap(job, true);
 		getScheduler ().schedule (runnable, delay, unit);
 		return runnable.nr;
 	}
 
 	public long scheduleJobWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
 	{
-		WrappedRunnable runnable = new WrappedRunnable (job, false);
+		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap(job, false);
 		getScheduler ().scheduleWithFixedDelay (runnable, startDelay, delay, unit);
 		return runnable.nr;
 	}
 
 	public void cancelJob (long jobid)
 	{
-		jobs.remove (jobid);
+		jobWrapper.cancelJob(jobid);
 	}
 
 	public BitcoinPeer[] getConnectPeers ()

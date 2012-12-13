@@ -251,6 +251,13 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			return hash.hashCode ();
 		}
+		
+		public boolean equals(Object o)
+		{
+			if (o == null) return false;
+			if (o == this) return true;
+			return hash.equals (((CachedBlock) o).hash);
+		}
 	}
 
 	@Override
@@ -336,7 +343,7 @@ public abstract class CachedBlockStore implements BlockStore
 			CachedBlock prev = curr.getPrevious ();
 			if ( !last.equals (Hash.ZERO_HASH.toString ()) )
 			{
-				while ( prev != null && !curr.equals (last) )
+				while ( prev != null && !curr.getHash ().equals (last) )
 				{
 					curr = prev;
 					prev = curr.getPrevious ();
@@ -344,7 +351,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			do
 			{
-				if ( locator.contains (curr) )
+				if ( locator.contains (curr.getHash ()) )
 				{
 					break;
 				}
@@ -728,7 +735,7 @@ public abstract class CachedBlockStore implements BlockStore
 				// if branching from main we have to revert, then forward unspent cache
 				CachedBlock p = currentHead.getLast ();
 				CachedBlock q = p.previous;
-				while ( !q.hash.equals (trunkBlock) )
+				while ( !q.equals (trunkBlock) )
 				{
 					Blk block = retrieveBlock (p);
 					backwardCache (block);
@@ -736,9 +743,9 @@ public abstract class CachedBlockStore implements BlockStore
 					q = p.previous;
 				}
 				List<CachedBlock> pathToNewHead = new ArrayList<CachedBlock> ();
-				p = cachedBlocks.get (usingHead.getLast ());
+				p = cachedBlocks.get (usingHead.getLast ().getHash ());
 				q = p.previous;
-				while ( !q.hash.equals (trunkBlock) )
+				while ( !q.equals (trunkBlock) )
 				{
 					pathToNewHead.add (p);
 				}
@@ -750,7 +757,7 @@ public abstract class CachedBlockStore implements BlockStore
 					forwardCache (block);
 				}
 			}
-			else if ( b.getHead ().getId () == currentHead.getId () )
+			else if ( b.getHead ().getId ().longValue () == currentHead.getId ().longValue () )
 			{
 				// spend if on the trunk
 				forwardCache (b);
