@@ -727,7 +727,6 @@ public class Script
 	public static boolean isMultiSig (byte[] script) throws ValidationException
 	{
 		List<Token> parsed = parse (script);
-		boolean multisig = false;
 		int nkeys = -1;
 		int nvotes = -1;
 		for ( int i = 0; i < parsed.size (); ++i )
@@ -739,14 +738,11 @@ public class Script
 				break;
 			}
 		}
-		if ( nkeys >= 0 )
-		{
-			if ( parsed.size () != nkeys + 3 )
-			{
-				return false;
-			}
-		}
 		if ( nkeys <= 0 || nkeys > 3 )
+		{
+			return false;
+		}
+		if ( parsed.size () != nkeys + 3 )
 		{
 			return false;
 		}
@@ -754,7 +750,7 @@ public class Script
 		{
 			return false;
 		}
-		return multisig;
+		return true;
 	}
 
 	public static boolean isStandard (byte[] script) throws ValidationException
