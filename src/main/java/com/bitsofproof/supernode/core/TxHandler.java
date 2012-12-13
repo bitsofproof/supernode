@@ -207,7 +207,7 @@ public class TxHandler implements ChainListener
 			ArrayList<TxIn> spent = spentByAddress.get (address);
 			if ( spent != null )
 			{
-				spentByAddress.remove (in);
+				spent.remove (in);
 			}
 		}
 	}

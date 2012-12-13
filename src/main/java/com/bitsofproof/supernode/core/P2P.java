@@ -172,7 +172,12 @@ public abstract class P2P
 		@Override
 		public boolean equals (Object obj)
 		{
-			return address.equals (((Peer) obj).address);
+			if (obj == this)
+				return true;
+			if (obj == null)
+				return false;
+			
+			return obj instanceof Peer && address.equals (((Peer) obj).address);
 		}
 
 		@Override

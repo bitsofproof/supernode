@@ -191,6 +191,32 @@ public class TxIn implements Serializable, Cloneable
 		sequence = reader.readUint32 ();
 	}
 
+	
+	@Override
+	public int hashCode ()
+	{
+		int hash = 13;
+		hash = 37 * hash + sourceHash.hashCode ();
+		hash = 37 * hash + ix.hashCode ();
+		return hash;
+	}
+
+	@Override
+	public boolean equals (Object obj)
+	{
+		if (obj == this)
+			return true;
+		if (obj == null)
+			return false;
+		
+		if (obj instanceof TxIn) {
+			TxIn ot = (TxIn) obj;
+			return ix.equals(ot.ix) && sourceHash.equals (ot.sourceHash);
+		}
+		
+		return false;
+	}
+
 	protected TxIn flatCopy (Tx tc)
 	{
 		TxIn c = new TxIn ();

@@ -63,8 +63,8 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 				bm.setBlock (b);
 				peer.send (bm);
+				log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 			}
-			log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 		}
 	}
 
