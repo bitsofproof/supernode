@@ -1560,6 +1560,13 @@ public class Script
 		{
 			return false;
 		}
-		return ECKeyPair.verify (hash, sig, pubkey);
+		try
+		{
+			return ECKeyPair.verify (hash, sig, pubkey);
+		}
+		catch ( Exception e )
+		{
+			return false;
+		}
 	}
 }
