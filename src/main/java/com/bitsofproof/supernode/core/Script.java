@@ -734,8 +734,8 @@ public class Script
 		{
 			if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
 			{
-				nkeys = Script.intValue (parsed.get (i - 1).data);
-				nvotes = Script.intValue (parsed.get (i - nkeys - 2).data);
+				nkeys = parsed.get (i - 1).op.ordinal () - Opcode.OP_1.ordinal () + 1;
+				nvotes = parsed.get (i - nkeys - 2).op.ordinal () - Opcode.OP_1.ordinal () + 1;
 				break;
 			}
 		}
