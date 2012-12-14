@@ -18,6 +18,14 @@ package com.bitsofproof.supernode.core;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -96,7 +104,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void transactionTest () throws ValidationException
+	public void transactionTest () throws ValidationException, InterruptedException, ExecutionException
 	{
 		WireFormat.Reader reader =
 				new WireFormat.Reader (
@@ -112,6 +120,7 @@ public class ScriptTest
 								.fromHex ("0100000001c997a5e56e104102fa209c6a852dd90660a20b2d9c352423edce25857fcd3704000000004847304402204e45e16932b8af514961a1d3a1a25fdf3f4f7732e9d624c6c61548ab5fb8cd410220181522ec8eca07de4860a4acdd12909d831cc56cbbac4622082221a8768d1d0901ffffffff0200ca9a3b00000000434104ae1a62fe09c5f51b13905f07f06b99a2f7159b2225f374cd378d71302fa28414e7aab37397f554a7df5f142c21c1b7303b8a0626f1baded5c72a704f7e6cd84cac00286bee0000000043410411db93e1dcdb8a016b49840f8c53bc1eb68a382e97b1482ecad7b148a6909a5cb2e0eaddfb84ccf9744464f82e160bfa9b8b64f9d4c03f999b8643f656b412a3ac00000000"));
 		Tx t2 = new Tx ();
 		t2.fromWire (reader);
+
 		assertTrue (t2.getHash ().equals ("f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16"));
 		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (1));
 		assertTrue (new Script (t1, 0).evaluate (true));
@@ -343,12 +352,76 @@ public class ScriptTest
 				Tx.fromWireDump ("010000000123ba84a7ce8ab2785a838fa9ca50ad395bee25aba38dda28336cc337d08a599e000000006a4730440220320a58bf09ce578dd2ddf5381a34d80c3b659e2748c8fd8aa1b7ecc5b8c87665022019905d76a7bbc83cbc3fb6d33e7e8aae903716206e9cf1fcb75518ce37baf69a01210312c50bdc21e06827c0bdd3ef1ff849e24b17147f9a6f240c4af45bd235eb5819ffffffff0102000000000000004751210351efb6e91a31221652105d032a2508275f374cea63939ad72f1b1e02f477da782100f2b7816db49d55d24df7bdffdbc1e203b424e8cd39f5651ab938e5e4a193569e52ae00000000");
 		assertTrue (Script.isMultiSig (t1.getOutputs ().get (0).getScript ()));
 
+		ExecutorService executor = Executors.newFixedThreadPool (4);
+
+		List<Callable<ValidationException>> callables = new ArrayList<Callable<ValidationException>> ();
+
 		// Malformed public key in multisig
-		t2 =
+		final Tx p1 =
 				Tx.fromWireDump ("010000000123ba84a7ce8ab2785a838fa9ca50ad395bee25aba38dda28336cc337d08a599e000000006a4730440220320a58bf09ce578dd2ddf5381a34d80c3b659e2748c8fd8aa1b7ecc5b8c87665022019905d76a7bbc83cbc3fb6d33e7e8aae903716206e9cf1fcb75518ce37baf69a01210312c50bdc21e06827c0bdd3ef1ff849e24b17147f9a6f240c4af45bd235eb5819ffffffff0102000000000000004751210351efb6e91a31221652105d032a2508275f374cea63939ad72f1b1e02f477da782100f2b7816db49d55d24df7bdffdbc1e203b424e8cd39f5651ab938e5e4a193569e52ae00000000");
-		t1 =
+		final Tx p2 =
+				Tx.fromWireDump ("0100000001ab9b9c1610dd8dce68fb8d1d787537421a8610364d9f6907360b33739c464432000000006b483045022100dcd533f206756c83757bd0738905799dd0c7f505c22c567641b1b35573a9b24b02204c3773f60752ea67809aa32eb0a07c0f16bcfe073c99e84c8c30a328fa14874c0121031c9bfff835236f589ba409b364a9d2c392971c053cdfbbac9ccdd9f30eabb15bffffffff01404b4c00000000004751210351efb6e91a31221652105d032a2508275f374cea63939ad72f1b1e02f477da7821004f0331742bbc917ba2056a3b8a857ea47ec088dd10475ea311302112c9d24a7152ae00000000");
+
+		final Tx n =
 				Tx.fromWireDump ("01000000025718fb915fb8b3a802bb699ddf04dd91261ef6715f5f2820a2b1b9b7e38b4f27000000004a004830450221008c2107ed4e026ab4319a591e8d9ec37719cdea053951c660566e3a3399428af502202ecd823d5f74a77cc2159d8af2d3ea5d36a702fef9a7edaaf562aef22ac35da401ffffffff038f52231b994efb980382e4d804efeadaee13cfe01abe0d969038ccb45ec17000000000490047304402200487cd787fde9b337ab87f9fe54b9fd46d5d1692aa58e97147a4fe757f6f944202203cbcfb9c0fc4e3c453938bbea9e5ae64030cf7a97fafaf460ea2cb54ed5651b501ffffffff0100093d00000000001976a9144dc39248253538b93d3a0eb122d16882b998145888ac00000000");
-		t1.getInputs ().get (0).setSource (t2.getOutputs ().get (0));
-		assertTrue (new Script (t1, 0).evaluate (true));
+
+		n.getInputs ().get (1).setSource (p2.getOutputs ().get (0));
+		n.getInputs ().get (0).setSource (p1.getOutputs ().get (0));
+
+		// parrallel script eval.
+		Callable<ValidationException> c1 = new Callable<ValidationException> ()
+		{
+			@Override
+			public ValidationException call () throws Exception
+			{
+				try
+				{
+					if ( new Script (n, 0).evaluate (true) )
+					{
+						return null;
+					}
+					else
+					{
+						return new ValidationException ("script is not true");
+					}
+				}
+				catch ( Exception e )
+				{
+					return new ValidationException (e);
+				}
+			}
+		};
+		Callable<ValidationException> c2 = new Callable<ValidationException> ()
+		{
+			@Override
+			public ValidationException call () throws Exception
+			{
+				try
+				{
+					if ( new Script (n, 1).evaluate (true) )
+					{
+						return null;
+					}
+					else
+					{
+						return new ValidationException ("script is not true");
+					}
+				}
+				catch ( Exception e )
+				{
+					return new ValidationException (e);
+				}
+			}
+		};
+		for ( int i = 0; i < 100; ++i )
+		{
+			callables.add (c1);
+			callables.add (c2);
+		}
+		List<Future<ValidationException>> results = executor.invokeAll (callables);
+		for ( Future<ValidationException> e : results )
+		{
+			assertTrue (e.get () == null);
+		}
 	}
 }
