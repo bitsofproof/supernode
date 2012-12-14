@@ -874,11 +874,6 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				try
 				{
-					// some miner add 0 with garbage...
-					if ( chain.isProduction () && o.getValue () != 0 && tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
-					{
-						throw new TransactionValidationException ("Nonstandard script rejected", t);
-					}
 					tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 					tcontext.nsigs += Script.sigOpCount (o.getScript ());
 				}
@@ -943,19 +938,16 @@ public abstract class CachedBlockStore implements BlockStore
 						throw new TransactionValidationException ("script too long ", t);
 					}
 				}
-				if ( chain.isProduction () )
+				try
 				{
-					try
+					if ( tcontext.block == null && chain.isProduction () && !Script.isStandard (o.getScript ()) )
 					{
-						if ( tcontext.block.getHeight () > 180000 && !Script.isStandard (o.getScript ()) )
-						{
-							throw new TransactionValidationException ("Nonstandard script rejected", t);
-						}
+						throw new TransactionValidationException ("Nonstandard script rejected", t);
 					}
-					catch ( ValidationException e )
-					{
-						throw new TransactionValidationException (e, t);
-					}
+				}
+				catch ( ValidationException e )
+				{
+					throw new TransactionValidationException (e, t);
 				}
 				if ( tcontext.block != null )
 				{
