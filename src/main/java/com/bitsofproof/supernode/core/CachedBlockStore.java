@@ -251,11 +251,18 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			return hash.hashCode ();
 		}
-		
-		public boolean equals(Object o)
+
+		@Override
+		public boolean equals (Object o)
 		{
-			if (o == null) return false;
-			if (o == this) return true;
+			if ( o == null )
+			{
+				return false;
+			}
+			if ( o == this )
+			{
+				return true;
+			}
 			return hash.equals (((CachedBlock) o).hash);
 		}
 	}
@@ -665,7 +672,8 @@ public abstract class CachedBlockStore implements BlockStore
 						{
 							if ( e.get () != null )
 							{
-								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getTx ().toWireDump (), e.get ());
+								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getIn () + " " + e.get ().getTx ().toWireDump () + " "
+										+ e.get ().getTx ().getInputs ().get (e.get ().getIn ()).getSource ().getTransaction ().toWireDump (), e.get ());
 							}
 						}
 						catch ( ExecutionException e1 )
