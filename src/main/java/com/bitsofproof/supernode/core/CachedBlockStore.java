@@ -672,8 +672,8 @@ public abstract class CachedBlockStore implements BlockStore
 						{
 							if ( e.get () != null )
 							{
-								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getIn () + " " + e.get ().getTx ().toWireDump () + " "
-										+ e.get ().getTx ().getInputs ().get (e.get ().getIn ()).getSource ().getTransaction ().toWireDump (), e.get ());
+								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getIn () + " " + e.get ().getTx ().toWireDump (),
+										e.get ());
 							}
 						}
 						catch ( ExecutionException e1 )
