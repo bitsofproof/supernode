@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
+import com.bitsofproof.supernode.model.Tx;
 
 public class BitcoinNetwork extends P2P
 {
@@ -53,7 +54,6 @@ public class BitcoinNetwork extends P2P
 			.synchronizedMap (new HashMap<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> ());
 	private final Set<BitcoinPeer> connectedPeers = new CopyOnWriteArraySet<BitcoinPeer> ();
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
-
 
 	@Override
 	public void start () throws IOException
@@ -85,9 +85,9 @@ public class BitcoinNetwork extends P2P
 			@Override
 			public void run ()
 			{
-				if (jobs.containsKey (nr))
+				if ( jobs.containsKey (nr) )
 				{
-					if (single)
+					if ( single )
 					{
 						jobs.remove (nr);
 					}
@@ -95,7 +95,7 @@ public class BitcoinNetwork extends P2P
 					{
 						job.run ();
 					}
-					catch (Exception e)
+					catch ( Exception e )
 					{
 						log.debug ("Exception in scheduled job. The job will not be rescheduled.", e);
 						jobs.remove (this);
@@ -103,37 +103,37 @@ public class BitcoinNetwork extends P2P
 				}
 			}
 		}
-		
-		public WrappedRunnable wrap(Runnable job, boolean single)
+
+		public WrappedRunnable wrap (Runnable job, boolean single)
 		{
-			return new WrappedRunnable(job, single);
+			return new WrappedRunnable (job, single);
 		}
-		
-		public void cancelJob(long id)
+
+		public void cancelJob (long id)
 		{
 			jobs.remove (id);
 		}
 	}
-	
-	private static JobWrapper jobWrapper = new JobWrapper();
-	
+
+	private static JobWrapper jobWrapper = new JobWrapper ();
+
 	public long scheduleJob (final Runnable job, int delay, TimeUnit unit)
 	{
-		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap(job, true);
+		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap (job, true);
 		getScheduler ().schedule (runnable, delay, unit);
 		return runnable.nr;
 	}
 
 	public long scheduleJobWithFixedDelay (Runnable job, int startDelay, int delay, TimeUnit unit)
 	{
-		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap(job, false);
+		JobWrapper.WrappedRunnable runnable = jobWrapper.wrap (job, false);
 		getScheduler ().scheduleWithFixedDelay (runnable, startDelay, delay, unit);
 		return runnable.nr;
 	}
 
 	public void cancelJob (long jobid)
 	{
-		jobWrapper.cancelJob(jobid);
+		jobWrapper.cancelJob (jobid);
 	}
 
 	public BitcoinPeer[] getConnectPeers ()
@@ -288,6 +288,12 @@ public class BitcoinNetwork extends P2P
 	public void setPeerStore (PeerStore peerStore)
 	{
 		this.peerStore = peerStore;
+	}
+
+	public void sendTransaction (Tx t)
+	{
+		// TODO Auto-generated method stub
+
 	}
 
 }

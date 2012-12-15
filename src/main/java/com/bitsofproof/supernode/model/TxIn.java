@@ -66,6 +66,8 @@ public class TxIn implements Serializable, Cloneable
 	// scriptSig
 	private byte[] script;
 
+	private transient String txHash;
+
 	public Long getId ()
 	{
 		return id;
@@ -191,7 +193,6 @@ public class TxIn implements Serializable, Cloneable
 		sequence = reader.readUint32 ();
 	}
 
-	
 	@Override
 	public int hashCode ()
 	{
@@ -204,16 +205,21 @@ public class TxIn implements Serializable, Cloneable
 	@Override
 	public boolean equals (Object obj)
 	{
-		if (obj == this)
+		if ( obj == this )
+		{
 			return true;
-		if (obj == null)
-			return false;
-		
-		if (obj instanceof TxIn) {
-			TxIn ot = (TxIn) obj;
-			return ix.equals(ot.ix) && sourceHash.equals (ot.sourceHash);
 		}
-		
+		if ( obj == null )
+		{
+			return false;
+		}
+
+		if ( obj instanceof TxIn )
+		{
+			TxIn ot = (TxIn) obj;
+			return ix.equals (ot.ix) && sourceHash.equals (ot.sourceHash);
+		}
+
 		return false;
 	}
 
@@ -229,6 +235,16 @@ public class TxIn implements Serializable, Cloneable
 		c.transaction = tc;
 
 		return c;
+	}
+
+	public String getTxHash ()
+	{
+		return txHash;
+	}
+
+	public void setTxHash (String txHash)
+	{
+		this.txHash = txHash;
 	}
 
 }

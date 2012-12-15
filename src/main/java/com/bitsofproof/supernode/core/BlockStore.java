@@ -26,6 +26,8 @@ public interface BlockStore
 {
 	public void cache (int cacheSize) throws ValidationException;
 
+	public String getPreviousBlockHash (String hash);
+
 	public List<String> getLocator ();
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
@@ -41,6 +43,8 @@ public interface BlockStore
 	public void resetStore (Chain chain) throws TransactionValidationException;
 
 	public Blk getBlock (String hash);
+
+	public Tx getTransaction (String hash);
 
 	public boolean isStoredBlock (String hash);
 

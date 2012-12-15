@@ -26,6 +26,8 @@ import javax.persistence.PersistenceContext;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Hash;
@@ -160,7 +162,7 @@ public class JpaBlockStore extends CachedBlockStore
 		JPAQuery q = new JPAQuery (entityManager);
 		List<Object[]> rows =
 				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
-						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txin);
+						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, tx.hash, txin);
 		for ( Object[] o : rows )
 		{
 			entityManager.detach (o[1]);
@@ -202,6 +204,7 @@ public class JpaBlockStore extends CachedBlockStore
 	}
 
 	@Override
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
 		QTxOut txout = QTxOut.txOut;
@@ -253,5 +256,42 @@ public class JpaBlockStore extends CachedBlockStore
 	protected TxOut getSourceReference (TxOut source)
 	{
 		return entityManager.getReference (TxOut.class, source.getId ());
+	}
+
+	@Override
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	public Tx getTransaction (String hash)
+	{
+		JPAQuery q = new JPAQuery (entityManager);
+		QTx tx = QTx.tx;
+
+		List<Tx> transactions = q.from (tx).where (tx.hash.eq (hash)).list (tx);
+		for ( Tx t : transactions )
+		{
+			// trigger lazy loading
+			t.getInputs ().size ();
+			t.getOutputs ().size ();
+			entityManager.detach (t);
+		}
+		if ( transactions.size () == 1 )
+		{
+			return transactions.get (0);
+		}
+		boolean allAvailable = true;
+		for ( Tx t : transactions )
+		{
+			for ( TxOut o : t.getOutputs () )
+			{
+				if ( !o.isAvailable () )
+				{
+					allAvailable = false;
+				}
+			}
+		}
+		if ( allAvailable )
+		{
+			return transactions.get (0);
+		}
+		return null;
 	}
 }

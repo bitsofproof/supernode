@@ -104,13 +104,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
-	@Override
-	public abstract List<TxOut> getUnspentOutput (List<String> addresses);
-
 	protected abstract List<Object[]> getSpendList (List<String> addresses);
-
-	@Override
-	public abstract boolean isEmpty ();
 
 	public void removeUTXO (String txhash, long ix)
 	{
@@ -324,6 +318,31 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
+	public String getPreviousBlockHash (String hash)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			CachedBlock current = cachedBlocks.get (hash);
+			if ( current != null )
+			{
+				CachedBlock previous = current.previous;
+				if ( previous == null )
+				{
+					return Hash.ZERO_HASH_STRING;
+				}
+				return previous.hash;
+			}
+			return null;
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
 	public long getChainHeight ()
 	{
 		try
@@ -427,7 +446,9 @@ public abstract class CachedBlockStore implements BlockStore
 			for ( Object[] cols : rows )
 			{
 				String blockHash = (String) cols[0];
-				TxIn in = (TxIn) cols[1];
+				String txHash = (String) cols[1];
+				TxIn in = (TxIn) cols[2];
+				in.setTxHash (txHash);
 				CachedBlock block = cachedBlocks.get (blockHash);
 				if ( isBlockOnBranch (block, currentHead) )
 				{
@@ -821,7 +842,55 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		if ( !need.isEmpty () )
 		{
-			for ( TxOut o : findTxOuts (need) )
+			List<TxOut> all = findTxOuts (need);
+
+			// filter for duplicate transaction hashes.
+			// such transaction is only available if none of its siblings is spent
+			List<TxOut> fromDB = new ArrayList<TxOut> ();
+			Map<String, HashMap<Long, ArrayList<TxOut>>> found = new HashMap<String, HashMap<Long, ArrayList<TxOut>>> ();
+			for ( TxOut o : all )
+			{
+				HashMap<Long, ArrayList<TxOut>> outsByIx = found.get (o.getTxHash ());
+				if ( outsByIx == null )
+				{
+					outsByIx = new HashMap<Long, ArrayList<TxOut>> ();
+					found.put (o.getTxHash (), outsByIx);
+				}
+				ArrayList<TxOut> outs = outsByIx.get (o.getIx ());
+				if ( outs == null )
+				{
+					outs = new ArrayList<TxOut> ();
+					outsByIx.put (o.getIx (), outs);
+				}
+				outs.add (o);
+			}
+			for ( Map.Entry<String, HashMap<Long, ArrayList<TxOut>>> e : found.entrySet () )
+			{
+				for ( Map.Entry<Long, ArrayList<TxOut>> e2 : e.getValue ().entrySet () )
+				{
+					if ( e2.getValue ().size () == 1 )
+					{
+						fromDB.add (e2.getValue ().get (0));
+					}
+					else
+					{
+						boolean allAvailable = true;
+						for ( TxOut o : e2.getValue () )
+						{
+							if ( !o.isAvailable () )
+							{
+								allAvailable = false;
+							}
+						}
+						if ( allAvailable )
+						{
+							fromDB.add (e2.getValue ().get (0));
+						}
+					}
+				}
+			}
+
+			for ( TxOut o : fromDB )
 			{
 				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (o.getTxHash ());
 				if ( outs == null )

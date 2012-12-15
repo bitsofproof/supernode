@@ -347,6 +347,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 	}
 
+	@Override
+	public Tx getTransaction (String hash)
+	{
+		Tx t = readTx (hash);
+		return t;
+	}
+
 	private void writePeer (KnownPeer p)
 	{
 		if ( batch != null )
@@ -583,7 +590,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			for ( TxOut o : t.getOutputs () )
 			{
-				result.add (new Object[] { t.getBlockHash (), o });
+				if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
+				{
+					result.add (new Object[] { t.getBlockHash (), o });
+				}
 			}
 		}
 		return result;
@@ -689,8 +699,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				Tx s = readTx (i.getSourceHash ());
 				TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
-
-				result.add (new Object[] { t.getBlockHash (), spend });
+				if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
+				{
+					result.add (new Object[] { t.getBlockHash (), t.getHash (), spend });
+				}
 			}
 		}
 		return result;
