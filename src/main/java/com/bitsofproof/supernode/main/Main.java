@@ -64,8 +64,8 @@ public class Main
 					a.add (s);
 				}
 			}
-			ctx.load ("classpath:common.xml");
-			ctx.load ("classpath:*-profile.xml");
+			ctx.load ("classpath:context/common.xml");
+			ctx.load ("classpath:context/*-profile.xml");
 			ctx.refresh ();
 			ctx.getBean (App.class).start (a.toArray (new String[0]));
 		}
