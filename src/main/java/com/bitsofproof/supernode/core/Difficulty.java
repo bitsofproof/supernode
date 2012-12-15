@@ -43,7 +43,7 @@ public class Difficulty
 	{
 		// Limit the adjustment step.
 		periodLength = Math.max (Math.min (periodLength, targetTime * 4), targetTime / 4);
-		BigInteger newTarget = (getTarget (currentTarget).multiply (BigInteger.valueOf (periodLength))).divide (BigInteger.valueOf (1209600));
+		BigInteger newTarget = (getTarget (currentTarget).multiply (BigInteger.valueOf (periodLength))).divide (BigInteger.valueOf (targetTime));
 		// not simpler than this
 		if ( newTarget.compareTo (minTarget) > 0 )
 		{

@@ -38,6 +38,7 @@ import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.signers.ECDSASigner;
 
+
 public class ECKeyPair
 {
 	private static final SecureRandom secureRandom = new SecureRandom ();

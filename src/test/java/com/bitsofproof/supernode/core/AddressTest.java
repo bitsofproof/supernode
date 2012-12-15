@@ -25,6 +25,7 @@ import java.util.Arrays;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+
 public class AddressTest
 {
 	static Chain chain;

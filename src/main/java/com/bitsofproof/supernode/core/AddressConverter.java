@@ -18,6 +18,8 @@ package com.bitsofproof.supernode.core;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+
+
 public class AddressConverter
 {
 	private static final char[] b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray ();

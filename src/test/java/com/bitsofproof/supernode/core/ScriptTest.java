@@ -413,7 +413,7 @@ public class ScriptTest
 				}
 			}
 		};
-		for ( int i = 0; i < 100; ++i )
+		for ( int i = 0; i < 20; ++i )
 		{
 			callables.add (c1);
 			callables.add (c2);
@@ -423,5 +423,10 @@ public class ScriptTest
 		{
 			assertTrue (e.get () == null);
 		}
+
+		// send to OP_1
+		t1 =
+				Tx.fromWireDump ("01000000027aa7f9172660e38236b3bb97830c0b79a6e843ae83145d8707b9b8f249e7c470000000006b48304502207b3a5fc309e495b93b4f9136c5780c8c03a44eca5b1d1bdc867d85757f5064b80221009a0845c3a48e5bf1881c760d321fc67ad56daaee608c6945c90996b23a08006001210353f9a0f2c1050c22bc2292b67adf7dae73c6917412a77b29925107fc795ba621ffffffffbce7839d77c264156d6724c4ac9a6be344b00c7cbb19214681c5e5f819dfc1bd000000006a473044022066663219d304b747b69c4c987c2a7d3b9de0fd467a79ce984fc08ba79a78d51002207d6641b1fcd3314a8b8ea957f3dafff689df29bd39f2c6b0c6a584356142154c012103f81890f43dbf0e38f734a8b8f0da9bb1ede141e34bf8793dda153c1beda1cbfbffffffff0100e1f50500000000015100000000");
+		assertFalse (Script.isStandard (t1.getOutputs ().get (0).getScript ()));
 	}
 }

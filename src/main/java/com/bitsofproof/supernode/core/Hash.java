@@ -21,6 +21,8 @@ import java.security.NoSuchAlgorithmException;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
+
+
 public class Hash
 {
 	private final byte[] bytes;
