@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bouncycastle.util.encoders.Hex;
-import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.core.ByteUtils;
 import com.bitsofproof.supernode.core.Chain;
@@ -14,7 +13,6 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-@Component ("testChain")
 public class TestChain implements Chain
 {
 

@@ -15,7 +15,6 @@
  */
 package com.bitsofproof.supernode.main;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,13 +22,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
-import org.springframework.core.io.support.ResourcePropertySource;
 
-import com.google.common.base.Enums;
-
-/**
- * @author Bártfai Tamás <bartfaitamas@gmail.com>
- */
 public class Main
 {
 	protected interface App
@@ -41,73 +34,44 @@ public class Main
 
 	public static void main (String[] args) throws Exception
 	{
-		Profile profile = null;
-		if ( args.length > 0 && args[0] != "help" )
-		{
-			profile = Enums.valueOfFunction (Profile.class).apply (args[0].toUpperCase ());
-		}
+		log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
+		log.trace ("Spring context setup");
 
-		if ( profile == null )
+		if ( args.length == 0 )
 		{
-			printUsage ();
+			System.err.println ("Usage: java com.bitsofproof.main.Main profile [profile...] -- [args...] [options...]");
 			return;
 		}
 
+		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
 		try
 		{
 			List<String> a = new ArrayList<String> ();
-			boolean first = true;
+			boolean profiles = true;
 			for ( String s : args )
 			{
-				if ( !first )
+				if ( s.equals ("--") )
+				{
+					profiles = false;
+				}
+				if ( profiles )
+				{
+					log.info ("Loading profile: " + s);
+					ctx.getEnvironment ().addActiveProfile (s);
+				}
+				else
 				{
 					a.add (s);
 				}
-				first = false;
 			}
-			loadContext (profile).getBean (App.class).start (a.toArray (new String[0]));
+			ctx.load ("classpath:common.xml");
+			ctx.load ("classpath:*-profile.xml");
+			ctx.refresh ();
+			ctx.getBean (App.class).start (a.toArray (new String[0]));
 		}
 		catch ( CmdLineException cle )
 		{
 			cle.getParser ().printUsage (System.err);
-		}
-	}
-
-	protected static void printUsage ()
-	{
-		System.err.println ("Usage: java com.bitsofproof.Supernode < demo | server | lserver | audit > [COMMAND ARGS]");
-	}
-
-	protected static GenericXmlApplicationContext loadContext (Profile profile) throws IOException
-	{
-		log.info ("bitsofproof supernode (c) 2012 Tamas Blummer tamas@bitsofproof.com");
-		log.trace ("Spring context setup");
-		log.info ("Profile: " + profile.toString ());
-
-		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
-		ctx.getEnvironment ().getPropertySources ().addFirst (loadProperties (profile));
-		ctx.getEnvironment ().setActiveProfiles (profile.toString ());
-		ctx.load ("classpath:context/common-context.xml");
-		ctx.load ("classpath:context/*-config.xml");
-		ctx.refresh ();
-
-		return ctx;
-	}
-
-	protected static ResourcePropertySource loadProperties (Profile profile) throws IOException
-	{
-		String propertiesLocation = String.format ("classpath:etc/supernode-%s.properties", profile.toString ());
-		return new ResourcePropertySource (propertiesLocation);
-	}
-
-	protected static enum Profile
-	{
-		DEMO, AUDIT, SERVER, LSERVER, ARCHIVE;
-
-		@Override
-		public String toString ()
-		{
-			return super.toString ().toLowerCase ();
 		}
 	}
 }

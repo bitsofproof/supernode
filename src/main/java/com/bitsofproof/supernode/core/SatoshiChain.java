@@ -19,14 +19,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bouncycastle.util.encoders.Hex;
-import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-@Component ("productionChain")
 public class SatoshiChain implements Chain
 {
 

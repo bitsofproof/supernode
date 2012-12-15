@@ -53,6 +53,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	private static DB db;
 	private final SecureRandom rnd = new SecureRandom ();
 	private WriteBatch batch = null;
+	private Map<String, Tx> inBatch = null;
 
 	private static enum KeyType
 	{
@@ -231,6 +232,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private Tx readTx (String hash)
 	{
+		if ( batch != null )
+		{
+			if ( inBatch.containsKey (hash) )
+			{
+				return inBatch.get (hash);
+			}
+		}
 		byte[] data = db.get (Key.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
@@ -244,6 +252,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		if ( batch != null )
 		{
 			batch.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+			inBatch.put (t.getHash (), t);
 		}
 		else
 		{
@@ -294,7 +303,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (id);
-		return Head.fromLevelDB (db.get (Key.createKey (KeyType.HEAD, writer.toByteArray ())));
+		byte[] data = db.get (Key.createKey (KeyType.HEAD, writer.toByteArray ()));
+		if ( data != null )
+		{
+			return Head.fromLevelDB (data);
+		}
+		return null;
 	}
 
 	private void writeHead (Head h)
@@ -609,6 +623,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	protected void startBatch ()
 	{
 		batch = db.createWriteBatch ();
+		inBatch = new HashMap<String, Tx> ();
 	}
 
 	@Override
@@ -619,6 +634,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			db.write (batch);
 			batch.close ();
 			batch = null;
+			inBatch = null;
 		}
 	}
 
@@ -629,6 +645,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			batch.close ();
 			batch = null;
+			inBatch = null;
 		}
 	}
 
