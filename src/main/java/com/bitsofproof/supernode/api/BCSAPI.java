@@ -22,7 +22,7 @@ import com.bitsofproof.supernode.core.ValidationException;
 /**
  * This is the API extensions to the bitsofproof supernode should build on
  */
-public interface BSCAPI
+public interface BCSAPI
 {
 	/**
 	 * get a block for the hash
