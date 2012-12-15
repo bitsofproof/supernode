@@ -2,7 +2,17 @@ COMPILE
 mvn package
 
 RUN
-java -jar target/supernode-0.6-SNAPSHOT.jar demo
+java -jar target/supernode-0.7-SNAPSHOT.jar testnet3 memdb server
+or
+java -jar target/supernode-0.7-SNAPSHOT.jar production leveldb server
+or
+java -jar target/supernode-0.7-SNAPSHOT.jar production relational server
+
+You should configre relational data source in src/main/resources/relational-profile.xml before use.
+
+I recommend to also use below options to java: 
+java -server -Xmx4g ...
+
 
 UPGRADE 
 to maven for previously used ant-eclipse project
