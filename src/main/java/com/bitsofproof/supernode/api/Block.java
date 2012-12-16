@@ -21,7 +21,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class Block implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 8656709442771257759L;
@@ -219,5 +218,17 @@ public class Block implements Serializable, Cloneable
 			}
 		}
 		return b;
+	}
+
+	public static Block fromWireDump (String dump)
+	{
+		return fromWire (new WireFormat.Reader (ByteUtils.fromHex (dump)));
+	}
+
+	public String toWireDump ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWire (writer);
+		return ByteUtils.toHex (writer.toByteArray ());
 	}
 }

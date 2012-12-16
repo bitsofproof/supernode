@@ -19,7 +19,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class Transaction implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 690918485496086537L;
@@ -201,6 +200,18 @@ public class Transaction implements Serializable, Cloneable
 			}
 		}
 		return t;
+	}
+
+	public static Transaction fromWireDump (String dump)
+	{
+		return fromWire (new WireFormat.Reader (ByteUtils.fromHex (dump)));
+	}
+
+	public String toWireDump ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		toWire (writer);
+		return ByteUtils.toHex (writer.toByteArray ());
 	}
 
 	@Override
