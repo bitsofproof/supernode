@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
+import com.bitsofproof.supernode.api.ChainParameter;
 import com.bitsofproof.supernode.model.Blk;
 
 public interface Chain extends ChainParameter
