@@ -20,6 +20,8 @@ import java.util.List;
 
 import org.bouncycastle.util.encoders.Hex;
 
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;

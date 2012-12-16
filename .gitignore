@@ -1,12 +1,8 @@
-bin
 lib
-dist
-generated
 log
-derby.log
-/target
+target
 .classpath
 .project
 .settings
 .factorypath
-/data
+data

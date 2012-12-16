@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.main;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.kohsuke.args4j.CmdLineException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
@@ -44,34 +43,27 @@ public class Main
 		}
 
 		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
-		try
+		List<String> a = new ArrayList<String> ();
+		boolean profiles = true;
+		for ( String s : args )
 		{
-			List<String> a = new ArrayList<String> ();
-			boolean profiles = true;
-			for ( String s : args )
+			if ( s.equals ("--") )
 			{
-				if ( s.equals ("--") )
-				{
-					profiles = false;
-				}
-				if ( profiles )
-				{
-					log.info ("Loading profile: " + s);
-					ctx.getEnvironment ().addActiveProfile (s);
-				}
-				else
-				{
-					a.add (s);
-				}
+				profiles = false;
 			}
-			ctx.load ("classpath:context/common.xml");
-			ctx.load ("classpath:context/*-profile.xml");
-			ctx.refresh ();
-			ctx.getBean (App.class).start (a.toArray (new String[0]));
+			if ( profiles )
+			{
+				log.info ("Loading profile: " + s);
+				ctx.getEnvironment ().addActiveProfile (s);
+			}
+			else
+			{
+				a.add (s);
+			}
 		}
-		catch ( CmdLineException cle )
-		{
-			cle.getParser ().printUsage (System.err);
-		}
+		ctx.load ("classpath:context/common.xml");
+		ctx.load ("classpath:context/*-profile.xml");
+		ctx.refresh ();
+		ctx.getBean (App.class).start (a.toArray (new String[0]));
 	}
 }

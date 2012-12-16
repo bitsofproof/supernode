@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.core.WireFormat.Address;
+import com.bitsofproof.supernode.api.WireFormat.Address;
 import com.bitsofproof.supernode.messages.AddrMessage;
 
 public class AddressSeeder implements Runnable

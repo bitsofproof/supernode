@@ -27,6 +27,11 @@ import java.util.StringTokenizer;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ECKeyPair;
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;

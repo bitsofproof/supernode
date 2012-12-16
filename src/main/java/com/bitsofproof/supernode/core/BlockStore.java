@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import java.util.List;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;

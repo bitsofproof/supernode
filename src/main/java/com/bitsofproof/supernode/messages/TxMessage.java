@@ -15,9 +15,9 @@
  */
 package com.bitsofproof.supernode.messages;
 
+import com.bitsofproof.supernode.api.WireFormat.Reader;
+import com.bitsofproof.supernode.api.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
-import com.bitsofproof.supernode.core.WireFormat.Reader;
-import com.bitsofproof.supernode.core.WireFormat.Writer;
 import com.bitsofproof.supernode.model.Tx;
 
 public class TxMessage extends BitcoinPeer.Message

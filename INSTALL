@@ -1,3 +1,6 @@
+INSTALL
+clone and install bitsofproof supernode-api first as this build depends on that module.
+
 COMPILE
 mvn package
 

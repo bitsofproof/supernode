@@ -25,9 +25,9 @@ import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.TransactionValidationException;
-import com.bitsofproof.supernode.core.ValidationException;
 
 public class Server extends Main implements Main.App
 {

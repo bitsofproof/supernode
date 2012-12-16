@@ -31,9 +31,9 @@ import java.util.StringTokenizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.AddressConverter;
 import com.bitsofproof.supernode.core.Discovery;
-import com.bitsofproof.supernode.core.ValidationException;
 
 public class IRCDiscovery implements Discovery
 {

@@ -25,8 +25,8 @@ import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.WireFormat;
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.WireFormat;
 
 @Entity
 @Table (name = "head")

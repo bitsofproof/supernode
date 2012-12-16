@@ -22,6 +22,9 @@ import java.io.ByteArrayOutputStream;
 
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 

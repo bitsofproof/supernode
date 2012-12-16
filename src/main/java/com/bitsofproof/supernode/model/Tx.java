@@ -33,9 +33,9 @@ import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bitsofproof.supernode.core.ByteUtils;
-import com.bitsofproof.supernode.core.Hash;
-import com.bitsofproof.supernode.core.WireFormat;
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.WireFormat;
 
 @Entity
 @Table (name = "tx")

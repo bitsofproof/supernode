@@ -31,10 +31,10 @@ import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bitsofproof.supernode.core.ByteUtils;
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.Script;
-import com.bitsofproof.supernode.core.ValidationException;
-import com.bitsofproof.supernode.core.WireFormat;
 
 @Entity
 @Table (name = "txout")

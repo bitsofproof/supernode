@@ -25,6 +25,9 @@ import java.util.Arrays;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ValidationException;
+
 
 public class AddressTest
 {

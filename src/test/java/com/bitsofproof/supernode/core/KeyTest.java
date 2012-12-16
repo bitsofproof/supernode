@@ -21,6 +21,11 @@ import java.math.BigInteger;
 
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ECKeyPair;
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
+
 
 public class KeyTest
 {

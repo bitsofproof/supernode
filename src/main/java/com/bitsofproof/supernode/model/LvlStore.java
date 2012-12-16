@@ -38,11 +38,11 @@ import org.iq80.leveldb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
-import com.bitsofproof.supernode.core.Hash;
 import com.bitsofproof.supernode.core.PeerStore;
-import com.bitsofproof.supernode.core.WireFormat;
 
 public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 {

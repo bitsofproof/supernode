@@ -18,6 +18,9 @@ package com.bitsofproof.supernode.core;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
+
 
 
 public class AddressConverter
