@@ -18,7 +18,7 @@ package com.bitsofproof.supernode.api;
 import java.math.BigInteger;
 import java.util.Arrays;
 
-import com.bitsofproof.supernode.core.ChainParameter;
+import com.bitsofproof.supernode.api.ChainParameter;
 
 public class AddressConverter
 {
