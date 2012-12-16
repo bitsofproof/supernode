@@ -15,10 +15,10 @@
  */
 package com.bitsofproof.supernode.core;
 
-import static com.bitsofproof.supernode.core.Difficulty.getCompactTarget;
-import static com.bitsofproof.supernode.core.Difficulty.getDifficulty;
-import static com.bitsofproof.supernode.core.Difficulty.getNextTarget;
-import static com.bitsofproof.supernode.core.Difficulty.getTarget;
+import static com.bitsofproof.supernode.api.Difficulty.getCompactTarget;
+import static com.bitsofproof.supernode.api.Difficulty.getDifficulty;
+import static com.bitsofproof.supernode.api.Difficulty.getNextTarget;
+import static com.bitsofproof.supernode.api.Difficulty.getTarget;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;

@@ -17,7 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import com.bitsofproof.supernode.model.Blk;
 
-public interface Chain
+public interface Chain extends ChainParameter
 {
 	public Blk getGenesis ();
 
@@ -25,19 +25,9 @@ public interface Chain
 
 	public int getPort ();
 
-	public int getDifficultyReviewBlocks ();
-
-	public int getTargetBlockTime ();
-
 	public byte[] getAlertKey ();
 
 	public long getVersion ();
-
-	public boolean isProduction ();
-
-	public int getAddressFlag ();
-
-	public int getMultisigAddressFlag ();
 
 	public int getValidateFrom ();
 }

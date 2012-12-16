@@ -25,9 +25,11 @@ import java.util.Arrays;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ValidationException;
-
+import com.bitsofproof.supernode.core.Chain;
+import com.bitsofproof.supernode.core.SatoshiChain;
 
 public class AddressTest
 {
