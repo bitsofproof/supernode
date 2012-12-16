@@ -29,9 +29,9 @@ import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.TransactionValidationException;
 
-public class Server extends Main implements Main.App
+public class Supernode extends Main implements Main.App
 {
-	private static final Logger log = LoggerFactory.getLogger (Server.class);
+	private static final Logger log = LoggerFactory.getLogger (Supernode.class);
 
 	private BitcoinNetwork network;
 
