@@ -37,19 +37,14 @@ import com.bitsofproof.supernode.model.Tx;
 
 @Controller
 @RequestMapping ("/bccapi")
-@Profile("server")
+@Profile ("bccapi")
 public class NativeBCCAPI
 {
 	private static final String API_VERSION = "1";
 
 	@Autowired
 	private BCCAPI api;
-	
-	public void setApi(BCCAPI api)
-	{
-	    this.api = api;
-	}
-	
+
 	@RequestMapping (method = { RequestMethod.GET }, value = "/" + API_VERSION + "/getLoginChallenge", produces = "application/octet-stream")
 	public @ResponseBody
 	byte[] getLoginChallenge (@RequestParam (value = "key", required = true) String accountPublicKey) throws IOException, APIException
