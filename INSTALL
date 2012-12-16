@@ -1,0 +1,6 @@
+INSTALL
+Use maven to install this module into your local maven repository.
+This module is needed to compile the supernode or any application connecting to it.
+Execute:
+
+mvn install
