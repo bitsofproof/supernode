@@ -118,4 +118,10 @@ public class ImplementBCSAPI implements BCSAPI
 		return ins;
 	}
 
+	@Override
+	public long getHeartbeat (long mine)
+	{
+		return mine;
+	}
+
 }
