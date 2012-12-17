@@ -22,6 +22,8 @@ import java.util.List;
  */
 public interface BCSAPI
 {
+	public long getHeartbeat (long mine);
+
 	/**
 	 * get a block for the hash
 	 * 
