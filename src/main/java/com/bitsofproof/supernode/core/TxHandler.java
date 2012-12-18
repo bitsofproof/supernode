@@ -92,6 +92,7 @@ public class TxHandler implements ChainListener
 								p.send (tm);
 							}
 						}
+						log.trace ("sent validated transaction to peers " + txm.getTx ().getHash ());
 					}
 					catch ( ValidationException e )
 					{
