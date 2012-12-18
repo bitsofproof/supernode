@@ -92,6 +92,7 @@
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI">
 		<property name="store" ref="store" />
 		<property name="network" ref="bitcoinNetwork" />
+		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 
 	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">

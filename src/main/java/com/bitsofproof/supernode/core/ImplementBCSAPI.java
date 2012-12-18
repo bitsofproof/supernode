@@ -3,6 +3,11 @@ package com.bitsofproof.supernode.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
@@ -19,6 +24,12 @@ public class ImplementBCSAPI implements BCSAPI
 {
 	private BlockStore store;
 	private BitcoinNetwork network;
+	private PlatformTransactionManager transactionManager;
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
 
 	public void setStore (BlockStore store)
 	{
@@ -31,20 +42,36 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public Block getBlock (String hash)
+	public Block getBlock (final String hash)
 	{
-		Blk b = store.getBlock (hash);
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		b.toWire (writer);
+		final WireFormat.Writer writer = new WireFormat.Writer ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				Blk b = store.getBlock (hash);
+				b.toWire (writer);
+			}
+		});
 		return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 	}
 
 	@Override
-	public Transaction getTransaction (String hash)
+	public Transaction getTransaction (final String hash)
 	{
-		Tx t = store.getTransaction (hash);
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		t.toWire (writer);
+		final WireFormat.Writer writer = new WireFormat.Writer ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				Tx t = store.getTransaction (hash);
+				t.toWire (writer);
+			}
+		});
 		return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 	}
 
@@ -61,18 +88,26 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public List<TransactionOutput> getBalance (List<String> address)
+	public List<TransactionOutput> getBalance (final List<String> address)
 	{
-		List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
-		List<TxOut> utxo = store.getUnspentOutput (address);
-		for ( TxOut o : utxo )
+		final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			o.toWire (writer);
-			TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			out.setTransactionHash (o.getTxHash ());
-			outs.add (out);
-		}
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				List<TxOut> utxo = store.getUnspentOutput (address);
+				for ( TxOut o : utxo )
+				{
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					o.toWire (writer);
+					TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+					out.setTransactionHash (o.getTxHash ());
+					outs.add (out);
+				}
+			}
+		});
 		return outs;
 	}
 
@@ -87,34 +122,50 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public List<TransactionOutput> getReceivedTransactions (List<String> address)
+	public List<TransactionOutput> getReceivedTransactions (final List<String> address)
 	{
-		List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
-		List<TxOut> recvd = store.getReceived (address);
-		for ( TxOut o : recvd )
+		final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			o.toWire (writer);
-			TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			out.setTransactionHash (o.getTxHash ());
-			outs.add (out);
-		}
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				List<TxOut> recvd = store.getReceived (address);
+				for ( TxOut o : recvd )
+				{
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					o.toWire (writer);
+					TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+					out.setTransactionHash (o.getTxHash ());
+					outs.add (out);
+				}
+			}
+		});
 		return outs;
 	}
 
 	@Override
-	public List<TransactionInput> getSpentTransactions (List<String> address)
+	public List<TransactionInput> getSpentTransactions (final List<String> address)
 	{
-		List<TransactionInput> ins = new ArrayList<TransactionInput> ();
-		List<TxIn> spent = store.getSpent (address);
-		for ( TxIn i : spent )
+		final List<TransactionInput> ins = new ArrayList<TransactionInput> ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			i.toWire (writer);
-			TransactionInput in = TransactionInput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			in.setTransactionHash (i.getTxHash ());
-			ins.add (in);
-		}
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				List<TxIn> spent = store.getSpent (address);
+				for ( TxIn i : spent )
+				{
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					i.toWire (writer);
+					TransactionInput in = TransactionInput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+					in.setTransactionHash (i.getTxHash ());
+					ins.add (in);
+				}
+			}
+		});
 		return ins;
 	}
 

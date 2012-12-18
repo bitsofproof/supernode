@@ -11,6 +11,15 @@
 
 	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
 
+	<bean id="lvlTransaction" class="com.bitsofproof.supernode.model.LvlTransaction"/>
+
+	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+		<property name="userTransaction" ref="lvlTransaction"/>
+	</bean>
+
+<!-- 	<tx:annotation-driven transaction-manager="transactionManager" />  -->
+
+
 	<bean id="store" class="com.bitsofproof.supernode.model.LvlStore">
 		<property name="database" value="data"/>
 		<property name="cacheSize" value="100"/>
