@@ -20,6 +20,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -172,9 +173,14 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		List<Object[]> rows =
 				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, tx.hash, txin);
-		for ( Object[] o : rows )
+		Iterator<Object[]> i = rows.iterator ();
+		while ( i.hasNext () )
 		{
-			entityManager.detach (o[1]);
+			Object[] o = i.next ();
+			if ( !isOnTrunk ((String) o[0]) )
+			{
+				i.remove ();
+			}
 		}
 		return rows;
 	}
@@ -205,9 +211,14 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		List<Object[]> rows =
 				q.from (txout).join (txout.transaction, tx).join (tx.block, blk)
 						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txout);
-		for ( Object[] o : rows )
+		Iterator<Object[]> i = rows.iterator ();
+		while ( i.hasNext () )
 		{
-			entityManager.detach (o[1]);
+			Object[] o = i.next ();
+			if ( !isOnTrunk ((String) o[0]) )
+			{
+				i.remove ();
+			}
 		}
 		return rows;
 	}

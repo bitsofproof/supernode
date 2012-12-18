@@ -306,6 +306,20 @@ public abstract class CachedBlockStore implements BlockStore
 		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
+	protected boolean isOnTrunk (String block)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+			CachedBlock b = cachedBlocks.get (block);
+			return isBlockOnBranch (b, currentHead);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
 	@Override
 	public boolean isStoredBlock (String hash)
 	{
