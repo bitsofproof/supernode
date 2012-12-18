@@ -3,3 +3,6 @@ target
 .project
 .settings
 .factorypath
+bcsapi_server.keystore
+bcsapi_client.keystore
+BCSAPIPASSWORD
