@@ -15,7 +15,9 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
@@ -49,7 +51,7 @@ public interface BlockStore
 
 	public boolean isStoredBlock (String hash);
 
-	public void validateTransaction (Tx tx) throws ValidationException;
+	public void validateTransaction (Tx tx, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException;
 
 	public long getChainHeight ();
 

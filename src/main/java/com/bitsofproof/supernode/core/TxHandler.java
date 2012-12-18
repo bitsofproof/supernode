@@ -32,6 +32,7 @@ import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class TxHandler implements ChainListener
 {
@@ -39,6 +40,7 @@ public class TxHandler implements ChainListener
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
+	private final Map<String, HashMap<Long, TxOut>> newOutput = new HashMap<String, HashMap<Long, TxOut>> ();
 
 	public TxHandler (final BitcoinNetwork network, final ChainLoader loader)
 	{
@@ -79,7 +81,7 @@ public class TxHandler implements ChainListener
 				{
 					try
 					{
-						store.validateTransaction (txm.getTx ());
+						store.validateTransaction (txm.getTx (), newOutput);
 						cacheTransaction (txm.getTx ());
 						for ( BitcoinPeer p : network.getConnectPeers () )
 						{
@@ -109,6 +111,12 @@ public class TxHandler implements ChainListener
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		unconfirmed.put (tx.getHash (), tx);
+		HashMap<Long, TxOut> outs = new HashMap<Long, TxOut> ();
+		newOutput.put (tx.getHash (), outs);
+		for ( TxOut out : tx.getOutputs () )
+		{
+			outs.put (out.getIx (), out);
+		}
 	}
 
 	@Override

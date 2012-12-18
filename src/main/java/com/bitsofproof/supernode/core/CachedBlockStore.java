@@ -437,7 +437,7 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	public List<TxIn> getSpent (List<String> addresses)
 	{
 		List<Object[]> rows = getSpendList (addresses);
@@ -468,7 +468,7 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	public List<TxOut> getReceived (List<String> addresses)
 	{
 		List<Object[]> rows = getReceivedList (addresses);
@@ -1230,7 +1230,7 @@ public abstract class CachedBlockStore implements BlockStore
 		insertBlock (genesis);
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public Blk getBlock (String hash)
 	{
@@ -1254,7 +1254,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
-	public void validateTransaction (Tx t) throws ValidationException
+	public void validateTransaction (Tx t, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException
 	{
 		try
 		{
@@ -1264,8 +1264,21 @@ public abstract class CachedBlockStore implements BlockStore
 			tcontext.block = null;
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
+			tcontext.resolvedInputs = resolvedInputs;
 			resolveInputs (tcontext, t);
 			validateTransaction (tcontext, t);
+			for ( TxIn in : t.getInputs () )
+			{
+				HashMap<Long, TxOut> out = tcontext.resolvedInputs.get (in.getSourceHash ());
+				if ( out != null )
+				{
+					out.remove (in.getId ());
+					if ( out.size () == 0 )
+					{
+						tcontext.resolvedInputs.remove (in.getSourceHash ());
+					}
+				}
+			}
 		}
 		finally
 		{
