@@ -17,6 +17,10 @@ package com.bitsofproof.supernode.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
@@ -32,6 +36,12 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 	private final BlockStore store;
 	private TxHandler txHandler;
+	private PlatformTransactionManager transactionManager;
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
 
 	public GetDataHandler (BitcoinNetwork network)
 	{
@@ -40,7 +50,7 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 	}
 
 	@Override
-	public void process (GetDataMessage m, final BitcoinPeer peer)
+	public void process (final GetDataMessage m, final BitcoinPeer peer)
 	{
 		log.trace ("received getheader for " + m.getBlocks ().size () + " blocks " + m.getTransactions ().size () + " transactions from " + peer);
 		for ( byte[] h : m.getTransactions () )
@@ -55,18 +65,27 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 			}
 		}
 
-		for ( final byte[] h : m.getBlocks () )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			final Blk b = store.getBlock (new Hash (h).toString ());
-			if ( b != null )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
+				status.setRollbackOnly ();
 
-				bm.setBlock (b);
-				peer.send (bm);
-				log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
+				for ( final byte[] h : m.getBlocks () )
+				{
+					final Blk b = store.getBlock (new Hash (h).toString ());
+					if ( b != null )
+					{
+						final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
+
+						bm.setBlock (b);
+						peer.send (bm);
+						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
+					}
+				}
 			}
-		}
+		});
 	}
 
 	public void setTxHandler (TxHandler txHandler)
