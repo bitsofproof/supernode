@@ -216,11 +216,17 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
+		List<TxOut> utxo = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
-		return q.from (txout)
-				.where (txout.available.eq (true).and (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))))
-				.list (txout);
+		for ( TxOut o : q.from (txout).where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (txout) )
+		{
+			if ( o.isAvailable () )
+			{
+				utxo.add (o);
+			}
+		}
+		return utxo;
 	}
 
 	@Override
