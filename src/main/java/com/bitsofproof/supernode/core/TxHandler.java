@@ -91,7 +91,7 @@ public class TxHandler implements ChainListener
 								p.send (tm);
 							}
 						}
-						log.trace ("sent validated transaction to peers " + txm.getTx ().getHash ());
+						log.info ("sent validated transaction to peers " + txm.getTx ().getHash ());
 					}
 					catch ( ValidationException e )
 					{
@@ -122,13 +122,13 @@ public class TxHandler implements ChainListener
 	@Override
 	public void blockAdded (final Blk blk)
 	{
+		heard.clear ();
 		if ( unconfirmed.isEmpty () )
 		{
 			return;
 		}
 		for ( Tx tx : blk.getTransactions () )
 		{
-			heard.remove (tx.getHash ());
 			Tx cached = unconfirmed.get (tx.getHash ());
 			if ( cached != null )
 			{

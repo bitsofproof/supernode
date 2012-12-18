@@ -558,6 +558,7 @@ public abstract class CachedBlockStore implements BlockStore
 			Head head;
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
+				log.trace ("continuing trunk");
 				// continuing
 				head = prev.getHead ();
 
@@ -579,6 +580,7 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 					trunkBlock = trunkBlock.getPrevious ();
 				}
+				log.trace ("branching trunk at " + trunkBlock);
 				head.setPrevious (prev.getHead ());
 
 				head.setLeaf (b.getHash ());
@@ -764,12 +766,14 @@ public abstract class CachedBlockStore implements BlockStore
 
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
+				log.trace ("NEW trunk ");
 				// we have a new trunk
 				// if branching from main we have to revert, then forward unspent cache
 				CachedBlock p = currentHead.getLast ();
 				CachedBlock q = p.previous;
 				while ( !q.equals (trunkBlock) )
 				{
+					log.trace ("BACKWARD cache " + p.hash);
 					Blk block = retrieveBlock (p);
 					backwardCache (block);
 					p = q;
@@ -786,6 +790,7 @@ public abstract class CachedBlockStore implements BlockStore
 				// spend what now came to trunk
 				for ( CachedBlock cb : pathToNewHead )
 				{
+					log.trace ("FORWARD cache " + cb.hash);
 					Blk block = retrieveBlock (cb);
 					forwardCache (block);
 				}
@@ -795,7 +800,7 @@ public abstract class CachedBlockStore implements BlockStore
 				// spend if on the trunk
 				forwardCache (b);
 			}
-			log.trace ("stored block " + b.getHeight () + " " + b.getHash ());
+			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
 
 			// now this is the new trunk
 			currentHead = usingHead;

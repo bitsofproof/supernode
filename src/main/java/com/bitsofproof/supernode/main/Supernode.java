@@ -66,7 +66,9 @@ public class Supernode extends Main implements Main.App
 		}
 		try
 		{
+			log.debug ("Caching ...");
 			network.getStore ().cache (cacheSize);
+			log.debug ("Starting network ...");
 			network.start ();
 		}
 		catch ( ValidationException e )
