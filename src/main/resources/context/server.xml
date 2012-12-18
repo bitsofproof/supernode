@@ -11,6 +11,10 @@
 	<description>supernode spring assembly (c) 2012 Tamas Blummer
 		tamas@bitsofproof.com</description>
 
+    <context:property-placeholder />
+    
+	<context:component-scan base-package="com.bitsofproof.supernode" />
+
 	<bean id="application" class="com.bitsofproof.supernode.main.Supernode">
 		<property name="network" ref="bitcoinNetwork" />
 	</bean>
@@ -95,5 +99,11 @@
 		<property name="service" ref="BCSAPI" />
 		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPI" />
 		<property name="registryPort" value="1199" />
+		<property name="serverSocketFactory">
+			<bean class="javax.rmi.ssl.SslRMIServerSocketFactory"/>
+		</property>
+		<property name="clientSocketFactory">
+			<bean class="javax.rmi.ssl.SslRMIClientSocketFactory" />
+		</property>
 	</bean>
 </beans>

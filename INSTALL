@@ -1,15 +1,16 @@
 INSTALL
-clone and install bitsofproof supernode-api first as this build depends on that module.
+1. Clone and install bitsofproof supernode-api as bitsofproof supernode has compile and runtime dependencies on that module. 
+2. Follow the INSTALL instructions of the supernode-api
 
 COMPILE
 mvn package
 
 RUN
-java -jar target/supernode-0.7-SNAPSHOT.jar testnet3 memdb server
+java -jar target/supernode-0.7-SNAPSHOT.jar testnet3 memdb
 or
-java -jar target/supernode-0.7-SNAPSHOT.jar production leveldb server
+java -jar target/supernode-0.7-SNAPSHOT.jar production leveldb
 or
-java -jar target/supernode-0.7-SNAPSHOT.jar production relational server
+java -jar target/supernode-0.7-SNAPSHOT.jar production relational
 
 You should configre relational data source in src/main/resources/context/relational-profile.xml 
 and mvn package before use.
@@ -17,12 +18,3 @@ and mvn package before use.
 I recommend to also use below options to java: 
 java -server -Xmx4g ...
 
-
-UPGRADE 
-to maven for previously used ant-eclipse project
-1. Delete the project in eclipse (just the project, not the content)
-2. Install m2e through the marketplace (Help > Eclipse Marketplace)
-3. For the APT source generator to work in eclipse automatically install m2e-apt. In eclipse: Window > Preference > Maven > Discovery > Open Catalog
-4. Merge the pull request
-5. Import the project into eclipse File > Import > Existing Maven Project
-6. Go to Project Properties > Maven > Annotation Processing, enable project specific settings and turn on annotation processing	
