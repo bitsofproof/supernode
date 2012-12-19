@@ -20,7 +20,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -165,24 +164,40 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected List<Object[]> getSpendList (List<String> addresses)
 	{
+		List<Object[]> spent = new ArrayList<Object[]> ();
+
 		QTxOut txout = QTxOut.txOut;
 		QTxIn txin = QTxIn.txIn;
 		QTx tx = QTx.tx;
 		QBlk blk = QBlk.blk;
 		JPAQuery q = new JPAQuery (entityManager);
-		List<Object[]> rows =
-				q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
-						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, tx.hash, txin);
-		Iterator<Object[]> i = rows.iterator ();
-		while ( i.hasNext () )
+		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses))
+				.list (blk.hash, tx.hash, txin) )
 		{
-			Object[] o = i.next ();
-			if ( !isOnTrunk ((String) o[0]) )
+			if ( isOnTrunk ((String) o[0]) )
 			{
-				i.remove ();
+				spent.add (o);
 			}
 		}
-		return rows;
+		q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner2.in (addresses))
+				.list (blk.hash, tx.hash, txin) )
+		{
+			if ( isOnTrunk ((String) o[0]) )
+			{
+				spent.add (o);
+			}
+		}
+		q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner3.in (addresses))
+				.list (blk.hash, tx.hash, txin) )
+		{
+			if ( isOnTrunk ((String) o[0]) )
+			{
+				spent.add (o);
+			}
+		}
+		return spent;
 	}
 
 	@Override
@@ -204,23 +219,35 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected List<Object[]> getReceivedList (List<String> addresses)
 	{
+		List<Object[]> received = new ArrayList<Object[]> ();
 		QTxOut txout = QTxOut.txOut;
-		JPAQuery q = new JPAQuery (entityManager);
 		QTx tx = QTx.tx;
 		QBlk blk = QBlk.blk;
-		List<Object[]> rows =
-				q.from (txout).join (txout.transaction, tx).join (tx.block, blk)
-						.where (txout.owner1.in (addresses).or (txout.owner2.in (addresses)).or (txout.owner3.in (addresses))).list (blk.hash, txout);
-		Iterator<Object[]> i = rows.iterator ();
-		while ( i.hasNext () )
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses)).list (blk.hash, txout) )
 		{
-			Object[] o = i.next ();
-			if ( !isOnTrunk ((String) o[0]) )
+			if ( isOnTrunk ((String) o[0]) )
 			{
-				i.remove ();
+				received.add (o);
 			}
 		}
-		return rows;
+		q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner2.in (addresses)).list (blk.hash, txout) )
+		{
+			if ( isOnTrunk ((String) o[0]) )
+			{
+				received.add (o);
+			}
+		}
+		q = new JPAQuery (entityManager);
+		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner3.in (addresses)).list (blk.hash, txout) )
+		{
+			if ( isOnTrunk ((String) o[0]) )
+			{
+				received.add (o);
+			}
+		}
+		return received;
 	}
 
 	@Override

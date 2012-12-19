@@ -3,6 +3,8 @@ package com.bitsofproof.supernode.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
@@ -22,6 +24,8 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public class ImplementBCSAPI implements BCSAPI
 {
+	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
+
 	private BlockStore store;
 	private BitcoinNetwork network;
 	private PlatformTransactionManager transactionManager;
@@ -44,76 +48,103 @@ public class ImplementBCSAPI implements BCSAPI
 	@Override
 	public Block getBlock (final String hash)
 	{
-		final WireFormat.Writer writer = new WireFormat.Writer ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		try
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			log.trace ("get block " + hash);
+			final WireFormat.Writer writer = new WireFormat.Writer ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-				Blk b = store.getBlock (hash);
-				b.toWire (writer);
-			}
-		});
-		return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					Blk b = store.getBlock (hash);
+					b.toWire (writer);
+				}
+			});
+			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		}
+		finally
+		{
+			log.trace ("get block returned " + hash);
+		}
 	}
 
 	@Override
 	public Transaction getTransaction (final String hash)
 	{
-		final WireFormat.Writer writer = new WireFormat.Writer ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		try
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			log.trace ("get transaction " + hash);
+			final WireFormat.Writer writer = new WireFormat.Writer ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-				Tx t = store.getTransaction (hash);
-				t.toWire (writer);
-			}
-		});
-		return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					Tx t = store.getTransaction (hash);
+					t.toWire (writer);
+				}
+			});
+			return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		}
+		finally
+		{
+			log.trace ("get transaction returned " + hash);
+		}
 	}
 
 	@Override
 	public String getTrunk ()
 	{
+		log.trace ("get trunk ");
 		return store.getHeadHash ();
 	}
 
 	@Override
 	public String getPreviousBlockHash (String hash)
 	{
+		log.trace ("get previous block " + hash);
 		return store.getPreviousBlockHash (hash);
 	}
 
 	@Override
 	public List<TransactionOutput> getBalance (final List<String> address)
 	{
-		final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		try
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			log.trace ("get balance ");
+			final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-				List<TxOut> utxo = store.getUnspentOutput (address);
-				for ( TxOut o : utxo )
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					o.toWire (writer);
-					TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					out.setTransactionHash (o.getTxHash ());
-					outs.add (out);
+					status.setRollbackOnly ();
+					List<TxOut> utxo = store.getUnspentOutput (address);
+					for ( TxOut o : utxo )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						outs.add (out);
+					}
 				}
-			}
-		});
-		return outs;
+			});
+			return outs;
+		}
+		finally
+		{
+			log.trace ("get balance returned");
+		}
 	}
 
 	@Override
 	public void sendTransaction (Transaction transaction) throws ValidationException
 	{
+		log.trace ("send transaction " + transaction.getHash ());
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		transaction.toWire (writer);
 		Tx t = new Tx ();
@@ -124,54 +155,71 @@ public class ImplementBCSAPI implements BCSAPI
 	@Override
 	public List<TransactionOutput> getReceivedTransactions (final List<String> address)
 	{
-		final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		try
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			log.trace ("get received");
+			final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-				List<TxOut> recvd = store.getReceived (address);
-				for ( TxOut o : recvd )
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					o.toWire (writer);
-					TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					out.setTransactionHash (o.getTxHash ());
-					outs.add (out);
+					status.setRollbackOnly ();
+					List<TxOut> recvd = store.getReceived (address);
+					for ( TxOut o : recvd )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						outs.add (out);
+					}
 				}
-			}
-		});
-		return outs;
+			});
+			return outs;
+		}
+		finally
+		{
+			log.trace ("get received returned");
+		}
 	}
 
 	@Override
 	public List<TransactionInput> getSpentTransactions (final List<String> address)
 	{
-		final List<TransactionInput> ins = new ArrayList<TransactionInput> ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		try
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			log.trace ("get spent");
+			final List<TransactionInput> ins = new ArrayList<TransactionInput> ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-				List<TxIn> spent = store.getSpent (address);
-				for ( TxIn i : spent )
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					i.toWire (writer);
-					TransactionInput in = TransactionInput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					in.setTransactionHash (i.getTxHash ());
-					ins.add (in);
+					status.setRollbackOnly ();
+					List<TxIn> spent = store.getSpent (address);
+					for ( TxIn i : spent )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						i.toWire (writer);
+						TransactionInput in = TransactionInput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						in.setTransactionHash (i.getTxHash ());
+						ins.add (in);
+					}
 				}
-			}
-		});
-		return ins;
+			});
+			return ins;
+		}
+		finally
+		{
+			log.trace ("get spent returned");
+		}
 	}
 
 	@Override
 	public long getHeartbeat (long mine)
 	{
+		log.trace ("get heartbeat");
 		return mine;
 	}
 
