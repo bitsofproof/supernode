@@ -266,15 +266,19 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				utxo.add (o);
 			}
 			q = new JPAQuery (entityManager);
-			for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses)).list (txout) )
+			for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses).and (txout.available.eq (true))).list (txout) )
 			{
 				utxo.add (o);
 			}
 			q = new JPAQuery (entityManager);
-			for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses)).list (txout) )
+			for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses).and (txout.available.eq (true))).list (txout) )
 			{
 				utxo.add (o);
 			}
+		}
+		else
+		{
+
 		}
 		return utxo;
 	}
