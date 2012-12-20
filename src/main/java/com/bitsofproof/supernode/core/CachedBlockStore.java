@@ -309,7 +309,6 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private boolean isOnTrunk (String block)
 	{
-		lock.readLock ().lock ();
 		CachedBlock b = cachedBlocks.get (block);
 		return isBlockOnBranch (b, currentHead);
 	}
