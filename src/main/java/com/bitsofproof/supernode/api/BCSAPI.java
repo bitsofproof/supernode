@@ -59,12 +59,9 @@ public interface BCSAPI
 	 * get transaction outputs that could be spent by the adresses
 	 * 
 	 * @param address
-	 * @param asOf
-	 *            - The balance will be computed using outputs included into blocks mined not later than asOf. -1 means until most recent known block. Unix
-	 *            style timestamp.
 	 * @return list of outputs, eventually empty
 	 */
-	public List<TransactionOutput> getBalance (List<String> address, long asOf);
+	public List<TransactionOutput> getBalance (List<String> address);
 
 	/**
 	 * send a signed transaction
@@ -76,22 +73,12 @@ public interface BCSAPI
 	public void sendTransaction (Transaction transaction) throws ValidationException;
 
 	/**
-	 * get list of outputs an address ever received
+	 * get account statement
 	 * 
-	 * @param address
-	 * @param after
-	 *            - result includes output in blocks mined after this. Unix timestamp.
-	 * @return list of outputs, eventually empty
+	 * @param addresses
+	 * @param from
+	 *            - unix time point the account statement should start from
+	 * @return
 	 */
-	public List<TransactionOutput> getReceivedTransactions (List<String> address, long after);
-
-	/**
-	 * get list of spends for a set of adresses
-	 * 
-	 * @param address
-	 * @param after
-	 *            - result includes output in blocks mined after this. Unix timestamp.
-	 * @return list of spends, eventually empty
-	 */
-	public List<TransactionInput> getSpentTransactions (List<String> address, long after);
+	public AccountStatement getAccountStatement (List<String> addresses, long from);
 }
