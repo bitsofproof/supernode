@@ -1,15 +1,14 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
-import java.util.List;
 
 public class AccountPosting implements Serializable
 {
 	private static final long serialVersionUID = -6577653630851369444L;
 
 	private long timestamp;
-	private List<TransactionOutput> received;
-	private List<TransactionOutput> spent;
+	private TransactionOutput received;
+	private TransactionOutput spent;
 
 	public long getTimestamp ()
 	{
@@ -21,22 +20,22 @@ public class AccountPosting implements Serializable
 		this.timestamp = timestamp;
 	}
 
-	public List<TransactionOutput> getReceived ()
+	public TransactionOutput getReceived ()
 	{
 		return received;
 	}
 
-	public void setReceived (List<TransactionOutput> received)
+	public void setReceived (TransactionOutput received)
 	{
 		this.received = received;
 	}
 
-	public List<TransactionOutput> getSpent ()
+	public TransactionOutput getSpent ()
 	{
 		return spent;
 	}
 
-	public void setSpent (List<TransactionOutput> spent)
+	public void setSpent (TransactionOutput spent)
 	{
 		this.spent = spent;
 	}
