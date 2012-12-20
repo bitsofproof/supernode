@@ -189,15 +189,15 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 
 		JPAQuery q = new JPAQuery (entityManager);
 
-		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 				.where (txout.owner1.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 				.where (txout.owner2.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
 				.where (txout.owner3.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
 
 		return spent;
