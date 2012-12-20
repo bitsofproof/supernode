@@ -68,14 +68,17 @@ public class Main
 			{
 				profiles = false;
 			}
-			if ( profiles )
-			{
-				log.info ("Loading profile: " + s);
-				ctx.getEnvironment ().addActiveProfile (s);
-			}
 			else
 			{
-				a.add (s);
+				if ( profiles )
+				{
+					log.info ("Loading profile: " + s);
+					ctx.getEnvironment ().addActiveProfile (s);
+				}
+				else
+				{
+					a.add (s);
+				}
 			}
 		}
 		ctx.load ("classpath:context/server.xml");
