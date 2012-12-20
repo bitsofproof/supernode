@@ -596,25 +596,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (final List<String> addresses, long after)
-	{
-		// TODO: implement after
-		List<Object[]> result = new ArrayList<Object[]> ();
-		List<Tx> related = readRelatedTx (addresses);
-		for ( Tx t : related )
-		{
-			for ( TxOut o : t.getOutputs () )
-			{
-				if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
-				{
-					result.add (new Object[] { t.getBlockHash (), o });
-				}
-			}
-		}
-		return result;
-	}
-
-	@Override
 	protected TxOut getSourceReference (TxOut source)
 	{
 		return readTx (source.getTxHash ()).getOutputs ().get (source.getIx ().intValue ());
@@ -707,9 +688,8 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses, long after)
+	protected List<Object[]> getSpendList (List<String> addresses, long from)
 	{
-		// TDOD: implement after
 		List<Object[]> result = new ArrayList<Object[]> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )
@@ -717,10 +697,36 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxIn i : t.getInputs () )
 			{
 				Tx s = readTx (i.getSourceHash ());
-				TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
-				if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
+				Blk b = readBlk (s.getBlockHash (), false);
+				if ( b.getCreateTime () >= from )
 				{
-					result.add (new Object[] { t.getBlockHash (), t.getHash (), spend });
+					TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
+					if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
+					{
+						result.add (new Object[] { b.getHash (), b.getCreateTime (), spend });
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	@Override
+	protected List<Object[]> getReceivedList (final List<String> addresses, long from)
+	{
+		List<Object[]> result = new ArrayList<Object[]> ();
+		List<Tx> related = readRelatedTx (addresses);
+		for ( Tx t : related )
+		{
+			Blk b = readBlk (t.getBlockHash (), false);
+			if ( b.getCreateTime () >= from )
+			{
+				for ( TxOut o : t.getOutputs () )
+				{
+					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
+					{
+						result.add (new Object[] { b.getHash (), b.getCreateTime (), o });
+					}
 				}
 			}
 		}

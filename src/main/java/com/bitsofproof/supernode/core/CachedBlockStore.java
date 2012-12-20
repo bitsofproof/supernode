@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void forwardCache (Blk b);
 
-	protected abstract List<Object[]> getReceivedList (List<String> addresses, long after);
+	protected abstract List<Object[]> getReceivedList (List<String> addresses, long from);
 
 	protected abstract TxOut getSourceReference (TxOut source);
 
@@ -108,7 +109,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
-	protected abstract List<Object[]> getSpendList (List<String> addresses, long after);
+	protected abstract List<Object[]> getSpendList (List<String> addresses, long from);
 
 	public void removeUTXO (String txhash, long ix)
 	{
@@ -306,18 +307,11 @@ public abstract class CachedBlockStore implements BlockStore
 		return isBlockOnBranch (block, branch.getPrevious ());
 	}
 
-	protected boolean isOnTrunk (String block)
+	private boolean isOnTrunk (String block)
 	{
-		try
-		{
-			lock.readLock ().lock ();
-			CachedBlock b = cachedBlocks.get (block);
-			return isBlockOnBranch (b, currentHead);
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
+		lock.readLock ().lock ();
+		CachedBlock b = cachedBlocks.get (block);
+		return isBlockOnBranch (b, currentHead);
 	}
 
 	@Override
@@ -452,25 +446,21 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxIn> getSpent (List<String> addresses, long after)
+	public List<Object[]> getSpent (List<String> addresses, long after)
 	{
 		List<Object[]> rows = getSpendList (addresses, after);
-
-		ArrayList<TxIn> spent = new ArrayList<TxIn> ();
 		try
 		{
 			lock.readLock ().lock ();
 
-			for ( Object[] cols : rows )
+			Iterator<Object[]> i = rows.iterator ();
+			while ( i.hasNext () )
 			{
-				String blockHash = (String) cols[0];
-				String txHash = (String) cols[1];
-				TxIn in = (TxIn) cols[2];
-				in.setTxHash (txHash);
-				CachedBlock block = cachedBlocks.get (blockHash);
-				if ( isBlockOnBranch (block, currentHead) )
+				Object[] cols = i.next ();
+				String block = (String) cols[0];
+				if ( !isOnTrunk (block) )
 				{
-					spent.add (in);
+					i.remove ();
 				}
 			}
 		}
@@ -478,27 +468,26 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			lock.readLock ().unlock ();
 		}
-		return spent;
+		return rows;
 	}
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxOut> getReceived (List<String> addresses, long after)
+	public List<Object[]> getReceived (List<String> addresses, long after)
 	{
 		List<Object[]> rows = getReceivedList (addresses, after);
-		ArrayList<TxOut> recvd = new ArrayList<TxOut> ();
 		try
 		{
 			lock.readLock ().lock ();
 
-			for ( Object[] cols : rows )
+			Iterator<Object[]> i = rows.iterator ();
+			while ( i.hasNext () )
 			{
-				String blockHash = (String) cols[0];
-				TxOut in = (TxOut) cols[1];
-				CachedBlock block = cachedBlocks.get (blockHash);
-				if ( isBlockOnBranch (block, currentHead) )
+				Object[] cols = i.next ();
+				String block = (String) cols[0];
+				if ( !isOnTrunk (block) )
 				{
-					recvd.add (in);
+					i.remove ();
 				}
 			}
 		}
@@ -506,7 +495,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			lock.readLock ().unlock ();
 		}
-		return recvd;
+		return rows;
 	}
 
 	private static class TransactionContext
@@ -554,7 +543,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			return;
 		}
-
+		log.trace ("Start storing block " + b.getHash ());
 		// find previous block
 		CachedBlock cachedPrevious = cachedBlocks.get (b.getPreviousHash ());
 		if ( cachedPrevious != null )

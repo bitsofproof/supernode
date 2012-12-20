@@ -162,46 +162,6 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses, long after)
-	{
-		// TODO: implement after
-		List<Object[]> spent = new ArrayList<Object[]> ();
-
-		QTxOut txout = QTxOut.txOut;
-		QTxIn txin = QTxIn.txIn;
-		QTx tx = QTx.tx;
-		QBlk blk = QBlk.blk;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses))
-				.list (blk.hash, tx.hash, txin) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				spent.add (o);
-			}
-		}
-		q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner2.in (addresses))
-				.list (blk.hash, tx.hash, txin) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				spent.add (o);
-			}
-		}
-		q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk).where (txout.owner3.in (addresses))
-				.list (blk.hash, tx.hash, txin) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				spent.add (o);
-			}
-		}
-		return spent;
-	}
-
-	@Override
 	protected List<TxOut> findTxOuts (Map<String, HashSet<Long>> need)
 	{
 		List<TxOut> fromDB = new ArrayList<TxOut> ();
@@ -218,37 +178,51 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (List<String> addresses, long after)
+	protected List<Object[]> getSpendList (List<String> addresses, long from)
 	{
-		// TODO: implement after
+		List<Object[]> spent = new ArrayList<Object[]> ();
+
+		QTxOut txout = QTxOut.txOut;
+		QTxIn txin = QTxIn.txIn;
+		QTx tx = QTx.tx;
+		QBlk blk = QBlk.blk;
+
+		JPAQuery q = new JPAQuery (entityManager);
+
+		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+				.where (txout.owner1.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+
+		q = new JPAQuery (entityManager);
+		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+				.where (txout.owner2.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+
+		q = new JPAQuery (entityManager);
+		spent.addAll (q.from (txout).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
+				.where (txout.owner3.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+
+		return spent;
+	}
+
+	@Override
+	protected List<Object[]> getReceivedList (List<String> addresses, long from)
+	{
 		List<Object[]> received = new ArrayList<Object[]> ();
 		QTxOut txout = QTxOut.txOut;
 		QTx tx = QTx.tx;
 		QBlk blk = QBlk.blk;
 		JPAQuery q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses)).list (blk.hash, txout) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				received.add (o);
-			}
-		}
+
+		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
+				.list (blk.hash, blk.createTime, txout));
+
 		q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner2.in (addresses)).list (blk.hash, txout) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				received.add (o);
-			}
-		}
+		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
+				.list (blk.hash, blk.createTime, txout));
+
 		q = new JPAQuery (entityManager);
-		for ( Object[] o : q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner3.in (addresses)).list (blk.hash, txout) )
-		{
-			if ( isOnTrunk ((String) o[0]) )
-			{
-				received.add (o);
-			}
-		}
+		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
+				.list (blk.hash, blk.createTime, txout));
+
 		return received;
 	}
 

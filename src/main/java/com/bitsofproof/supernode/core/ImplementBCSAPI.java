@@ -10,6 +10,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.api.AccountPosting;
 import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.Block;
@@ -113,7 +114,6 @@ public class ImplementBCSAPI implements BCSAPI
 	{
 		try
 		{
-			// TODO: implement asOf
 			log.trace ("get balance ");
 			final List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
 			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
@@ -160,10 +160,74 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement getAccountStatement (List<String> addresses, long from)
+	public AccountStatement getAccountStatement (final List<String> addresses, final long from)
 	{
-		// TODO Auto-generated method stub
-		return null;
-	}
+		log.trace ("get account statement ");
+		try
+		{
+			final AccountStatement statement = new AccountStatement ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			{
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					List<TransactionOutput> balances = new ArrayList<TransactionOutput> ();
+					statement.setOpeningBalances (balances);
 
+					Blk trunk = store.getBlock (store.getHeadHash ());
+					statement.setExtracted (trunk.getCreateTime ());
+					statement.setMostRecentBlock (store.getHeadHash ());
+					statement.setOpening (statement.getExtracted ());
+
+					List<TxOut> utxo = store.getUnspentOutput (addresses);
+					for ( TxOut o : utxo )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						balances.add (out);
+					}
+					List<AccountPosting> postings = new ArrayList<AccountPosting> ();
+					statement.setPostings (postings);
+
+					for ( Object[] spent : store.getSpent (addresses, from) )
+					{
+						AccountPosting p = new AccountPosting ();
+						p.setTimestamp ((Long) spent[1]);
+
+						TxOut o = (TxOut) spent[2];
+						utxo.add (o);
+
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						p.setReceived (out);
+					}
+
+					for ( Object[] received : store.getReceived (addresses, from) )
+					{
+						AccountPosting p = new AccountPosting ();
+						p.setTimestamp ((Long) received[1]);
+
+						TxOut o = (TxOut) received[2];
+						utxo.remove (o);
+
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						p.setReceived (out);
+					}
+				}
+			});
+			return statement;
+		}
+		finally
+		{
+			log.trace ("get balance returned");
+		}
+	}
 }

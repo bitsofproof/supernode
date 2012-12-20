@@ -88,13 +88,6 @@ public class TxOut implements Serializable
 	@Index (name = "heightix")
 	private long height;
 
-	// this is redundant but saves joins at balance queries
-	private String blockHash;
-
-	// this is redundant but saves joins at balance queries
-	@Index (name = "timeix")
-	private long blockTime;
-
 	public JSONObject toJSON ()
 	{
 		JSONObject o = new JSONObject ();
