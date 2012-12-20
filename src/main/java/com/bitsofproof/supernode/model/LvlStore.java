@@ -688,9 +688,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses, long from)
+	protected List<TxIn> getSpendList (List<String> addresses, long from)
 	{
-		List<Object[]> result = new ArrayList<Object[]> ();
+		List<TxIn> result = new ArrayList<TxIn> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )
 		{
@@ -701,9 +701,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				if ( b.getCreateTime () >= from )
 				{
 					TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
+					i.setSource (spend);
 					if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
 					{
-						result.add (new Object[] { b.getHash (), b.getCreateTime (), spend });
+						result.add (i);
 					}
 				}
 			}
@@ -712,9 +713,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (final List<String> addresses, long from)
+	protected List<TxOut> getReceivedList (final List<String> addresses, long from)
 	{
-		List<Object[]> result = new ArrayList<Object[]> ();
+		List<TxOut> result = new ArrayList<TxOut> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )
 		{
@@ -725,7 +726,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
 					{
-						result.add (new Object[] { b.getHash (), b.getCreateTime (), o });
+						result.add (o);
 					}
 				}
 			}

@@ -22,6 +22,7 @@ import java.util.Map;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
 public interface BlockStore
@@ -34,9 +35,9 @@ public interface BlockStore
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
 
-	public List<Object[]> getSpent (List<String> addresses, long after);
+	public List<TxIn> getSpent (List<String> addresses, long from);
 
-	public List<Object[]> getReceived (List<String> addresses, long after);
+	public List<TxOut> getReceived (List<String> addresses, long from);
 
 	public void storeBlock (Blk b) throws ValidationException;
 

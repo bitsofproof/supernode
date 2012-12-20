@@ -81,12 +81,16 @@ public class TxOut implements Serializable
 
 	// this is redundant but saves a join at cacheing
 	@Column (length = 64, nullable = false)
-	@Index (name = "outhash")
+	@Index (name = "outthash")
 	private String txHash;
 
 	// this is redundant for a check and quick cache load
 	@Index (name = "heightix")
 	private long height;
+
+	// this is redundant for joinless account balance
+	@Index (name = "outtime")
+	private long blockTime;
 
 	public JSONObject toJSON ()
 	{
@@ -262,5 +266,15 @@ public class TxOut implements Serializable
 	public void setHeight (long height)
 	{
 		this.height = height;
+	}
+
+	public long getBlockTime ()
+	{
+		return blockTime;
+	}
+
+	public void setBlockTime (long blockTime)
+	{
+		this.blockTime = blockTime;
 	}
 }

@@ -28,6 +28,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -66,7 +67,9 @@ public class TxIn implements Serializable, Cloneable
 	// scriptSig
 	private byte[] script;
 
-	private transient String txHash;
+	// this is redundant for joinless account balance
+	@Index (name = "intime")
+	private long blockTime;
 
 	public Long getId ()
 	{
@@ -136,6 +139,16 @@ public class TxIn implements Serializable, Cloneable
 	public void setTransaction (Tx transaction)
 	{
 		this.transaction = transaction;
+	}
+
+	public long getBlockTime ()
+	{
+		return blockTime;
+	}
+
+	public void setBlockTime (long blockTime)
+	{
+		this.blockTime = blockTime;
 	}
 
 	public JSONObject toJSON ()
@@ -236,15 +249,4 @@ public class TxIn implements Serializable, Cloneable
 
 		return c;
 	}
-
-	public String getTxHash ()
-	{
-		return txHash;
-	}
-
-	public void setTxHash (String txHash)
-	{
-		this.txHash = txHash;
-	}
-
 }

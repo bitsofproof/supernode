@@ -178,50 +178,41 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses, long from)
+	protected List<TxIn> getSpendList (List<String> addresses, long from)
 	{
-		List<Object[]> spent = new ArrayList<Object[]> ();
+		List<TxIn> spent = new ArrayList<TxIn> ();
 
 		QTxOut txout = QTxOut.txOut;
 		QTxIn txin = QTxIn.txIn;
-		QTx tx = QTx.tx;
-		QBlk blk = QBlk.blk;
 
 		JPAQuery q = new JPAQuery (entityManager);
 
-		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
-				.where (txout.owner1.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner1.in (addresses).and (txin.blockTime.goe (from))).list (txin));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
-				.where (txout.owner2.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner2.in (addresses).and (txin.blockTime.goe (from))).list (txin));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txin).join (txin.source, txout).join (txin.transaction, tx).join (tx.block, blk)
-				.where (txout.owner3.in (addresses).and (blk.createTime.goe (from))).list (blk.hash, blk.createTime, txout));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner3.in (addresses).and (txin.blockTime.goe (from))).list (txin));
 
 		return spent;
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (List<String> addresses, long from)
+	protected List<TxOut> getReceivedList (List<String> addresses, long from)
 	{
-		List<Object[]> received = new ArrayList<Object[]> ();
+		List<TxOut> received = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
-		QTx tx = QTx.tx;
-		QBlk blk = QBlk.blk;
+
 		JPAQuery q = new JPAQuery (entityManager);
 
-		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
-				.list (blk.hash, blk.createTime, txout));
+		received.addAll (q.from (txout).where (txout.owner1.in (addresses).and (txout.blockTime.goe (from))).list (txout));
 
 		q = new JPAQuery (entityManager);
-		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
-				.list (blk.hash, blk.createTime, txout));
+		received.addAll (q.from (txout).where (txout.owner2.in (addresses).and (txout.blockTime.goe (from))).list (txout));
 
 		q = new JPAQuery (entityManager);
-		received.addAll (q.from (txout).join (txout.transaction, tx).join (tx.block, blk).where (txout.owner1.in (addresses).and (blk.createTime.goe (from)))
-				.list (blk.hash, blk.createTime, txout));
+		received.addAll (q.from (txout).where (txout.owner3.in (addresses).and (txout.blockTime.goe (from))).list (txout));
 
 		return received;
 	}

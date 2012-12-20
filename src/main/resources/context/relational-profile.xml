@@ -11,17 +11,13 @@
 
 	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
 
-	<bean id="derbyDataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource">
+	<bean id="dataSource" class="org.apache.derby.jdbc.ClientConnectionPoolDataSource">
 		<property name="portNumber" value="1527" />
 		<property name="serverName" value="localhost" />
 		<property name="databaseName" value="data" />
 		<property name="user" value="dbuser" />
 		<property name="password" value="XrcCZC6ftyxRuEQGBgJ92w" />
 		<property name="createDatabase" value="create" />
-	</bean>
-
-	<bean id="dataSource" class="com.bitsofproof.supernode.model.PooledDatasource">
-		<property name="dataSource" ref="derbyDataSource" />
 	</bean>
 
 	<bean id="entityManagerFactory"

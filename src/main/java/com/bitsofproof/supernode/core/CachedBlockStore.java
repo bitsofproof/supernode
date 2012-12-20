@@ -95,7 +95,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void forwardCache (Blk b);
 
-	protected abstract List<Object[]> getReceivedList (List<String> addresses, long from);
+	protected abstract List<TxOut> getReceivedList (List<String> addresses, long from);
 
 	protected abstract TxOut getSourceReference (TxOut source);
 
@@ -109,7 +109,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
-	protected abstract List<Object[]> getSpendList (List<String> addresses, long from);
+	protected abstract List<TxIn> getSpendList (List<String> addresses, long from);
 
 	public void removeUTXO (String txhash, long ix)
 	{
@@ -446,18 +446,18 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<Object[]> getSpent (List<String> addresses, long after)
+	public List<TxIn> getSpent (List<String> addresses, long after)
 	{
-		List<Object[]> rows = getSpendList (addresses, after);
+		List<TxIn> rows = getSpendList (addresses, after);
 		try
 		{
 			lock.readLock ().lock ();
 
-			Iterator<Object[]> i = rows.iterator ();
+			Iterator<TxIn> i = rows.iterator ();
 			while ( i.hasNext () )
 			{
-				Object[] cols = i.next ();
-				String block = (String) cols[0];
+				TxIn in = i.next ();
+				String block = in.getTransaction ().getBlock ().getHash ();
 				if ( !isOnTrunk (block) )
 				{
 					i.remove ();
@@ -473,18 +473,18 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<Object[]> getReceived (List<String> addresses, long after)
+	public List<TxOut> getReceived (List<String> addresses, long after)
 	{
-		List<Object[]> rows = getReceivedList (addresses, after);
+		List<TxOut> rows = getReceivedList (addresses, after);
 		try
 		{
 			lock.readLock ().lock ();
 
-			Iterator<Object[]> i = rows.iterator ();
+			Iterator<TxOut> i = rows.iterator ();
 			while ( i.hasNext () )
 			{
-				Object[] cols = i.next ();
-				String block = (String) cols[0];
+				TxOut cols = i.next ();
+				String block = cols.getTransaction ().getBlock ().getHash ();
 				if ( !isOnTrunk (block) )
 				{
 					i.remove ();
@@ -741,12 +741,14 @@ public abstract class CachedBlockStore implements BlockStore
 							i.setSource (getSourceReference (source));
 						}
 					}
+					i.setBlockTime (b.getCreateTime ());
 				}
 				for ( TxOut o : t.getOutputs () )
 				{
 					parseOwners (o);
 					o.setTxHash (t.getHash ());
 					o.setHeight (b.getHeight ());
+					o.setBlockTime (b.getCreateTime ());
 				}
 			}
 

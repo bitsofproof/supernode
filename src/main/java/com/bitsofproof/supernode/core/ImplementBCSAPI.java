@@ -20,6 +20,7 @@ import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
 public class ImplementBCSAPI implements BCSAPI
@@ -182,26 +183,19 @@ public class ImplementBCSAPI implements BCSAPI
 
 					log.trace ("retrieve balance");
 					List<TxOut> utxo = store.getUnspentOutput (addresses);
-					for ( TxOut o : utxo )
-					{
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						o.toWire (writer);
-						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-						out.setTransactionHash (o.getTxHash ());
-						balances.add (out);
-					}
+
 					List<AccountPosting> postings = new ArrayList<AccountPosting> ();
 					statement.setPostings (postings);
 
 					log.trace ("retrieve spent");
-					for ( Object[] spent : store.getSpent (addresses, from) )
+					for ( TxIn spent : store.getSpent (addresses, from) )
 					{
 						AccountPosting p = new AccountPosting ();
 						postings.add (p);
 
-						p.setTimestamp ((Long) spent[1]);
+						p.setTimestamp (spent.getBlockTime ());
 
-						TxOut o = (TxOut) spent[2];
+						TxOut o = spent.getSource ();
 						utxo.add (o);
 
 						WireFormat.Writer writer = new WireFormat.Writer ();
@@ -212,14 +206,12 @@ public class ImplementBCSAPI implements BCSAPI
 					}
 
 					log.trace ("retrieve received");
-					for ( Object[] received : store.getReceived (addresses, from) )
+					for ( TxOut o : store.getReceived (addresses, from) )
 					{
 						AccountPosting p = new AccountPosting ();
 						postings.add (p);
 
-						p.setTimestamp ((Long) received[1]);
-
-						TxOut o = (TxOut) received[2];
+						p.setTimestamp (o.getBlockTime ());
 						utxo.remove (o);
 
 						WireFormat.Writer writer = new WireFormat.Writer ();
@@ -228,13 +220,21 @@ public class ImplementBCSAPI implements BCSAPI
 						out.setTransactionHash (o.getTxHash ());
 						p.setReceived (out);
 					}
+					for ( TxOut o : utxo )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						balances.add (out);
+					}
 				}
 			});
 			return statement;
 		}
 		finally
 		{
-			log.trace ("get balance returned");
+			log.trace ("get account statement returned");
 		}
 	}
 }
