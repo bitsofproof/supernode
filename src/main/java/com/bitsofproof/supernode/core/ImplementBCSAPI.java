@@ -1,6 +1,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -182,7 +183,17 @@ public class ImplementBCSAPI implements BCSAPI
 					statement.setOpening (statement.getExtracted ());
 
 					log.trace ("retrieve balance");
-					List<TxOut> utxo = store.getUnspentOutput (addresses);
+					HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
+					for ( TxOut o : store.getUnspentOutput (addresses) )
+					{
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs == null )
+						{
+							outs = new HashMap<Long, TxOut> ();
+							utxo.put (o.getTxHash (), outs);
+						}
+						outs.put (o.getIx (), o);
+					}
 
 					List<AccountPosting> postings = new ArrayList<AccountPosting> ();
 					statement.setPostings (postings);
@@ -196,7 +207,13 @@ public class ImplementBCSAPI implements BCSAPI
 						p.setTimestamp (spent.getBlockTime ());
 
 						TxOut o = spent.getSource ();
-						utxo.add (o);
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs == null )
+						{
+							outs = new HashMap<Long, TxOut> ();
+							utxo.put (o.getTxHash (), outs);
+						}
+						outs.put (o.getIx (), o);
 
 						WireFormat.Writer writer = new WireFormat.Writer ();
 						o.toWire (writer);
@@ -212,7 +229,15 @@ public class ImplementBCSAPI implements BCSAPI
 						postings.add (p);
 
 						p.setTimestamp (o.getBlockTime ());
-						utxo.remove (o);
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs != null )
+						{
+							outs.remove (o.getIx ());
+							if ( outs.size () == 0 )
+							{
+								utxo.remove (o.getTxHash ());
+							}
+						}
 
 						WireFormat.Writer writer = new WireFormat.Writer ();
 						o.toWire (writer);
@@ -220,13 +245,16 @@ public class ImplementBCSAPI implements BCSAPI
 						out.setTransactionHash (o.getTxHash ());
 						p.setReceived (out);
 					}
-					for ( TxOut o : utxo )
+					for ( HashMap<Long, TxOut> outs : utxo.values () )
 					{
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						o.toWire (writer);
-						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-						out.setTransactionHash (o.getTxHash ());
-						balances.add (out);
+						for ( TxOut o : outs.values () )
+						{
+							WireFormat.Writer writer = new WireFormat.Writer ();
+							o.toWire (writer);
+							TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+							out.setTransactionHash (o.getTxHash ());
+							balances.add (out);
+						}
 					}
 				}
 			});

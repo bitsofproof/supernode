@@ -706,14 +706,15 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					Tx s = readTx (i.getSourceHash ());
 					Blk b = readBlk (s.getBlockHash (), false);
-					i.setTransaction (t);
-					t.setBlock (b);
 					if ( b.getCreateTime () >= from )
 					{
 						TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
 						i.setSource (spend);
 						if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
 						{
+							i.setTransaction (t);
+							t.setBlock (b);
+							i.setBlockTime (b.getCreateTime ());
 							result.add (i);
 						}
 					}
@@ -736,9 +737,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				t.setBlock (b);
 				for ( TxOut o : t.getOutputs () )
 				{
-					o.setTransaction (t);
 					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
 					{
+						o.setTransaction (t);
+						o.setBlockTime (b.getCreateTime ());
 						result.add (o);
 					}
 				}
