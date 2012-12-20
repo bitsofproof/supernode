@@ -33,11 +33,11 @@ public interface BlockStore
 
 	public List<String> getLocator ();
 
-	public List<TxOut> getUnspentOutput (List<String> addresses);
+	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf);
 
-	public List<TxIn> getSpent (List<String> addresses);
+	public List<TxIn> getSpent (List<String> addresses, long after);
 
-	public List<TxOut> getReceived (List<String> addresses);
+	public List<TxOut> getReceived (List<String> addresses, long after);
 
 	public void storeBlock (Blk b) throws ValidationException;
 

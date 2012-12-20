@@ -596,8 +596,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (final List<String> addresses)
+	protected List<Object[]> getReceivedList (final List<String> addresses, long after)
 	{
+		// TODO: implement after
 		List<Object[]> result = new ArrayList<Object[]> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )
@@ -688,17 +689,21 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	public List<TxOut> getUnspentOutput (List<String> addresses)
+	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf)
 	{
+		// TODO: implement asOf
 		List<TxOut> result = new ArrayList<TxOut> ();
-		List<Tx> related = readRelatedTx (addresses);
-		for ( Tx t : related )
+		if ( asOf < 0 )
 		{
-			for ( TxOut o : t.getOutputs () )
+			List<Tx> related = readRelatedTx (addresses);
+			for ( Tx t : related )
 			{
-				if ( o.isAvailable () && addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
+				for ( TxOut o : t.getOutputs () )
 				{
-					result.add (o);
+					if ( o.isAvailable () && addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
+					{
+						result.add (o);
+					}
 				}
 			}
 		}
@@ -706,8 +711,9 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses)
+	protected List<Object[]> getSpendList (List<String> addresses, long after)
 	{
+		// TDOD: implement after
 		List<Object[]> result = new ArrayList<Object[]> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )

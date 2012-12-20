@@ -162,8 +162,9 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getSpendList (List<String> addresses)
+	protected List<Object[]> getSpendList (List<String> addresses, long after)
 	{
+		// TODO: implement after
 		List<Object[]> spent = new ArrayList<Object[]> ();
 
 		QTxOut txout = QTxOut.txOut;
@@ -217,8 +218,9 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<Object[]> getReceivedList (List<String> addresses)
+	protected List<Object[]> getReceivedList (List<String> addresses, long after)
 	{
+		// TODO: implement after
 		List<Object[]> received = new ArrayList<Object[]> ();
 		QTxOut txout = QTxOut.txOut;
 		QTx tx = QTx.tx;
@@ -252,30 +254,24 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
-	public List<TxOut> getUnspentOutput (List<String> addresses)
+	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf)
 	{
 		List<TxOut> utxo = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
-		JPAQuery q = new JPAQuery (entityManager);
-		for ( TxOut o : q.from (txout).where (txout.owner1.in (addresses)).list (txout) )
+		if ( asOf < 0 )
 		{
-			if ( o.isAvailable () )
+			JPAQuery q = new JPAQuery (entityManager);
+			for ( TxOut o : q.from (txout).where (txout.owner1.in (addresses).and (txout.available.eq (true))).list (txout) )
 			{
 				utxo.add (o);
 			}
-		}
-		q = new JPAQuery (entityManager);
-		for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses)).list (txout) )
-		{
-			if ( o.isAvailable () )
+			q = new JPAQuery (entityManager);
+			for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses)).list (txout) )
 			{
 				utxo.add (o);
 			}
-		}
-		q = new JPAQuery (entityManager);
-		for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses)).list (txout) )
-		{
-			if ( o.isAvailable () )
+			q = new JPAQuery (entityManager);
+			for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses)).list (txout) )
 			{
 				utxo.add (o);
 			}

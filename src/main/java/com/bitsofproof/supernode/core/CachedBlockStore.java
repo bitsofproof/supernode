@@ -94,7 +94,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void forwardCache (Blk b);
 
-	protected abstract List<Object[]> getReceivedList (List<String> addresses);
+	protected abstract List<Object[]> getReceivedList (List<String> addresses, long after);
 
 	protected abstract TxOut getSourceReference (TxOut source);
 
@@ -108,7 +108,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
-	protected abstract List<Object[]> getSpendList (List<String> addresses);
+	protected abstract List<Object[]> getSpendList (List<String> addresses, long after);
 
 	public void removeUTXO (String txhash, long ix)
 	{
@@ -452,9 +452,9 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxIn> getSpent (List<String> addresses)
+	public List<TxIn> getSpent (List<String> addresses, long after)
 	{
-		List<Object[]> rows = getSpendList (addresses);
+		List<Object[]> rows = getSpendList (addresses, after);
 
 		ArrayList<TxIn> spent = new ArrayList<TxIn> ();
 		try
@@ -483,9 +483,9 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxOut> getReceived (List<String> addresses)
+	public List<TxOut> getReceived (List<String> addresses, long after)
 	{
-		List<Object[]> rows = getReceivedList (addresses);
+		List<Object[]> rows = getReceivedList (addresses, after);
 		ArrayList<TxOut> recvd = new ArrayList<TxOut> ();
 		try
 		{

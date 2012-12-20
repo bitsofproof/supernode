@@ -110,7 +110,7 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public List<TransactionOutput> getBalance (final List<String> address)
+	public List<TransactionOutput> getBalance (final List<String> address, final long asOf)
 	{
 		try
 		{
@@ -122,7 +122,7 @@ public class ImplementBCSAPI implements BCSAPI
 				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
-					List<TxOut> utxo = store.getUnspentOutput (address);
+					List<TxOut> utxo = store.getUnspentOutput (address, asOf);
 					for ( TxOut o : utxo )
 					{
 						WireFormat.Writer writer = new WireFormat.Writer ();
@@ -153,7 +153,7 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public List<TransactionOutput> getReceivedTransactions (final List<String> address)
+	public List<TransactionOutput> getReceivedTransactions (final List<String> address, final long after)
 	{
 		try
 		{
@@ -165,7 +165,7 @@ public class ImplementBCSAPI implements BCSAPI
 				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
-					List<TxOut> recvd = store.getReceived (address);
+					List<TxOut> recvd = store.getReceived (address, after);
 					for ( TxOut o : recvd )
 					{
 						WireFormat.Writer writer = new WireFormat.Writer ();
@@ -185,7 +185,7 @@ public class ImplementBCSAPI implements BCSAPI
 	}
 
 	@Override
-	public List<TransactionInput> getSpentTransactions (final List<String> address)
+	public List<TransactionInput> getSpentTransactions (final List<String> address, final long after)
 	{
 		try
 		{
@@ -197,7 +197,7 @@ public class ImplementBCSAPI implements BCSAPI
 				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
-					List<TxIn> spent = store.getSpent (address);
+					List<TxIn> spent = store.getSpent (address, after);
 					for ( TxIn i : spent )
 					{
 						WireFormat.Writer writer = new WireFormat.Writer ();
