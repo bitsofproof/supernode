@@ -180,6 +180,7 @@ public class ImplementBCSAPI implements BCSAPI
 					statement.setMostRecentBlock (store.getHeadHash ());
 					statement.setOpening (statement.getExtracted ());
 
+					log.trace ("retrieve balance");
 					List<TxOut> utxo = store.getUnspentOutput (addresses);
 					for ( TxOut o : utxo )
 					{
@@ -192,9 +193,12 @@ public class ImplementBCSAPI implements BCSAPI
 					List<AccountPosting> postings = new ArrayList<AccountPosting> ();
 					statement.setPostings (postings);
 
+					log.trace ("retrieve spent");
 					for ( Object[] spent : store.getSpent (addresses, from) )
 					{
 						AccountPosting p = new AccountPosting ();
+						postings.add (p);
+
 						p.setTimestamp ((Long) spent[1]);
 
 						TxOut o = (TxOut) spent[2];
@@ -207,9 +211,12 @@ public class ImplementBCSAPI implements BCSAPI
 						p.setReceived (out);
 					}
 
+					log.trace ("retrieve received");
 					for ( Object[] received : store.getReceived (addresses, from) )
 					{
 						AccountPosting p = new AccountPosting ();
+						postings.add (p);
+
 						p.setTimestamp ((Long) received[1]);
 
 						TxOut o = (TxOut) received[2];
