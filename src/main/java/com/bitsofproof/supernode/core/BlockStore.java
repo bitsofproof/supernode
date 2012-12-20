@@ -33,7 +33,7 @@ public interface BlockStore
 
 	public List<String> getLocator ();
 
-	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf);
+	public List<TxOut> getUnspentOutput (List<String> addresses);
 
 	public List<TxIn> getSpent (List<String> addresses, long after);
 

@@ -254,31 +254,24 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
-	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf)
+	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
 		List<TxOut> utxo = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
-		if ( asOf < 0 )
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( TxOut o : q.from (txout).where (txout.owner1.in (addresses).and (txout.available.eq (true))).list (txout) )
 		{
-			JPAQuery q = new JPAQuery (entityManager);
-			for ( TxOut o : q.from (txout).where (txout.owner1.in (addresses).and (txout.available.eq (true))).list (txout) )
-			{
-				utxo.add (o);
-			}
-			q = new JPAQuery (entityManager);
-			for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses).and (txout.available.eq (true))).list (txout) )
-			{
-				utxo.add (o);
-			}
-			q = new JPAQuery (entityManager);
-			for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses).and (txout.available.eq (true))).list (txout) )
-			{
-				utxo.add (o);
-			}
+			utxo.add (o);
 		}
-		else
+		q = new JPAQuery (entityManager);
+		for ( TxOut o : q.from (txout).where (txout.owner2.in (addresses).and (txout.available.eq (true))).list (txout) )
 		{
-
+			utxo.add (o);
+		}
+		q = new JPAQuery (entityManager);
+		for ( TxOut o : q.from (txout).where (txout.owner3.in (addresses).and (txout.available.eq (true))).list (txout) )
+		{
+			utxo.add (o);
 		}
 		return utxo;
 	}

@@ -689,21 +689,17 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	public List<TxOut> getUnspentOutput (List<String> addresses, long asOf)
+	public List<TxOut> getUnspentOutput (List<String> addresses)
 	{
-		// TODO: implement asOf
 		List<TxOut> result = new ArrayList<TxOut> ();
-		if ( asOf < 0 )
+		List<Tx> related = readRelatedTx (addresses);
+		for ( Tx t : related )
 		{
-			List<Tx> related = readRelatedTx (addresses);
-			for ( Tx t : related )
+			for ( TxOut o : t.getOutputs () )
 			{
-				for ( TxOut o : t.getOutputs () )
+				if ( o.isAvailable () && addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
 				{
-					if ( o.isAvailable () && addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
-					{
-						result.add (o);
-					}
+					result.add (o);
 				}
 			}
 		}
