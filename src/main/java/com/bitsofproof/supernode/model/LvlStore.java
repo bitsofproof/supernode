@@ -216,7 +216,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	private void writeAtx (String address, String hash)
 	{
 		byte[] a = address.getBytes ();
-		byte[] h = address.getBytes ();
+		byte[] h = new Hash (hash).toByteArray ();
 		byte[] k = new byte[a.length + h.length];
 		System.arraycopy (a, 0, k, 0, a.length);
 		System.arraycopy (h, 0, k, a.length, h.length);
