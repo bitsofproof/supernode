@@ -698,7 +698,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		List<TxIn> result = new ArrayList<TxIn> ();
 		List<Tx> related = readRelatedTx (addresses);
-		log.trace ("related " + related.size ());
+		log.info ("related " + related.size ());
 		for ( Tx t : related )
 		{
 			for ( TxIn i : t.getInputs () )
@@ -710,12 +710,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					Blk b = readBlk (s.getBlockHash (), false);
 					if ( b.getCreateTime () >= from )
 					{
-						log.trace ("related tx in time window " + s.getHash ());
+						log.info ("related tx in time window " + s.getHash ());
 						TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
 						i.setSource (spend);
 						if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
 						{
-							log.trace ("related tx with address " + s.getHash ());
+							log.info ("related tx with address " + s.getHash ());
 							i.setTransaction (t);
 							t.setBlock (b);
 							i.setBlockTime (b.getCreateTime ());
