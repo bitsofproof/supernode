@@ -38,6 +38,7 @@ import org.iq80.leveldb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
@@ -50,10 +51,65 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private String database = "data";
 	private long cacheSize = 100;
-	private static DB db;
+	private DB db;
 	private final SecureRandom rnd = new SecureRandom ();
 	private WriteBatch batch = null;
-	private Map<String, Tx> inBatch = null;
+	private final Map<String, byte[]> batchCache = new HashMap<String, byte[]> ();
+
+	private synchronized void put (byte[] key, byte[] data)
+	{
+		if ( batch != null )
+		{
+			batch.put (key, data);
+			batchCache.put (ByteUtils.toHex (key), data);
+		}
+		else
+		{
+			db.put (key, data);
+		}
+	}
+
+	private synchronized byte[] get (byte[] key)
+	{
+		if ( batch != null )
+		{
+			String ks = ByteUtils.toHex (key);
+			byte[] data = batchCache.get (ks);
+			if ( data != null )
+			{
+				return data;
+			}
+		}
+		return db.get (key);
+	}
+
+	@Override
+	protected synchronized void startBatch ()
+	{
+		batch = db.createWriteBatch ();
+		batchCache.clear ();
+	}
+
+	@Override
+	protected synchronized void endBatch ()
+	{
+		if ( batch != null )
+		{
+			db.write (batch);
+			batch.close ();
+			batchCache.clear ();
+		}
+	}
+
+	@Override
+	protected synchronized void cancelBatch ()
+	{
+		if ( batch != null )
+		{
+			batch.close ();
+			batchCache.clear ();
+		}
+	}
 
 	private static enum KeyType
 	{
@@ -226,26 +282,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		byte[] k = new byte[a.length + h.length];
 		System.arraycopy (a, 0, k, 0, a.length);
 		System.arraycopy (h, 0, k, a.length, h.length);
-		if ( batch != null )
-		{
-			batch.put (Key.createKey (KeyType.ATX, k), new byte[1]);
-		}
-		else
-		{
-			db.put (Key.createKey (KeyType.ATX, k), new byte[1]);
-		}
+		put (Key.createKey (KeyType.ATX, k), new byte[1]);
 	}
 
 	private Tx readTx (String hash)
 	{
-		if ( batch != null )
-		{
-			if ( inBatch.containsKey (hash) )
-			{
-				return inBatch.get (hash);
-			}
-		}
-		byte[] data = db.get (Key.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
+		byte[] data = get (Key.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
 			return Tx.fromLevelDB (data);
@@ -255,15 +297,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writeTx (Tx t)
 	{
-		if ( batch != null )
-		{
-			batch.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
-			inBatch.put (t.getHash (), t);
-		}
-		else
-		{
-			db.put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
-		}
+		put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
 		for ( TxOut o : t.getOutputs () )
 		{
 			if ( o.getOwner1 () != null )
@@ -309,7 +343,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (id);
-		byte[] data = db.get (Key.createKey (KeyType.HEAD, writer.toByteArray ()));
+		byte[] data = get (Key.createKey (KeyType.HEAD, writer.toByteArray ()));
 		if ( data != null )
 		{
 			return Head.fromLevelDB (data);
@@ -321,19 +355,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (h.getId ());
-		if ( batch != null )
-		{
-			batch.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
-		}
-		else
-		{
-			db.put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
-		}
+		put (Key.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
 	}
 
 	private Blk readBlk (String hash, boolean full)
 	{
-		byte[] data = db.get (Key.createKey (KeyType.BLOCK, new Hash (hash).toByteArray ()));
+		byte[] data = get (Key.createKey (KeyType.BLOCK, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
 			Blk b = Blk.fromLevelDB (data, true);
@@ -353,14 +380,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writeBlk (Blk b)
 	{
-		if ( batch != null )
-		{
-			batch.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
-		}
-		else
-		{
-			db.put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
-		}
+		put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
 		for ( Tx t : b.getTransactions () )
 		{
 			writeTx (t);
@@ -376,19 +396,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private void writePeer (KnownPeer p)
 	{
-		if ( batch != null )
-		{
-			batch.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
-		}
-		else
-		{
-			db.put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
-		}
+		put (Key.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
 	}
 
 	private KnownPeer readPeer (String address)
 	{
-		byte[] data = db.get (Key.createKey (KeyType.PEER, address.getBytes ()));
+		byte[] data = get (Key.createKey (KeyType.PEER, address.getBytes ()));
 		if ( data != null )
 		{
 			return KnownPeer.fromLevelDB (data);
@@ -605,36 +618,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	protected TxOut getSourceReference (TxOut source)
 	{
 		return readTx (source.getTxHash ()).getOutputs ().get (source.getIx ().intValue ());
-	}
-
-	@Override
-	protected void startBatch ()
-	{
-		batch = db.createWriteBatch ();
-		inBatch = new HashMap<String, Tx> ();
-	}
-
-	@Override
-	protected void endBatch ()
-	{
-		if ( batch != null )
-		{
-			db.write (batch);
-			batch.close ();
-			batch = null;
-			inBatch = null;
-		}
-	}
-
-	@Override
-	protected void cancelBatch ()
-	{
-		if ( batch != null )
-		{
-			batch.close ();
-			batch = null;
-			inBatch = null;
-		}
 	}
 
 	@Override
