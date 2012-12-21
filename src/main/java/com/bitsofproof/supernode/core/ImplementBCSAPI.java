@@ -1,6 +1,8 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
@@ -256,6 +258,29 @@ public class ImplementBCSAPI implements BCSAPI
 							balances.add (out);
 						}
 					}
+					Collections.sort (postings, new Comparator<AccountPosting> ()
+					{
+						@Override
+						public int compare (AccountPosting arg0, AccountPosting arg1)
+						{
+							if ( arg0.getTimestamp () != arg1.getTimestamp () )
+							{
+								return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
+							}
+							else
+							{
+								if ( arg0.getReceived () != null && arg1.getSpent () == null )
+								{
+									return -1;
+								}
+								if ( arg0.getReceived () == null && arg1.getSpent () != null )
+								{
+									return 1;
+								}
+								return 0;
+							}
+						}
+					});
 				}
 			});
 			return statement;
