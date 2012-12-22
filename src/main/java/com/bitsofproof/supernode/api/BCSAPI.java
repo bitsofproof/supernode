@@ -34,9 +34,17 @@ public interface BCSAPI extends BCSAPIRemoteCalls
 	 * Register a block listener
 	 * 
 	 * @param listener
-	 *            will be called for ever validated new block
+	 *            will be called for every validated new block
 	 */
 	public void registerBlockListener (BlockListener listener);
+
+	/**
+	 * Register a block template listener
+	 * 
+	 * @param listener
+	 *            will be called with work suggestions
+	 */
+	public void registerBlockTemplateListener (BlockListener listener);
 
 	/**
 	 * Register a listener for transactions involving the given addresses
