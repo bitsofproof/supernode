@@ -34,7 +34,7 @@ import org.json.JSONObject;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
-import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ScriptFormat;
 
 @Entity
 @Table (name = "txout")
@@ -100,7 +100,7 @@ public class TxOut implements Serializable
 			o.put ("value", value);
 			try
 			{
-				o.put ("script", Script.toReadable (script));
+				o.put ("script", ScriptFormat.toReadable (script));
 			}
 			catch ( ValidationException e )
 			{

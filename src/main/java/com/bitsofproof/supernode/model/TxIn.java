@@ -36,7 +36,7 @@ import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
-import com.bitsofproof.supernode.core.Script;
+import com.bitsofproof.supernode.core.ScriptFormat;
 
 @Entity
 @Table (name = "txin")
@@ -162,7 +162,7 @@ public class TxIn implements Serializable, Cloneable
 			{
 				try
 				{
-					o.put ("script", Script.toReadable (script));
+					o.put ("script", ScriptFormat.toReadable (script));
 				}
 				catch ( ValidationException e )
 				{

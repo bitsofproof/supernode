@@ -42,7 +42,6 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.core.Script.Opcode;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.Tx;
@@ -957,7 +956,7 @@ public abstract class CachedBlockStore implements BlockStore
 				try
 				{
 					tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-					tcontext.nsigs += Script.sigOpCount (o.getScript ());
+					tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript ());
 				}
 				catch ( ValidationException e )
 				{
@@ -994,7 +993,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					try
 					{
-						if ( Script.intValue (Script.parse (t.getInputs ().get (0).getScript ()).get (0).data) != tcontext.block.getHeight () )
+						if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != tcontext.block.getHeight () )
 						{
 							throw new TransactionValidationException ("Block height mismatch in coinbase", t);
 						}
@@ -1022,7 +1021,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				try
 				{
-					if ( tcontext.block == null && chain.isProduction () && !Script.isStandard (o.getScript ()) )
+					if ( tcontext.block == null && chain.isProduction () && !ScriptFormat.isStandard (o.getScript ()) )
 					{
 						throw new TransactionValidationException ("Nonstandard script rejected", t);
 					}
@@ -1035,7 +1034,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					try
 					{
-						tcontext.nsigs += Script.sigOpCount (o.getScript ());
+						tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript ());
 					}
 					catch ( ValidationException e )
 					{
@@ -1082,7 +1081,7 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						try
 						{
-							if ( !new Script (t, nr, source).evaluate (chain.isProduction ()) )
+							if ( !new ScriptEvaluation (t, nr, source).evaluate (chain.isProduction ()) )
 							{
 								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
 							}
@@ -1143,25 +1142,26 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void parseOwners (TxOut out) throws TransactionValidationException
 	{
-		List<Script.Token> parsed;
+		List<ScriptFormat.Token> parsed;
 		try
 		{
-			parsed = Script.parse (out.getScript ());
-			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == Opcode.OP_CHECKSIG )
+			parsed = ScriptFormat.parse (out.getScript ());
+			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG )
 			{
 				// pay to key
 				out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), false, chain));
 				out.setVotes (1L);
 			}
-			else if ( parsed.size () == 5 && parsed.get (0).op == Opcode.OP_DUP && parsed.get (1).op == Opcode.OP_HASH160 && parsed.get (2).data != null
-					&& parsed.get (3).op == Opcode.OP_EQUALVERIFY && parsed.get (4).op == Opcode.OP_CHECKSIG )
+			else if ( parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
+					&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
+					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG )
 			{
 				// pay to address
 				out.setOwner1 (AddressConverter.toSatoshiStyle (parsed.get (2).data, false, chain));
 				out.setVotes (1L);
 			}
-			else if ( parsed.size () == 3 && parsed.get (0).op == Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
-					&& parsed.get (2).op == Opcode.OP_EQUAL )
+			else if ( parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && parsed.get (1).data != null
+					&& parsed.get (1).data.length == 20 && parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL )
 			{
 				byte[] hash = parsed.get (1).data;
 				if ( hash.length == 20 )
@@ -1175,11 +1175,11 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				for ( int i = 0; i < parsed.size (); ++i )
 				{
-					if ( parsed.get (i).op == Opcode.OP_CHECKMULTISIG || parsed.get (i).op == Opcode.OP_CHECKMULTISIGVERIFY )
+					if ( parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIG || parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIGVERIFY )
 					{
 						if ( chain.isProduction () )
 						{
-							int nkeys = parsed.get (i - 1).op.ordinal () - Opcode.OP_1.ordinal () + 1;
+							int nkeys = parsed.get (i - 1).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
 							for ( int j = 0; j < nkeys; ++j )
 							{
 								if ( j == 0 )
@@ -1195,7 +1195,7 @@ public abstract class CachedBlockStore implements BlockStore
 									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
 								}
 							}
-							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - Opcode.OP_1.ordinal () + 1);
+							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);
 							return;
 						}
 					}
