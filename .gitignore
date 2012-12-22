@@ -6,3 +6,4 @@ target
 bcsapi_server.keystore
 bcsapi_client.keystore
 BCSAPIPASSWORD
+/jms_server.keystore
