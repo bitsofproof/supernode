@@ -18,3 +18,9 @@ and mvn package before use.
 I recommend to also use below options to java: 
 java -server -Xmx4g ...
 
+ECLIPSE
+1. Install m2e through the marketplace (Help > Eclipse Marketplace)
+2. For the APT source generator to work in eclipse automatically install m2e-apt. In eclipse: Preferences > Maven > Discovery > Open Catalog
+3. Import the project into eclipse File > Import > Existing Maven Project
+4. Go to Project Properties > Maven > Annotation Processing, enable project specific settings and turn on annotation processing  
+
