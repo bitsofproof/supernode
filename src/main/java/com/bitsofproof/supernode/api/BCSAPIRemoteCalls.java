@@ -55,6 +55,15 @@ public interface BCSAPIRemoteCalls
 	public void sendTransaction (Transaction transaction) throws ValidationException;
 
 	/**
+	 * senda mined block
+	 * 
+	 * @param block
+	 * @throws ValidationException
+	 *             - if the block is invalid for numerous reasons
+	 */
+	public void sendBlock (Block block) throws ValidationException;
+
+	/**
 	 * get account statement
 	 * 
 	 * @param addresses

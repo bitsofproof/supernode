@@ -105,6 +105,12 @@ public class BCSAPIClientSide implements BCSAPI
 	}
 
 	@Override
+	public void sendBlock (Block block) throws ValidationException
+	{
+		remote.sendBlock (block);
+	}
+
+	@Override
 	public AccountStatement getAccountStatement (List<String> addresses, long from)
 	{
 		return remote.getAccountStatement (addresses, from);
