@@ -111,12 +111,15 @@ public class TxHandler implements ChainListener
 	public void sendTransaction (Tx tx, BitcoinPeer peer)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
-		unconfirmed.put (tx.getHash (), tx);
-		HashMap<Long, TxOut> outs = new HashMap<Long, TxOut> ();
-		newOutput.put (tx.getHash (), outs);
-		for ( TxOut out : tx.getOutputs () )
+		synchronized ( unconfirmed )
 		{
-			outs.put (out.getIx (), out);
+			unconfirmed.put (tx.getHash (), tx);
+			HashMap<Long, TxOut> outs = new HashMap<Long, TxOut> ();
+			newOutput.put (tx.getHash (), outs);
+			for ( TxOut out : tx.getOutputs () )
+			{
+				outs.put (out.getIx (), out);
+			}
 		}
 		for ( TransactionListener l : transactionListener )
 		{
@@ -138,16 +141,14 @@ public class TxHandler implements ChainListener
 	public void blockAdded (final Blk blk)
 	{
 		heard.clear ();
-		if ( unconfirmed.isEmpty () )
+		synchronized ( unconfirmed )
 		{
-			return;
-		}
-		for ( Tx tx : blk.getTransactions () )
-		{
-			Tx cached = unconfirmed.get (tx.getHash ());
-			if ( cached != null )
+			if ( !unconfirmed.isEmpty () )
 			{
-				unconfirmed.remove (tx.getHash ());
+				for ( Tx tx : blk.getTransactions () )
+				{
+					unconfirmed.remove (tx.getHash ());
+				}
 			}
 		}
 	}

@@ -94,9 +94,9 @@ public class ChainLoader
 				{
 					try
 					{
-						store.storeBlock (block);
 						havePending.remove (block.getHash ());
-						notifyBlockAdded (block);
+
+						sendBlock (block, peer);
 
 						if ( pendingOn.containsKey (block.getHash ()) )
 						{
@@ -153,9 +153,8 @@ public class ChainLoader
 				while ( i.hasNext () )
 				{
 					Blk b = i.next ();
-					store.storeBlock (b);
 					havePending.remove (b.getHash ());
-					notifyBlockAdded (b);
+					sendBlock (b, null);
 					List<Blk> next = pendingOn.get (b.getHash ());
 					if ( next != null )
 					{
@@ -256,6 +255,25 @@ public class ChainLoader
 				}
 			}
 		});
+	}
+
+	public void sendBlock (Blk b, BitcoinPeer peer) throws ValidationException
+	{
+		store.storeBlock (b);
+		notifyBlockAdded (b);
+		if ( !isBehind () )
+		{
+			for ( BitcoinPeer p : network.getConnectPeers () )
+			{
+				if ( p != peer )
+				{
+					BlockMessage bm = (BlockMessage) peer.createMessage ("block");
+					bm.setBlock (b);
+					peer.send (bm);
+				}
+			}
+			log.trace ("sent block " + b.getHash ());
+		}
 	}
 
 	public int getTimeout ()

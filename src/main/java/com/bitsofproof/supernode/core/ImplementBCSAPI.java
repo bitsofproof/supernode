@@ -39,6 +39,8 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 
 	private BlockStore store;
 	private final TxHandler txhandler;
+	private final ChainLoader chainLoader;
+
 	private PlatformTransactionManager transactionManager;
 	private Connection connection;
 	private Session session;
@@ -53,6 +55,7 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	public ImplementBCSAPI (ChainLoader chainLoader, TxHandler txHandler)
 	{
 		this.txhandler = txHandler;
+		this.chainLoader = chainLoader;
 
 		chainLoader.addChainListener (this);
 		txHandler.addTransactionListener (this);
@@ -216,6 +219,17 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 		Tx t = new Tx ();
 		t.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		txhandler.sendTransaction (t, null);
+	}
+
+	@Override
+	public void sendBlock (Block block) throws ValidationException
+	{
+		log.trace ("send block " + block.getHash ());
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		block.toWire (writer);
+		Blk b = new Blk ();
+		b.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		chainLoader.sendBlock (b, null);
 	}
 
 	@Override
