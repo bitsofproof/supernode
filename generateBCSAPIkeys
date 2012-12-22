@@ -10,7 +10,7 @@ fi
 
 
 echo generating server key...
-rm -Pf bcsapi_server.keystore bcsapi_client.keystore
+rm -f bcsapi_server.keystore bcsapi_client.keystore jms_server.keystore
 echo generating key...
 keytool -genkey -validity 3650 -alias bitsofproofServer -dname "cn=bitsofproof supernode server, ou=IT, o=bitsofproof, c=NET" -keystore bcsapi_server.keystore -keypass $BCSAPIPASSWORD -storepass $BCSAPIPASSWORD
 echo extracting certificate...
@@ -18,20 +18,30 @@ keytool -exportcert -alias bitsofproofServer -keystore bcsapi_server.keystore -r
 
 echo 
 echo generatng client key...
-echo -n "client certificate password: "
-echo generating key...
 keytool -genkey -validity 3650 -alias bitsofproofClient -dname "cn=bitsofproof supernode client, ou=IT, o=bitsofproof, c=NET" -keystore bcsapi_client.keystore -keypass $BCSAPIPASSWORD -storepass $BCSAPIPASSWORD
 echo extracting certificate...
 keytool -exportcert -alias bitsofproofClient -keystore bcsapi_client.keystore -rfc -file client.cert -keypass $BCSAPIPASSWORD -storepass $BCSAPIPASSWORD
 
+echo 
+echo generatng JMS server key...
+keytool -genkey -validity 3650 -alias bitsofproofJMSServer -dname "cn=bitsofproof supernode JMS server, ou=IT, o=bitsofproof, c=NET" -keystore jms_server.keystore -keypass $BCSAPIPASSWORD -storepass $BCSAPIPASSWORD
+echo extracting certificate...
+keytool -exportcert -alias bitsofproofJMSServer -keystore jms_server.keystore -rfc -file jmsserver.cert -keypass $BCSAPIPASSWORD -storepass $BCSAPIPASSWORD
+
+echo
+echo add client and server certs to JMS server key store ...
+keytool -importcert -noprompt -trustcacerts -alias bitsofproofServer -file server.cert -keystore jms_server.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
+keytool -importcert -noprompt -trustcacerts -alias bitsofproofClient -file client.cert -keystore jms_server.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
 
 echo 
 echo add server cert to bcsapi_client.keystore...
 keytool -importcert -noprompt -trustcacerts -alias bitsofproofServer -file server.cert -keystore bcsapi_client.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
+keytool -importcert -noprompt -trustcacerts -alias bitsofproofJMSServer -file jmsserver.cert -keystore bcsapi_client.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
 echo add client cert to bcsapi_server.keystore...
 keytool -importcert -noprompt -trustcacerts -alias bitsofproofClient -file client.cert -keystore bcsapi_server.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
+keytool -importcert -noprompt -trustcacerts -alias bitsofproofJMSServer -file jmsserver.cert -keystore bcsapi_server.keystore -keypass $BCSAPIPASSWORD  -storepass $BCSAPIPASSWORD
 echo
-rm -Pf server.cert client.cert
+rm -f server.cert client.cert jmsserver.cert
 
 
 
