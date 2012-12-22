@@ -135,7 +135,7 @@ public class ScriptEvaluation
 		}
 		if ( psh )
 		{
-			if ( !ScriptFormat.isPushOnly (s1) )
+			if ( !ScriptFormat.isPushOnly (s2) )
 			{
 				throw new ValidationException ("input script for PTH should be push only.");
 			}
