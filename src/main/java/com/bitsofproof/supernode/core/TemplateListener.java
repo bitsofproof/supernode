@@ -15,9 +15,9 @@
  */
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.Blk;
 
-public interface TransactionListener
+public interface TemplateListener
 {
-	public void onTransaction (Tx transaction);
+	public void workOn (Blk b);
 }
