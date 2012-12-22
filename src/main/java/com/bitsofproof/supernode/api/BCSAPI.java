@@ -20,65 +20,30 @@ import java.util.List;
 /**
  * This is the API extensions to the bitsofproof supernode should build on
  */
-public interface BCSAPI
+public interface BCSAPI extends BCSAPIRemoteCalls
 {
-	public long getHeartbeat (long mine);
-
 	/**
-	 * get a block for the hash
+	 * Register a transactions listener
 	 * 
-	 * @param hash
-	 * @return block or null if hash is unknown
+	 * @param listener
+	 *            will be called for every validated transaction
 	 */
-	public Block getBlock (String hash);
+	public void registerTransactionListener (TransactionListener listener);
 
 	/**
-	 * get the transaction identified by the hash on the trunk
+	 * Register a block listener
 	 * 
-	 * @param hash
-	 * @return transaction or null if no transaction with that hash on the trunk
+	 * @param listener
+	 *            will be called for ever validated new block
 	 */
-	public Transaction getTransaction (String hash);
+	public void registerBlockListener (BlockListener listener);
 
 	/**
-	 * get the hash of the highest block on the trunk
-	 * 
-	 * @return
-	 */
-	public String getTrunk ();
-
-	/**
-	 * get predecessor of a block identified by the hash
-	 * 
-	 * @param hash
-	 * @return a block or null if the hash is invalid. It returns zero hash for genesis
-	 */
-	public String getPreviousBlockHash (String hash);
-
-	/**
-	 * get transaction outputs that could be spent by the adresses
-	 * 
-	 * @param address
-	 * @return list of outputs, eventually empty
-	 */
-	public List<TransactionOutput> getBalance (List<String> address);
-
-	/**
-	 * send a signed transaction
-	 * 
-	 * @param transaction
-	 * @throws ValidationException
-	 *             - if the transaction is invalid for numerous reasons
-	 */
-	public void sendTransaction (Transaction transaction) throws ValidationException;
-
-	/**
-	 * get account statement
+	 * Register a listener for transactions involving the given addresses
 	 * 
 	 * @param addresses
-	 * @param from
-	 *            - unix time point the account statement should start from
+	 * @param listener
 	 * @return
 	 */
-	public AccountStatement getAccountStatement (List<String> addresses, long from);
+	public void registerAccountListener (List<String> addresses, TransactionListener listener);
 }

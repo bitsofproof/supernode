@@ -37,6 +37,7 @@
 
 	<properties>
        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+       <activemq.version>5.7.0</activemq.version>
 	</properties>
 	<build>
 		<plugins>
@@ -52,6 +53,16 @@
 	</build>
 
 	<dependencies>
+	 <dependency>
+            <groupId>org.apache.geronimo.specs</groupId>
+            <artifactId>geronimo-jms_1.1_spec</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-core</artifactId>
+            <version>${activemq.version}</version>
+        </dependency>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk15on</artifactId>
