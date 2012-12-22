@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
