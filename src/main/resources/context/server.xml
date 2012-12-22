@@ -98,7 +98,6 @@
 			<ref bean="tx"/>
 		</constructor-arg>
 		<property name="store" ref="store" />
-		<property name="network" ref="bitcoinNetwork" />
 		<property name="transactionManager" ref="transactionManager" />
 		<property name="brokerURL" value="ssl://localhost:61613"/>
 		<property name="user" value="admin"/>

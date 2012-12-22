@@ -40,6 +40,8 @@ public class TxHandler implements ChainListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TxHandler.class);
 
+	private final BitcoinNetwork network;
+
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private final Map<String, HashMap<Long, TxOut>> newOutput = new HashMap<String, HashMap<Long, TxOut>> ();
@@ -52,6 +54,7 @@ public class TxHandler implements ChainListener
 
 	public TxHandler (final BitcoinNetwork network, final ChainLoader loader)
 	{
+		this.network = network;
 		final BlockStore store = network.getStore ();
 		loader.addChainListener (this);
 
@@ -89,17 +92,7 @@ public class TxHandler implements ChainListener
 					try
 					{
 						store.validateTransaction (txm.getTx (), newOutput);
-						cacheTransaction (txm.getTx ());
-						for ( BitcoinPeer p : network.getConnectPeers () )
-						{
-							if ( p != peer )
-							{
-								TxMessage tm = (TxMessage) p.createMessage ("tx");
-								tm.setTx (txm.getTx ());
-								p.send (tm);
-							}
-						}
-						log.info ("sent validated transaction to peers " + txm.getTx ().getHash ());
+						sendTransaction (txm.getTx (), peer);
 					}
 					catch ( ValidationException e )
 					{
@@ -115,7 +108,7 @@ public class TxHandler implements ChainListener
 		return unconfirmed.get (hash);
 	}
 
-	public void cacheTransaction (Tx tx)
+	public void sendTransaction (Tx tx, BitcoinPeer peer)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		unconfirmed.put (tx.getHash (), tx);
@@ -129,6 +122,16 @@ public class TxHandler implements ChainListener
 		{
 			l.onTransaction (tx);
 		}
+		for ( BitcoinPeer p : network.getConnectPeers () )
+		{
+			if ( p != peer )
+			{
+				TxMessage tm = (TxMessage) p.createMessage ("tx");
+				tm.setTx (tx);
+				p.send (tm);
+			}
+		}
+		log.info ("sent validated transaction to peers " + tx.getHash ());
 	}
 
 	@Override

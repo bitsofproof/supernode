@@ -38,7 +38,7 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
 	private BlockStore store;
-	private BitcoinNetwork network;
+	private final TxHandler txhandler;
 	private PlatformTransactionManager transactionManager;
 	private Connection connection;
 	private Session session;
@@ -52,6 +52,8 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 
 	public ImplementBCSAPI (ChainLoader chainLoader, TxHandler txHandler)
 	{
+		this.txhandler = txHandler;
+
 		chainLoader.addChainListener (this);
 		txHandler.addTransactionListener (this);
 	}
@@ -107,11 +109,6 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	public void setStore (BlockStore store)
 	{
 		this.store = store;
-	}
-
-	public void setNetwork (BitcoinNetwork network)
-	{
-		this.network = network;
 	}
 
 	@Override
@@ -218,7 +215,7 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 		transaction.toWire (writer);
 		Tx t = new Tx ();
 		t.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		network.sendTransaction (t);
+		txhandler.sendTransaction (t, null);
 	}
 
 	@Override
