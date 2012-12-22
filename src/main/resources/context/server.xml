@@ -90,16 +90,25 @@
 		<property name="startDelay" value="60" />
 	</bean>
 
-	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI">
+	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">
+		<constructor-arg>
+			<ref bean="chainloader"/>
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="tx"/>
+		</constructor-arg>
 		<property name="store" ref="store" />
 		<property name="network" ref="bitcoinNetwork" />
 		<property name="transactionManager" ref="transactionManager" />
+		<property name="brokerURL" value="tcp://localhost:61613"/>
+		<property name="user" value="admin"/>
+		<property name="password" value="password"/>
 	</bean>
 
 	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
 		<property name="serviceName" value="BCSAPI" />
 		<property name="service" ref="BCSAPI" />
-		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPI" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIRemoteCalls" />
 		<property name="registryPort" value="1199" />
 		<property name="serverSocketFactory">
 			<bean class="javax.rmi.ssl.SslRMIServerSocketFactory"/>

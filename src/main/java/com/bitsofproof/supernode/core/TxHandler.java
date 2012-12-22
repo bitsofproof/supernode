@@ -15,9 +15,11 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,6 +43,12 @@ public class TxHandler implements ChainListener
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private final Map<String, HashMap<Long, TxOut>> newOutput = new HashMap<String, HashMap<Long, TxOut>> ();
+	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
+
+	public void addTransactionListener (TransactionListener listener)
+	{
+		transactionListener.add (listener);
+	}
 
 	public TxHandler (final BitcoinNetwork network, final ChainLoader loader)
 	{
@@ -116,6 +124,10 @@ public class TxHandler implements ChainListener
 		for ( TxOut out : tx.getOutputs () )
 		{
 			outs.put (out.getIx (), out);
+		}
+		for ( TransactionListener l : transactionListener )
+		{
+			l.onTransaction (tx);
 		}
 	}
 

@@ -6,6 +6,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.jms.Connection;
+import javax.jms.JMSException;
+import javax.jms.MessageProducer;
+import javax.jms.ObjectMessage;
+import javax.jms.Session;
+
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -15,7 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AccountPosting;
 import com.bitsofproof.supernode.api.AccountStatement;
-import com.bitsofproof.supernode.api.BCSAPI;
+import com.bitsofproof.supernode.api.BCSAPIRemoteCalls;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
@@ -26,13 +33,71 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class ImplementBCSAPI implements BCSAPI
+public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, TransactionListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
 	private BlockStore store;
 	private BitcoinNetwork network;
 	private PlatformTransactionManager transactionManager;
+	private Connection connection;
+	private Session session;
+
+	private String brokerURL;
+	private String user;
+	private String password;
+
+	private MessageProducer transactionProducer;
+	private MessageProducer blockProducer;
+
+	public ImplementBCSAPI (ChainLoader chainLoader, TxHandler txHandler)
+	{
+		chainLoader.addChainListener (this);
+		txHandler.addTransactionListener (this);
+	}
+
+	public void init ()
+	{
+		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
+		try
+		{
+			connection = connectionFactory.createConnection ();
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			transactionProducer = session.createProducer (session.createTopic ("transaction"));
+			blockProducer = session.createProducer (session.createTopic ("block"));
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Error creating JMS producer", e);
+		}
+	}
+
+	public void destroy ()
+	{
+		try
+		{
+			session.close ();
+			connection.close ();
+		}
+		catch ( JMSException e )
+		{
+		}
+	}
+
+	public void setBrokerURL (String brokerURL)
+	{
+		this.brokerURL = brokerURL;
+	}
+
+	public void setUser (String user)
+	{
+		this.user = user;
+	}
+
+	public void setPassword (String password)
+	{
+		this.password = password;
+	}
 
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
 	{
@@ -288,6 +353,40 @@ public class ImplementBCSAPI implements BCSAPI
 		finally
 		{
 			log.trace ("get account statement returned");
+		}
+	}
+
+	@Override
+	public void blockAdded (Blk blk)
+	{
+		try
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			blk.toWire (writer);
+			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			ObjectMessage m = session.createObjectMessage (b);
+			blockProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
+		}
+	}
+
+	@Override
+	public void onTransaction (Tx tx)
+	{
+		try
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			tx.toWire (writer);
+			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			ObjectMessage m = session.createObjectMessage (t);
+			transactionProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
 		}
 	}
 }
