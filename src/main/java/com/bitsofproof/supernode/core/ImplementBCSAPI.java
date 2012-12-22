@@ -58,9 +58,9 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 
 	public void init ()
 	{
-		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
 		try
 		{
+			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
 			connection = connectionFactory.createConnection ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
