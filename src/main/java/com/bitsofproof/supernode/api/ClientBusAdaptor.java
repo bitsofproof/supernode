@@ -27,6 +27,7 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
+import javax.jms.MessageProducer;
 import javax.jms.ObjectMessage;
 import javax.jms.Session;
 
@@ -50,6 +51,9 @@ public class ClientBusAdaptor implements BCSAPIBus
 	private final List<TemplateListener> blockTemplateListener = Collections.synchronizedList (new ArrayList<TemplateListener> ());
 	private final Map<String, ArrayList<TransactionListener>> addressListener = Collections
 			.synchronizedMap (new HashMap<String, ArrayList<TransactionListener>> ());
+
+	private MessageProducer transactionProducer;
+	private MessageProducer blockProducer;
 
 	public void setClientId (String clientId)
 	{
@@ -163,6 +167,8 @@ public class ClientBusAdaptor implements BCSAPIBus
 					}
 				}
 			});
+			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
+			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 		}
 		catch ( JMSException e )
 		{
@@ -246,16 +252,28 @@ public class ClientBusAdaptor implements BCSAPIBus
 	}
 
 	@Override
-	public void sendTransaction (Transaction transaction) throws ValidationException
+	public void sendTransaction (Transaction transaction)
 	{
-		// TODO Auto-generated method stub
-
+		try
+		{
+			transactionProducer.send (session.createObjectMessage (transaction));
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send transaction", e);
+		}
 	}
 
 	@Override
-	public void sendBlock (Block block) throws ValidationException
+	public void sendBlock (Block block)
 	{
-		// TODO Auto-generated method stub
-
+		try
+		{
+			blockProducer.send (session.createObjectMessage (block));
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send transaction", e);
+		}
 	}
 }
