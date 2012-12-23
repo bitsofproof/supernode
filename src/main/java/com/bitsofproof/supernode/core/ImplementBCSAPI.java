@@ -22,7 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AccountPosting;
 import com.bitsofproof.supernode.api.AccountStatement;
-import com.bitsofproof.supernode.api.BCSAPIRemoteCalls;
+import com.bitsofproof.supernode.api.BCSAPIDirect;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
@@ -34,7 +34,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class ImplementBCSAPI implements BCSAPIRemoteCalls, TrunkListener, TransactionListener, TemplateListener
+public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, TransactionListener, TemplateListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
@@ -212,7 +212,6 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, TrunkListener, Transa
 		}
 	}
 
-	@Override
 	public void sendTransaction (Transaction transaction) throws ValidationException
 	{
 		log.trace ("send transaction " + transaction.getHash ());
@@ -223,7 +222,6 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, TrunkListener, Transa
 		txhandler.sendTransaction (t, null);
 	}
 
-	@Override
 	public void sendBlock (Block block) throws ValidationException
 	{
 		log.trace ("send block " + block.getHash ());

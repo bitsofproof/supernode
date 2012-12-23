@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans profile="BCSAPIDirect" 
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+	<description>supernode spring assembly (c) 2012 Tamas Blummer
+		tamas@bitsofproof.com</description>
+
+	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
+		<property name="serviceName" value="BCSAPI" />
+		<property name="service" ref="BCSAPI" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
+		<property name="registryPort" value="1199" />
+		<property name="serverSocketFactory">
+			<bean class="javax.rmi.ssl.SslRMIServerSocketFactory"/>
+		</property>
+		<property name="clientSocketFactory">
+			<bean class="javax.rmi.ssl.SslRMIClientSocketFactory" />
+		</property>
+	</bean>
+
+</beans>
