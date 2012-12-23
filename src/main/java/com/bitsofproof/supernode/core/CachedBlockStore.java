@@ -941,6 +941,18 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws TransactionValidationException
 	{
+		if ( tcontext.block == null || tcontext.block != null && tcontext.block.getHeight () > 200000 )
+		{
+			// BIP 0034
+			if ( t.getVersion () != 1 )
+			{
+				throw new TransactionValidationException ("Transaction version must be 1", t);
+			}
+		}
+		if ( t.getLockTime () != 0 )
+		{
+			throw new TransactionValidationException ("Transaction must be locked", t);
+		}
 		if ( tcontext.block != null && tcontext.coinbase )
 		{
 			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
@@ -986,10 +998,6 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( tcontext.block != null && tcontext.block.getHeight () > 200000 )
 			{
 				// BIP 0034
-				if ( t.getVersion () != 1 )
-				{
-					throw new TransactionValidationException ("Transaction version must be 1", t);
-				}
 				if ( tcontext.block.getVersion () == 2 && tcontext.coinbase )
 				{
 					try
@@ -1063,6 +1071,10 @@ public abstract class CachedBlockStore implements BlockStore
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final TxIn i : t.getInputs () )
 			{
+				if ( i.getSequence () != 0xFFFFFFFFL )
+				{
+					throw new TransactionValidationException ("Input sequencing is disabled ", t);
+				}
 				if ( i.getScript ().length > 520 )
 				{
 					if ( tcontext.block == null || tcontext.block.getHeight () > 200000 )
