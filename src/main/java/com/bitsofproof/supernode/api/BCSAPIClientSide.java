@@ -48,8 +48,8 @@ public class BCSAPIClientSide implements BCSAPI
 	private String clientId;
 
 	private final List<TransactionListener> transactionListener = Collections.synchronizedList (new ArrayList<TransactionListener> ());
-	private final List<BlockListener> blockListener = Collections.synchronizedList (new ArrayList<BlockListener> ());
-	private final List<BlockListener> blockTemplateListener = Collections.synchronizedList (new ArrayList<BlockListener> ());
+	private final List<TrunkListener> trunkListener = Collections.synchronizedList (new ArrayList<TrunkListener> ());
+	private final List<TemplateListener> blockTemplateListener = Collections.synchronizedList (new ArrayList<TemplateListener> ());
 	private final Map<String, ArrayList<TransactionListener>> addressListener = Collections
 			.synchronizedMap (new HashMap<String, ArrayList<TransactionListener>> ());
 
@@ -132,6 +132,13 @@ public class BCSAPIClientSide implements BCSAPI
 		return remote.getAccountStatement (addresses, from);
 	}
 
+	private void addMessageListener (String topic, MessageListener listener) throws JMSException
+	{
+		Destination destination = session.createTopic (topic);
+		MessageConsumer consumer = session.createConsumer (destination);
+		consumer.setMessageListener (listener);
+	}
+
 	public void init ()
 	{
 		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
@@ -141,9 +148,7 @@ public class BCSAPIClientSide implements BCSAPI
 			connection.setClientID (clientId);
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-			Destination transactionDestination = session.createTopic ("transaction");
-			MessageConsumer transactionConsumer = session.createConsumer (transactionDestination);
-			transactionConsumer.setMessageListener (new MessageListener ()
+			addMessageListener ("transaction", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -162,19 +167,17 @@ public class BCSAPIClientSide implements BCSAPI
 					}
 				}
 			});
-			Destination blockDestination = session.createTopic ("block");
-			MessageConsumer blockConsumer = session.createConsumer (blockDestination);
-			blockConsumer.setMessageListener (new MessageListener ()
+			addMessageListener ("extend", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
 				{
 					ObjectMessage o = (ObjectMessage) arg0;
-					for ( BlockListener l : blockListener )
+					for ( TrunkListener l : trunkListener )
 					{
 						try
 						{
-							l.process ((Block) o.getObject ());
+							l.blockAdded ((Block) o.getObject ());
 						}
 						catch ( JMSException e )
 						{
@@ -183,19 +186,36 @@ public class BCSAPIClientSide implements BCSAPI
 					}
 				}
 			});
-			Destination workDestination = session.createTopic ("work");
-			MessageConsumer workConsumer = session.createConsumer (workDestination);
-			workConsumer.setMessageListener (new MessageListener ()
+			addMessageListener ("revert", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
 				{
 					ObjectMessage o = (ObjectMessage) arg0;
-					for ( BlockListener l : blockTemplateListener )
+					for ( TrunkListener l : trunkListener )
 					{
 						try
 						{
-							l.process ((Block) o.getObject ());
+							l.blockRemoved ((Block) o.getObject ());
+						}
+						catch ( JMSException e )
+						{
+							log.error ("Block message error", e);
+						}
+					}
+				}
+			});
+			addMessageListener ("work", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					ObjectMessage o = (ObjectMessage) arg0;
+					for ( TemplateListener l : blockTemplateListener )
+					{
+						try
+						{
+							l.workOn ((Block) o.getObject ());
 						}
 						catch ( JMSException e )
 						{
@@ -231,13 +251,13 @@ public class BCSAPIClientSide implements BCSAPI
 	}
 
 	@Override
-	public void registerBlockListener (BlockListener listener)
+	public void registerTrunkListener (TrunkListener listener)
 	{
-		blockListener.add (listener);
+		trunkListener.add (listener);
 	}
 
 	@Override
-	public void registerBlockTemplateListener (BlockListener listener)
+	public void registerBlockTemplateListener (TemplateListener listener)
 	{
 		blockTemplateListener.add (listener);
 	}

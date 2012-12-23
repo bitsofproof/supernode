@@ -31,6 +31,8 @@ public class TransactionFactory
 		outputs.add (output);
 		coinbase.setOutputs (outputs);
 
+		coinbase.computeHash ();
+
 		return coinbase;
 	}
 }
