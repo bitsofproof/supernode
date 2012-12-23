@@ -7,7 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 
 import javax.jms.Connection;
+import javax.jms.Destination;
 import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.ObjectMessage;
 import javax.jms.Session;
@@ -66,6 +70,13 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		blockTemplater.addTemplateListener (this);
 	}
 
+	private void addMessageListener (String topic, MessageListener listener) throws JMSException
+	{
+		Destination destination = session.createTopic (topic);
+		MessageConsumer consumer = session.createConsumer (destination);
+		consumer.setMessageListener (listener);
+	}
+
 	public void init ()
 	{
 		try
@@ -77,6 +88,46 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 			extendProducer = session.createProducer (session.createTopic ("extend"));
 			revertProducer = session.createProducer (session.createTopic ("revert"));
 			templateProducer = session.createProducer (session.createTopic ("work"));
+			addMessageListener ("newTransaction", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					ObjectMessage o = (ObjectMessage) arg0;
+					try
+					{
+						sendTransaction ((Transaction) o.getObject ());
+					}
+					catch ( ValidationException e )
+					{
+						log.trace ("Rejected invalid transaction ", e);
+					}
+					catch ( JMSException e )
+					{
+						log.trace ("Rejected invalid transaction", e);
+					}
+				}
+			});
+			addMessageListener ("newBlock", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					ObjectMessage o = (ObjectMessage) arg0;
+					try
+					{
+						sendBlock ((Block) o.getObject ());
+					}
+					catch ( ValidationException e )
+					{
+						log.trace ("Rejected invalid block ", e);
+					}
+					catch ( JMSException e )
+					{
+						log.trace ("Rejected invalid block", e);
+					}
+				}
+			});
 		}
 		catch ( JMSException e )
 		{
