@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.api;
 
 public interface ChainParameter
 {
+	public long getRewardForHeight (int height);
+
 	public int getDifficultyReviewBlocks ();
 
 	public int getTargetBlockTime ();

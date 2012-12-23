@@ -24,10 +24,6 @@ import java.util.Arrays;
 
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.AddressConverter;
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.ValidationException;
-
 public class AddressTest
 {
 	private static final ChainParameter chain = new ChainParameter ()
@@ -60,6 +56,12 @@ public class AddressTest
 		public int getMultisigAddressFlag ()
 		{
 			return 0x05;
+		}
+
+		@Override
+		public long getRewardForHeight (int height)
+		{
+			return 50L;
 		}
 	};
 

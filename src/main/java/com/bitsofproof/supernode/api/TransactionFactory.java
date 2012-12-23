@@ -5,7 +5,7 @@ import java.util.List;
 
 public class TransactionFactory
 {
-	public static Transaction createCoinbase (long value, String receiver, int blockHeight, ChainParameter chain) throws ValidationException
+	public static Transaction createCoinbase (String receiver, int blockHeight, ChainParameter chain) throws ValidationException
 	{
 		Transaction coinbase = new Transaction ();
 		coinbase.setVersion (1);
@@ -25,7 +25,7 @@ public class TransactionFactory
 
 		TransactionOutput output = new TransactionOutput ();
 		output.setScript (ScriptFormat.getPayToAddressScript (AddressConverter.fromSatoshiStyle (receiver, chain)));
-		output.setValue (value);
+		output.setValue (chain.getRewardForHeight (blockHeight));
 
 		List<TransactionOutput> outputs = new ArrayList<TransactionOutput> ();
 		outputs.add (output);
