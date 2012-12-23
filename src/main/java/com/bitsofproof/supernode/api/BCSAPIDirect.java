@@ -2,7 +2,7 @@ package com.bitsofproof.supernode.api;
 
 import java.util.List;
 
-public interface BCSAPIRemoteCalls
+public interface BCSAPIDirect
 {
 	public long getHeartbeat (long mine);
 
@@ -44,24 +44,6 @@ public interface BCSAPIRemoteCalls
 	 * @return list of outputs, eventually empty
 	 */
 	public List<TransactionOutput> getBalance (List<String> address);
-
-	/**
-	 * send a signed transaction
-	 * 
-	 * @param transaction
-	 * @throws ValidationException
-	 *             - if the transaction is invalid for numerous reasons
-	 */
-	public void sendTransaction (Transaction transaction) throws ValidationException;
-
-	/**
-	 * send a mined block
-	 * 
-	 * @param block
-	 * @throws ValidationException
-	 *             - if the block is invalid for numerous reasons
-	 */
-	public void sendBlock (Block block) throws ValidationException;
 
 	/**
 	 * get account statement

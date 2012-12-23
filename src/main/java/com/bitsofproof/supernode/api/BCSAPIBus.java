@@ -20,8 +20,26 @@ import java.util.List;
 /**
  * This is the API extensions to the bitsofproof supernode should build on
  */
-public interface BCSAPI extends BCSAPIRemoteCalls
+public interface BCSAPIBus
 {
+	/**
+	 * send a signed transaction
+	 * 
+	 * @param transaction
+	 * @throws ValidationException
+	 *             - if the transaction is invalid for numerous reasons
+	 */
+	public void sendTransaction (Transaction transaction) throws ValidationException;
+
+	/**
+	 * send a mined block
+	 * 
+	 * @param block
+	 * @throws ValidationException
+	 *             - if the block is invalid for numerous reasons
+	 */
+	public void sendBlock (Block block) throws ValidationException;
+
 	/**
 	 * Register a transactions listener
 	 * 

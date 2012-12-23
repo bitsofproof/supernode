@@ -34,11 +34,9 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BCSAPIClientSide implements BCSAPI
+public class ClientBusAdaptor implements BCSAPIBus
 {
-	private static final Logger log = LoggerFactory.getLogger (BCSAPIClientSide.class);
-
-	private BCSAPIRemoteCalls remote;
+	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 	private Connection connection;
 	private Session session;
 
@@ -71,65 +69,6 @@ public class BCSAPIClientSide implements BCSAPI
 	public void setPassword (String password)
 	{
 		this.password = password;
-	}
-
-	public void setRemote (BCSAPIRemoteCalls proxy)
-	{
-		this.remote = proxy;
-	}
-
-	@Override
-	public long getHeartbeat (long mine)
-	{
-		return remote.getHeartbeat (mine);
-	}
-
-	@Override
-	public Block getBlock (String hash)
-	{
-		return remote.getBlock (hash);
-	}
-
-	@Override
-	public Transaction getTransaction (String hash)
-	{
-		return remote.getTransaction (hash);
-	}
-
-	@Override
-	public String getTrunk ()
-	{
-		return remote.getTrunk ();
-	}
-
-	@Override
-	public String getPreviousBlockHash (String hash)
-	{
-		return remote.getPreviousBlockHash (hash);
-	}
-
-	@Override
-	public List<TransactionOutput> getBalance (List<String> address)
-	{
-		return remote.getBalance (address);
-	}
-
-	@Override
-	public void sendTransaction (Transaction transaction) throws ValidationException
-	{
-		remote.sendTransaction (transaction);
-	}
-
-	@Override
-	public void sendBlock (Block block) throws ValidationException
-	{
-		remote.sendBlock (block);
-	}
-
-	@Override
-	public AccountStatement getAccountStatement (List<String> addresses, long from)
-	{
-		return remote.getAccountStatement (addresses, from);
 	}
 
 	private void addMessageListener (String topic, MessageListener listener) throws JMSException
@@ -304,5 +243,19 @@ public class BCSAPIClientSide implements BCSAPI
 		{
 			log.error ("Can not create JMS session", e);
 		}
+	}
+
+	@Override
+	public void sendTransaction (Transaction transaction) throws ValidationException
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void sendBlock (Block block) throws ValidationException
+	{
+		// TODO Auto-generated method stub
+
 	}
 }
