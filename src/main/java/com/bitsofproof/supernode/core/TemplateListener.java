@@ -15,9 +15,9 @@
  */
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.model.Blk;
+import com.bitsofproof.supernode.api.Block;
 
 public interface TemplateListener
 {
-	public void workOn (Blk b);
+	public void workOn (Block template);
 }

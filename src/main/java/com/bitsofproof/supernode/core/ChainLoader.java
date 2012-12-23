@@ -54,33 +54,12 @@ public class ChainLoader
 	private final BlockStore store;
 	private final BitcoinNetwork network;
 
-	private final List<ChainListener> chainListener = new ArrayList<ChainListener> ();
-
 	private final static int ORPHANLIMIT = 1000;
 
 	private class KnownBlock
 	{
 		private int nr;
 		private String hash;
-	}
-
-	public boolean isBehind ()
-	{
-		int stored = (int) store.getChainHeight ();
-
-		for ( BitcoinPeer peer : network.getConnectPeers () )
-		{
-			if ( stored < peer.getHeight () )
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public int getCurrentHeight ()
-	{
-		return (int) store.getChainHeight ();
 	}
 
 	public ChainLoader (final BitcoinNetwork network)
@@ -100,7 +79,7 @@ public class ChainLoader
 					try
 					{
 						havePending.remove (block.getHash ());
-
+						store.storeBlock (block);
 						sendBlock (block, peer);
 
 						if ( pendingOn.containsKey (block.getHash ()) )
@@ -159,6 +138,7 @@ public class ChainLoader
 				{
 					Blk b = i.next ();
 					havePending.remove (b.getHash ());
+					store.storeBlock (b);
 					sendBlock (b, null);
 					List<Blk> next = pendingOn.get (b.getHash ());
 					if ( next != null )
@@ -262,23 +242,18 @@ public class ChainLoader
 		});
 	}
 
-	public void sendBlock (Blk b, BitcoinPeer peer) throws ValidationException
+	private void sendBlock (Blk b, BitcoinPeer peer) throws ValidationException
 	{
-		store.storeBlock (b);
-		notifyBlockAdded (b);
-		if ( !isBehind () )
+		for ( BitcoinPeer p : network.getConnectPeers () )
 		{
-			for ( BitcoinPeer p : network.getConnectPeers () )
+			if ( p != peer )
 			{
-				if ( p != peer )
-				{
-					BlockMessage bm = (BlockMessage) peer.createMessage ("block");
-					bm.setBlock (b);
-					peer.send (bm);
-				}
+				BlockMessage bm = (BlockMessage) p.createMessage ("block");
+				bm.setBlock (b);
+				p.send (bm);
 			}
-			log.trace ("sent block " + b.getHash ());
 		}
+		log.trace ("sent block " + b.getHash ());
 	}
 
 	public int getTimeout ()
@@ -355,19 +330,6 @@ public class ChainLoader
 					peer.disconnect ();
 				}
 			}, timeout, TimeUnit.SECONDS));
-		}
-	}
-
-	public void addChainListener (ChainListener l)
-	{
-		chainListener.add (l);
-	}
-
-	public void notifyBlockAdded (Blk b)
-	{
-		for ( ChainListener c : chainListener )
-		{
-			c.blockAdded (b);
 		}
 	}
 

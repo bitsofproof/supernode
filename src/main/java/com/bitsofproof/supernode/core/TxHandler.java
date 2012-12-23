@@ -36,7 +36,7 @@ import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class TxHandler implements ChainListener
+public class TxHandler implements TrunkListener
 {
 	private static final Logger log = LoggerFactory.getLogger (TxHandler.class);
 
@@ -52,11 +52,11 @@ public class TxHandler implements ChainListener
 		transactionListener.add (listener);
 	}
 
-	public TxHandler (final BitcoinNetwork network, final ChainLoader loader)
+	public TxHandler (final BitcoinNetwork network)
 	{
 		this.network = network;
 		final BlockStore store = network.getStore ();
-		loader.addChainListener (this);
+		store.addTrunkListener (this);
 
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
@@ -74,7 +74,7 @@ public class TxHandler implements ChainListener
 						get.getTransactions ().add (h);
 					}
 				}
-				if ( !loader.isBehind () && get.getTransactions ().size () > 0 )
+				if ( get.getTransactions ().size () > 0 )
 				{
 					log.trace ("asking for transaction details from " + peer.getAddress ());
 					peer.send (get);
@@ -87,7 +87,7 @@ public class TxHandler implements ChainListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) && !loader.isBehind () )
+				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
 				{
 					try
 					{
@@ -138,7 +138,7 @@ public class TxHandler implements ChainListener
 	}
 
 	@Override
-	public void blockAdded (final Blk blk)
+	public void trunkExtended (Blk blk)
 	{
 		heard.clear ();
 		synchronized ( unconfirmed )
@@ -148,6 +148,22 @@ public class TxHandler implements ChainListener
 				for ( Tx tx : blk.getTransactions () )
 				{
 					unconfirmed.remove (tx.getHash ());
+				}
+			}
+		}
+	}
+
+	@Override
+	public void trunkShortened (Blk blk)
+	{
+		heard.clear ();
+		synchronized ( unconfirmed )
+		{
+			if ( !unconfirmed.isEmpty () )
+			{
+				for ( Tx tx : blk.getTransactions () )
+				{
+					unconfirmed.put (tx.getHash (), tx);
 				}
 			}
 		}

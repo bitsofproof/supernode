@@ -67,6 +67,7 @@ public abstract class CachedBlockStore implements BlockStore
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 	protected final Map<String, HashMap<Long, TxOut>> cachedUTXO = new HashMap<String, HashMap<Long, TxOut>> ();
+	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -111,7 +112,30 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxIn> getSpendList (List<String> addresses, long from);
 
-	public void removeUTXO (String txhash, long ix)
+	public void addTrunkListener (TrunkListener listener)
+	{
+		trunkListener.add (listener);
+	}
+
+	private void extendTrunk (Blk b)
+	{
+		forwardCache (b);
+		for ( TrunkListener l : trunkListener )
+		{
+			l.trunkExtended (b);
+		}
+	}
+
+	private void shortenTrunk (Blk b)
+	{
+		backwardCache (b);
+		for ( TrunkListener l : trunkListener )
+		{
+			l.trunkShortened (b);
+		}
+	}
+
+	protected void removeUTXO (String txhash, long ix)
 	{
 		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
 		if ( outs != null )
@@ -124,7 +148,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	public void addUTXO (String txhash, TxOut out)
+	protected void addUTXO (String txhash, TxOut out)
 	{
 		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
 		if ( outs == null )
@@ -135,7 +159,7 @@ public abstract class CachedBlockStore implements BlockStore
 		outs.put (out.getIx (), out);
 	}
 
-	public HashMap<Long, TxOut> getUTXO (String txhash)
+	protected HashMap<Long, TxOut> getUTXO (String txhash)
 	{
 		return cachedUTXO.get (txhash);
 	}
@@ -779,7 +803,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					log.trace ("BACKWARD cache " + p.hash);
 					Blk block = retrieveBlock (p);
-					backwardCache (block);
+					shortenTrunk (block);
 					p = q;
 					q = p.previous;
 				}
@@ -796,13 +820,13 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					log.trace ("FORWARD cache " + cb.hash);
 					Blk block = retrieveBlock (cb);
-					forwardCache (block);
+					extendTrunk (block);
 				}
 			}
 			else if ( b.getHead ().getId ().longValue () == currentHead.getId ().longValue () )
 			{
 				// spend if on the trunk
-				forwardCache (b);
+				extendTrunk (b);
 			}
 			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
 

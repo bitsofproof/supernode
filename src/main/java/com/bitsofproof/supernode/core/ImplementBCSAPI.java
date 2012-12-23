@@ -28,18 +28,19 @@ import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, TransactionListener
+public class ImplementBCSAPI implements BCSAPIRemoteCalls, TrunkListener, TransactionListener, TemplateListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
-	private BlockStore store;
+	private final BitcoinNetwork network;
+	private final BlockStore store;
 	private final TxHandler txhandler;
-	private final ChainLoader chainLoader;
 
 	private PlatformTransactionManager transactionManager;
 	private Connection connection;
@@ -50,15 +51,19 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	private String password;
 
 	private MessageProducer transactionProducer;
-	private MessageProducer blockProducer;
+	private MessageProducer extendProducer;
+	private MessageProducer revertProducer;
+	private MessageProducer templateProducer;
 
-	public ImplementBCSAPI (ChainLoader chainLoader, TxHandler txHandler)
+	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
 	{
+		this.network = network;
 		this.txhandler = txHandler;
-		this.chainLoader = chainLoader;
+		this.store = network.getStore ();
 
-		chainLoader.addChainListener (this);
+		store.addTrunkListener (this);
 		txHandler.addTransactionListener (this);
+		blockTemplater.addTemplateListener (this);
 	}
 
 	public void init ()
@@ -69,7 +74,9 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 			connection = connectionFactory.createConnection ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
-			blockProducer = session.createProducer (session.createTopic ("block"));
+			extendProducer = session.createProducer (session.createTopic ("extend"));
+			revertProducer = session.createProducer (session.createTopic ("revert"));
+			templateProducer = session.createProducer (session.createTopic ("work"));
 		}
 		catch ( JMSException e )
 		{
@@ -107,11 +114,6 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
 	{
 		this.transactionManager = transactionManager;
-	}
-
-	public void setStore (BlockStore store)
-	{
-		this.store = store;
 	}
 
 	@Override
@@ -229,7 +231,20 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 		block.toWire (writer);
 		Blk b = new Blk ();
 		b.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		chainLoader.sendBlock (b, null);
+		try
+		{
+			store.storeBlock (b);
+			for ( BitcoinPeer p : network.getConnectPeers () )
+			{
+				BlockMessage bm = (BlockMessage) p.createMessage ("block");
+				bm.setBlock (b);
+				p.send (bm);
+			}
+		}
+		catch ( ValidationException e )
+		{
+			log.info ("Attempt to send invalid block " + b.getHash ());
+		}
 	}
 
 	@Override
@@ -368,23 +383,6 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 	}
 
 	@Override
-	public void blockAdded (Blk blk)
-	{
-		try
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			ObjectMessage m = session.createObjectMessage (b);
-			blockProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
-	}
-
-	@Override
 	public void onTransaction (Tx tx)
 	{
 		try
@@ -394,6 +392,54 @@ public class ImplementBCSAPI implements BCSAPIRemoteCalls, ChainListener, Transa
 			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 			ObjectMessage m = session.createObjectMessage (t);
 			transactionProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
+		}
+	}
+
+	@Override
+	public void workOn (Block template)
+	{
+		try
+		{
+			ObjectMessage m = session.createObjectMessage (template);
+			templateProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
+		}
+	}
+
+	@Override
+	public void trunkExtended (Blk blk)
+	{
+		try
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			blk.toWire (writer);
+			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			ObjectMessage m = session.createObjectMessage (b);
+			extendProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
+		}
+	}
+
+	@Override
+	public void trunkShortened (Blk blk)
+	{
+		try
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			blk.toWire (writer);
+			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			ObjectMessage m = session.createObjectMessage (b);
+			revertProducer.send (m);
 		}
 		catch ( JMSException e )
 		{

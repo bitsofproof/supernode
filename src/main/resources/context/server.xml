@@ -61,9 +61,6 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
-		<constructor-arg>
-			<ref bean="chainloader" />
-		</constructor-arg>
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
 		<constructor-arg>
@@ -90,14 +87,26 @@
 		<property name="startDelay" value="60" />
 	</bean>
 
+	<bean id="blocktemplater" class="com.bitsofproof.supernode.core.BlockTemplater">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="tx" />
+		</constructor-arg>
+		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
+	</bean>
+
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">
 		<constructor-arg>
-			<ref bean="chainloader"/>
+			<ref bean="bitcoinNetwork"/>
 		</constructor-arg>
 		<constructor-arg>
 			<ref bean="tx"/>
 		</constructor-arg>
-		<property name="store" ref="store" />
+		<constructor-arg>
+			<ref bean="blocktemplater"/>
+		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
 		<property name="brokerURL" value="ssl://localhost:61613"/>
 		<property name="user" value="admin"/>

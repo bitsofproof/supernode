@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
-import com.bitsofproof.supernode.model.Tx;
 
 public class BitcoinNetwork extends P2P
 {
@@ -289,11 +288,4 @@ public class BitcoinNetwork extends P2P
 	{
 		this.peerStore = peerStore;
 	}
-
-	public void sendTransaction (Tx t)
-	{
-		// TODO Auto-generated method stub
-
-	}
-
 }

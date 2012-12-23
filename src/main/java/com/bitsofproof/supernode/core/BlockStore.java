@@ -29,6 +29,8 @@ public interface BlockStore
 {
 	public void cache (int cacheSize) throws ValidationException;
 
+	public void addTrunkListener (TrunkListener l);
+
 	public String getPreviousBlockHash (String hash);
 
 	public List<String> getLocator ();
