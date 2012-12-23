@@ -44,6 +44,12 @@ public class TestChain implements Chain
 	}
 
 	@Override
+	public long getRewardForHeight (int height)
+	{
+		return (50L * Tx.COIN) >> (height / 210000L);
+	}
+
+	@Override
 	public byte[] getAlertKey ()
 	{
 		return SATOSHI_KEY;

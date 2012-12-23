@@ -78,6 +78,11 @@ public class ChainLoader
 		return false;
 	}
 
+	public int getCurrentHeight ()
+	{
+		return (int) store.getChainHeight ();
+	}
+
 	public ChainLoader (final BitcoinNetwork network)
 	{
 		this.network = network;

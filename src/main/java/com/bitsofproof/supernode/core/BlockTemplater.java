@@ -19,14 +19,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.Transaction;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 
 public class BlockTemplater implements ChainListener, TransactionListener
 {
 	private final List<TemplateListener> templateListener = new ArrayList<TemplateListener> ();
-	private final Blk template = new Blk ();
-	private final List<Tx> validTransactions = Collections.synchronizedList (new ArrayList<Tx> ());
+	private final List<Transaction> validTransactions = Collections.synchronizedList (new ArrayList<Transaction> ());
+
+	private final Block template = new Block ();
 
 	private String coinbaseAddress;
 
@@ -50,6 +54,7 @@ public class BlockTemplater implements ChainListener, TransactionListener
 	private synchronized void initTemplate ()
 	{
 		// TODO:missing implementation
+		template.setTransactions (new ArrayList<Transaction> ());
 	}
 
 	@Override
@@ -60,8 +65,10 @@ public class BlockTemplater implements ChainListener, TransactionListener
 	}
 
 	@Override
-	public void onTransaction (Tx transaction)
+	public void onTransaction (Tx tx)
 	{
-		validTransactions.add (transaction);
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		tx.toWire (writer);
+		validTransactions.add (Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ())));
 	}
 }

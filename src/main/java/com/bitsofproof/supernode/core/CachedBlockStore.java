@@ -717,7 +717,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 			}
 			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
-			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > ((50L * Tx.COIN) >> (b.getHeight () / 210000L)) )
+			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
 			{
 				throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
 			}

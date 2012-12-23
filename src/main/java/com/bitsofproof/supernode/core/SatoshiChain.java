@@ -46,6 +46,12 @@ public class SatoshiChain implements Chain
 	}
 
 	@Override
+	public long getRewardForHeight (int height)
+	{
+		return (50L * Tx.COIN) >> (height / 210000L);
+	}
+
+	@Override
 	public int getDifficultyReviewBlocks ()
 	{
 		return 2016;
