@@ -38,6 +38,7 @@ import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.PeerStore;
+import com.bitsofproof.supernode.core.TxOutCache;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
@@ -51,14 +52,14 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	private PlatformTransactionManager transactionManager;
 
 	@Override
-	protected void cacheUTXO (int lookback)
+	protected void cacheUTXO (int lookback, TxOutCache cache)
 	{
 		long after = Math.max (currentHead.getHeight () - lookback, 0L);
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);
 		for ( TxOut o : q.from (txout).where (txout.available.eq (true).and (txout.height.gt (after))).list (txout) )
 		{
-			cachedUTXO.add (o.flatCopy (null));
+			cache.add (o.flatCopy (null));
 			entityManager.detach (o);
 		}
 	}
@@ -111,7 +112,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void backwardCache (Blk b)
+	protected void backwardCache (Blk b, TxOutCache cache)
 	{
 		List<Tx> txs = new ArrayList<Tx> ();
 		txs.addAll (b.getTransactions ());
@@ -121,7 +122,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (false);
-				cachedUTXO.remove (t.getHash (), out.getIx ());
+				cache.remove (t.getHash (), out.getIx ());
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -130,21 +131,21 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					TxOut source = in.getSource ();
 					source.setAvailable (true);
-					cachedUTXO.add (source.flatCopy (null));
+					cache.add (source.flatCopy (null));
 				}
 			}
 		}
 	}
 
 	@Override
-	protected void forwardCache (Blk b)
+	protected void forwardCache (Blk b, TxOutCache cache)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (true);
-				cachedUTXO.add (out.flatCopy (null));
+				cache.add (out.flatCopy (null));
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -152,7 +153,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
 					in.getSource ().setAvailable (false);
-					cachedUTXO.remove (in.getSourceHash (), in.getIx ());
+					cache.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
 		}

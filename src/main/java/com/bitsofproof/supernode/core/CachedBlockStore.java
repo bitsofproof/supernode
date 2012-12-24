@@ -67,7 +67,7 @@ public abstract class CachedBlockStore implements BlockStore
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
-	protected final TxOutCache cachedUTXO = new TxOutCache ();
+	private final TxOutCache cachedUTXO = new TxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -89,13 +89,13 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheHeads ();
 
-	protected abstract void cacheUTXO (int lookback);
+	protected abstract void cacheUTXO (int lookback, TxOutCache cache);
 
 	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
-	protected abstract void backwardCache (Blk b);
+	protected abstract void backwardCache (Blk b, TxOutCache cache);
 
-	protected abstract void forwardCache (Blk b);
+	protected abstract void forwardCache (Blk b, TxOutCache cache);
 
 	protected abstract List<TxOut> getReceivedList (List<String> addresses, long from);
 
@@ -121,7 +121,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void extendTrunk (Blk b)
 	{
-		forwardCache (b);
+		forwardCache (b, cachedUTXO);
 		for ( TrunkListener l : trunkListener )
 		{
 			l.trunkExtended (b);
@@ -130,7 +130,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void shortenTrunk (Blk b)
 	{
-		backwardCache (b);
+		backwardCache (b, cachedUTXO);
 		for ( TrunkListener l : trunkListener )
 		{
 			l.trunkShortened (b);
@@ -280,7 +280,7 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( size > 0 )
 			{
 				log.trace ("Cache UTXO set ...");
-				cacheUTXO (size);
+				cacheUTXO (size, cachedUTXO);
 			}
 
 			log.trace ("Cache filled.");

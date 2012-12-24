@@ -44,6 +44,7 @@ import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.PeerStore;
+import com.bitsofproof.supernode.core.TxOutCache;
 
 public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 {
@@ -479,7 +480,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void cacheUTXO (final int after)
+	protected void cacheUTXO (final int after, final TxOutCache cache)
 	{
 		final AtomicInteger n = new AtomicInteger (0);
 		forAllBackward (KeyType.BLOCK, new DataProcessor ()
@@ -500,7 +501,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					{
 						if ( o.isAvailable () )
 						{
-							cachedUTXO.add (o);
+							cache.add (o);
 						}
 					}
 				}
@@ -510,7 +511,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void backwardCache (Blk b)
+	protected void backwardCache (Blk b, TxOutCache cache)
 	{
 		List<Tx> txs = new ArrayList<Tx> ();
 		txs.addAll (b.getTransactions ());
@@ -520,7 +521,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (false);
-				cachedUTXO.remove (t.getHash (), out.getIx ());
+				cache.remove (t.getHash (), out.getIx ());
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -532,7 +533,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					source.setAvailable (true);
 					writeTx (sourceTx);
 
-					cachedUTXO.add (source.flatCopy (null));
+					cache.add (source.flatCopy (null));
 				}
 			}
 			writeTx (t);
@@ -540,14 +541,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void forwardCache (Blk b)
+	protected void forwardCache (Blk b, TxOutCache cache)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (true);
-				cachedUTXO.add (out.flatCopy (null));
+				cache.add (out.flatCopy (null));
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -559,7 +560,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					source.setAvailable (false);
 					writeTx (sourceTx);
 
-					cachedUTXO.remove (in.getSourceHash (), in.getIx ());
+					cache.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
 			writeTx (t);
