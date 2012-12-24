@@ -518,7 +518,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void backwardCache (Blk b)
 	{
-		for ( Tx t : b.getTransactions () )
+		List<Tx> txs = new ArrayList<Tx> ();
+		txs.addAll (b.getTransactions ());
+		Collections.reverse (txs);
+		for ( Tx t : txs )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{

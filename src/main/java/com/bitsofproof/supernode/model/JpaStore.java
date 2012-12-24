@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.model;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -119,7 +120,10 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void backwardCache (Blk b)
 	{
-		for ( Tx t : b.getTransactions () )
+		List<Tx> txs = new ArrayList<Tx> ();
+		txs.addAll (b.getTransactions ());
+		Collections.reverse (txs);
+		for ( Tx t : txs )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
