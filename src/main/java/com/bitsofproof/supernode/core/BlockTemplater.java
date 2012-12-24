@@ -16,13 +16,12 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,15 +40,21 @@ import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class BlockTemplater implements TrunkListener, TransactionListener
 {
 	private static final Logger log = LoggerFactory.getLogger (BlockTemplater.class);
 
 	private final List<TemplateListener> templateListener = new ArrayList<TemplateListener> ();
-	private final List<Transaction> incomingOrder = new LinkedList<Transaction> ();
+
+	private final List<Transaction> maximalFeeOrder = new LinkedList<Transaction> ();
+
+	Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
+
 	private final Map<String, HashMap<Long, String>> inputUses = new HashMap<String, HashMap<Long, String>> ();
-	private final Set<String> mineable = new HashSet<String> ();
+	private final Map<String, Transaction> mineable = new HashMap<String, Transaction> ();
+	private final Map<String, Long> fee = new HashMap<String, Long> ();
 
 	private final Block template = new Block ();
 
@@ -101,13 +106,11 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private void addTransaction (Tx tx)
 	{
-		// TODO: check limits and fees
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		tx.toWire (writer);
 		Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		t.computeHash ();
-		incomingOrder.add (t);
-		mineable.add (t.getHash ());
+		mineable.put (t.getHash (), t);
 
 		for ( TransactionInput input : t.getInputs () )
 		{
@@ -147,21 +150,9 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 				else
 				{
 					String hash = t.getHash ();
-					if ( mineable.contains (hash) )
-					{
-						Iterator<Transaction> ti = incomingOrder.iterator ();
-						while ( ti.hasNext () )
-						{
-							Transaction mt = ti.next ();
-							if ( mt.getHash ().equals (hash) )
-							{
-								ti.remove ();
-								break;
-							}
-						}
-						mineable.remove (hash);
-						inputUses.remove (hash);
-					}
+					mineable.remove (hash);
+					inputUses.remove (hash);
+					fee.remove (hash);
 					for ( TxIn i : t.getInputs () )
 					{
 						if ( inputUses.containsKey (i.getSourceHash ()) )
@@ -169,21 +160,9 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 							String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
 							if ( doubleSpend != null )
 							{
-								if ( mineable.contains (doubleSpend) )
-								{
-									Iterator<Transaction> ti = incomingOrder.iterator ();
-									while ( ti.hasNext () )
-									{
-										Transaction mt = ti.next ();
-										if ( mt.getHash ().equals (doubleSpend) )
-										{
-											ti.remove ();
-											break;
-										}
-									}
-									mineable.remove (doubleSpend);
-									inputUses.remove (doubleSpend);
-								}
+								mineable.remove (doubleSpend);
+								inputUses.remove (doubleSpend);
+								fee.remove (doubleSpend);
 							}
 						}
 					}
@@ -229,7 +208,17 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		{
 			log.error ("Can not create coinbase ", e);
 		}
-		template.getTransactions ().addAll (incomingOrder);
+		List<Transaction> feeOrder = new ArrayList<Transaction> ();
+		feeOrder.addAll (mineable.values ());
+		Collections.sort (feeOrder, new Comparator<Transaction> ()
+		{
+			@Override
+			public int compare (Transaction arg0, Transaction arg1)
+			{
+				return 0;
+			}
+		});
+
 		template.computeHash ();
 	}
 }

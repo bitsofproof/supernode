@@ -55,6 +55,8 @@ public interface BlockStore
 
 	public void validateTransaction (Tx tx, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException;
 
+	public void resolveTransactionInputs (Tx tx, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException;
+
 	public long getChainHeight ();
 
 	public boolean isEmpty ();

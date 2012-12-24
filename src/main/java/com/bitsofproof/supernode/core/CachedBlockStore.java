@@ -112,6 +112,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxIn> getSpendList (List<String> addresses, long from);
 
+	@Override
 	public void addTrunkListener (TrunkListener listener)
 	{
 		trunkListener.add (listener);
@@ -674,7 +675,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					outs.put (o.getIx (), o);
 				}
-				resolveInputs (tcontext, t);
+				resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
 			}
 			if ( b.getHeight () > chain.getValidateFrom () )
 			{
@@ -835,14 +836,14 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void resolveInputs (TransactionContext tcontext, Tx t) throws ValidationException
+	private void resolveInputs (Map<String, HashMap<Long, TxOut>> resolvedInputs, int blockHeight, Tx t) throws ValidationException
 	{
-		resolveInputsUsingUTXOCache (tcontext, t);
-		resolveInputsUsingDB (tcontext, t);
-		checkInputResolution (tcontext, t);
+		resolveInputsUsingUTXOCache (resolvedInputs, t);
+		resolveInputsUsingDB (resolvedInputs, t);
+		checkInputResolution (resolvedInputs, blockHeight, t);
 	}
 
-	private void resolveInputsUsingUTXOCache (TransactionContext tcontext, Tx t) throws ValidationException
+	private void resolveInputsUsingUTXOCache (Map<String, HashMap<Long, TxOut>> resolvedInputs, Tx t) throws ValidationException
 	{
 		for ( final TxIn i : t.getInputs () )
 		{
@@ -851,20 +852,20 @@ public abstract class CachedBlockStore implements BlockStore
 				HashMap<Long, TxOut> utxo = getUTXO (i.getSourceHash ());
 				if ( utxo != null )
 				{
-					tcontext.resolvedInputs.put (i.getSourceHash (), utxo);
+					resolvedInputs.put (i.getSourceHash (), utxo);
 				}
 			}
 		}
 	}
 
-	private void resolveInputsUsingDB (TransactionContext tcontext, Tx t) throws ValidationException
+	private void resolveInputsUsingDB (Map<String, HashMap<Long, TxOut>> resolvedInputs, Tx t) throws ValidationException
 	{
 		Map<String, HashSet<Long>> need = new HashMap<String, HashSet<Long>> ();
 		for ( final TxIn i : t.getInputs () )
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, TxOut> resolved = tcontext.resolvedInputs.get (i.getSourceHash ());
+				HashMap<Long, TxOut> resolved = resolvedInputs.get (i.getSourceHash ());
 				if ( resolved == null || !resolved.containsKey (i.getIx ()) )
 				{
 					HashSet<Long> ixs = need.get (i.getSourceHash ());
@@ -929,32 +930,32 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( TxOut o : fromDB )
 			{
-				HashMap<Long, TxOut> outs = tcontext.resolvedInputs.get (o.getTxHash ());
+				HashMap<Long, TxOut> outs = resolvedInputs.get (o.getTxHash ());
 				if ( outs == null )
 				{
 					outs = new HashMap<Long, TxOut> ();
-					tcontext.resolvedInputs.put (o.getTxHash (), outs);
+					resolvedInputs.put (o.getTxHash (), outs);
 				}
 				outs.put (o.getIx (), o);
 			}
 		}
 	}
 
-	private void checkInputResolution (TransactionContext tcontext, Tx t) throws ValidationException
+	private void checkInputResolution (Map<String, HashMap<Long, TxOut>> resolvedInputs, int height, Tx t) throws ValidationException
 	{
 		for ( final TxIn i : t.getInputs () )
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				if ( !tcontext.resolvedInputs.containsKey (i.getSourceHash ()) || !tcontext.resolvedInputs.get (i.getSourceHash ()).containsKey (i.getIx ()) )
+				if ( !resolvedInputs.containsKey (i.getSourceHash ()) || !resolvedInputs.get (i.getSourceHash ()).containsKey (i.getIx ()) )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 							+ t.toWireDump ());
 				}
-				TxOut out = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
-				if ( tcontext.block != null && out.isCoinbase () )
+				TxOut out = resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+				if ( height != 0 && out.isCoinbase () )
 				{
-					if ( out.getHeight () > tcontext.block.getHeight () - 100 )
+					if ( out.getHeight () > height - 100 )
 					{
 						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 					}
@@ -1300,19 +1301,38 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
+	public void resolveTransactionInputs (Tx t, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			resolveInputs (resolvedInputs, 0, t);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Override
 	public void validateTransaction (Tx t, Map<String, HashMap<Long, TxOut>> resolvedInputs) throws ValidationException
 	{
 		try
 		{
 			lock.readLock ().lock ();
 
+			resolveInputs (resolvedInputs, 0, t);
+
 			TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = null;
 			tcontext.coinbase = false;
 			tcontext.nsigs = 0;
 			tcontext.resolvedInputs = resolvedInputs;
-			resolveInputs (tcontext, t);
+
 			validateTransaction (tcontext, t);
+
 			for ( TxIn in : t.getInputs () )
 			{
 				HashMap<Long, TxOut> out = tcontext.resolvedInputs.get (in.getSourceHash ());
