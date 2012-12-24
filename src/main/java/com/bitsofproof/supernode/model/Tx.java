@@ -340,7 +340,6 @@ public class Tx implements Serializable
 				TxOut output = new TxOut ();
 				output.fromWire (reader);
 				output.setTransaction (this);
-				output.setTxHash (hash);
 				output.setIx (i);
 				outputs.add (output);
 			}
@@ -353,6 +352,14 @@ public class Tx implements Serializable
 		lockTime = reader.readUint32 ();
 
 		hash = reader.hash (cursor, reader.getCursor () - cursor).toString ();
+
+		if ( nout > 0 )
+		{
+			for ( TxOut out : outputs )
+			{
+				out.setTxHash (hash);
+			}
+		}
 	}
 
 	public Tx flatCopy ()
