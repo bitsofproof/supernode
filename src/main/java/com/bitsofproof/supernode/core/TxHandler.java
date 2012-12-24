@@ -45,7 +45,7 @@ public class TxHandler implements TrunkListener
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final Map<String, HashMap<Long, TxOut>> availableOutput = new HashMap<String, HashMap<Long, TxOut>> ();
+	private final TxOutCache availableOutput = new TxOutCache ();
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
 	public void addTransactionListener (TransactionListener listener)
@@ -126,15 +126,7 @@ public class TxHandler implements TrunkListener
 
 			for ( TxIn in : tx.getInputs () )
 			{
-				outs = availableOutput.get (in.getSourceHash ());
-				if ( outs != null )
-				{
-					outs.remove (in.getIx ());
-					if ( outs.size () == 0 )
-					{
-						availableOutput.remove (in.getSourceHash ());
-					}
-				}
+				availableOutput.remove (in.getSourceHash (), in.getIx ());
 			}
 		}
 	}
