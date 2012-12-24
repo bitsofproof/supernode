@@ -28,13 +28,13 @@ public class TxOutCache
 		}
 	}
 
-	public void put (String hash, TxOut out)
+	public void put (TxOut out)
 	{
-		HashMap<Long, TxOut> outs = map.get (hash);
+		HashMap<Long, TxOut> outs = map.get (out.getTxHash ());
 		if ( outs == null )
 		{
 			outs = new HashMap<Long, TxOut> ();
-			map.put (hash, outs);
+			map.put (out.getTxHash (), outs);
 		}
 		outs.put (out.getIx (), out);
 	}

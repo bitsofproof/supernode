@@ -144,7 +144,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected void addUTXO (String txhash, TxOut out)
 	{
-		cachedUTXO.put (txhash, out);
+		cachedUTXO.put (out);
 	}
 
 	protected static class CachedHead
@@ -661,7 +661,7 @@ public abstract class CachedBlockStore implements BlockStore
 				resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
 				for ( TxOut o : t.getOutputs () )
 				{
-					tcontext.resolvedInputs.put (t.getHash (), o);
+					tcontext.resolvedInputs.put (o);
 				}
 			}
 			if ( b.getHeight () > chain.getValidateFrom () )
@@ -912,7 +912,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( TxOut o : fromDB )
 			{
-				resolvedInputs.put (o.getTxHash (), o);
+				resolvedInputs.put (o);
 			}
 		}
 	}
