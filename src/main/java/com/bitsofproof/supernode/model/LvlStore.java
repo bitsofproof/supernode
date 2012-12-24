@@ -500,7 +500,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					{
 						if ( o.isAvailable () )
 						{
-							addUTXO (o.getTxHash (), o);
+							cachedUTXO.add (o);
 						}
 					}
 				}
@@ -520,7 +520,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (false);
-				removeUTXO (t.getHash (), out.getIx ());
+				cachedUTXO.remove (t.getHash (), out.getIx ());
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -532,7 +532,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					source.setAvailable (true);
 					writeTx (sourceTx);
 
-					addUTXO (in.getSourceHash (), source.flatCopy (null));
+					cachedUTXO.add (source.flatCopy (null));
 				}
 			}
 			writeTx (t);
@@ -547,7 +547,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (true);
-				addUTXO (t.getHash (), out.flatCopy (null));
+				cachedUTXO.add (out.flatCopy (null));
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -559,7 +559,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					source.setAvailable (false);
 					writeTx (sourceTx);
 
-					removeUTXO (in.getSourceHash (), in.getIx ());
+					cachedUTXO.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
 			writeTx (t);

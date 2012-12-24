@@ -58,7 +58,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		JPAQuery q = new JPAQuery (entityManager);
 		for ( TxOut o : q.from (txout).where (txout.available.eq (true).and (txout.height.gt (after))).list (txout) )
 		{
-			addUTXO (o.getTxHash (), o.flatCopy (null));
+			cachedUTXO.add (o.flatCopy (null));
 			entityManager.detach (o);
 		}
 	}
@@ -121,7 +121,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (false);
-				removeUTXO (t.getHash (), out.getIx ());
+				cachedUTXO.remove (t.getHash (), out.getIx ());
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -130,7 +130,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					TxOut source = in.getSource ();
 					source.setAvailable (true);
-					addUTXO (in.getSourceHash (), source.flatCopy (null));
+					cachedUTXO.add (source.flatCopy (null));
 				}
 			}
 		}
@@ -144,7 +144,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			for ( TxOut out : t.getOutputs () )
 			{
 				out.setAvailable (true);
-				addUTXO (t.getHash (), out.flatCopy (null));
+				cachedUTXO.add (out.flatCopy (null));
 			}
 
 			for ( TxIn in : t.getInputs () )
@@ -152,7 +152,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
 					in.getSource ().setAvailable (false);
-					removeUTXO (in.getSourceHash (), in.getIx ());
+					cachedUTXO.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
 		}

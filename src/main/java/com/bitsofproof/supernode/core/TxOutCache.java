@@ -28,7 +28,7 @@ public class TxOutCache
 		}
 	}
 
-	public void put (TxOut out)
+	public void add (TxOut out)
 	{
 		HashMap<Long, TxOut> outs = map.get (out.getTxHash ());
 		if ( outs == null )

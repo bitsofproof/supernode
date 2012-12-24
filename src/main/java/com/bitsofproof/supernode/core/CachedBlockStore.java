@@ -67,7 +67,7 @@ public abstract class CachedBlockStore implements BlockStore
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
-	private final TxOutCache cachedUTXO = new TxOutCache ();
+	protected final TxOutCache cachedUTXO = new TxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -135,16 +135,6 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			l.trunkShortened (b);
 		}
-	}
-
-	protected void removeUTXO (String txhash, long ix)
-	{
-		cachedUTXO.remove (txhash, ix);
-	}
-
-	protected void addUTXO (String txhash, TxOut out)
-	{
-		cachedUTXO.put (out);
 	}
 
 	protected static class CachedHead
@@ -661,7 +651,7 @@ public abstract class CachedBlockStore implements BlockStore
 				resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
 				for ( TxOut o : t.getOutputs () )
 				{
-					tcontext.resolvedInputs.put (o);
+					tcontext.resolvedInputs.add (o);
 				}
 			}
 			if ( b.getHeight () > chain.getValidateFrom () )
@@ -912,7 +902,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( TxOut o : fromDB )
 			{
-				resolvedInputs.put (o);
+				resolvedInputs.add (o);
 			}
 		}
 	}
