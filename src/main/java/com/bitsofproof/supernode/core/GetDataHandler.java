@@ -52,7 +52,7 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 	@Override
 	public void process (final GetDataMessage m, final BitcoinPeer peer)
 	{
-		log.trace ("received getheader for " + m.getBlocks ().size () + " blocks " + m.getTransactions ().size () + " transactions from " + peer);
+		log.trace ("received getdata for " + m.getBlocks ().size () + " blocks " + m.getTransactions ().size () + " transactions from " + peer);
 		for ( byte[] h : m.getTransactions () )
 		{
 			Tx t = txHandler.getTransaction (new Hash (h).toString ());
