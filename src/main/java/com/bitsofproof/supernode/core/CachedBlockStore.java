@@ -66,7 +66,52 @@ public abstract class CachedBlockStore implements BlockStore
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	protected final Map<String, HashMap<Long, TxOut>> cachedUTXO = new HashMap<String, HashMap<Long, TxOut>> ();
+
+	private static class TxOutCache
+	{
+		private final Map<String, HashMap<Long, TxOut>> map = new HashMap<String, HashMap<Long, TxOut>> ();
+
+		public TxOut get (String hash, Long ix)
+		{
+			HashMap<Long, TxOut> outs = map.get (hash);
+			if ( outs != null )
+			{
+				return outs.get (ix);
+			}
+			return null;
+		}
+
+		public HashMap<Long, TxOut> get (String hash)
+		{
+			return map.get (hash);
+		}
+
+		public void put (String hash, Long ix, TxOut out)
+		{
+			HashMap<Long, TxOut> outs = map.get (hash);
+			if ( outs == null )
+			{
+				outs = new HashMap<Long, TxOut> ();
+				map.put (hash, outs);
+			}
+			outs.put (ix, out);
+		}
+
+		public void remove (String hash, Long ix)
+		{
+			HashMap<Long, TxOut> outs = map.get (hash);
+			if ( outs != null )
+			{
+				outs.remove (ix);
+				if ( outs.size () == 0 )
+				{
+					map.remove (hash);
+				}
+			}
+		}
+	}
+
+	private final TxOutCache cachedUTXO = new TxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
@@ -138,31 +183,12 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected void removeUTXO (String txhash, long ix)
 	{
-		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
-		if ( outs != null )
-		{
-			outs.remove (ix);
-			if ( outs.size () == 0 )
-			{
-				cachedUTXO.remove (txhash);
-			}
-		}
+		cachedUTXO.remove (txhash, ix);
 	}
 
 	protected void addUTXO (String txhash, TxOut out)
 	{
-		HashMap<Long, TxOut> outs = cachedUTXO.get (txhash);
-		if ( outs == null )
-		{
-			outs = new HashMap<Long, TxOut> ();
-			cachedUTXO.put (txhash, outs);
-		}
-		outs.put (out.getIx (), out);
-	}
-
-	protected HashMap<Long, TxOut> getUTXO (String txhash)
-	{
-		return cachedUTXO.get (txhash);
+		cachedUTXO.put (txhash, out.getIx (), out);
 	}
 
 	protected static class CachedHead
@@ -583,6 +609,10 @@ public abstract class CachedBlockStore implements BlockStore
 			CachedBlock trunkBlock = cachedPrevious;
 
 			Head head;
+
+			Map<String, HashMap<Long, TxOut>> notInBranch = new HashMap<String, HashMap<Long, TxOut>> ();
+			Map<String, HashMap<Long, TxOut>> newBranch = new HashMap<String, HashMap<Long, TxOut>> ();
+
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
 				log.trace ("continuing trunk");
@@ -601,6 +631,13 @@ public abstract class CachedBlockStore implements BlockStore
 				int n = 0;
 				while ( !isBlockOnBranch (trunkBlock, currentHead) )
 				{
+					Blk c = retrieveBlock (trunkBlock);
+					List<Tx> txs = new ArrayList<Tx> ();
+					txs.addAll (c.getTransactions ());
+					Collections.reverse (txs);
+					for ( Tx t : txs )
+					{
+					}
 					if ( ++n > FORCE_TRUNK )
 					{
 						throw new ValidationException ("Attempt to branch too far back in history " + b.getHash ());
@@ -849,7 +886,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, TxOut> utxo = getUTXO (i.getSourceHash ());
+				HashMap<Long, TxOut> utxo = cachedUTXO.get (i.getSourceHash ());
 				if ( utxo != null )
 				{
 					resolvedInputs.put (i.getSourceHash (), utxo);

@@ -500,13 +500,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					{
 						if ( o.isAvailable () )
 						{
-							HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
-							if ( outs == null )
-							{
-								outs = new HashMap<Long, TxOut> ();
-								cachedUTXO.put (o.getTxHash (), outs);
-							}
-							outs.put (o.getIx (), o.flatCopy (null));
+							addUTXO (o.getTxHash (), o);
 						}
 					}
 				}

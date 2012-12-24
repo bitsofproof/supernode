@@ -19,7 +19,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,13 +58,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		JPAQuery q = new JPAQuery (entityManager);
 		for ( TxOut o : q.from (txout).where (txout.available.eq (true).and (txout.height.gt (after))).list (txout) )
 		{
-			HashMap<Long, TxOut> outs = cachedUTXO.get (o.getTxHash ());
-			if ( outs == null )
-			{
-				outs = new HashMap<Long, TxOut> ();
-				cachedUTXO.put (o.getTxHash (), outs);
-			}
-			outs.put (o.getIx (), o.flatCopy (null));
+			addUTXO (o.getTxHash (), o.flatCopy (null));
 			entityManager.detach (o);
 		}
 	}
