@@ -1332,19 +1332,6 @@ public abstract class CachedBlockStore implements BlockStore
 			tcontext.resolvedInputs = resolvedInputs;
 
 			validateTransaction (tcontext, t);
-
-			for ( TxIn in : t.getInputs () )
-			{
-				HashMap<Long, TxOut> out = tcontext.resolvedInputs.get (in.getSourceHash ());
-				if ( out != null )
-				{
-					out.remove (in.getId ());
-					if ( out.size () == 0 )
-					{
-						tcontext.resolvedInputs.remove (in.getSourceHash ());
-					}
-				}
-			}
 		}
 		finally
 		{

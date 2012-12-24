@@ -270,6 +270,7 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		transaction.toWire (writer);
 		Tx t = new Tx ();
 		t.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		txhandler.cacheTransaction (t);
 		txhandler.sendTransaction (t, null);
 	}
 

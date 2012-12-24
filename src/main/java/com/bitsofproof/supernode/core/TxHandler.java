@@ -34,6 +34,7 @@ import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
 public class TxHandler implements TrunkListener
@@ -44,7 +45,7 @@ public class TxHandler implements TrunkListener
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final Map<String, HashMap<Long, TxOut>> newOutput = new HashMap<String, HashMap<Long, TxOut>> ();
+	private final Map<String, HashMap<Long, TxOut>> availableOutput = new HashMap<String, HashMap<Long, TxOut>> ();
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
 	public void addTransactionListener (TransactionListener listener)
@@ -91,7 +92,8 @@ public class TxHandler implements TrunkListener
 				{
 					try
 					{
-						store.validateTransaction (txm.getTx (), newOutput);
+						store.validateTransaction (txm.getTx (), availableOutput);
+						cacheTransaction (txm.getTx ());
 						sendTransaction (txm.getTx (), peer);
 					}
 					catch ( ValidationException e )
@@ -108,19 +110,37 @@ public class TxHandler implements TrunkListener
 		return unconfirmed.get (hash);
 	}
 
-	public void sendTransaction (Tx tx, BitcoinPeer peer)
+	public void cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		synchronized ( unconfirmed )
 		{
 			unconfirmed.put (tx.getHash (), tx);
+
 			HashMap<Long, TxOut> outs = new HashMap<Long, TxOut> ();
-			newOutput.put (tx.getHash (), outs);
+			availableOutput.put (tx.getHash (), outs);
 			for ( TxOut out : tx.getOutputs () )
 			{
 				outs.put (out.getIx (), out);
 			}
+
+			for ( TxIn in : tx.getInputs () )
+			{
+				outs = availableOutput.get (in.getSourceHash ());
+				if ( outs != null )
+				{
+					outs.remove (in.getIx ());
+					if ( outs.size () == 0 )
+					{
+						availableOutput.remove (in.getSourceHash ());
+					}
+				}
+			}
 		}
+	}
+
+	public void sendTransaction (Tx tx, BitcoinPeer peer)
+	{
 		for ( TransactionListener l : transactionListener )
 		{
 			l.onTransaction (tx);
@@ -140,15 +160,12 @@ public class TxHandler implements TrunkListener
 	@Override
 	public void trunkExtended (Blk blk)
 	{
-		heard.clear ();
 		synchronized ( unconfirmed )
 		{
-			if ( !unconfirmed.isEmpty () )
+			for ( Tx tx : blk.getTransactions () )
 			{
-				for ( Tx tx : blk.getTransactions () )
-				{
-					unconfirmed.remove (tx.getHash ());
-				}
+				unconfirmed.remove (tx.getHash ());
+				availableOutput.remove (tx.getHash ());
 			}
 		}
 	}
@@ -156,15 +173,11 @@ public class TxHandler implements TrunkListener
 	@Override
 	public void trunkShortened (Blk blk)
 	{
-		heard.clear ();
 		synchronized ( unconfirmed )
 		{
-			if ( !unconfirmed.isEmpty () )
+			for ( Tx tx : blk.getTransactions () )
 			{
-				for ( Tx tx : blk.getTransactions () )
-				{
-					unconfirmed.put (tx.getHash (), tx);
-				}
+				cacheTransaction (tx);
 			}
 		}
 	}
