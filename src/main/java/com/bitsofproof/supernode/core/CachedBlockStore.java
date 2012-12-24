@@ -742,7 +742,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 					{
-						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
 						if ( source.getId () == null )
 						{
 							i.setSource (source);
@@ -836,11 +836,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, TxOut> utxo = cachedUTXO.get (i.getSourceHash ());
-				if ( utxo != null )
-				{
-					resolvedInputs.put (i.getSourceHash (), utxo);
-				}
+				resolvedInputs.copy (cachedUTXO, i.getSourceHash ());
 			}
 		}
 	}
@@ -852,8 +848,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				HashMap<Long, TxOut> resolved = resolvedInputs.get (i.getSourceHash ());
-				if ( resolved == null || !resolved.containsKey (i.getIx ()) )
+				if ( resolvedInputs.get (i.getSourceHash (), i.getIx ()) == null )
 				{
 					HashSet<Long> ixs = need.get (i.getSourceHash ());
 					if ( ixs == null )
@@ -917,13 +912,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( TxOut o : fromDB )
 			{
-				HashMap<Long, TxOut> outs = resolvedInputs.get (o.getTxHash ());
-				if ( outs == null )
-				{
-					outs = new HashMap<Long, TxOut> ();
-					resolvedInputs.put (o.getTxHash (), outs);
-				}
-				outs.put (o.getIx (), o);
+				resolvedInputs.put (o.getTxHash (), o);
 			}
 		}
 	}
@@ -1095,7 +1084,7 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 				}
 
-				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash ()).get (i.getIx ());
+				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
 				sumIn += source.getValue ();
 
 				final int nr = inNumber;

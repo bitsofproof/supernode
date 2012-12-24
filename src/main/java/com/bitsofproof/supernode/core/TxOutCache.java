@@ -19,14 +19,13 @@ public class TxOutCache
 		return null;
 	}
 
-	public HashMap<Long, TxOut> get (String hash)
+	public void copy (TxOutCache other, String hash)
 	{
-		return map.get (hash);
-	}
-
-	public void put (String hash, HashMap<Long, TxOut> outs)
-	{
-		map.put (hash, outs);
+		HashMap<Long, TxOut> outs = other.map.get (hash);
+		if ( outs != null )
+		{
+			map.put (hash, outs);
+		}
 	}
 
 	public void put (String hash, TxOut out)

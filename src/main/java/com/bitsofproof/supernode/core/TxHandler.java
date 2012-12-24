@@ -117,11 +117,9 @@ public class TxHandler implements TrunkListener
 		{
 			unconfirmed.put (tx.getHash (), tx);
 
-			HashMap<Long, TxOut> outs = new HashMap<Long, TxOut> ();
-			availableOutput.put (tx.getHash (), outs);
 			for ( TxOut out : tx.getOutputs () )
 			{
-				outs.put (out.getIx (), out);
+				availableOutput.put (tx.getHash (), out);
 			}
 
 			for ( TxIn in : tx.getInputs () )
