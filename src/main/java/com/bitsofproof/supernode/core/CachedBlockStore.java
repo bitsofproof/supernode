@@ -611,7 +611,7 @@ public abstract class CachedBlockStore implements BlockStore
 				head.setPrevious (prev.getHead ());
 
 				head.setLeaf (b.getHash ());
-				head.setHeight (head.getHeight () + 1);
+				head.setHeight (prev.getHeight () + 1);
 				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
 				insertHead (head);
 			}
