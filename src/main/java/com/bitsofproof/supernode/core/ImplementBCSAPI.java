@@ -270,8 +270,10 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		transaction.toWire (writer);
 		Tx t = new Tx ();
 		t.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		txhandler.cacheTransaction (t);
-		txhandler.sendTransaction (t, null);
+		if ( txhandler.cacheTransaction (t) )
+		{
+			txhandler.sendTransaction (t, null);
+		}
 	}
 
 	public void sendBlock (Block block) throws ValidationException

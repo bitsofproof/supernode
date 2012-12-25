@@ -99,8 +99,10 @@ public class TxHandler implements TrunkListener
 					try
 					{
 						store.validateTransaction (txm.getTx (), availableOutput);
-						cacheTransaction (txm.getTx ());
-						sendTransaction (txm.getTx (), peer);
+						if ( cacheTransaction (txm.getTx ()) )
+						{
+							sendTransaction (txm.getTx (), peer);
+						}
 					}
 					catch ( ValidationException e )
 					{
@@ -116,11 +118,16 @@ public class TxHandler implements TrunkListener
 		return unconfirmed.get (hash);
 	}
 
-	public void cacheTransaction (Tx tx)
+	public boolean cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		synchronized ( unconfirmed )
 		{
+			if ( unconfirmed.containsKey (tx.getHash ()) )
+			{
+				return false;
+			}
+
 			unconfirmed.put (tx.getHash (), tx);
 
 			for ( TxOut out : tx.getOutputs () )
@@ -132,6 +139,7 @@ public class TxHandler implements TrunkListener
 			{
 				availableOutput.remove (in.getSourceHash (), in.getIx ());
 			}
+			return true;
 		}
 	}
 
