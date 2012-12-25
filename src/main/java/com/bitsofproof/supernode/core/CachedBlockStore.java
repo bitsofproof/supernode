@@ -1134,10 +1134,6 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new TransactionValidationException ("Transaction value out more than in", t);
 			}
-			if ( tcontext.block == null && (sumIn - sumOut) < Tx.COIN / 10000 )
-			{
-				throw new TransactionValidationException ("There is no free lunch.", t);
-			}
 			List<Future<TransactionValidationException>> results;
 			try
 			{
