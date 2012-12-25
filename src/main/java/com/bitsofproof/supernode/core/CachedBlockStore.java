@@ -67,9 +67,10 @@ public abstract class CachedBlockStore implements BlockStore
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 
-	private final TxOutCache cachedUTXO = new TxOutCache ();
+	private final ImplementTxOutCache cachedUTXO = new ImplementTxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
+	private final ExecutorService trunkNotifyer = Executors.newFixedThreadPool (1);
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
@@ -93,9 +94,9 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
-	protected abstract void backwardCache (Blk b, TxOutCache cache);
+	protected abstract void backwardCache (Blk b, TxOutCache cache, boolean modify);
 
-	protected abstract void forwardCache (Blk b, TxOutCache cache);
+	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify);
 
 	protected abstract List<TxOut> getReceivedList (List<String> addresses, long from);
 
@@ -121,20 +122,36 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private void extendTrunk (Blk b)
 	{
-		forwardCache (b, cachedUTXO);
-		for ( TrunkListener l : trunkListener )
+		forwardCache (b, cachedUTXO, true);
+		final String blockHash = b.getHash ();
+		trunkNotifyer.execute (new Runnable ()
 		{
-			l.trunkExtended (b);
-		}
+			@Override
+			public void run ()
+			{
+				for ( TrunkListener l : trunkListener )
+				{
+					l.trunkExtended (blockHash);
+				}
+			}
+		});
 	}
 
-	private void shortenTrunk (Blk b)
+	private void shortenTrunk (final Blk b)
 	{
-		backwardCache (b, cachedUTXO);
-		for ( TrunkListener l : trunkListener )
+		backwardCache (b, cachedUTXO, true);
+		final String blockHash = b.getHash ();
+		trunkNotifyer.execute (new Runnable ()
 		{
-			l.trunkShortened (b);
-		}
+			@Override
+			public void run ()
+			{
+				for ( TrunkListener l : trunkListener )
+				{
+					l.trunkShortened (blockHash);
+				}
+			}
+		});
 	}
 
 	protected static class CachedHead
@@ -501,7 +518,7 @@ public abstract class CachedBlockStore implements BlockStore
 		BigInteger blkSumOutput = BigInteger.ZERO;
 		int nsigs = 0;
 		boolean coinbase = true;
-		TxOutCache resolvedInputs = new TxOutCache ();
+		TxOutCache resolvedInputs = new ImplementTxOutCache ();
 	}
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
@@ -556,12 +573,10 @@ public abstract class CachedBlockStore implements BlockStore
 
 			Head head;
 
-			Map<String, HashMap<Long, TxOut>> notInBranch = new HashMap<String, HashMap<Long, TxOut>> ();
-			Map<String, HashMap<Long, TxOut>> newBranch = new HashMap<String, HashMap<Long, TxOut>> ();
+			ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
 
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
-				log.trace ("continuing trunk");
 				// continuing
 				head = prev.getHead ();
 
@@ -575,24 +590,37 @@ public abstract class CachedBlockStore implements BlockStore
 				// branching
 				head = new Head ();
 				int n = 0;
+
+				CachedBlock q = currentHead.getLast ();
+				CachedBlock p = q.previous;
+				while ( !p.getHash ().equals (trunkBlock.getHash ()) )
+				{
+					Blk block = retrieveBlock (q);
+					backwardCache (block, deltaUTXO, false);
+
+					q = p;
+					p = q.previous;
+				}
+
+				List<CachedBlock> pathFromTrunkToPrev = new ArrayList<CachedBlock> ();
 				while ( !isBlockOnBranch (trunkBlock, currentHead) )
 				{
-					Blk c = retrieveBlock (trunkBlock);
-					List<Tx> txs = new ArrayList<Tx> ();
-					txs.addAll (c.getTransactions ());
-					Collections.reverse (txs);
-					for ( Tx t : txs )
-					{
-					}
+					pathFromTrunkToPrev.add (trunkBlock);
+
 					if ( ++n > FORCE_TRUNK )
 					{
 						throw new ValidationException ("Attempt to branch too far back in history " + b.getHash ());
 					}
 					trunkBlock = trunkBlock.getPrevious ();
 				}
-				log.trace ("branching trunk at " + trunkBlock);
-				head.setPrevious (prev.getHead ());
+				Collections.reverse (pathFromTrunkToPrev);
 
+				for ( CachedBlock block : pathFromTrunkToPrev )
+				{
+					forwardCache (retrieveBlock (block), deltaUTXO, false);
+				}
+
+				head.setPrevious (prev.getHead ());
 				head.setLeaf (b.getHash ());
 				head.setHeight (prev.getHeight () + 1);
 				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
@@ -644,6 +672,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			final TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = b;
+			tcontext.resolvedInputs = deltaUTXO;
 
 			log.trace ("resolving inputs for block " + b.getHash ());
 			for ( Tx t : b.getTransactions () )
@@ -772,14 +801,12 @@ public abstract class CachedBlockStore implements BlockStore
 
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
-				log.trace ("NEW trunk ");
 				// we have a new trunk
 				// if branching from main we have to revert, then forward unspent cache
 				CachedBlock p = currentHead.getLast ();
 				CachedBlock q = p.previous;
 				while ( !q.equals (trunkBlock) )
 				{
-					log.trace ("BACKWARD cache " + p.hash);
 					Blk block = retrieveBlock (p);
 					shortenTrunk (block);
 					p = q;
@@ -796,7 +823,6 @@ public abstract class CachedBlockStore implements BlockStore
 				// spend what now came to trunk
 				for ( CachedBlock cb : pathToNewHead )
 				{
-					log.trace ("FORWARD cache " + cb.hash);
 					Blk block = retrieveBlock (cb);
 					extendTrunk (block);
 				}

@@ -511,7 +511,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void backwardCache (Blk b, TxOutCache cache)
+	protected void backwardCache (Blk b, TxOutCache cache, boolean modify)
 	{
 		List<Tx> txs = new ArrayList<Tx> ();
 		txs.addAll (b.getTransactions ());
@@ -520,7 +520,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				out.setAvailable (false);
+				if ( modify )
+				{
+					out.setAvailable (false);
+				}
 				cache.remove (t.getHash (), out.getIx ());
 			}
 
@@ -530,24 +533,33 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					Tx sourceTx = readTx (in.getSourceHash ());
 					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
-					source.setAvailable (true);
-					writeTx (sourceTx);
+					if ( modify )
+					{
+						source.setAvailable (true);
+						writeTx (sourceTx);
+					}
 
 					cache.add (source.flatCopy (null));
 				}
 			}
-			writeTx (t);
+			if ( modify )
+			{
+				writeTx (t);
+			}
 		}
 	}
 
 	@Override
-	protected void forwardCache (Blk b, TxOutCache cache)
+	protected void forwardCache (Blk b, TxOutCache cache, boolean modify)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				out.setAvailable (true);
+				if ( modify )
+				{
+					out.setAvailable (true);
+				}
 				cache.add (out.flatCopy (null));
 			}
 
@@ -557,13 +569,19 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					Tx sourceTx = readTx (in.getSourceHash ());
 					TxOut source = sourceTx.getOutputs ().get (in.getIx ().intValue ());
-					source.setAvailable (false);
-					writeTx (sourceTx);
+					if ( modify )
+					{
+						source.setAvailable (false);
+						writeTx (sourceTx);
+					}
 
 					cache.remove (in.getSourceHash (), in.getIx ());
 				}
 			}
-			writeTx (t);
+			if ( modify )
+			{
+				writeTx (t);
+			}
 		}
 	}
 

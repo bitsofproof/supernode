@@ -61,6 +61,7 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
 		<constructor-arg>

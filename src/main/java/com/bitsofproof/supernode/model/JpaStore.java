@@ -112,7 +112,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void backwardCache (Blk b, TxOutCache cache)
+	protected void backwardCache (Blk b, TxOutCache cache, boolean modify)
 	{
 		List<Tx> txs = new ArrayList<Tx> ();
 		txs.addAll (b.getTransactions ());
@@ -121,7 +121,10 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				out.setAvailable (false);
+				if ( modify )
+				{
+					out.setAvailable (false);
+				}
 				cache.remove (t.getHash (), out.getIx ());
 			}
 
@@ -130,7 +133,10 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
 					TxOut source = in.getSource ();
-					source.setAvailable (true);
+					if ( modify )
+					{
+						source.setAvailable (true);
+					}
 					cache.add (source.flatCopy (null));
 				}
 			}
@@ -138,13 +144,16 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void forwardCache (Blk b, TxOutCache cache)
+	protected void forwardCache (Blk b, TxOutCache cache, boolean modify)
 	{
 		for ( Tx t : b.getTransactions () )
 		{
 			for ( TxOut out : t.getOutputs () )
 			{
-				out.setAvailable (true);
+				if ( modify )
+				{
+					out.setAvailable (true);
+				}
 				cache.add (out.flatCopy (null));
 			}
 
@@ -152,7 +161,10 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			{
 				if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
-					in.getSource ().setAvailable (false);
+					if ( modify )
+					{
+						in.getSource ().setAvailable (false);
+					}
 					cache.remove (in.getSourceHash (), in.getIx ());
 				}
 			}

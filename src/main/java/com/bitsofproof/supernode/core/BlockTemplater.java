@@ -28,6 +28,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ChainParameter;
@@ -62,6 +66,13 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private final ChainParameter chain;
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
+	private final BitcoinNetwork network;
+	private PlatformTransactionManager transactionManager;
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
 
 	public void setCoinbaseAddress (String coinbaseAddress)
 	{
@@ -70,6 +81,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	public BlockTemplater (BitcoinNetwork network, TxHandler txhandler)
 	{
+		this.network = network;
 		BlockStore store = network.getStore ();
 		chain = network.getChain ();
 		store.addTrunkListener (this);
@@ -136,61 +148,81 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 	}
 
 	@Override
-	public void trunkExtended (Blk blk)
+	public void trunkExtended (final String blockHash)
 	{
-		synchronized ( template )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			boolean coinbase = true;
-			for ( Tx t : blk.getTransactions () )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				if ( coinbase )
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				synchronized ( template )
 				{
-					coinbase = false;
-				}
-				else
-				{
-					String hash = t.getHash ();
-					mineable.remove (hash);
-					inputUses.remove (hash);
-					fee.remove (hash);
-					for ( TxIn i : t.getInputs () )
+					boolean coinbase = true;
+					for ( Tx t : blk.getTransactions () )
 					{
-						if ( inputUses.containsKey (i.getSourceHash ()) )
+						if ( coinbase )
 						{
-							String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
-							if ( doubleSpend != null )
+							coinbase = false;
+						}
+						else
+						{
+							String hash = t.getHash ();
+							mineable.remove (hash);
+							inputUses.remove (hash);
+							fee.remove (hash);
+							for ( TxIn i : t.getInputs () )
 							{
-								mineable.remove (doubleSpend);
-								inputUses.remove (doubleSpend);
-								fee.remove (doubleSpend);
+								if ( inputUses.containsKey (i.getSourceHash ()) )
+								{
+									String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
+									if ( doubleSpend != null )
+									{
+										mineable.remove (doubleSpend);
+										inputUses.remove (doubleSpend);
+										fee.remove (doubleSpend);
+									}
+								}
 							}
 						}
 					}
+					createTemplate (blk);
 				}
 			}
-			createTemplate (blk);
-		}
+		});
 	}
 
 	@Override
-	public void trunkShortened (Blk blk)
+	public void trunkShortened (final String blockHash)
 	{
-		synchronized ( template )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			boolean coinbase = true;
-			for ( Tx t : blk.getTransactions () )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				if ( coinbase )
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				synchronized ( template )
 				{
-					coinbase = false;
-				}
-				else
-				{
-					addTransaction (t);
+					boolean coinbase = true;
+					for ( Tx t : blk.getTransactions () )
+					{
+						if ( coinbase )
+						{
+							coinbase = false;
+						}
+						else
+						{
+							addTransaction (t);
+						}
+					}
+					createTemplate (blk);
 				}
 			}
-			createTemplate (blk);
-		}
+		});
 	}
 
 	private void createTemplate (Blk blk)

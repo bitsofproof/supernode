@@ -25,6 +25,10 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -43,9 +47,11 @@ public class TxHandler implements TrunkListener
 
 	private final BitcoinNetwork network;
 
+	private PlatformTransactionManager transactionManager;
+
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final TxOutCache availableOutput = new TxOutCache ();
+	private final TxOutCache availableOutput = new ImplementTxOutCache ();
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
 	public void addTransactionListener (TransactionListener listener)
@@ -148,27 +154,55 @@ public class TxHandler implements TrunkListener
 	}
 
 	@Override
-	public void trunkExtended (Blk blk)
+	public void trunkExtended (final String blockHash)
 	{
-		synchronized ( unconfirmed )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			for ( Tx tx : blk.getTransactions () )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				unconfirmed.remove (tx.getHash ());
-				availableOutput.remove (tx.getHash ());
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				synchronized ( unconfirmed )
+				{
+					for ( Tx tx : blk.getTransactions () )
+					{
+						unconfirmed.remove (tx.getHash ());
+						for ( TxOut o : tx.getOutputs () )
+						{
+							availableOutput.remove (o.getTxHash (), o.getIx ());
+						}
+					}
+				}
 			}
-		}
+		});
 	}
 
 	@Override
-	public void trunkShortened (Blk blk)
+	public void trunkShortened (final String blockHash)
 	{
-		synchronized ( unconfirmed )
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			for ( Tx tx : blk.getTransactions () )
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				cacheTransaction (tx);
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				synchronized ( unconfirmed )
+				{
+					for ( Tx tx : blk.getTransactions () )
+					{
+						cacheTransaction (tx);
+					}
+				}
 			}
-		}
+		});
+	}
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
 	}
 }

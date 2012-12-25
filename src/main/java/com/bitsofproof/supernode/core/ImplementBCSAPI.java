@@ -464,36 +464,56 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 	}
 
 	@Override
-	public void trunkExtended (Blk blk)
+	public void trunkExtended (final String blockHash)
 	{
-		try
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			ObjectMessage m = session.createObjectMessage (b);
-			extendProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				try
+				{
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					blk.toWire (writer);
+					Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+					ObjectMessage m = session.createObjectMessage (b);
+					extendProducer.send (m);
+				}
+				catch ( JMSException e )
+				{
+					log.error ("Can not send JMS message ", e);
+				}
+			}
+		});
 	}
 
 	@Override
-	public void trunkShortened (Blk blk)
+	public void trunkShortened (final String blockHash)
 	{
-		try
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			ObjectMessage m = session.createObjectMessage (b);
-			revertProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+
+				Blk blk = network.getStore ().getBlock (blockHash);
+				try
+				{
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					blk.toWire (writer);
+					Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+					ObjectMessage m = session.createObjectMessage (b);
+					revertProducer.send (m);
+				}
+				catch ( JMSException e )
+				{
+					log.error ("Can not send JMS message ", e);
+				}
+			}
+		});
 	}
 }
