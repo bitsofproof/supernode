@@ -119,7 +119,7 @@ public class ChainLoader
 					{
 						return;
 					}
-					if ( !peerRequests.contains (block.getHash ()) )
+					if ( peerRequests.size () == 1 )
 					{
 						sendBlock (block, peer);
 					}
