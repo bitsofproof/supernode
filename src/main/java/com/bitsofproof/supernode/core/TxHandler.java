@@ -98,10 +98,17 @@ public class TxHandler implements TrunkListener
 				{
 					try
 					{
-						store.validateTransaction (txm.getTx (), availableOutput);
+						boolean relay = store.validateTransaction (txm.getTx (), availableOutput);
 						if ( cacheTransaction (txm.getTx ()) )
 						{
-							sendTransaction (txm.getTx (), peer);
+							if ( relay )
+							{
+								sendTransaction (txm.getTx (), peer);
+							}
+							else
+							{
+								log.trace ("Not relaying transaction " + txm.getTx ().getHash ());
+							}
 						}
 					}
 					catch ( ValidationException e )

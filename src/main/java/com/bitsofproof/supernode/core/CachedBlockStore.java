@@ -57,7 +57,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	// not allowed to branch further back on trunk
 	private static final int FORCE_TRUNK = 100;
-
+	private static final long MIN_RELAY_TX_FEE = 10000;
 	@Autowired
 	private Chain chain;
 
@@ -1305,7 +1305,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	@Override
-	public void validateTransaction (Tx t, TxOutCache resolvedInputs) throws ValidationException
+	public boolean validateTransaction (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
 		try
 		{
@@ -1320,6 +1320,23 @@ public abstract class CachedBlockStore implements BlockStore
 			tcontext.resolvedInputs = resolvedInputs;
 
 			validateTransaction (tcontext, t);
+
+			// This node will not relay transactions not paying a minimal fee.
+			long fee = 0;
+			for ( TxIn in : t.getInputs () )
+			{
+				fee += resolvedInputs.get (in.getSourceHash (), in.getIx ()).getValue ();
+			}
+			for ( TxOut out : t.getOutputs () )
+			{
+				fee -= out.getValue ();
+			}
+			if ( fee < MIN_RELAY_TX_FEE )
+			{
+				return false;
+			}
+
+			return true;
 		}
 		finally
 		{

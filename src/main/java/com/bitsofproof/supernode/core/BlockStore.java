@@ -51,7 +51,7 @@ public interface BlockStore
 
 	public boolean isStoredBlock (String hash);
 
-	public void validateTransaction (Tx tx, TxOutCache resolvedInputs) throws ValidationException;
+	public boolean validateTransaction (Tx tx, TxOutCache resolvedInputs) throws ValidationException;
 
 	public void resolveTransactionInputs (Tx tx, TxOutCache resolvedInputs) throws ValidationException;
 
