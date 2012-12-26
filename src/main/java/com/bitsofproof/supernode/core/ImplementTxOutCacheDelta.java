@@ -59,18 +59,32 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 	@Override
 	public void add (TxOut out)
 	{
-		added.add (out);
+		if ( removed.containsKey (out.getTxHash ()) && removed.get (out.getTxHash ()).contains (out.getIx ()) )
+		{
+			removed.get (out.getTxHash ()).remove (out.getIx ());
+		}
+		else
+		{
+			added.add (out);
+		}
 	}
 
 	@Override
 	public void remove (String hash, Long ix)
 	{
-		HashSet<Long> rs = removed.get (hash);
-		if ( rs == null )
+		if ( added.get (hash, ix) != null )
 		{
-			rs = new HashSet<Long> ();
-			removed.put (hash, rs);
+			added.remove (hash, ix);
 		}
-		rs.add (ix);
+		else
+		{
+			HashSet<Long> rs = removed.get (hash);
+			if ( rs == null )
+			{
+				rs = new HashSet<Long> ();
+				removed.put (hash, rs);
+			}
+			rs.add (ix);
+		}
 	}
 }
