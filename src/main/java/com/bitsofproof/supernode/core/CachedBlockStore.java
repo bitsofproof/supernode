@@ -808,6 +808,10 @@ public abstract class CachedBlockStore implements BlockStore
 				// we have a new trunk
 				// if branching from main we have to revert, then forward unspent cache
 				CachedBlock p = currentHead.getLast ();
+
+				Blk last = retrieveBlock (p);
+				shortenTrunk (last);
+
 				CachedBlock q = p.previous;
 				while ( !q.equals (trunkBlock) )
 				{
@@ -817,14 +821,16 @@ public abstract class CachedBlockStore implements BlockStore
 					q = p.previous;
 				}
 				List<CachedBlock> pathToNewHead = new ArrayList<CachedBlock> ();
-				p = cachedBlocks.get (usingHead.getLast ().getHash ());
+				p = m;
 				q = p.previous;
 				while ( !q.equals (trunkBlock) )
 				{
 					pathToNewHead.add (p);
+					p = q;
+					q = p.previous;
 				}
 				Collections.reverse (pathToNewHead);
-				// spend what now came to trunk
+
 				for ( CachedBlock cb : pathToNewHead )
 				{
 					Blk block = retrieveBlock (cb);
