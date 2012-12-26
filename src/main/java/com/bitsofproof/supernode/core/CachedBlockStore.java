@@ -592,6 +592,10 @@ public abstract class CachedBlockStore implements BlockStore
 				int n = 0;
 
 				CachedBlock q = currentHead.getLast ();
+
+				Blk last = retrieveBlock (q);
+				backwardCache (last, deltaUTXO, false);
+
 				CachedBlock p = q.previous;
 				while ( !p.getHash ().equals (trunkBlock.getHash ()) )
 				{
