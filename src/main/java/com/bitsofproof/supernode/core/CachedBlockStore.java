@@ -575,6 +575,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
 
+			boolean branching = false;
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
 				// continuing
@@ -588,6 +589,7 @@ public abstract class CachedBlockStore implements BlockStore
 			else
 			{
 				// branching
+				branching = true;
 				head = new Head ();
 				int n = 0;
 
@@ -836,16 +838,16 @@ public abstract class CachedBlockStore implements BlockStore
 					Blk block = retrieveBlock (cb);
 					extendTrunk (block);
 				}
-			}
-			else if ( b.getHead ().getId ().longValue () == currentHead.getId ().longValue () )
-			{
-				// spend if on the trunk
+
 				extendTrunk (b);
+				currentHead = usingHead;
+			}
+			else if ( !branching )
+			{
+				extendTrunk (b);
+				currentHead = usingHead;
 			}
 			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
-
-			// now this is the new trunk
-			currentHead = usingHead;
 		}
 	}
 
