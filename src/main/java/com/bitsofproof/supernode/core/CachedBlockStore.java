@@ -569,13 +569,8 @@ public abstract class CachedBlockStore implements BlockStore
 				throw new ValidationException ("Future generation attempt " + b.getHash ());
 			}
 
-			CachedBlock trunkBlock = cachedPrevious;
-
 			Head head;
 
-			ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
-
-			boolean branching = false;
 			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
 			{
 				// continuing
@@ -589,42 +584,7 @@ public abstract class CachedBlockStore implements BlockStore
 			else
 			{
 				// branching
-				branching = true;
 				head = new Head ();
-				int n = 0;
-
-				CachedBlock q = currentHead.getLast ();
-
-				Blk last = retrieveBlock (q);
-				backwardCache (last, deltaUTXO, false);
-
-				CachedBlock p = q.previous;
-				while ( !p.getHash ().equals (trunkBlock.getHash ()) )
-				{
-					Blk block = retrieveBlock (q);
-					backwardCache (block, deltaUTXO, false);
-
-					q = p;
-					p = q.previous;
-				}
-
-				List<CachedBlock> pathFromTrunkToPrev = new ArrayList<CachedBlock> ();
-				while ( !isBlockOnBranch (trunkBlock, currentHead) )
-				{
-					pathFromTrunkToPrev.add (trunkBlock);
-
-					if ( ++n > FORCE_TRUNK )
-					{
-						throw new ValidationException ("Attempt to branch too far back in history " + b.getHash ());
-					}
-					trunkBlock = trunkBlock.getPrevious ();
-				}
-				Collections.reverse (pathFromTrunkToPrev);
-
-				for ( CachedBlock block : pathFromTrunkToPrev )
-				{
-					forwardCache (retrieveBlock (block), deltaUTXO, false);
-				}
 
 				head.setPrevious (prev.getHead ());
 				head.setLeaf (b.getHash ());
@@ -675,6 +635,36 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 
 			b.checkMerkleRoot ();
+
+			ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
+
+			CachedBlock trunkBlock = cachedPrevious;
+			List<CachedBlock> pathFromTrunkToPrev = new ArrayList<CachedBlock> ();
+			while ( !isBlockOnBranch (trunkBlock, currentHead) )
+			{
+				pathFromTrunkToPrev.add (trunkBlock);
+				trunkBlock = trunkBlock.getPrevious ();
+			}
+			Collections.reverse (pathFromTrunkToPrev);
+
+			if ( currentHead.getLast () != cachedPrevious )
+			{
+				CachedBlock q = currentHead.getLast ();
+				CachedBlock p = q.previous;
+				while ( !q.getHash ().equals (trunkBlock.getHash ()) )
+				{
+					Blk block = retrieveBlock (q);
+					backwardCache (block, deltaUTXO, false);
+
+					q = p;
+					p = q.previous;
+				}
+
+				for ( CachedBlock block : pathFromTrunkToPrev )
+				{
+					forwardCache (retrieveBlock (block), deltaUTXO, false);
+				}
+			}
 
 			final TransactionContext tcontext = new TransactionContext ();
 			tcontext.block = b;
@@ -808,14 +798,9 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
 				// we have a new trunk
-				// if branching from main we have to revert, then forward unspent cache
 				CachedBlock p = currentHead.getLast ();
-
-				Blk last = retrieveBlock (p);
-				shortenTrunk (last);
-
 				CachedBlock q = p.previous;
-				while ( !q.equals (trunkBlock) )
+				while ( !p.equals (trunkBlock) )
 				{
 					Blk block = retrieveBlock (p);
 					shortenTrunk (block);
@@ -827,7 +812,7 @@ public abstract class CachedBlockStore implements BlockStore
 				q = p.previous;
 				while ( !q.equals (trunkBlock) )
 				{
-					pathToNewHead.add (p);
+					pathToNewHead.add (q);
 					p = q;
 					q = p.previous;
 				}
@@ -842,7 +827,7 @@ public abstract class CachedBlockStore implements BlockStore
 				extendTrunk (b);
 				currentHead = usingHead;
 			}
-			else if ( !branching )
+			else if ( currentHead.getLast () == cachedPrevious )
 			{
 				extendTrunk (b);
 				currentHead = usingHead;
