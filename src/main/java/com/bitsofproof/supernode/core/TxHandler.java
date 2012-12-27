@@ -52,6 +52,7 @@ public class TxHandler implements TrunkListener
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private final TxOutCache availableOutput = new ImplementTxOutCache ();
+
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
 	public void addTransactionListener (TransactionListener listener)
@@ -94,26 +95,29 @@ public class TxHandler implements TrunkListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
+				synchronized ( unconfirmed )
 				{
-					try
+					if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
 					{
-						boolean relay = store.validateTransaction (txm.getTx (), availableOutput);
-						if ( cacheTransaction (txm.getTx ()) )
+						try
 						{
-							if ( relay )
+							boolean relay = store.validateTransaction (txm.getTx (), availableOutput);
+							if ( cacheTransaction (txm.getTx ()) )
 							{
-								sendTransaction (txm.getTx (), peer);
-							}
-							else
-							{
-								log.trace ("Not relaying transaction " + txm.getTx ().getHash ());
+								if ( relay )
+								{
+									sendTransaction (txm.getTx (), peer);
+								}
+								else
+								{
+									log.trace ("Not relaying transaction " + txm.getTx ().getHash ());
+								}
 							}
 						}
-					}
-					catch ( ValidationException e )
-					{
-						log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+						catch ( ValidationException e )
+						{
+							log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+						}
 					}
 				}
 			}
@@ -122,7 +126,10 @@ public class TxHandler implements TrunkListener
 
 	public Tx getTransaction (String hash)
 	{
-		return unconfirmed.get (hash);
+		synchronized ( unconfirmed )
+		{
+			return unconfirmed.get (hash);
+		}
 	}
 
 	public boolean cacheTransaction (Tx tx)
@@ -169,7 +176,7 @@ public class TxHandler implements TrunkListener
 	}
 
 	@Override
-	public void trunkExtended (final String blockHash)
+	public void trunkUpdate (final List<String> removedBlocks, final List<String> addedBlocks)
 	{
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
@@ -177,39 +184,42 @@ public class TxHandler implements TrunkListener
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
+				List<String> dropped = new ArrayList<String> ();
 
-				Blk blk = network.getStore ().getBlock (blockHash);
-				synchronized ( unconfirmed )
+				for ( String blockHash : removedBlocks )
 				{
-					for ( Tx tx : blk.getTransactions () )
+					Blk blk = network.getStore ().getBlock (blockHash);
+					synchronized ( unconfirmed )
 					{
-						unconfirmed.remove (tx.getHash ());
-						for ( TxOut o : tx.getOutputs () )
+						for ( Tx tx : blk.getTransactions () )
 						{
-							availableOutput.remove (o.getTxHash (), o.getIx ());
+							if ( cacheTransaction (tx) )
+							{
+								removedBlocks.add (tx.getHash ());
+							}
 						}
 					}
 				}
-			}
-		});
-	}
-
-	@Override
-	public void trunkShortened (final String blockHash)
-	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-
-				Blk blk = network.getStore ().getBlock (blockHash);
-				synchronized ( unconfirmed )
+				for ( String blockHash : addedBlocks )
 				{
-					for ( Tx tx : blk.getTransactions () )
+					Blk blk = network.getStore ().getBlock (blockHash);
+					synchronized ( unconfirmed )
 					{
-						cacheTransaction (tx);
+						for ( Tx tx : blk.getTransactions () )
+						{
+							unconfirmed.remove (tx.getHash ());
+							for ( TxOut o : tx.getOutputs () )
+							{
+								availableOutput.remove (o.getTxHash (), o.getIx ());
+							}
+						}
+					}
+				}
+				for ( String o : dropped )
+				{
+					if ( !unconfirmed.containsKey (o) )
+					{
+						sendTransaction (unconfirmed.get (o), null);
 					}
 				}
 			}

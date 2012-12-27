@@ -148,7 +148,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 	}
 
 	@Override
-	public void trunkExtended (final String blockHash)
+	public void trunkUpdate (final List<String> shortened, final List<String> extended)
 	{
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
@@ -156,70 +156,59 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
-
-				Blk blk = network.getStore ().getBlock (blockHash);
 				synchronized ( template )
 				{
-					boolean coinbase = true;
-					for ( Tx t : blk.getTransactions () )
+					for ( String blockHash : shortened )
 					{
-						if ( coinbase )
+						Blk blk = network.getStore ().getBlock (blockHash);
+						boolean coinbase = true;
+						for ( Tx t : blk.getTransactions () )
 						{
-							coinbase = false;
-						}
-						else
-						{
-							String hash = t.getHash ();
-							mineable.remove (hash);
-							inputUses.remove (hash);
-							fee.remove (hash);
-							for ( TxIn i : t.getInputs () )
+							if ( coinbase )
 							{
-								if ( inputUses.containsKey (i.getSourceHash ()) )
+								coinbase = false;
+							}
+							else
+							{
+								addTransaction (t);
+							}
+						}
+					}
+					Blk last = null;
+					for ( final String blockHash : extended )
+					{
+						Blk blk = network.getStore ().getBlock (blockHash);
+						last = blk;
+						boolean coinbase = true;
+						for ( Tx t : blk.getTransactions () )
+						{
+							if ( coinbase )
+							{
+								coinbase = false;
+							}
+							else
+							{
+								String hash = t.getHash ();
+								mineable.remove (hash);
+								inputUses.remove (hash);
+								fee.remove (hash);
+								for ( TxIn i : t.getInputs () )
 								{
-									String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
-									if ( doubleSpend != null )
+									if ( inputUses.containsKey (i.getSourceHash ()) )
 									{
-										mineable.remove (doubleSpend);
-										inputUses.remove (doubleSpend);
-										fee.remove (doubleSpend);
+										String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
+										if ( doubleSpend != null )
+										{
+											mineable.remove (doubleSpend);
+											inputUses.remove (doubleSpend);
+											fee.remove (doubleSpend);
+										}
 									}
 								}
 							}
 						}
 					}
-					createTemplate (blk);
-				}
-			}
-		});
-	}
-
-	@Override
-	public void trunkShortened (final String blockHash)
-	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-
-				Blk blk = network.getStore ().getBlock (blockHash);
-				synchronized ( template )
-				{
-					boolean coinbase = true;
-					for ( Tx t : blk.getTransactions () )
-					{
-						if ( coinbase )
-						{
-							coinbase = false;
-						}
-						else
-						{
-							addTransaction (t);
-						}
-					}
-					createTemplate (blk);
+					createTemplate (last);
 				}
 			}
 		});

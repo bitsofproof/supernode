@@ -120,40 +120,6 @@ public abstract class CachedBlockStore implements BlockStore
 		trunkListener.add (listener);
 	}
 
-	private void extendTrunk (Blk b)
-	{
-		forwardCache (b, cachedUTXO, true);
-		final String blockHash = b.getHash ();
-		trunkNotifyer.execute (new Runnable ()
-		{
-			@Override
-			public void run ()
-			{
-				for ( TrunkListener l : trunkListener )
-				{
-					l.trunkExtended (blockHash);
-				}
-			}
-		});
-	}
-
-	private void shortenTrunk (final Blk b)
-	{
-		backwardCache (b, cachedUTXO, true);
-		final String blockHash = b.getHash ();
-		trunkNotifyer.execute (new Runnable ()
-		{
-			@Override
-			public void run ()
-			{
-				for ( TrunkListener l : trunkListener )
-				{
-					l.trunkShortened (blockHash);
-				}
-			}
-		});
-	}
-
 	protected static class CachedHead
 	{
 		private Long id;
@@ -795,6 +761,9 @@ public abstract class CachedBlockStore implements BlockStore
 			usingHead.setHeight (b.getHeight ());
 			usingHead.getBlocks ().add (m);
 
+			final List<String> removedBlocks = new ArrayList<String> ();
+			final List<String> addedBlocks = new ArrayList<String> ();
+
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
 				// we have a new trunk
@@ -803,7 +772,8 @@ public abstract class CachedBlockStore implements BlockStore
 				while ( !p.equals (trunkBlock) )
 				{
 					Blk block = retrieveBlock (p);
-					shortenTrunk (block);
+					backwardCache (block, cachedUTXO, true);
+					removedBlocks.add (p.getHash ());
 					p = q;
 					q = p.previous;
 				}
@@ -821,18 +791,32 @@ public abstract class CachedBlockStore implements BlockStore
 				for ( CachedBlock cb : pathToNewHead )
 				{
 					Blk block = retrieveBlock (cb);
-					extendTrunk (block);
+					forwardCache (block, cachedUTXO, true);
+					addedBlocks.add (cb.getHash ());
 				}
 
-				extendTrunk (b);
+				forwardCache (b, cachedUTXO, true);
+				addedBlocks.add (b.getHash ());
 				currentHead = usingHead;
 			}
 			else if ( currentHead.getLast () == cachedPrevious )
 			{
-				extendTrunk (b);
+				forwardCache (b, cachedUTXO, true);
+				addedBlocks.add (b.getHash ());
 				currentHead = usingHead;
 			}
 			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
+			trunkNotifyer.execute (new Runnable ()
+			{
+				@Override
+				public void run ()
+				{
+					for ( TrunkListener l : trunkListener )
+					{
+						l.trunkUpdate (removedBlocks, addedBlocks);
+					}
+				}
+			});
 		}
 	}
 

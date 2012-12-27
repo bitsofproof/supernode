@@ -9,6 +9,7 @@ import java.util.List;
 import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
+import javax.jms.MapMessage;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
@@ -55,8 +56,7 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 	private String password;
 
 	private MessageProducer transactionProducer;
-	private MessageProducer extendProducer;
-	private MessageProducer revertProducer;
+	private MessageProducer trunkProducer;
 	private MessageProducer templateProducer;
 
 	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
@@ -85,8 +85,7 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 			connection = connectionFactory.createConnection ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
-			extendProducer = session.createProducer (session.createTopic ("extend"));
-			revertProducer = session.createProducer (session.createTopic ("revert"));
+			trunkProducer = session.createProducer (session.createTopic ("trunk"));
 			templateProducer = session.createProducer (session.createTopic ("work"));
 			addMessageListener ("newTransaction", new MessageListener ()
 			{
@@ -466,7 +465,7 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 	}
 
 	@Override
-	public void trunkExtended (final String blockHash)
+	public void trunkUpdate (final List<String> removed, final List<String> extended)
 	{
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
@@ -474,42 +473,28 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
-
-				Blk blk = network.getStore ().getBlock (blockHash);
-				try
+				List<Block> r = new ArrayList<Block> ();
+				List<Block> a = new ArrayList<Block> ();
+				for ( String blockHash : removed )
 				{
+					Blk blk = network.getStore ().getBlock (blockHash);
 					WireFormat.Writer writer = new WireFormat.Writer ();
 					blk.toWire (writer);
-					Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					ObjectMessage m = session.createObjectMessage (b);
-					extendProducer.send (m);
+					r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
 				}
-				catch ( JMSException e )
+				for ( String blockHash : extended )
 				{
-					log.error ("Can not send JMS message ", e);
-				}
-			}
-		});
-	}
-
-	@Override
-	public void trunkShortened (final String blockHash)
-	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-
-				Blk blk = network.getStore ().getBlock (blockHash);
-				try
-				{
+					Blk blk = network.getStore ().getBlock (blockHash);
 					WireFormat.Writer writer = new WireFormat.Writer ();
 					blk.toWire (writer);
-					Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					ObjectMessage m = session.createObjectMessage (b);
-					revertProducer.send (m);
+					a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+				}
+				try
+				{
+					MapMessage m = session.createMapMessage ();
+					m.setObject ("removed", r);
+					m.setObject ("added", a);
+					trunkProducer.send (m);
 				}
 				catch ( JMSException e )
 				{
