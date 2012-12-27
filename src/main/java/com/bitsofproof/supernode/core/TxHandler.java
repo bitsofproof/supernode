@@ -128,6 +128,7 @@ public class TxHandler implements TrunkListener
 				{
 					log.trace ("Not relaying transaction " + t.getHash ());
 				}
+				notifyListener (t);
 			}
 		}
 	}
@@ -140,7 +141,7 @@ public class TxHandler implements TrunkListener
 		}
 	}
 
-	public boolean cacheTransaction (Tx tx)
+	private boolean cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		synchronized ( unconfirmed )
@@ -161,16 +162,12 @@ public class TxHandler implements TrunkListener
 			{
 				availableOutput.remove (in.getSourceHash (), in.getIx ());
 			}
-			return true;
 		}
+		return true;
 	}
 
-	public void sendTransaction (Tx tx, BitcoinPeer peer)
+	private void sendTransaction (Tx tx, BitcoinPeer peer)
 	{
-		for ( TransactionListener l : transactionListener )
-		{
-			l.onTransaction (tx);
-		}
 		for ( BitcoinPeer p : network.getConnectPeers () )
 		{
 			if ( p != peer )
@@ -181,6 +178,14 @@ public class TxHandler implements TrunkListener
 			}
 		}
 		log.info ("sent validated transaction to peers " + tx.getHash ());
+	}
+
+	private void notifyListener (Tx tx)
+	{
+		for ( TransactionListener l : transactionListener )
+		{
+			l.onTransaction (tx);
+		}
 	}
 
 	@Override
@@ -221,9 +226,11 @@ public class TxHandler implements TrunkListener
 					}
 					for ( String o : dropped )
 					{
-						if ( !unconfirmed.containsKey (o) )
+						if ( unconfirmed.containsKey (o) )
 						{
-							sendTransaction (unconfirmed.get (o), null);
+							Tx tx = unconfirmed.get (o);
+							sendTransaction (tx, null);
+							notifyListener (tx);
 						}
 					}
 				}
