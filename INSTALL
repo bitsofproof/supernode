@@ -5,21 +5,12 @@ INSTALL
 COMPILE
 mvn package
 
-RUN
+DEMO RUN
 java -jar target/supernode-0.7-SNAPSHOT.jar testnet3 memdb
-or
-java -jar target/supernode-0.7-SNAPSHOT.jar production leveldb
-or
-java -jar target/supernode-0.7-SNAPSHOT.jar production relational
 
-You should configre relational data source in src/main/resources/context/relational-profile.xml 
-and mvn package before use.
+ADVANCED USE
+https://github.com/bitsofproof/supernode/wiki
 
-You can add BCSAPIDirect and BCSAPIBus to command line parameters to turn on BCSAPI over RMI and over JMS that are
-used by the supernode-testclient. BCSAPIBus needs a JMS provider. I recommend Apache Apollo.
-
-I recommend to also use below options to java: 
-java -server -Xmx4g ...
 
 ECLIPSE
 1. Install m2e through the marketplace (Help > Eclipse Marketplace)
