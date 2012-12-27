@@ -24,6 +24,7 @@ import java.util.Map;
 import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
+import javax.jms.MapMessage;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
@@ -110,36 +111,18 @@ public class ClientBusAdaptor implements BCSAPIBus
 					}
 				}
 			});
-			addMessageListener ("extend", new MessageListener ()
+			addMessageListener ("trunk", new MessageListener ()
 			{
+				@SuppressWarnings ("unchecked")
 				@Override
 				public void onMessage (Message arg0)
 				{
-					ObjectMessage o = (ObjectMessage) arg0;
+					MapMessage o = (MapMessage) arg0;
 					for ( TrunkListener l : trunkListener )
 					{
 						try
 						{
-							l.blockAdded ((Block) o.getObject ());
-						}
-						catch ( JMSException e )
-						{
-							log.error ("Block message error", e);
-						}
-					}
-				}
-			});
-			addMessageListener ("revert", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					ObjectMessage o = (ObjectMessage) arg0;
-					for ( TrunkListener l : trunkListener )
-					{
-						try
-						{
-							l.blockRemoved ((Block) o.getObject ());
+							l.trunkUpdate ((List<Block>) o.getObject ("removed"), (List<Block>) o.getObject ("added"));
 						}
 						catch ( JMSException e )
 						{
