@@ -101,18 +101,7 @@ public class TxHandler implements TrunkListener
 					{
 						try
 						{
-							boolean relay = store.validateTransaction (txm.getTx (), availableOutput);
-							if ( cacheTransaction (txm.getTx ()) )
-							{
-								if ( relay )
-								{
-									sendTransaction (txm.getTx (), peer);
-								}
-								else
-								{
-									log.trace ("Not relaying transaction " + txm.getTx ().getHash ());
-								}
-							}
+							validateCacheAndSend (txm.getTx (), peer);
 						}
 						catch ( ValidationException e )
 						{
@@ -122,6 +111,25 @@ public class TxHandler implements TrunkListener
 				}
 			}
 		});
+	}
+
+	public void validateCacheAndSend (Tx t, BitcoinPeer peer) throws ValidationException
+	{
+		synchronized ( unconfirmed )
+		{
+			boolean relay = network.getStore ().validateTransaction (t, availableOutput);
+			if ( cacheTransaction (t) )
+			{
+				if ( relay )
+				{
+					sendTransaction (t, peer);
+				}
+				else
+				{
+					log.trace ("Not relaying transaction " + t.getHash ());
+				}
+			}
+		}
 	}
 
 	public Tx getTransaction (String hash)
