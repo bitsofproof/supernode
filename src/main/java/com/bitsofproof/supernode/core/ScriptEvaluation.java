@@ -71,7 +71,7 @@ public class ScriptEvaluation
 
 	private boolean isFalse (byte[] b)
 	{
-		return b.length == 0 || b.length == 1 && (b[0] == 0x80 || b[0] == 0x00);
+		return b.length == 0 || b.length == 1 && ((b[0] & 0xff) == 0x80 || b[0] == 0x00);
 	}
 
 	private boolean isTrue (byte[] b)
