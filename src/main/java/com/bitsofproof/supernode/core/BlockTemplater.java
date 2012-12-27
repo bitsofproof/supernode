@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -38,13 +37,10 @@ import com.bitsofproof.supernode.api.ChainParameter;
 import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionFactory;
-import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
-import com.bitsofproof.supernode.model.TxIn;
-import com.bitsofproof.supernode.model.TxOut;
 
 public class BlockTemplater implements TrunkListener, TransactionListener
 {
@@ -52,22 +48,21 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private final List<TemplateListener> templateListener = new ArrayList<TemplateListener> ();
 
-	private final List<Transaction> maximalFeeOrder = new LinkedList<Transaction> ();
-
-	Map<String, HashMap<Long, TxOut>> resolvedInputs = new HashMap<String, HashMap<Long, TxOut>> ();
-
-	private final Map<String, HashMap<Long, String>> inputUses = new HashMap<String, HashMap<Long, String>> ();
 	private final Map<String, Transaction> mineable = new HashMap<String, Transaction> ();
-	private final Map<String, Long> fee = new HashMap<String, Long> ();
 
 	private final Block template = new Block ();
 
 	private String coinbaseAddress;
+	private long minimumFee;
 
 	private final ChainParameter chain;
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private final BitcoinNetwork network;
 	private PlatformTransactionManager transactionManager;
+
+	private String previousHash;
+	private long nextDifficulty;
+	private int nextHeight;
 
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
 	{
@@ -77,6 +72,11 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 	public void setCoinbaseAddress (String coinbaseAddress)
 	{
 		this.coinbaseAddress = coinbaseAddress;
+	}
+
+	public void setMinimumFee (long minimumFee)
+	{
+		this.minimumFee = minimumFee;
 	}
 
 	public BlockTemplater (BitcoinNetwork network, TxHandler txhandler)
@@ -104,11 +104,42 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		}
 		synchronized ( template )
 		{
+			updateTemplate ();
+
 			for ( TemplateListener listener : templateListener )
 			{
 				listener.workOn (template);
 			}
 		}
+	}
+
+	private void updateTemplate ()
+	{
+		template.setCreateTime (System.currentTimeMillis () / 1000);
+		template.setDifficultyTarget (nextDifficulty);
+		template.setNonce (0);
+		template.setPreviousHash (previousHash);
+		template.setTransactions (new ArrayList<Transaction> ());
+		try
+		{
+			template.getTransactions ().add (TransactionFactory.createCoinbase (coinbaseAddress, nextHeight, chain));
+		}
+		catch ( ValidationException e )
+		{
+			log.error ("Can not create coinbase ", e);
+		}
+		List<Transaction> feeOrder = new ArrayList<Transaction> ();
+		feeOrder.addAll (mineable.values ());
+		Collections.sort (feeOrder, new Comparator<Transaction> ()
+		{
+			@Override
+			public int compare (Transaction arg0, Transaction arg1)
+			{
+				return 0;
+			}
+		});
+
+		template.computeHash ();
 	}
 
 	public void addTemplateListener (TemplateListener listener)
@@ -123,19 +154,6 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		t.computeHash ();
 		mineable.put (t.getHash (), t);
-
-		for ( TransactionInput input : t.getInputs () )
-		{
-			HashMap<Long, String> use = inputUses.get (input.getSourceHash ());
-			if ( use == null )
-			{
-				use = new HashMap<Long, String> ();
-				inputUses.put (input.getSourceHash (), use);
-			}
-			use.put (input.getIx (), t.getHash ());
-		}
-		template.getTransactions ().add (t);
-		template.computeHash ();
 	}
 
 	@Override
@@ -174,11 +192,21 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 							}
 						}
 					}
-					Blk last = null;
 					for ( final String blockHash : extended )
 					{
 						Blk blk = network.getStore ().getBlock (blockHash);
-						last = blk;
+						previousHash = blk.getHash ();
+						nextHeight = blk.getHeight () + 1;
+						if ( nextHeight % chain.getDifficultyReviewBlocks () == 0 )
+						{
+							nextDifficulty =
+									Difficulty.getNextTarget (network.getStore ().getPeriodLength (previousHash, chain.getDifficultyReviewBlocks ()),
+											blk.getDifficultyTarget (), chain.getTargetBlockTime ());
+						}
+						else
+						{
+							nextDifficulty = blk.getDifficultyTarget ();
+						}
 						boolean coinbase = true;
 						for ( Tx t : blk.getTransactions () )
 						{
@@ -188,58 +216,12 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 							}
 							else
 							{
-								String hash = t.getHash ();
-								mineable.remove (hash);
-								inputUses.remove (hash);
-								fee.remove (hash);
-								for ( TxIn i : t.getInputs () )
-								{
-									if ( inputUses.containsKey (i.getSourceHash ()) )
-									{
-										String doubleSpend = inputUses.get (i.getSourceHash ()).get (i.getIx ());
-										if ( doubleSpend != null )
-										{
-											mineable.remove (doubleSpend);
-											inputUses.remove (doubleSpend);
-											fee.remove (doubleSpend);
-										}
-									}
-								}
+								mineable.remove (t.getHash ());
 							}
 						}
 					}
-					createTemplate (last);
 				}
 			}
 		});
-	}
-
-	private void createTemplate (Blk blk)
-	{
-		template.setCreateTime (System.currentTimeMillis () / 1000);
-		template.setDifficultyTarget (Difficulty.getNextTarget (chain.getDifficultyReviewBlocks (), blk.getDifficultyTarget (), chain.getTargetBlockTime ()));
-		template.setNonce (0);
-		template.setPreviousHash (blk.getPreviousHash ());
-		template.setTransactions (new ArrayList<Transaction> ());
-		try
-		{
-			template.getTransactions ().add (TransactionFactory.createCoinbase (coinbaseAddress, blk.getHeight () + 1, chain));
-		}
-		catch ( ValidationException e )
-		{
-			log.error ("Can not create coinbase ", e);
-		}
-		List<Transaction> feeOrder = new ArrayList<Transaction> ();
-		feeOrder.addAll (mineable.values ());
-		Collections.sort (feeOrder, new Comparator<Transaction> ()
-		{
-			@Override
-			public int compare (Transaction arg0, Transaction arg1)
-			{
-				return 0;
-			}
-		});
-
-		template.computeHash ();
 	}
 }

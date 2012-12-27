@@ -484,6 +484,22 @@ public abstract class CachedBlockStore implements BlockStore
 		return rows;
 	}
 
+	public long getPeriodLength (String previousHash, int reviewPeriod)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			CachedBlock cachedPrevious = cachedBlocks.get (previousHash);
+
+			return computePeriodLength (cachedPrevious, cachedPrevious.getTime (), reviewPeriod);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
 	private static class TransactionContext
 	{
 		Blk block;
@@ -571,15 +587,9 @@ public abstract class CachedBlockStore implements BlockStore
 
 			if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
 			{
-				CachedBlock c = null;
-				CachedBlock p = cachedPrevious;
-				for ( int i = 0; i < chain.getDifficultyReviewBlocks () - 1; ++i )
-				{
-					c = p;
-					p = c.getPrevious ();
-				}
+				long periodLength = computePeriodLength (cachedPrevious, prev.getCreateTime (), chain.getDifficultyReviewBlocks ());
 
-				long next = Difficulty.getNextTarget (prev.getCreateTime () - p.getTime (), prev.getDifficultyTarget (), chain.getTargetBlockTime ());
+				long next = Difficulty.getNextTarget (periodLength, prev.getDifficultyTarget (), chain.getTargetBlockTime ());
 				if ( chain.isProduction () && next != b.getDifficultyTarget () )
 				{
 					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
@@ -830,6 +840,22 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 			});
 		}
+	}
+
+	private long computePeriodLength (CachedBlock cachedPrevious, long previousTime, int reviewPeriod)
+	{
+		long periodLength = previousTime;
+
+		CachedBlock c = null;
+		CachedBlock p = cachedPrevious;
+		for ( int i = 0; i < reviewPeriod - 1; ++i )
+		{
+			c = p;
+			p = c.getPrevious ();
+		}
+		periodLength -= p.getTime ();
+
+		return periodLength;
 	}
 
 	private void resolveInputs (TxOutCache resolvedInputs, int blockHeight, Tx t) throws ValidationException

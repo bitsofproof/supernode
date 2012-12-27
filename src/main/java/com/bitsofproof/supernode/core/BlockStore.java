@@ -31,6 +31,8 @@ public interface BlockStore
 
 	public String getPreviousBlockHash (String hash);
 
+	public long getPeriodLength (String previousHash, int reviewPeriod);
+
 	public List<String> getLocator ();
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
