@@ -192,27 +192,24 @@ public class TxHandler implements TrunkListener
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
-				List<String> dropped = new ArrayList<String> ();
-
-				for ( String blockHash : removedBlocks )
+				synchronized ( unconfirmed )
 				{
-					Blk blk = network.getStore ().getBlock (blockHash);
-					synchronized ( unconfirmed )
+					List<String> dropped = new ArrayList<String> ();
+
+					for ( String blockHash : removedBlocks )
 					{
+						Blk blk = network.getStore ().getBlock (blockHash);
 						for ( Tx tx : blk.getTransactions () )
 						{
 							if ( cacheTransaction (tx) )
 							{
-								removedBlocks.add (tx.getHash ());
+								dropped.add (tx.getHash ());
 							}
 						}
 					}
-				}
-				for ( String blockHash : addedBlocks )
-				{
-					Blk blk = network.getStore ().getBlock (blockHash);
-					synchronized ( unconfirmed )
+					for ( String blockHash : addedBlocks )
 					{
+						Blk blk = network.getStore ().getBlock (blockHash);
 						for ( Tx tx : blk.getTransactions () )
 						{
 							unconfirmed.remove (tx.getHash ());
@@ -222,12 +219,12 @@ public class TxHandler implements TrunkListener
 							}
 						}
 					}
-				}
-				for ( String o : dropped )
-				{
-					if ( !unconfirmed.containsKey (o) )
+					for ( String o : dropped )
 					{
-						sendTransaction (unconfirmed.get (o), null);
+						if ( !unconfirmed.containsKey (o) )
+						{
+							sendTransaction (unconfirmed.get (o), null);
+						}
 					}
 				}
 			}
