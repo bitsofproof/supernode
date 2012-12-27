@@ -35,12 +35,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ChainParameter;
 import com.bitsofproof.supernode.api.Difficulty;
+import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionFactory;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class BlockTemplater implements TrunkListener, TransactionListener
 {
@@ -48,12 +51,14 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private final List<TemplateListener> templateListener = new ArrayList<TemplateListener> ();
 
-	private final Map<String, Transaction> mineable = new HashMap<String, Transaction> ();
+	private final Map<String, Tx> mineable = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
 	private final Block template = new Block ();
 
+	private static final int MAX_BLOCK_SIZE = 1000000;
+	private static final int MAX_BLOCK_SIGOPS = 20000;
+
 	private String coinbaseAddress;
-	private long minimumFee;
 
 	private final ChainParameter chain;
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
@@ -74,11 +79,6 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		this.coinbaseAddress = coinbaseAddress;
 	}
 
-	public void setMinimumFee (long minimumFee)
-	{
-		this.minimumFee = minimumFee;
-	}
-
 	public BlockTemplater (BitcoinNetwork network, TxHandler txhandler)
 	{
 		this.network = network;
@@ -93,28 +93,24 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			{
 				feedWorker ();
 			}
-		}, 1L, 1L, TimeUnit.SECONDS);
+		}, 60L, 1L, TimeUnit.SECONDS);
 	}
 
 	public void feedWorker ()
 	{
-		if ( template.getHash () == null )
-		{
-			return;
-		}
-		synchronized ( template )
-		{
-			updateTemplate ();
+		log.trace ("Compiling new work...");
+		updateTemplate ();
 
-			for ( TemplateListener listener : templateListener )
-			{
-				listener.workOn (template);
-			}
+		for ( TemplateListener listener : templateListener )
+		{
+			listener.workOn (template);
 		}
+		log.trace ("Sent new work...");
 	}
 
 	private void updateTemplate ()
 	{
+		template.setVersion (2);
 		template.setCreateTime (System.currentTimeMillis () / 1000);
 		template.setDifficultyTarget (nextDifficulty);
 		template.setNonce (0);
@@ -128,17 +124,115 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		{
 			log.error ("Can not create coinbase ", e);
 		}
-		List<Transaction> feeOrder = new ArrayList<Transaction> ();
-		feeOrder.addAll (mineable.values ());
-		Collections.sort (feeOrder, new Comparator<Transaction> ()
+
+		List<Tx> dependencyOrder = new ArrayList<Tx> ();
+		final Comparator<Tx> dependencyComparator = new Comparator<Tx> ()
 		{
 			@Override
-			public int compare (Transaction arg0, Transaction arg1)
+			public int compare (Tx a, Tx b)
 			{
+				for ( TxIn in : b.getInputs () )
+				{
+					if ( in.getSourceHash ().equals (a.getHash ()) )
+					{
+						return -1;
+					}
+				}
+				for ( TxIn in : a.getInputs () )
+				{
+					if ( in.getSourceHash ().equals (b.getHash ()) )
+					{
+						return 1;
+					}
+				}
 				return 0;
+			}
+		};
+
+		List<Tx> candidates = new ArrayList<Tx> ();
+
+		dependencyOrder.addAll (mineable.values ());
+
+		Collections.sort (dependencyOrder, dependencyComparator);
+
+		final Map<String, Long> feesOffered = new HashMap<String, Long> ();
+
+		TxOutCache resolvedInputs = new ImplementTxOutCache ();
+		for ( Tx tx : dependencyOrder )
+		{
+			try
+			{
+				network.getStore ().resolveTransactionInputs (tx, resolvedInputs);
+
+				long fee = 0;
+				for ( TxOut out : tx.getOutputs () )
+				{
+					fee -= out.getValue ();
+				}
+				for ( TxIn in : tx.getInputs () )
+				{
+					TxOut source = resolvedInputs.get (in.getSourceHash (), in.getIx ());
+					fee += source.getValue ();
+				}
+				candidates.add (tx);
+				feesOffered.put (tx.getHash (), fee);
+			}
+			catch ( ValidationException e )
+			{
+				mineable.remove (tx.getHash ());
+			}
+
+		}
+
+		Collections.sort (candidates, new Comparator<Tx> ()
+		{
+			@Override
+			public int compare (Tx a, Tx b)
+			{
+				int cmp = dependencyComparator.compare (a, b);
+				if ( cmp == 0 )
+				{
+					return (int) (feesOffered.get (a.getHash ()).longValue () - feesOffered.get (b.getHash ()).longValue ());
+				}
+				return cmp;
 			}
 		});
 
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		template.toWire (writer);
+		int blockSize = writer.toByteArray ().length;
+		int sigOpCount = 1;
+		List<Transaction> finalists = new ArrayList<Transaction> ();
+
+		for ( Tx tx : candidates )
+		{
+			writer = new WireFormat.Writer ();
+			tx.toWire (writer);
+			blockSize += writer.toByteArray ().length;
+			if ( blockSize > MAX_BLOCK_SIZE )
+			{
+				break;
+			}
+			for ( TxOut out : tx.getOutputs () )
+			{
+				try
+				{
+					sigOpCount += ScriptFormat.sigOpCount (out.getScript ());
+				}
+				catch ( ValidationException e )
+				{
+					continue;
+				}
+			}
+			if ( sigOpCount > MAX_BLOCK_SIGOPS )
+			{
+				break;
+			}
+			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			t.computeHash ();
+			finalists.add (t);
+		}
+		template.getTransactions ().addAll (finalists);
 		template.computeHash ();
 	}
 
@@ -149,11 +243,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private void addTransaction (Tx tx)
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		tx.toWire (writer);
-		Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		t.computeHash ();
-		mineable.put (t.getHash (), t);
+		mineable.put (tx.getHash (), tx);
 	}
 
 	private void removeTransaction (Tx tx)
@@ -179,50 +269,47 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
-				synchronized ( template )
+				for ( String blockHash : shortened )
 				{
-					for ( String blockHash : shortened )
+					Blk blk = network.getStore ().getBlock (blockHash);
+					boolean coinbase = true;
+					for ( Tx t : blk.getTransactions () )
 					{
-						Blk blk = network.getStore ().getBlock (blockHash);
-						boolean coinbase = true;
-						for ( Tx t : blk.getTransactions () )
+						if ( coinbase )
 						{
-							if ( coinbase )
-							{
-								coinbase = false;
-							}
-							else
-							{
-								addTransaction (t);
-							}
-						}
-					}
-					for ( final String blockHash : extended )
-					{
-						Blk blk = network.getStore ().getBlock (blockHash);
-						previousHash = blk.getHash ();
-						nextHeight = blk.getHeight () + 1;
-						if ( nextHeight % chain.getDifficultyReviewBlocks () == 0 )
-						{
-							nextDifficulty =
-									Difficulty.getNextTarget (network.getStore ().getPeriodLength (previousHash, chain.getDifficultyReviewBlocks ()),
-											blk.getDifficultyTarget (), chain.getTargetBlockTime ());
+							coinbase = false;
 						}
 						else
 						{
-							nextDifficulty = blk.getDifficultyTarget ();
+							addTransaction (t);
 						}
-						boolean coinbase = true;
-						for ( Tx t : blk.getTransactions () )
+					}
+				}
+				for ( final String blockHash : extended )
+				{
+					Blk blk = network.getStore ().getBlock (blockHash);
+					previousHash = blk.getHash ();
+					nextHeight = blk.getHeight () + 1;
+					if ( nextHeight % chain.getDifficultyReviewBlocks () == 0 )
+					{
+						nextDifficulty =
+								Difficulty.getNextTarget (network.getStore ().getPeriodLength (previousHash, chain.getDifficultyReviewBlocks ()),
+										blk.getDifficultyTarget (), chain.getTargetBlockTime ());
+					}
+					else
+					{
+						nextDifficulty = blk.getDifficultyTarget ();
+					}
+					boolean coinbase = true;
+					for ( Tx t : blk.getTransactions () )
+					{
+						if ( coinbase )
 						{
-							if ( coinbase )
-							{
-								coinbase = false;
-							}
-							else
-							{
-								removeTransaction (t);
-							}
+							coinbase = false;
+						}
+						else
+						{
+							removeTransaction (t);
 						}
 					}
 				}
