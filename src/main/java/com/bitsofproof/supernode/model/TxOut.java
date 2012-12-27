@@ -77,7 +77,7 @@ public class TxOut implements Serializable
 	private String owner3;
 
 	// indicate if available (UTXO)
-	private boolean available = true;
+	private boolean available = false;
 
 	// this is redundant but saves a join at cacheing
 	@Column (length = 64, nullable = false)

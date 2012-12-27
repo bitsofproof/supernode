@@ -484,6 +484,7 @@ public abstract class CachedBlockStore implements BlockStore
 		return rows;
 	}
 
+	@Override
 	public long getPeriodLength (String previousHash, int reviewPeriod)
 	{
 		try
@@ -778,7 +779,6 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				cachedHeads.put (head.getId (), usingHead = new CachedHead ());
 			}
-			usingHead.setLast (m);
 			usingHead.setChainWork (b.getChainWork ());
 			usingHead.setHeight (b.getHeight ());
 			usingHead.getBlocks ().add (m);
@@ -827,18 +827,24 @@ public abstract class CachedBlockStore implements BlockStore
 				addedBlocks.add (b.getHash ());
 				currentHead = usingHead;
 			}
+
+			usingHead.setLast (m);
+
 			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
-			trunkNotifyer.execute (new Runnable ()
+			if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
 			{
-				@Override
-				public void run ()
+				trunkNotifyer.execute (new Runnable ()
 				{
-					for ( TrunkListener l : trunkListener )
+					@Override
+					public void run ()
 					{
-						l.trunkUpdate (removedBlocks, addedBlocks);
+						for ( TrunkListener l : trunkListener )
+						{
+							l.trunkUpdate (removedBlocks, addedBlocks);
+						}
 					}
-				}
-			});
+				});
+			}
 		}
 	}
 
