@@ -75,11 +75,11 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			CachedBlock cb = null;
 			if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
+				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight ());
 			}
 			else
 			{
-				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime ());
+				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime (), b.getHeight ());
 			}
 			cachedBlocks.put (b.getHash (), cb);
 			CachedHead h = cachedHeads.get (b.getHead ().getId ());

@@ -8,3 +8,4 @@ target
 data
 /bcsapi_server.keystore
 /BCSAPIPASSWORD
+/derby.log

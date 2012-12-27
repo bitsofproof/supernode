@@ -192,18 +192,20 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected static class CachedBlock
 	{
-		public CachedBlock (String hash, Long id, CachedBlock previous, long time)
+		public CachedBlock (String hash, Long id, CachedBlock previous, long time, int height)
 		{
 			this.hash = hash;
 			this.id = id;
 			this.previous = previous;
 			this.time = time;
+			this.height = height;
 		}
 
 		private final String hash;
 		private final Long id;
 		private final CachedBlock previous;
 		private final long time;
+		private final int height;
 
 		public Long getId ()
 		{
@@ -223,6 +225,11 @@ public abstract class CachedBlockStore implements BlockStore
 		public String getHash ()
 		{
 			return hash;
+		}
+
+		public int getHeight ()
+		{
+			return height;
 		}
 
 		@Override
@@ -613,6 +620,11 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			Collections.reverse (pathFromTrunkToPrev);
 
+			if ( trunkBlock.getHeight () < (currentHead.getLast ().getHeight () - FORCE_TRUNK) )
+			{
+				throw new ValidationException ("Attempt to build on or create a branch too far back in history");
+			}
+
 			if ( currentHead.getLast () != cachedPrevious )
 			{
 				CachedBlock q = currentHead.getLast ();
@@ -748,7 +760,7 @@ public abstract class CachedBlockStore implements BlockStore
 			insertBlock (b);
 
 			// modify transient caches only after persistent changes
-			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime ());
+			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight ());
 			cachedBlocks.put (b.getHash (), m);
 
 			CachedHead usingHead = cachedHeads.get (head.getId ());
