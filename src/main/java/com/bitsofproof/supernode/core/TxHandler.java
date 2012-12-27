@@ -206,7 +206,7 @@ public class TxHandler implements TrunkListener
 						Blk blk = network.getStore ().getBlock (blockHash);
 						for ( Tx tx : blk.getTransactions () )
 						{
-							if ( cacheTransaction (tx) )
+							if ( cacheTransaction (tx.flatCopy ()) )
 							{
 								dropped.add (tx.getHash ());
 							}
@@ -230,7 +230,7 @@ public class TxHandler implements TrunkListener
 						{
 							Tx tx = unconfirmed.get (o);
 							sendTransaction (tx, null);
-							notifyListener (tx);
+							notifyListener (tx.flatCopy ());
 						}
 					}
 				}

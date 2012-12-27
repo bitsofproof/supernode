@@ -156,6 +156,11 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		mineable.put (t.getHash (), t);
 	}
 
+	private void removeTransaction (Tx tx)
+	{
+		mineable.remove (tx.getHash ());
+	}
+
 	@Override
 	public void onTransaction (Tx tx)
 	{
@@ -216,7 +221,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 							}
 							else
 							{
-								mineable.remove (t.getHash ());
+								removeTransaction (t);
 							}
 						}
 					}
