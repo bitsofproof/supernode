@@ -9,7 +9,6 @@ import java.util.List;
 import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
-import javax.jms.MapMessage;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
@@ -31,6 +30,7 @@ import com.bitsofproof.supernode.api.BCSAPIDirect;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
+import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.messages.BlockMessage;
@@ -488,10 +488,9 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 				}
 				try
 				{
-					MapMessage m = session.createMapMessage ();
-					m.setObject ("removed", r);
-					m.setObject ("added", a);
-					trunkProducer.send (m);
+					TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
+					ObjectMessage om = session.createObjectMessage (tu);
+					trunkProducer.send (om);
 				}
 				catch ( JMSException e )
 				{
