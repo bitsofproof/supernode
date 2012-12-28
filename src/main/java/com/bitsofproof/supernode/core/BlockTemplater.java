@@ -213,6 +213,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 					int sigOpCount = 1;
 					List<Transaction> finalists = new ArrayList<Transaction> ();
 
+					long fee = 0;
 					for ( Tx tx : candidates )
 					{
 						writer = new WireFormat.Writer ();
@@ -240,7 +241,10 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 						Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 						t.computeHash ();
 						finalists.add (t);
+						fee += feesOffered.get (t.getHash ()).longValue ();
 					}
+					template.getTransactions ().get (0).getOutputs ().get (0)
+							.setValue (template.getTransactions ().get (0).getOutputs ().get (0).getValue () + fee);
 					template.getTransactions ().addAll (finalists);
 					template.computeHash ();
 				}
