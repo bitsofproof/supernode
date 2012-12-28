@@ -25,10 +25,6 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -47,11 +43,9 @@ public class TxHandler implements TrunkListener
 
 	private final BitcoinNetwork network;
 
-	private PlatformTransactionManager transactionManager;
-
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final TxOutCache availableOutput = new ImplementTxOutCache ();
+	private TxOutCache availableOutput = null;
 
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
@@ -65,6 +59,14 @@ public class TxHandler implements TrunkListener
 		this.network = network;
 		final BlockStore store = network.getStore ();
 		store.addTrunkListener (this);
+		network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
+		{
+			@Override
+			public void run (TxOutCache cache)
+			{
+				availableOutput = new ImplementTxOutCacheDelta (cache);
+			}
+		});
 
 		network.addListener ("inv", new BitcoinMessageListener<InvMessage> ()
 		{
@@ -95,73 +97,65 @@ public class TxHandler implements TrunkListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				synchronized ( unconfirmed )
+				validateCacheAndSend (txm.getTx (), peer);
+			}
+		});
+	}
+
+	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer)
+	{
+		network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
+		{
+			@Override
+			public void run (TxOutCache cache)
+			{
+				try
 				{
-					if ( !unconfirmed.containsKey (txm.getTx ().getHash ()) )
+					boolean relay = network.getStore ().validateTransaction (t, availableOutput);
+					if ( cacheTransaction (t) )
 					{
-						try
+						if ( relay )
 						{
-							validateCacheAndSend (txm.getTx (), peer);
+							sendTransaction (t, peer);
 						}
-						catch ( ValidationException e )
+						else
 						{
-							log.trace ("Rejeting transaction " + txm.getTx ().getHash () + " from " + peer.getAddress ());
+							log.trace ("Not relaying transaction " + t.getHash ());
 						}
+						notifyListener (t);
 					}
+				}
+				catch ( ValidationException e )
+				{
+					log.trace ("Rejeting transaction " + t.getHash () + " from " + peer.getAddress ());
 				}
 			}
 		});
 	}
 
-	public void validateCacheAndSend (Tx t, BitcoinPeer peer) throws ValidationException
-	{
-		synchronized ( unconfirmed )
-		{
-			boolean relay = network.getStore ().validateTransaction (t, availableOutput);
-			if ( cacheTransaction (t) )
-			{
-				if ( relay )
-				{
-					sendTransaction (t, peer);
-				}
-				else
-				{
-					log.trace ("Not relaying transaction " + t.getHash ());
-				}
-				notifyListener (t);
-			}
-		}
-	}
-
 	public Tx getTransaction (String hash)
 	{
-		synchronized ( unconfirmed )
-		{
-			return unconfirmed.get (hash);
-		}
+		return unconfirmed.get (hash);
 	}
 
 	private boolean cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
-		synchronized ( unconfirmed )
+		if ( unconfirmed.containsKey (tx.getHash ()) )
 		{
-			if ( unconfirmed.containsKey (tx.getHash ()) )
-			{
-				return false;
-			}
+			return false;
+		}
 
-			unconfirmed.put (tx.getHash (), tx);
+		unconfirmed.put (tx.getHash (), tx);
 
-			for ( TxOut out : tx.getOutputs () )
-			{
-				availableOutput.add (out);
-			}
+		for ( TxOut out : tx.getOutputs () )
+		{
+			availableOutput.add (out);
+		}
 
-			for ( TxIn in : tx.getInputs () )
-			{
-				availableOutput.remove (in.getSourceHash (), in.getIx ());
-			}
+		for ( TxIn in : tx.getInputs () )
+		{
+			availableOutput.remove (in.getSourceHash (), in.getIx ());
 		}
 		return true;
 	}
@@ -184,62 +178,49 @@ public class TxHandler implements TrunkListener
 	{
 		for ( TransactionListener l : transactionListener )
 		{
+			// This further extends transaction and cache context
 			l.onTransaction (tx);
 		}
 	}
 
 	@Override
-	public void trunkUpdate (final List<String> removedBlocks, final List<String> addedBlocks)
+	public void trunkUpdate (final List<Blk> removedBlocks, final List<Blk> addedBlocks)
 	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-				synchronized ( unconfirmed )
-				{
-					List<String> dropped = new ArrayList<String> ();
+		// this is already running in cache and transaction context
+		List<String> dropped = new ArrayList<String> ();
 
-					for ( String blockHash : removedBlocks )
+		for ( Blk blk : removedBlocks )
+		{
+			for ( Tx tx : blk.getTransactions () )
+			{
+				if ( cacheTransaction (tx.flatCopy ()) )
+				{
+					dropped.add (tx.getHash ());
+				}
+			}
+		}
+		for ( Blk blk : addedBlocks )
+		{
+			for ( Tx tx : blk.getTransactions () )
+			{
+				if ( unconfirmed.containsKey (tx.getHash ()) )
+				{
+					unconfirmed.remove (tx.getHash ());
+					for ( TxOut o : tx.getOutputs () )
 					{
-						Blk blk = network.getStore ().getBlock (blockHash);
-						for ( Tx tx : blk.getTransactions () )
-						{
-							if ( cacheTransaction (tx.flatCopy ()) )
-							{
-								dropped.add (tx.getHash ());
-							}
-						}
-					}
-					for ( String blockHash : addedBlocks )
-					{
-						Blk blk = network.getStore ().getBlock (blockHash);
-						for ( Tx tx : blk.getTransactions () )
-						{
-							unconfirmed.remove (tx.getHash ());
-							for ( TxOut o : tx.getOutputs () )
-							{
-								availableOutput.remove (o.getTxHash (), o.getIx ());
-							}
-						}
-					}
-					for ( String o : dropped )
-					{
-						if ( unconfirmed.containsKey (o) )
-						{
-							Tx tx = unconfirmed.get (o);
-							sendTransaction (tx, null);
-							notifyListener (tx.flatCopy ());
-						}
+						availableOutput.remove (o.getTxHash (), o.getIx ());
 					}
 				}
 			}
-		});
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
+		}
+		for ( String o : dropped )
+		{
+			Tx tx = unconfirmed.get (o);
+			if ( tx != null )
+			{
+				sendTransaction (tx, null);
+				notifyListener (tx);
+			}
+		}
 	}
 }

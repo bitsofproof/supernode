@@ -462,41 +462,31 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 	}
 
 	@Override
-	public void trunkUpdate (final List<String> removed, final List<String> extended)
+	public void trunkUpdate (final List<Blk> removed, final List<Blk> extended)
 	{
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		List<Block> r = new ArrayList<Block> ();
+		List<Block> a = new ArrayList<Block> ();
+		for ( Blk blk : removed )
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-				List<Block> r = new ArrayList<Block> ();
-				List<Block> a = new ArrayList<Block> ();
-				for ( String blockHash : removed )
-				{
-					Blk blk = network.getStore ().getBlock (blockHash);
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					blk.toWire (writer);
-					r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-				}
-				for ( String blockHash : extended )
-				{
-					Blk blk = network.getStore ().getBlock (blockHash);
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					blk.toWire (writer);
-					a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-				}
-				try
-				{
-					TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
-					ObjectMessage om = session.createObjectMessage (tu);
-					trunkProducer.send (om);
-				}
-				catch ( JMSException e )
-				{
-					log.error ("Can not send JMS message ", e);
-				}
-			}
-		});
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			blk.toWire (writer);
+			r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+		}
+		for ( Blk blk : extended )
+		{
+			WireFormat.Writer writer = new WireFormat.Writer ();
+			blk.toWire (writer);
+			a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+		}
+		try
+		{
+			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
+			ObjectMessage om = session.createObjectMessage (tu);
+			trunkProducer.send (om);
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send JMS message ", e);
+		}
 	}
 }

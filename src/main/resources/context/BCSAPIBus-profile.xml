@@ -20,7 +20,6 @@
 			<ref bean="tx" />
 		</constructor-arg>
 		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">

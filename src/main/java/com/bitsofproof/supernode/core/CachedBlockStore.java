@@ -70,9 +70,23 @@ public abstract class CachedBlockStore implements BlockStore
 	private final ImplementTxOutCache cachedUTXO = new ImplementTxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
-	private final ExecutorService trunkNotifyer = Executors.newFixedThreadPool (1);
 	private final ExecutorService inputProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
+
+	@Override
+	public void runInCacheContext (CacheContextRunnable runnable)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			runnable.run (cachedUTXO);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
 
 	protected void startBatch ()
 	{
@@ -783,8 +797,8 @@ public abstract class CachedBlockStore implements BlockStore
 			usingHead.setHeight (b.getHeight ());
 			usingHead.getBlocks ().add (m);
 
-			final List<String> removedBlocks = new ArrayList<String> ();
-			final List<String> addedBlocks = new ArrayList<String> ();
+			final List<Blk> removedBlocks = new ArrayList<Blk> ();
+			final List<Blk> addedBlocks = new ArrayList<Blk> ();
 
 			if ( usingHead.getChainWork () > currentHead.getChainWork () )
 			{
@@ -795,7 +809,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					Blk block = retrieveBlock (p);
 					backwardCache (block, cachedUTXO, true);
-					removedBlocks.add (p.getHash ());
+					removedBlocks.add (block);
 					p = q;
 					q = p.previous;
 				}
@@ -814,17 +828,17 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					Blk block = retrieveBlock (cb);
 					forwardCache (block, cachedUTXO, true);
-					addedBlocks.add (cb.getHash ());
+					addedBlocks.add (block);
 				}
 
 				forwardCache (b, cachedUTXO, true);
-				addedBlocks.add (b.getHash ());
+				addedBlocks.add (b);
 				currentHead = usingHead;
 			}
 			else if ( currentHead.getLast () == cachedPrevious )
 			{
 				forwardCache (b, cachedUTXO, true);
-				addedBlocks.add (b.getHash ());
+				addedBlocks.add (b);
 				currentHead = usingHead;
 			}
 
@@ -833,17 +847,10 @@ public abstract class CachedBlockStore implements BlockStore
 			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
 			if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
 			{
-				trunkNotifyer.execute (new Runnable ()
+				for ( TrunkListener l : trunkListener )
 				{
-					@Override
-					public void run ()
-					{
-						for ( TrunkListener l : trunkListener )
-						{
-							l.trunkUpdate (removedBlocks, addedBlocks);
-						}
-					}
-				});
+					l.trunkUpdate (removedBlocks, addedBlocks);
+				}
 			}
 		}
 	}

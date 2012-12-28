@@ -62,6 +62,10 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 		if ( removed.containsKey (out.getTxHash ()) && removed.get (out.getTxHash ()).contains (out.getIx ()) )
 		{
 			removed.get (out.getTxHash ()).remove (out.getIx ());
+			if ( removed.get (out.getTxHash ()).size () == 0 )
+			{
+				removed.remove (out.getTxHash ());
+			}
 		}
 		else
 		{

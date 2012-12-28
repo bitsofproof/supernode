@@ -25,7 +25,14 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public interface BlockStore
 {
+	public interface CacheContextRunnable
+	{
+		public void run (TxOutCache cache);
+	}
+
 	public void cache (int cacheSize) throws ValidationException;
+
+	public void runInCacheContext (CacheContextRunnable runnable);
 
 	public void addTrunkListener (TrunkListener l);
 
