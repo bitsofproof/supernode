@@ -21,6 +21,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +48,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private final Map<String, Tx> mineable = Collections.synchronizedMap (new HashMap<String, Tx> ());
 
-	private final Block template = new Block ();
+	private Block template = null;
 
 	private static final int MAX_BLOCK_SIZE = 1000000;
 	private static final int MAX_BLOCK_SIGOPS = 20000;
@@ -72,23 +74,28 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 		chain = network.getChain ();
 		store.addTrunkListener (this);
 		txhandler.addTransactionListener (this);
-		/*
-		 * scheduler.scheduleAtFixedRate (new Runnable () {
-		 * 
-		 * @Override public void run () { feedWorker (); } }, 60L, 1L, TimeUnit.SECONDS);
-		 */
+		new ScheduledThreadPoolExecutor (1).scheduleAtFixedRate (new Runnable ()
+		{
+			@Override
+			public void run ()
+			{
+				feedWorker ();
+			}
+		}, 10L, 1L, TimeUnit.SECONDS);
 	}
 
 	public void feedWorker ()
 	{
-		log.trace ("Compiling new work...");
-		updateTemplate ();
-
-		for ( TemplateListener listener : templateListener )
+		if ( template != null )
 		{
-			listener.workOn (template);
+			updateTemplate ();
+
+			for ( TemplateListener listener : templateListener )
+			{
+				listener.workOn (template);
+			}
+			log.trace ("Sent new work...");
 		}
-		log.trace ("Sent new work...");
 	}
 
 	private void updateTemplate ()
@@ -98,138 +105,149 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			@Override
 			public void run (TxOutCache cache)
 			{
-				TxOutCache availableOutput = new ImplementTxOutCacheDelta (cache);
-
-				template.setVersion (2);
-				template.setCreateTime (System.currentTimeMillis () / 1000);
-				template.setDifficultyTarget (nextDifficulty);
-				template.setNonce (0);
-				template.setPreviousHash (previousHash);
-				template.setTransactions (new ArrayList<Transaction> ());
 				try
 				{
-					template.getTransactions ().add (TransactionFactory.createCoinbase (coinbaseAddress, nextHeight, chain));
-				}
-				catch ( ValidationException e )
-				{
-					log.error ("Can not create coinbase ", e);
-				}
+					log.trace ("Compiling new work...");
 
-				List<Tx> dependencyOrder = new ArrayList<Tx> ();
-				final Comparator<Tx> dependencyComparator = new Comparator<Tx> ()
-				{
-					@Override
-					public int compare (Tx a, Tx b)
-					{
-						for ( TxIn in : b.getInputs () )
-						{
-							if ( in.getSourceHash ().equals (a.getHash ()) )
-							{
-								return -1;
-							}
-						}
-						for ( TxIn in : a.getInputs () )
-						{
-							if ( in.getSourceHash ().equals (b.getHash ()) )
-							{
-								return 1;
-							}
-						}
-						return 0;
-					}
-				};
+					TxOutCache availableOutput = new ImplementTxOutCacheDelta (cache);
 
-				List<Tx> candidates = new ArrayList<Tx> ();
-
-				synchronized ( mineable )
-				{
-					dependencyOrder.addAll (mineable.values ());
-				}
-
-				Collections.sort (dependencyOrder, dependencyComparator);
-
-				final Map<String, Long> feesOffered = new HashMap<String, Long> ();
-
-				for ( Tx tx : dependencyOrder )
-				{
+					template.setVersion (2);
+					template.setCreateTime (System.currentTimeMillis () / 1000);
+					template.setDifficultyTarget (nextDifficulty);
+					template.setNonce (0);
+					template.setPreviousHash (previousHash);
+					template.setTransactions (new ArrayList<Transaction> ());
 					try
 					{
-						network.getStore ().resolveTransactionInputs (tx, availableOutput);
-
-						long fee = 0;
-						for ( TxOut out : tx.getOutputs () )
-						{
-							availableOutput.add (out);
-
-							fee -= out.getValue ();
-						}
-						for ( TxIn in : tx.getInputs () )
-						{
-							TxOut source = availableOutput.get (in.getSourceHash (), in.getIx ());
-
-							availableOutput.remove (in.getSourceHash (), in.getIx ());
-
-							fee += source.getValue ();
-						}
-						candidates.add (tx);
-						feesOffered.put (tx.getHash (), fee);
+						template.getTransactions ().add (TransactionFactory.createCoinbase (coinbaseAddress, nextHeight, chain));
 					}
 					catch ( ValidationException e )
 					{
-						mineable.remove (tx.getHash ());
+						log.error ("Can not create coinbase ", e);
 					}
-				}
 
-				Collections.sort (candidates, new Comparator<Tx> ()
-				{
-					@Override
-					public int compare (Tx a, Tx b)
+					List<Tx> dependencyOrder = new ArrayList<Tx> ();
+					final Comparator<Tx> dependencyComparator = new Comparator<Tx> ()
 					{
-						int cmp = dependencyComparator.compare (a, b);
-						if ( cmp == 0 )
+						@Override
+						public int compare (Tx a, Tx b)
 						{
-							return (int) (feesOffered.get (a.getHash ()).longValue () - feesOffered.get (b.getHash ()).longValue ());
+							for ( TxIn in : b.getInputs () )
+							{
+								if ( in.getSourceHash ().equals (a.getHash ()) )
+								{
+									return -1;
+								}
+							}
+							for ( TxIn in : a.getInputs () )
+							{
+								if ( in.getSourceHash ().equals (b.getHash ()) )
+								{
+									return 1;
+								}
+							}
+							return 0;
 						}
-						return cmp;
-					}
-				});
+					};
 
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				template.toWire (writer);
-				int blockSize = writer.toByteArray ().length;
-				int sigOpCount = 1;
-				List<Transaction> finalists = new ArrayList<Transaction> ();
+					List<Tx> candidates = new ArrayList<Tx> ();
 
-				for ( Tx tx : candidates )
-				{
-					writer = new WireFormat.Writer ();
-					tx.toWire (writer);
-					blockSize += writer.toByteArray ().length;
-					if ( blockSize > MAX_BLOCK_SIZE )
+					synchronized ( mineable )
 					{
-						break;
+						dependencyOrder.addAll (mineable.values ());
 					}
-					for ( TxOut out : tx.getOutputs () )
+
+					Collections.sort (dependencyOrder, dependencyComparator);
+
+					final Map<String, Long> feesOffered = new HashMap<String, Long> ();
+
+					for ( Tx tx : dependencyOrder )
 					{
 						try
 						{
-							sigOpCount += ScriptFormat.sigOpCount (out.getScript ());
+							network.getStore ().resolveTransactionInputs (tx, availableOutput);
+
+							long fee = 0;
+							for ( TxOut out : tx.getOutputs () )
+							{
+								availableOutput.add (out);
+
+								fee -= out.getValue ();
+							}
+							for ( TxIn in : tx.getInputs () )
+							{
+								TxOut source = availableOutput.get (in.getSourceHash (), in.getIx ());
+
+								availableOutput.remove (in.getSourceHash (), in.getIx ());
+
+								fee += source.getValue ();
+							}
+							candidates.add (tx);
+							feesOffered.put (tx.getHash (), fee);
 						}
 						catch ( ValidationException e )
 						{
-							continue;
+							mineable.remove (tx.getHash ());
 						}
 					}
-					if ( sigOpCount > MAX_BLOCK_SIGOPS )
+
+					Collections.sort (candidates, new Comparator<Tx> ()
 					{
-						break;
+						@Override
+						public int compare (Tx a, Tx b)
+						{
+							int cmp = dependencyComparator.compare (a, b);
+							if ( cmp == 0 )
+							{
+								return (int) (feesOffered.get (a.getHash ()).longValue () - feesOffered.get (b.getHash ()).longValue ());
+							}
+							return cmp;
+						}
+					});
+
+					template.computeHash ();
+
+					WireFormat.Writer writer = new WireFormat.Writer ();
+					template.toWire (writer);
+					int blockSize = writer.toByteArray ().length;
+					int sigOpCount = 1;
+					List<Transaction> finalists = new ArrayList<Transaction> ();
+
+					for ( Tx tx : candidates )
+					{
+						writer = new WireFormat.Writer ();
+						tx.toWire (writer);
+						blockSize += writer.toByteArray ().length;
+						if ( blockSize > MAX_BLOCK_SIZE )
+						{
+							break;
+						}
+						for ( TxOut out : tx.getOutputs () )
+						{
+							try
+							{
+								sigOpCount += ScriptFormat.sigOpCount (out.getScript ());
+							}
+							catch ( ValidationException e )
+							{
+								continue;
+							}
+						}
+						if ( sigOpCount > MAX_BLOCK_SIGOPS )
+						{
+							break;
+						}
+						Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						t.computeHash ();
+						finalists.add (t);
 					}
-					Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-					t.computeHash ();
-					finalists.add (t);
+					template.getTransactions ().addAll (finalists);
+					template.computeHash ();
 				}
-				template.getTransactions ().addAll (finalists);
-				template.computeHash ();
+				catch ( Exception e )
+				{
+					log.error ("Could not create work", e);
+				}
 			}
 		});
 
@@ -290,6 +308,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 					mineable.remove (t.getHash ());
 				}
 			}
+			template = new Block ();
 		}
 	}
 }
