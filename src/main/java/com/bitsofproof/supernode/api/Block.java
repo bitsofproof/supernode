@@ -23,7 +23,7 @@ import java.util.List;
 
 public class Block implements Serializable, Cloneable
 {
-	private static final long serialVersionUID = 8656709442771257759L;
+	private static final long serialVersionUID = 2846027750944390897L;
 
 	private String hash;
 	private long version;
@@ -33,6 +33,27 @@ public class Block implements Serializable, Cloneable
 	private long difficultyTarget;
 	private long nonce;
 	List<Transaction> transactions;
+
+	@Override
+	public Block clone ()
+	{
+		Block c = new Block ();
+		c.hash = hash;
+		c.version = version;
+		c.previousHash = previousHash;
+		c.merkleRoot = merkleRoot;
+		c.difficultyTarget = difficultyTarget;
+		c.nonce = nonce;
+		if ( transactions != null )
+		{
+			c.transactions = new ArrayList<Transaction> (transactions.size ());
+			for ( Transaction t : transactions )
+			{
+				c.transactions.add (t.clone ());
+			}
+		}
+		return c;
+	}
 
 	public String getHash ()
 	{
@@ -231,4 +252,5 @@ public class Block implements Serializable, Cloneable
 		toWire (writer);
 		return ByteUtils.toHex (writer.toByteArray ());
 	}
+
 }
