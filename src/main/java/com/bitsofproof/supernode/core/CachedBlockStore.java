@@ -399,10 +399,7 @@ public abstract class CachedBlockStore implements BlockStore
 					inventory.remove (limit);
 				}
 				curr = prev;
-				if ( prev != null )
-				{
-					prev = curr.getPrevious ();
-				}
+				prev = curr.getPrevious ();
 			} while ( prev != null );
 			return inventory;
 		}
