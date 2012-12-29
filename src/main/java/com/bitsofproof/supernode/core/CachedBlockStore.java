@@ -389,7 +389,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			do
 			{
-				if ( locator.contains (curr.getHash ()) )
+				if ( locator.contains (curr.getHash ()) || curr.getHeight () < 1 )
 				{
 					break;
 				}
