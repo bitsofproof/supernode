@@ -403,7 +403,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					prev = curr.getPrevious ();
 				}
-			} while ( curr != null );
+			} while ( prev != null );
 			return inventory;
 		}
 		finally
