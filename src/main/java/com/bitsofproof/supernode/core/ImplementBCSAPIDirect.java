@@ -6,17 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.jms.Connection;
-import javax.jms.Destination;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
-import javax.jms.Session;
-
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -30,135 +19,25 @@ import com.bitsofproof.supernode.api.BCSAPIDirect;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
-import com.bitsofproof.supernode.api.TrunkUpdateMessage;
-import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
-import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, TransactionListener, TemplateListener
+public class ImplementBCSAPIDirect implements BCSAPIDirect
 {
-	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
+	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPIDirect.class);
 
-	private final BitcoinNetwork network;
 	private final BlockStore store;
 	private final TxHandler txhandler;
 
 	private PlatformTransactionManager transactionManager;
-	private Connection connection;
-	private Session session;
 
-	private String brokerURL;
-	private String user;
-	private String password;
-
-	private MessageProducer transactionProducer;
-	private MessageProducer trunkProducer;
-	private MessageProducer templateProducer;
-
-	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
+	public ImplementBCSAPIDirect (BlockStore store, TxHandler txHandler)
 	{
-		this.network = network;
 		this.txhandler = txHandler;
-		this.store = network.getStore ();
-
-		store.addTrunkListener (this);
-		txHandler.addTransactionListener (this);
-		blockTemplater.addTemplateListener (this);
-	}
-
-	private void addMessageListener (String topic, MessageListener listener) throws JMSException
-	{
-		Destination destination = session.createTopic (topic);
-		MessageConsumer consumer = session.createConsumer (destination);
-		consumer.setMessageListener (listener);
-	}
-
-	public void init ()
-	{
-		try
-		{
-			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
-			connection = connectionFactory.createConnection ();
-			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-			transactionProducer = session.createProducer (session.createTopic ("transaction"));
-			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			templateProducer = session.createProducer (session.createTopic ("work"));
-			addMessageListener ("newTransaction", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					ObjectMessage o = (ObjectMessage) arg0;
-					try
-					{
-						sendTransaction ((Transaction) o.getObject ());
-					}
-					catch ( ValidationException e )
-					{
-						log.trace ("Rejected invalid transaction ", e);
-					}
-					catch ( JMSException e )
-					{
-						log.trace ("Rejected invalid transaction", e);
-					}
-				}
-			});
-			addMessageListener ("newBlock", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					ObjectMessage o = (ObjectMessage) arg0;
-					try
-					{
-						sendBlock ((Block) o.getObject ());
-					}
-					catch ( ValidationException e )
-					{
-						log.trace ("Rejected invalid block ", e);
-					}
-					catch ( JMSException e )
-					{
-						log.trace ("Rejected invalid block", e);
-					}
-				}
-			});
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Error creating JMS producer", e);
-		}
-	}
-
-	public void destroy ()
-	{
-		try
-		{
-			session.close ();
-			connection.close ();
-		}
-		catch ( JMSException e )
-		{
-		}
-	}
-
-	public void setBrokerURL (String brokerURL)
-	{
-		this.brokerURL = brokerURL;
-	}
-
-	public void setUser (String user)
-	{
-		this.user = user;
-	}
-
-	public void setPassword (String password)
-	{
-		this.password = password;
+		this.store = store;
 	}
 
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
@@ -197,17 +76,25 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		try
 		{
 			log.trace ("get transaction " + hash);
+			Tx tx = txhandler.getTransaction (hash);
 			final WireFormat.Writer writer = new WireFormat.Writer ();
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			if ( tx == null )
 			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
+				new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 				{
-					status.setRollbackOnly ();
-					Tx t = store.getTransaction (hash);
-					t.toWire (writer);
-				}
-			});
+					@Override
+					protected void doInTransactionWithoutResult (TransactionStatus status)
+					{
+						status.setRollbackOnly ();
+						Tx t = store.getTransaction (hash);
+						t.toWire (writer);
+					}
+				});
+			}
+			else
+			{
+				tx.toWire (writer);
+			}
 			return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		}
 		finally
@@ -259,39 +146,6 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		finally
 		{
 			log.trace ("get balance returned");
-		}
-	}
-
-	public void sendTransaction (Transaction transaction) throws ValidationException
-	{
-		log.trace ("send transaction " + transaction.getHash ());
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		transaction.toWire (writer);
-		Tx t = new Tx ();
-		t.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		txhandler.validateCacheAndSend (t, null);
-	}
-
-	public void sendBlock (Block block) throws ValidationException
-	{
-		log.trace ("send block " + block.getHash ());
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		block.toWire (writer);
-		Blk b = new Blk ();
-		b.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		try
-		{
-			store.storeBlock (b);
-			for ( BitcoinPeer p : network.getConnectPeers () )
-			{
-				BlockMessage bm = (BlockMessage) p.createMessage ("block");
-				bm.setBlock (b);
-				p.send (bm);
-			}
-		}
-		catch ( ValidationException e )
-		{
-			log.info ("Attempt to send invalid block " + b.getHash ());
 		}
 	}
 
@@ -427,66 +281,6 @@ public class ImplementBCSAPI implements BCSAPIDirect, TrunkListener, Transaction
 		finally
 		{
 			log.trace ("get account statement returned");
-		}
-	}
-
-	@Override
-	public void onTransaction (Tx tx)
-	{
-		try
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			tx.toWire (writer);
-			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			ObjectMessage m = session.createObjectMessage (t);
-			transactionProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
-	}
-
-	@Override
-	public void workOn (Block template)
-	{
-		try
-		{
-			ObjectMessage m = session.createObjectMessage (template);
-			templateProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
-	}
-
-	@Override
-	public void trunkUpdate (final List<Blk> removed, final List<Blk> extended)
-	{
-		List<Block> r = new ArrayList<Block> ();
-		List<Block> a = new ArrayList<Block> ();
-		for ( Blk blk : removed )
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-		}
-		for ( Blk blk : extended )
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-		}
-		try
-		{
-			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
-			ObjectMessage om = session.createObjectMessage (tu);
-			trunkProducer.send (om);
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not send JMS message ", e);
 		}
 	}
 }

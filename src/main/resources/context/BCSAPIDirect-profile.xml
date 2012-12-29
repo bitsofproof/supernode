@@ -12,9 +12,18 @@
 	<description>supernode spring assembly (c) 2012 Tamas Blummer
 		tamas@bitsofproof.com</description>
 
+	<bean id="BCSAPIDirect" class="com.bitsofproof.supernode.core.ImplementBCSAPIDirect">
+		<constructor-arg>
+			<ref bean="store"/>
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="tx"/>
+		</constructor-arg>
+	</bean>
+	
 	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
 		<property name="serviceName" value="BCSAPI" />
-		<property name="service" ref="BCSAPI" />
+		<property name="service" ref="BCSAPIDirect" />
 		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
 		<property name="registryPort" value="1199" />
 		<property name="serverSocketFactory">

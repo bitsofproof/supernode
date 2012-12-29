@@ -22,7 +22,7 @@
 		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
 	</bean>
 
-	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">
+	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPIBus" init-method="init" destroy-method="destroy">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork"/>
 		</constructor-arg>
@@ -32,7 +32,6 @@
 		<constructor-arg>
 			<ref bean="blocktemplater"/>
 		</constructor-arg>
-		<property name="transactionManager" ref="transactionManager" />
 		<property name="brokerURL" value="ssl://localhost:61613"/>
 		<property name="user" value="admin"/>
 		<property name="password" value="password"/>
