@@ -172,11 +172,15 @@ public abstract class P2P
 		@Override
 		public boolean equals (Object obj)
 		{
-			if (obj == this)
+			if ( obj == this )
+			{
 				return true;
-			if (obj == null)
+			}
+			if ( obj == null )
+			{
 				return false;
-			
+			}
+
 			return obj instanceof Peer && address.equals (((Peer) obj).address);
 		}
 
@@ -694,7 +698,7 @@ public abstract class P2P
 								discover ();
 								log.trace ("Runqueue size " + runqueue.size ());
 							}
-						} while ( !address.getAddress ().isReachable (500) );
+						} while ( !address.getAddress ().isReachable (1000) );
 
 						final Peer peer = createPeer (address, true);
 						peer.unsolicited = false;
