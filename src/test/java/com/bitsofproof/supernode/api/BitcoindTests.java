@@ -47,13 +47,14 @@ public class BitcoindTests
 	}
 
 	@Test
-	public void base58encode () throws IOException, JSONException
+	public void base58encode () throws IOException, JSONException, ValidationException
 	{
 		JSONArray testData = readObjectArray (BASE58_ENCODE);
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			JSONArray test = testData.getJSONArray (i);
 			assertTrue (AddressConverter.toBase58 (ByteUtils.fromHex (test.getString (0))).equals (test.get (1)));
+			assertTrue (ByteUtils.toHex (AddressConverter.fromBase58 (test.getString (1))).equals (test.get (0)));
 		}
 	}
 }
