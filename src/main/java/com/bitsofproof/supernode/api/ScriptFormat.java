@@ -2,6 +2,7 @@ package com.bitsofproof.supernode.api;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -529,14 +530,51 @@ public class ScriptFormat
 		{
 			String token = tokenizer.nextToken ();
 			ScriptFormat.Opcode op = ScriptFormat.Opcode.OP_FALSE;
-			if ( token.startsWith ("OP_") )
+			if ( token.startsWith ("0x") )
 			{
-				op = ScriptFormat.Opcode.valueOf (token);
-				writer.writeByte (op.o);
+				byte[] data = ByteUtils.fromHex (token.substring (2));
+				writer.writeBytes (data);
+			}
+			else if ( token.startsWith ("'") )
+			{
+				String str = token.substring (1, token.length () - 1);
+				try
+				{
+					writer.writeData (str.getBytes ("US-ASCII"));
+				}
+				catch ( UnsupportedEncodingException e )
+				{
+				}
+			}
+			else if ( (token.startsWith ("-") || token.startsWith ("0") || token.startsWith ("1") || token.startsWith ("2") || token.startsWith ("3")
+					|| token.startsWith ("4") || token.startsWith ("5") || token.startsWith ("6") || token.startsWith ("7") || token.startsWith ("8") || token
+						.startsWith ("9"))
+					&& !token.equals ("1NEGATE")
+					&& !token.equals ("2DROP")
+					&& !token.equals ("2DUP")
+					&& !token.equals ("3DUP")
+					&& !token.equals ("2OVER")
+					&& !token.equals ("2ROT")
+					&& !token.equals ("2SWAP")
+					&& !token.equals ("1ADD")
+					&& !token.equals ("1SUB")
+					&& !token.equals ("2MUL") && !token.equals ("2DIV") && !token.equals ("2SWAP") )
+			{
+				try
+				{
+					writer.writeData (new Number (Long.valueOf (token).longValue ()).toByteArray ());
+				}
+				catch ( NumberFormatException e )
+				{
+				}
+				catch ( ValidationException e )
+				{
+				}
 			}
 			else
 			{
-				writer.writeData (ByteUtils.fromHex (token));
+				op = ScriptFormat.Opcode.valueOf ("OP_" + token);
+				writer.writeByte (op.o);
 			}
 		}
 		return writer.toByteArray ();
@@ -558,16 +596,16 @@ public class ScriptFormat
 			{
 				if ( token.data.length > 0 )
 				{
-					b.append (ByteUtils.toHex (token.data));
+					b.append ("0x" + ByteUtils.toHex (token.data));
 				}
 				else
 				{
-					b.append ("OP_FALSE");
+					b.append ("FALSE");
 				}
 			}
 			else
 			{
-				b.append (token.op);
+				b.append (token.op.toString ().substring (2));
 			}
 		}
 		return b.toString ();
