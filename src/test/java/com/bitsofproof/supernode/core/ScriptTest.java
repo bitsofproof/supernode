@@ -18,6 +18,8 @@ package com.bitsofproof.supernode.core;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,11 +28,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.BeforeClass;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.junit.Test;
 
 import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
@@ -38,75 +40,35 @@ import com.bitsofproof.supernode.model.Tx;
 
 public class ScriptTest
 {
-	@BeforeClass
-	public static void setup ()
+	private final String SCRIPT_VALID = "script_valid.json";
+
+	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
+		InputStream input = this.getClass ().getResource ("/" + resource).openStream ();
+		StringBuffer content = new StringBuffer ();
+		byte[] buffer = new byte[1024];
+		int len;
+		while ( (len = input.read (buffer)) > 0 )
+		{
+			byte[] s = new byte[len];
+			System.arraycopy (buffer, 0, s, 0, len);
+			content.append (new String (buffer, "UTF-8"));
+		}
+		return new JSONArray (content.toString ());
 	}
 
 	@Test
-	public void testGenesis () throws ValidationException
+	public void bitcoindValidScriptTest () throws IOException, JSONException
 	{
-		assertTrue (ScriptFormat
-				.parse (ByteUtils
-						.fromHex ("4104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac"))
-				.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG);
-	}
-
-	@Test
-	public void stringTest () throws ValidationException
-	{
-		assertTrue (ScriptFormat.toReadable (ScriptFormat.fromReadable ("abcd")).equals ("abcd"));
-
-		assertTrue (ScriptFormat
-				.toReadable (
-						ScriptFormat
-								.fromReadable ("3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda"))
-				.equals (
-						"3044022002dbe4b5a2fbb521e4dc5fbec75fd960651a2754b03d0871b8c965469be50fa702206d97421fb7ea9359b63e48c2108223284b9a71560bd8182469b9039228d7b3d701 0295bf727111acdeab8778284f02b768d1e21acbcbae42090cc49aaa3cc6d19cda"));
-	}
-
-	@Test
-	public void dataPushTest ()
-	{
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("0a0b0c 0a0b0c OP_EQUAL")));
-	}
-
-	@Test
-	public void ifTest ()
-	{
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_1 OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_IF OP_1 OP_ELSE OP_1 OP_ENDIF")));
-		assertFalse (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_IF OP_FALSE OP_ELSE OP_1 OP_ENDIF OP_EQUAL")));
-		assertFalse (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_IF OP_1 OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat
-				.fromReadable ("OP_1 OP_NOTIF OP_FALSE OP_IF OP_FALSE OP_ENDIF OP_ELSE OP_1 OP_ENDIF OP_1 OP_EQUAL")));
-	}
-
-	@Test
-	public void stackTest ()
-	{
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_TOALTSTACK OP_FALSE OP_FROMALTSTACK OP_1 OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_2 OP_SWAP OP_1 OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_2 OP_3 OP_1 OP_PICK OP_2 OP_EQUAL")));
-	}
-
-	@Test
-	public void mathTest ()
-	{
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_2 OP_ADD OP_3 OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_3 OP_DUP OP_SUB OP_FALSE OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_5 OP_SUB OP_ABS OP_4 OP_EQUAL")));
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_1 OP_5 OP_MAX OP_2 OP_MIN OP_2 OP_EQUAL")));
-	}
-
-	@Test
-	public void digestTest ()
-	{
-		byte[] b = { 'H', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!' };
-		byte[] h = Hash.sha256 (b);
-
-		assertTrue (new ScriptEvaluation ().evaluateSingleScript (ScriptFormat.fromReadable ("OP_PUSHDATA1 0" + Integer.toString (b.length, 16) + " "
-				+ ByteUtils.toHex (b) + " OP_SHA256 OP_PUSHDATA1 20 " + ByteUtils.toHex (h) + " OP_EQUAL")));
+		JSONArray testData = readObjectArray (SCRIPT_VALID);
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			JSONArray test = testData.getJSONArray (i);
+			ScriptEvaluation script = new ScriptEvaluation ();
+			System.out.println (i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
+			script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (0).toString ()));
+			assertTrue (script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (1).toString ())));
+		}
 	}
 
 	@Test

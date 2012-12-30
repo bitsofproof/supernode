@@ -170,7 +170,19 @@ public class ScriptEvaluation
 		{
 			while ( tokenizer.hashMoreElements () )
 			{
-				ScriptFormat.Token token = tokenizer.nextToken ();
+				ScriptFormat.Token token = null;
+				try
+				{
+					token = tokenizer.nextToken ();
+				}
+				catch ( ValidationException e )
+				{
+					if ( ignoreStack.peek () )
+					{
+						continue;
+					}
+					throw e;
+				}
 				if ( token.data != null )
 				{
 					if ( !ignoreStack.peek () )
