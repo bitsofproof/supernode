@@ -36,14 +36,19 @@ public class AddressConverter
 
 	public static String toBase58 (byte[] b)
 	{
+		if ( b.length == 0 )
+		{
+			return "";
+		}
+
 		int lz = 0;
-		while ( b[lz] == 0 && lz < b.length )
+		while ( lz < b.length && b[lz] == 0 )
 		{
 			++lz;
 		}
 
 		StringBuffer s = new StringBuffer ();
-		BigInteger n = new BigInteger (b);
+		BigInteger n = new BigInteger (1, b);
 		while ( n.compareTo (BigInteger.ZERO) > 0 )
 		{
 			BigInteger[] r = n.divideAndRemainder (BigInteger.valueOf (58));
