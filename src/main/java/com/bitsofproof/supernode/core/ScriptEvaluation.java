@@ -108,14 +108,18 @@ public class ScriptEvaluation
 		this.source = source;
 	}
 
-	@SuppressWarnings ("unchecked")
 	public boolean evaluate (boolean production) throws ValidationException
 	{
-		Stack<byte[]> copy = new Stack<byte[]> ();
-
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
 		byte[] s2 = source.getScript ();
 
+		return evaluateScripts (production, s1, s2);
+	}
+
+	@SuppressWarnings ("unchecked")
+	public boolean evaluateScripts (boolean production, byte[] s1, byte[] s2) throws ValidationException
+	{
+		Stack<byte[]> copy = new Stack<byte[]> ();
 		if ( !evaluateSingleScript (s1) )
 		{
 			return false;
@@ -160,6 +164,11 @@ public class ScriptEvaluation
 	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluateSingleScript (byte[] script)
 	{
+		if ( script.length == 0 )
+		{
+			return false;
+		}
+
 		ScriptFormat.Tokenizer tokenizer = new ScriptFormat.Tokenizer (script);
 		int codeseparator = 0;
 
@@ -217,7 +226,7 @@ public class ScriptEvaluation
 						ignoreStack.pop ();
 						break;
 					case OP_ELSE:
-						ignoreStack.push (!ignoreStack.pop ());
+						ignoreStack.push (!ignoreStack.pop () || ignoreStack.peek ());
 						break;
 				}
 				if ( !ignoreStack.peek () )

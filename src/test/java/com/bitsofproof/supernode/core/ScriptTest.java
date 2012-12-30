@@ -41,6 +41,7 @@ import com.bitsofproof.supernode.model.Tx;
 public class ScriptTest
 {
 	private final String SCRIPT_VALID = "script_valid.json";
+	private final String SCRIPT_INVALID = "script_invalid.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
@@ -58,16 +59,30 @@ public class ScriptTest
 	}
 
 	@Test
-	public void bitcoindValidScriptTest () throws IOException, JSONException
+	public void bitcoindValidScriptTest () throws IOException, JSONException, ValidationException
 	{
 		JSONArray testData = readObjectArray (SCRIPT_VALID);
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
-			System.out.println (i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
+			System.out.println ("valid " + i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
+			assertTrue (script.evaluateScripts (true, ScriptFormat.fromReadable (test.get (0).toString ()),
+					ScriptFormat.fromReadable (test.get (1).toString ())));
+		}
+	}
+
+	@Test
+	public void bitcoindInvalidScriptTest () throws IOException, JSONException
+	{
+		JSONArray testData = readObjectArray (SCRIPT_INVALID);
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			JSONArray test = testData.getJSONArray (i);
+			ScriptEvaluation script = new ScriptEvaluation ();
+			System.out.println ("invalid " + i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
 			script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (0).toString ()));
-			assertTrue (script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (1).toString ())));
+			assertFalse (script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (1).toString ())));
 		}
 	}
 
