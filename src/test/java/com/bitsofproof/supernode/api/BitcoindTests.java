@@ -33,7 +33,7 @@ public class BitcoindTests
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
-		InputStream input = this.getClass ().getResource ("/" + BASE58_ENCODE).openStream ();
+		InputStream input = this.getClass ().getResource ("/" + resource).openStream ();
 		StringBuffer content = new StringBuffer ();
 		byte[] buffer = new byte[1024];
 		int len;
