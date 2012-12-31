@@ -723,7 +723,7 @@ public class ScriptFormat
 		while ( tokenizer.hashMoreElements () )
 		{
 			ScriptFormat.Token token = tokenizer.nextToken ();
-			if ( token.data != null && token.data.length == sig.length )
+			if ( token.data != null && token.op.o <= 75 && token.data.length == sig.length )
 			{
 				boolean found = true;
 				for ( int i = 0; i < sig.length; ++i )
