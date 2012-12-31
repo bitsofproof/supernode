@@ -370,10 +370,6 @@ public class ScriptFormat
 
 		public Number (long n) throws ValidationException
 		{
-			if ( Math.abs (n) > 0xffffffffL )
-			{
-				throw new ValidationException ("Number overflow in script");
-			}
 			if ( n == 0 )
 			{
 				w = new byte[0];
@@ -385,19 +381,19 @@ public class ScriptFormat
 				negative = true;
 				n = -n;
 			}
-			if ( n <= 0xff )
+			if ( n <= 0x7f )
 			{
 				w = new byte[] { (byte) (n & 0xff) };
 				w[0] |= negative ? 0x80 : 0;
 				return;
 			}
-			if ( n <= 0xffff )
+			if ( n <= 0x7fff )
 			{
 				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff) };
 				w[1] |= negative ? 0x80 : 0;
 				return;
 			}
-			if ( n <= 0xffffff )
+			if ( n <= 0x7fffff )
 			{
 				w = new byte[] { (byte) (n & 0xff), (byte) ((n >> 8) & 0xff), (byte) ((n >> 16) & 0xff) };
 				w[2] |= negative ? 0x80 : 0;
@@ -477,7 +473,7 @@ public class ScriptFormat
 	{
 		for ( ScriptFormat.Token t : parse (script) )
 		{
-			if ( t.op.o > 75 || t.data != null )
+			if ( t.op.o > 78 )
 			{
 				return false;
 			}
@@ -549,6 +545,7 @@ public class ScriptFormat
 			else if ( (token.startsWith ("-") || token.startsWith ("0") || token.startsWith ("1") || token.startsWith ("2") || token.startsWith ("3")
 					|| token.startsWith ("4") || token.startsWith ("5") || token.startsWith ("6") || token.startsWith ("7") || token.startsWith ("8") || token
 						.startsWith ("9"))
+					&& !token.equals ("0NOTEQUAL")
 					&& !token.equals ("1NEGATE")
 					&& !token.equals ("2DROP")
 					&& !token.equals ("2DUP")
@@ -557,12 +554,19 @@ public class ScriptFormat
 					&& !token.equals ("2ROT")
 					&& !token.equals ("2SWAP")
 					&& !token.equals ("1ADD")
-					&& !token.equals ("1SUB")
-					&& !token.equals ("2MUL") && !token.equals ("2DIV") && !token.equals ("2SWAP") )
+					&& !token.equals ("1SUB") && !token.equals ("2MUL") && !token.equals ("2DIV") && !token.equals ("2SWAP") )
 			{
 				try
 				{
-					writer.writeData (new Number (Long.valueOf (token).longValue ()).toByteArray ());
+					long n = Long.valueOf (token).longValue ();
+					if ( n >= 1 && n <= 16 )
+					{
+						writer.writeByte (Opcode.OP_1.o + (int) n - 1);
+					}
+					else
+					{
+						writer.writeData (new Number (n).toByteArray ());
+					}
 				}
 				catch ( NumberFormatException e )
 				{
@@ -600,7 +604,7 @@ public class ScriptFormat
 				}
 				else
 				{
-					b.append ("FALSE");
+					b.append ("0x0");
 				}
 			}
 			else
@@ -611,57 +615,85 @@ public class ScriptFormat
 		return b.toString ();
 	}
 
-	public static boolean isPayToScriptHash (byte[] script) throws ValidationException
+	public static boolean isPayToScriptHash (byte[] script)
 	{
-		List<ScriptFormat.Token> parsed = parse (script);
-		return parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
-				&& parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL;
-	}
-
-	public static boolean isPayToKey (byte[] script) throws ValidationException
-	{
-		List<ScriptFormat.Token> parsed = parse (script);
-		return parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG;
-	}
-
-	public static boolean isPayToAddress (byte[] script) throws ValidationException
-	{
-		List<ScriptFormat.Token> parsed = parse (script);
-		return parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
-				&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
-				&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG;
-	}
-
-	public static boolean isMultiSig (byte[] script) throws ValidationException
-	{
-		List<ScriptFormat.Token> parsed = parse (script);
-		int nkeys = -1;
-		int nvotes = -1;
-		for ( int i = 0; i < parsed.size (); ++i )
+		try
 		{
-			if ( parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIG || parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIGVERIFY )
+			List<ScriptFormat.Token> parsed = parse (script);
+			return parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && (parsed.get (1).data != null && parsed.get (1).op.o <= 75)
+					&& parsed.get (1).data.length == 20 && parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL;
+		}
+		catch ( ValidationException e )
+		{
+			return false;
+		}
+	}
+
+	public static boolean isPayToKey (byte[] script)
+	{
+		try
+		{
+			List<ScriptFormat.Token> parsed = parse (script);
+			return parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG;
+		}
+		catch ( ValidationException e )
+		{
+			return false;
+		}
+	}
+
+	public static boolean isPayToAddress (byte[] script)
+	{
+		try
+		{
+			List<ScriptFormat.Token> parsed = parse (script);
+			return parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
+					&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
+					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG;
+		}
+		catch ( ValidationException e )
+		{
+			return false;
+		}
+	}
+
+	public static boolean isMultiSig (byte[] script)
+	{
+		try
+		{
+			List<ScriptFormat.Token> parsed = parse (script);
+			int nkeys = -1;
+			int nvotes = -1;
+			for ( int i = 0; i < parsed.size (); ++i )
 			{
-				nkeys = parsed.get (i - 1).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
-				nvotes = parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
-				break;
+				if ( parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIG || parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIGVERIFY )
+				{
+					nkeys = parsed.get (i - 1).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
+					nvotes = parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
+					break;
+				}
+			}
+			if ( nkeys <= 0 || nkeys > 3 )
+			{
+				return false;
+			}
+			if ( parsed.size () != nkeys + 3 )
+			{
+				return false;
+			}
+			if ( nvotes < 0 || nvotes > nkeys )
+			{
+				return false;
 			}
 		}
-		if ( nkeys <= 0 || nkeys > 3 )
-		{
-			return false;
-		}
-		if ( parsed.size () != nkeys + 3 )
-		{
-			return false;
-		}
-		if ( nvotes < 0 || nvotes > nkeys )
+		catch ( ValidationException e )
 		{
 			return false;
 		}
 		return true;
 	}
 
-	public static boolean isStandard (byte[] script) throws ValidationException
+	public static boolean isStandard (byte[] script)
 	{
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script) || isMultiSig (script);
 	}
