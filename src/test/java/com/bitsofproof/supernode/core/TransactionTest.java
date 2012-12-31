@@ -121,16 +121,47 @@ public class TransactionTest
 				Tx tx = Tx.fromWireDump (test.getString (test.length () - 2));
 				boolean evaluatePSH = test.getBoolean (test.length () - 1);
 				int inr = 0;
-				for ( TxIn in : tx.getInputs () )
+				if ( tx.getHash ().equals ("0ea8dd5d0a5d36350fc1ed1ade25df63c6dc98f966b7b0546335bd966bfe3399") )
 				{
-					String sourceHash = in.getSourceHash ();
-					int sourceIx = in.getIx ().intValue ();
-					byte[] sourceScript = inputMap.get (sourceHash).get (sourceIx);
-					TxOut source = new TxOut ();
-					source.setScript (sourceScript);
-					in.setSource (source);
-					System.out.println ("invalid :" + test.toString ());
-					assertFalse (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+					// this tests for negative output not relevant here.
+					continue;
+				}
+				if ( tx.getHash ().equals ("6a6b568d403db6c0ff04d018035d406280f283f023726718e63411abe4d31363") )
+				{
+					// this tests for duplicate input not relevant here.
+					continue;
+				}
+				if ( tx.getHash ().equals ("bf93c6fe89592b2508f2876c6200d5ffadbd741e18c57b5e9fe5eff3101137b3") )
+				{
+					// this tests for coinbase script length not relevant here.
+					continue;
+				}
+				if ( tx.getHash ().equals ("d12fb29f9b00aaa9e89f5c34a27f43dd73f729aa796b36da0738b97f00587d0b") )
+				{
+					// this tests for coinbase script length not relevant here.
+					continue;
+				}
+				if ( tx.getHash ().equals ("c14dd04aa024d7befe2ea903084636e971ca576245b91b5fe5f20141537f8cad") )
+				{
+					// this tests for coinbase use is not relevant here.
+					continue;
+				}
+				if ( tx.getOutputs () == null )
+				{
+					continue; // this tested for before script eval
+				}
+				if ( tx.getInputs () != null ) // this is tested for before script evaluation
+				{
+					for ( TxIn in : tx.getInputs () )
+					{
+						String sourceHash = in.getSourceHash ();
+						int sourceIx = in.getIx ().intValue ();
+						byte[] sourceScript = inputMap.get (sourceHash).get (sourceIx);
+						TxOut source = new TxOut ();
+						source.setScript (sourceScript);
+						in.setSource (source);
+						assertFalse (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+					}
 				}
 			}
 		}
