@@ -997,7 +997,7 @@ public abstract class CachedBlockStore implements BlockStore
 				throw new TransactionValidationException ("Transaction version must be 1", t);
 			}
 		}
-		if ( t.getLockTime () != 0 )
+		if ( t.getLockTime () != 0 && chain.isProduction () )
 		{
 			throw new TransactionValidationException ("Transaction must be locked", t);
 		}
