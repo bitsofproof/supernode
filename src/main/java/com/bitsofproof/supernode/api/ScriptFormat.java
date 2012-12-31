@@ -577,7 +577,14 @@ public class ScriptFormat
 			}
 			else
 			{
-				op = ScriptFormat.Opcode.valueOf ("OP_" + token);
+				if ( token.startsWith ("OP_") )
+				{
+					op = ScriptFormat.Opcode.valueOf (token);
+				}
+				else
+				{
+					op = ScriptFormat.Opcode.valueOf ("OP_" + token);
+				}
 				writer.writeByte (op.o);
 			}
 		}
