@@ -159,7 +159,6 @@ public class ScriptEvaluation
 			{
 				copy = (Stack<byte[]>) stack.clone ();
 			}
-			alt = new Stack<byte[]> ();
 			if ( !evaluateSingleScript (s2) )
 			{
 				return false;
@@ -204,6 +203,8 @@ public class ScriptEvaluation
 		{
 			return false;
 		}
+
+		alt = new Stack<byte[]> ();
 
 		ScriptFormat.Tokenizer tokenizer = new ScriptFormat.Tokenizer (script);
 		int codeseparator = 0;
