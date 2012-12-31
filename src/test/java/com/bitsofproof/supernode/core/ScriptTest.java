@@ -55,6 +55,7 @@ public class ScriptTest
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
+			System.out.println ("valid script " + test.toString ());
 			assertTrue (script.evaluateScripts (false, ScriptFormat.fromReadable (test.get (0).toString ()),
 					ScriptFormat.fromReadable (test.get (1).toString ())));
 		}
@@ -68,6 +69,7 @@ public class ScriptTest
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
+			System.out.println ("invalid script " + test.toString ());
 			assertFalse (script.evaluateScripts (false, ScriptFormat.fromReadable (test.get (0).toString ()),
 					ScriptFormat.fromReadable (test.get (1).toString ())));
 		}

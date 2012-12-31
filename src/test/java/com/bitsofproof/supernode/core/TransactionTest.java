@@ -74,6 +74,7 @@ public class TransactionTest
 						in.put (ix, script);
 					}
 				}
+				System.out.println ("valid tx " + test.toString ());
 				Tx tx = Tx.fromWireDump (test.getString (test.length () - 2));
 				boolean evaluatePSH = test.getBoolean (test.length () - 1);
 				int inr = 0;
@@ -120,6 +121,7 @@ public class TransactionTest
 				}
 				Tx tx = Tx.fromWireDump (test.getString (test.length () - 2));
 				boolean evaluatePSH = test.getBoolean (test.length () - 1);
+				System.out.println ("invalid tx " + test.toString ());
 				int inr = 0;
 				if ( tx.getHash ().equals ("0ea8dd5d0a5d36350fc1ed1ade25df63c6dc98f966b7b0546335bd966bfe3399") )
 				{
