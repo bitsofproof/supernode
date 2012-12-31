@@ -1119,7 +1119,7 @@ public abstract class CachedBlockStore implements BlockStore
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final TxIn i : t.getInputs () )
 			{
-				if ( i.getSequence () != 0xFFFFFFFFL )
+				if ( i.getSequence () != 0xFFFFFFFFL && chain.isProduction () )
 				{
 					throw new TransactionValidationException ("Input sequencing is disabled ", t);
 				}
