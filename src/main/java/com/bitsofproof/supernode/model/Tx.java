@@ -44,7 +44,8 @@ public class Tx implements Serializable
 	private static final long serialVersionUID = 1L;
 
 	public static final long COIN = 100000000;
-	public static final long MAX_MONEY = 2099999997690000L;
+	public static final long MAX_MONEY = 21000000L * COIN;
+	// it should actually be 2099999997690000L, but above is in bitcoind
 
 	@Id
 	@GeneratedValue

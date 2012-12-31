@@ -3,14 +3,20 @@ package com.bitsofproof.supernode.core;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.junit.Test;
 
 import com.bitsofproof.supernode.api.ByteUtils;
@@ -18,9 +24,118 @@ import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
 public class TransactionTest
 {
+	private final String TX_VALID = "tx_valid.json";
+	private final String TX_INVALID = "tx_invalid.json";
+
+	private JSONArray readObjectArray (String resource) throws IOException, JSONException
+	{
+		InputStream input = this.getClass ().getResource ("/" + resource).openStream ();
+		StringBuffer content = new StringBuffer ();
+		byte[] buffer = new byte[1024];
+		int len;
+		while ( (len = input.read (buffer)) > 0 )
+		{
+			byte[] s = new byte[len];
+			System.arraycopy (buffer, 0, s, 0, len);
+			content.append (new String (buffer, "UTF-8"));
+		}
+		return new JSONArray (content.toString ());
+	}
+
+	@Test
+	public void bitcoindValidTxTest () throws IOException, JSONException
+	{
+		JSONArray testData = readObjectArray (TX_VALID);
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			JSONArray test = testData.getJSONArray (i);
+			if ( test.length () != 1 )
+			{
+				Map<String, HashMap<Integer, byte[]>> inputMap = new HashMap<String, HashMap<Integer, byte[]>> ();
+				for ( int j = 0; j < test.length () - 2; ++j )
+				{
+					JSONArray inputs = test.getJSONArray (j);
+					for ( int k = 0; k < inputs.length (); ++k )
+					{
+						JSONArray input = inputs.getJSONArray (k);
+						String prevHash = input.getString (0);
+						Integer ix = input.getInt (1);
+						byte[] script = ScriptFormat.fromReadable (input.getString (2));
+						HashMap<Integer, byte[]> in = inputMap.get (prevHash);
+						if ( in == null )
+						{
+							inputMap.put (prevHash, in = new HashMap<Integer, byte[]> ());
+						}
+						in.put (ix, script);
+					}
+				}
+				Tx tx = Tx.fromWireDump (test.getString (test.length () - 2));
+				boolean evaluatePSH = test.getBoolean (test.length () - 1);
+				int inr = 0;
+				for ( TxIn in : tx.getInputs () )
+				{
+					String sourceHash = in.getSourceHash ();
+					int sourceIx = in.getIx ().intValue ();
+					byte[] sourceScript = inputMap.get (sourceHash).get (sourceIx);
+					TxOut source = new TxOut ();
+					source.setScript (sourceScript);
+					in.setSource (source);
+					assertTrue (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+				}
+			}
+		}
+	}
+
+	@Test
+	public void bitcoindInvalidTxTest () throws IOException, JSONException
+	{
+		JSONArray testData = readObjectArray (TX_INVALID);
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			JSONArray test = testData.getJSONArray (i);
+			if ( test.length () != 1 )
+			{
+				Map<String, HashMap<Integer, byte[]>> inputMap = new HashMap<String, HashMap<Integer, byte[]>> ();
+				for ( int j = 0; j < test.length () - 2; ++j )
+				{
+					JSONArray inputs = test.getJSONArray (j);
+					for ( int k = 0; k < inputs.length (); ++k )
+					{
+						JSONArray input = inputs.getJSONArray (k);
+						String prevHash = input.getString (0);
+						Integer ix = input.getInt (1);
+						byte[] script = ScriptFormat.fromReadable (input.getString (2));
+						HashMap<Integer, byte[]> in = inputMap.get (prevHash);
+						if ( in == null )
+						{
+							inputMap.put (prevHash, in = new HashMap<Integer, byte[]> ());
+						}
+						in.put (ix, script);
+					}
+				}
+				Tx tx = Tx.fromWireDump (test.getString (test.length () - 2));
+				boolean evaluatePSH = test.getBoolean (test.length () - 1);
+				int inr = 0;
+				for ( TxIn in : tx.getInputs () )
+				{
+					String sourceHash = in.getSourceHash ();
+					int sourceIx = in.getIx ().intValue ();
+					byte[] sourceScript = inputMap.get (sourceHash).get (sourceIx);
+					TxOut source = new TxOut ();
+					source.setScript (sourceScript);
+					in.setSource (source);
+					System.out.println ("invalid :" + test.toString ());
+					assertFalse (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+				}
+			}
+		}
+	}
+
 	@Test
 	public void transactionTest () throws ValidationException, InterruptedException, ExecutionException
 	{

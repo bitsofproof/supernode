@@ -145,7 +145,7 @@ public class ScriptEvaluation
 	}
 
 	@SuppressWarnings ("unchecked")
-	public boolean evaluateScripts (boolean production, byte[] s1, byte[] s2)
+	public boolean evaluateScripts (boolean validatePSH, byte[] s1, byte[] s2)
 	{
 		try
 		{
@@ -154,7 +154,7 @@ public class ScriptEvaluation
 			{
 				return false;
 			}
-			boolean psh = ScriptFormat.isPayToScriptHash (s2);
+			boolean psh = ScriptFormat.isPayToScriptHash (s2) && validatePSH;
 			if ( psh )
 			{
 				copy = (Stack<byte[]>) stack.clone ();
@@ -175,13 +175,6 @@ public class ScriptEvaluation
 				}
 				stack = copy;
 				byte[] script = stack.pop ();
-				if ( production )
-				{
-					if ( !ScriptFormat.isStandard (script) )
-					{
-						return false;
-					}
-				}
 				if ( !evaluateSingleScript (script) )
 				{
 					return false;
