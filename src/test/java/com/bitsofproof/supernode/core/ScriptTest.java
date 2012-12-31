@@ -59,7 +59,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void bitcoindValidScriptTest () throws IOException, JSONException, ValidationException
+	public void bitcoindValidScriptTest () throws IOException, JSONException
 	{
 		JSONArray testData = readObjectArray (SCRIPT_VALID);
 		for ( int i = 0; i < testData.length (); ++i )
@@ -67,7 +67,7 @@ public class ScriptTest
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
 			System.out.println ("valid " + i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
-			assertTrue (script.evaluateScripts (true, ScriptFormat.fromReadable (test.get (0).toString ()),
+			assertTrue (script.evaluateScripts (false, ScriptFormat.fromReadable (test.get (0).toString ()),
 					ScriptFormat.fromReadable (test.get (1).toString ())));
 		}
 	}
@@ -81,8 +81,8 @@ public class ScriptTest
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
 			System.out.println ("invalid " + i + ": " + test.get (0).toString () + " | " + test.get (1).toString ());
-			script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (0).toString ()));
-			assertFalse (script.evaluateSingleScript (ScriptFormat.fromReadable (test.get (1).toString ())));
+			assertFalse (script.evaluateScripts (false, ScriptFormat.fromReadable (test.get (0).toString ()),
+					ScriptFormat.fromReadable (test.get (1).toString ())));
 		}
 	}
 

@@ -27,6 +27,7 @@ import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Tx;
@@ -36,10 +37,23 @@ import com.bitsofproof.supernode.model.TxOut;
 public class ScriptEvaluation
 {
 	private Stack<byte[]> stack = new Stack<byte[]> ();
-	private final Stack<byte[]> alt = new Stack<byte[]> ();
+	private Stack<byte[]> alt = new Stack<byte[]> ();
 	private final Tx tx;
 	private TxOut source;
 	private int inr;
+
+	private void push (byte[] data) throws ValidationException
+	{
+		if ( data.length > 520 )
+		{
+			throw new ValidationException ("Push > 520 bytes");
+		}
+		stack.push (data);
+		if ( stack.size () + alt.size () > 1000 )
+		{
+			throw new ValidationException ("Stack overflow");
+		}
+	}
 
 	private void pushInt (long n) throws ValidationException
 	{
@@ -49,6 +63,20 @@ public class ScriptEvaluation
 	private long popInt () throws ValidationException
 	{
 		return new ScriptFormat.Number (stack.pop ()).intValue ();
+	}
+
+	private long popOperand () throws ValidationException
+	{
+		if ( stack.peek ().length > 4 )
+		{
+			throw new ValidationException ("Operand overflow");
+		}
+		long n = new ScriptFormat.Number (stack.pop ()).intValue ();
+		if ( n > 2147483647 || n < -2147483647 )
+		{
+			throw new ValidationException ("Operand overflow");
+		}
+		return n;
 	}
 
 	private static boolean equals (byte[] a, byte[] b)
@@ -108,7 +136,7 @@ public class ScriptEvaluation
 		this.source = source;
 	}
 
-	public boolean evaluate (boolean production) throws ValidationException
+	public boolean evaluate (boolean production)
 	{
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
 		byte[] s2 = source.getScript ();
@@ -117,46 +145,54 @@ public class ScriptEvaluation
 	}
 
 	@SuppressWarnings ("unchecked")
-	public boolean evaluateScripts (boolean production, byte[] s1, byte[] s2) throws ValidationException
+	public boolean evaluateScripts (boolean production, byte[] s1, byte[] s2)
 	{
-		Stack<byte[]> copy = new Stack<byte[]> ();
-		if ( !evaluateSingleScript (s1) )
+		try
 		{
-			return false;
-		}
-		boolean psh = ScriptFormat.isPayToScriptHash (s1);
-		if ( psh )
-		{
-			copy = (Stack<byte[]>) stack.clone ();
-		}
-		if ( !evaluateSingleScript (s2) )
-		{
-			return false;
-		}
-		if ( popBoolean () == false )
-		{
-			return false;
-		}
-		if ( psh )
-		{
-			if ( !ScriptFormat.isPushOnly (s2) )
-			{
-				throw new ValidationException ("input script for PTH should be push only.");
-			}
-			stack = copy;
-			byte[] script = stack.pop ();
-			if ( production )
-			{
-				if ( !ScriptFormat.isStandard (script) )
-				{
-					return false;
-				}
-			}
-			if ( !evaluateSingleScript (script) )
+			Stack<byte[]> copy = new Stack<byte[]> ();
+			if ( !evaluateSingleScript (s1) )
 			{
 				return false;
 			}
-			return popBoolean ();
+			boolean psh = ScriptFormat.isPayToScriptHash (s2);
+			if ( psh )
+			{
+				copy = (Stack<byte[]>) stack.clone ();
+			}
+			alt = new Stack<byte[]> ();
+			if ( !evaluateSingleScript (s2) )
+			{
+				return false;
+			}
+			if ( popBoolean () == false )
+			{
+				return false;
+			}
+			if ( psh )
+			{
+				if ( !ScriptFormat.isPushOnly (s1) )
+				{
+					throw new ValidationException ("input script for PTH should be push only.");
+				}
+				stack = copy;
+				byte[] script = stack.pop ();
+				if ( production )
+				{
+					if ( !ScriptFormat.isStandard (script) )
+					{
+						return false;
+					}
+				}
+				if ( !evaluateSingleScript (script) )
+				{
+					return false;
+				}
+				return popBoolean ();
+			}
+		}
+		catch ( Exception e )
+		{
+			return false;
 		}
 		return true;
 	}
@@ -164,7 +200,7 @@ public class ScriptEvaluation
 	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluateSingleScript (byte[] script)
 	{
-		if ( script.length == 0 )
+		if ( script.length == 0 || script.length > 10000 )
 		{
 			return false;
 		}
@@ -175,6 +211,8 @@ public class ScriptEvaluation
 		Stack<Boolean> ignoreStack = new Stack<Boolean> ();
 		ignoreStack.push (false);
 
+		int ifdepth = 0;
+		int opcodeCount = 0;
 		try
 		{
 			while ( tokenizer.hashMoreElements () )
@@ -183,6 +221,10 @@ public class ScriptEvaluation
 				try
 				{
 					token = tokenizer.nextToken ();
+					if ( token.op.ordinal () > Opcode.OP_16.ordinal () && ++opcodeCount > 201 )
+					{
+						return false;
+					}
 				}
 				catch ( ValidationException e )
 				{
@@ -196,13 +238,44 @@ public class ScriptEvaluation
 				{
 					if ( !ignoreStack.peek () )
 					{
-						stack.push (token.data);
+						push (token.data);
+					}
+					else
+					{
+						if ( token.data.length > 520 )
+						{
+							return false;
+						}
 					}
 					continue;
 				}
 				switch ( token.op )
 				{
+					case OP_CAT:
+					case OP_SUBSTR:
+					case OP_LEFT:
+					case OP_RIGHT:
+						return false;
+					case OP_INVERT:
+					case OP_AND:
+					case OP_OR:
+					case OP_XOR:
+						return false;
+					case OP_VERIF:
+					case OP_VERNOTIF:
+						return false;
+					case OP_MUL:
+					case OP_DIV:
+					case OP_MOD:
+					case OP_LSHIFT:
+					case OP_RSHIFT:
+						return false;
+					case OP_2MUL:
+					case OP_2DIV:
+						return false;
+
 					case OP_IF:
+						++ifdepth;
 						if ( !ignoreStack.peek () && popBoolean () )
 						{
 							ignoreStack.push (false);
@@ -213,6 +286,7 @@ public class ScriptEvaluation
 						}
 						break;
 					case OP_NOTIF:
+						++ifdepth;
 						if ( !ignoreStack.peek () && !popBoolean () )
 						{
 							ignoreStack.push (false);
@@ -223,6 +297,7 @@ public class ScriptEvaluation
 						}
 						break;
 					case OP_ENDIF:
+						--ifdepth;
 						ignoreStack.pop ();
 						break;
 					case OP_ELSE:
@@ -251,7 +326,7 @@ public class ScriptEvaluation
 							pushInt (-1);
 							break;
 						case OP_FALSE:
-							stack.push (new byte[0]);
+							push (new byte[0]);
 							break;
 						case OP_1:
 							pushInt (1);
@@ -301,16 +376,11 @@ public class ScriptEvaluation
 						case OP_16:
 							pushInt (16);
 							break;
-						case OP_VER:
-						case OP_RESERVED:
-						case OP_VERIF:
-						case OP_VERNOTIF:
-							return false;
 						case OP_TOALTSTACK:
 							alt.push (stack.pop ());
 							break;
 						case OP_FROMALTSTACK:
-							stack.push (alt.pop ());
+							push (alt.pop ());
 							break;
 						case OP_2DROP:
 							stack.pop ();
@@ -320,10 +390,10 @@ public class ScriptEvaluation
 						{
 							byte[] a1 = stack.pop ();
 							byte[] a2 = stack.pop ();
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a2);
-							stack.push (a1);
+							push (a2);
+							push (a1);
+							push (a2);
+							push (a1);
 						}
 							break;
 						case OP_3DUP:
@@ -331,12 +401,12 @@ public class ScriptEvaluation
 							byte[] a1 = stack.pop ();
 							byte[] a2 = stack.pop ();
 							byte[] a3 = stack.pop ();
-							stack.push (a3);
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a3);
-							stack.push (a2);
-							stack.push (a1);
+							push (a3);
+							push (a2);
+							push (a1);
+							push (a3);
+							push (a2);
+							push (a1);
 						}
 							break;
 						case OP_2OVER:
@@ -345,12 +415,12 @@ public class ScriptEvaluation
 							byte[] a2 = stack.pop ();
 							byte[] a3 = stack.pop ();
 							byte[] a4 = stack.pop ();
-							stack.push (a4);
-							stack.push (a3);
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a4);
-							stack.push (a3);
+							push (a4);
+							push (a3);
+							push (a2);
+							push (a1);
+							push (a4);
+							push (a3);
 						}
 							break;
 						case OP_2ROT:
@@ -361,12 +431,12 @@ public class ScriptEvaluation
 							byte[] a4 = stack.pop ();
 							byte[] a5 = stack.pop ();
 							byte[] a6 = stack.pop ();
-							stack.push (a4);
-							stack.push (a3);
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a6);
-							stack.push (a5);
+							push (a4);
+							push (a3);
+							push (a2);
+							push (a1);
+							push (a6);
+							push (a5);
 						}
 							break;
 						case OP_2SWAP:
@@ -375,16 +445,16 @@ public class ScriptEvaluation
 							byte[] a2 = stack.pop ();
 							byte[] a3 = stack.pop ();
 							byte[] a4 = stack.pop ();
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a4);
-							stack.push (a3);
+							push (a2);
+							push (a1);
+							push (a4);
+							push (a3);
 						}
 							break;
 						case OP_IFDUP:
 							if ( peekBoolean () )
 							{
-								stack.push (stack.peek ());
+								push (stack.peek ());
 							}
 							break;
 						case OP_DEPTH:
@@ -395,29 +465,29 @@ public class ScriptEvaluation
 							break;
 						case OP_DUP:
 						{
-							stack.push (stack.peek ());
+							push (stack.peek ());
 						}
 							break;
 						case OP_NIP:
 						{
 							byte[] a1 = stack.pop ();
 							stack.pop ();
-							stack.push (a1);
+							push (a1);
 						}
 							break;
 						case OP_OVER:
 						{
 							byte[] a1 = stack.pop ();
 							byte[] a2 = stack.pop ();
-							stack.push (a2);
-							stack.push (a1);
-							stack.push (a2);
+							push (a2);
+							push (a1);
+							push (a2);
 						}
 							break;
 						case OP_PICK:
 						{
 							long n = popInt ();
-							stack.push (stack.get (stack.size () - 1 - (int) n));
+							push (stack.get (stack.size () - 1 - (int) n));
 						}
 							break;
 						case OP_ROLL:
@@ -425,46 +495,36 @@ public class ScriptEvaluation
 							long n = popInt ();
 							byte[] a = stack.get (stack.size () - 1 - (int) n);
 							stack.remove ((int) (stack.size () - 1 - n));
-							stack.push (a);
+							push (a);
 						}
 							break;
 						case OP_ROT:
 						{
 							byte[] a = stack.get (stack.size () - 1 - 2);
 							stack.remove (stack.size () - 1 - 2);
-							stack.push (a);
+							push (a);
 						}
 							break;
 						case OP_SWAP:
 						{
 							byte[] a = stack.pop ();
 							byte[] b = stack.pop ();
-							stack.push (a);
-							stack.push (b);
+							push (a);
+							push (b);
 						}
 							break;
 						case OP_TUCK:
 						{
 							byte[] a = stack.pop ();
 							byte[] b = stack.pop ();
-							stack.push (a);
-							stack.push (b);
-							stack.push (a);
+							push (a);
+							push (b);
+							push (a);
 						}
 							break;
-						case OP_CAT:
-						case OP_SUBSTR:
-						case OP_LEFT:
-						case OP_RIGHT:
-							return false;
 						case OP_SIZE:
 							pushInt (stack.peek ().length);
 							break;
-						case OP_INVERT:
-						case OP_AND:
-						case OP_OR:
-						case OP_XOR:
-							return false;
 						case OP_EQUAL:
 						case OP_EQUALVERIFY:
 						{
@@ -482,82 +542,68 @@ public class ScriptEvaluation
 							}
 						}
 							break;
+						case OP_VER:
+						case OP_RESERVED:
 						case OP_RESERVED1:
 						case OP_RESERVED2:
 							return false;
 						case OP_1ADD:// 0x8b in out 1 is added to the input.
-							pushInt (popInt () + 1);
+							pushInt (popOperand () + 1);
 							break;
 						case OP_1SUB:// 0x8c in out 1 is subtracted from the
 										// input.
-							pushInt (popInt () - 1);
+							pushInt (popOperand () - 1);
 							break;
-						case OP_2MUL:// 0x8d in out The input is multiplied by
-										// 2.
-										// Currently disabled.
-						case OP_2DIV:// 0x8e in out The input is divided by 2.
-										// Currently disabled.
-							return false;
 						case OP_NEGATE:// 0x8f in out The sign of the input is
 										// flipped.
-							pushInt (-popInt ());
+							pushInt (-popOperand ());
 							break;
 						case OP_ABS:// 0x90 in out The input is made positive.
-							pushInt (Math.abs (popInt ()));
+							pushInt (Math.abs (popOperand ()));
 							break;
 						case OP_NOT: // 0x91 in out If the input is 0 or 1, it
 										// is
 										// flipped. Otherwise the output will be
 										// 0.
-							pushInt (popInt () == 0 ? 1 : 0);
+							pushInt (popOperand () == 0 ? 1 : 0);
 							break;
 						case OP_0NOTEQUAL:// 0x92 in out Returns 0 if the input
 											// is
 											// 0. 1 otherwise.
-							pushInt (popInt () == 0 ? 0 : 1);
+							pushInt (popOperand () == 0 ? 0 : 1);
 							break;
 						case OP_ADD:// 0x93 a b out a is added to b.
-							pushInt (popInt () + popInt ());
+							pushInt (popOperand () + popOperand ());
 							break;
 						case OP_SUB:// 0x94 a b out b is subtracted from a.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
 							pushInt (b - a);
 						}
 							break;
-						case OP_MUL:// 0x95 a b out a is multiplied by b.
-									// Currently
-									// disabled.
-						case OP_DIV: // 0x96 a b out a is divided by b.
-										// Currently
-										// disabled.
-						case OP_MOD:// 0x97 a b out Returns the remainder after
-									// dividing a by b. Currently disabled.
-						case OP_LSHIFT:// 0x98 a b out Shifts a left b bits,
-										// preserving sign. Currently disabled.
-						case OP_RSHIFT:// 0x99 a b out Shifts a right b bits,
-										// preserving sign. Currently disabled.
-							return false;
-
 						case OP_BOOLAND:// 0x9a a b out If both a and b are not
 										// 0,
 										// the output is 1. Otherwise 0.
-							pushInt (popInt () != 0 && popInt () != 0 ? 1 : 0);
+							pushInt (popOperand () != 0 && popOperand () != 0 ? 1 : 0);
 							break;
 						case OP_BOOLOR:// 0x9b a b out If a or b is not 0, the
 										// output is 1. Otherwise 0.
-							pushInt (popInt () != 0 || popInt () != 0 ? 1 : 0);
+						{
+							long a = popOperand ();
+							long b = popOperand ();
+							pushInt (a != 0 || b != 0 ? 1 : 0);
+						}
 							break;
 						case OP_NUMEQUAL:// 0x9c a b out Returns 1 if the
 											// numbers
 											// are equal, 0 otherwise.
-							pushInt (popInt () == popInt () ? 1 : 0);
+							pushInt (popOperand () == popOperand () ? 1 : 0);
 							break;
 						case OP_NUMEQUALVERIFY:// 0x9d a b out Same as
 												// OP_NUMEQUAL,
 												// but runs OP_VERIFY afterward.
-							if ( popInt () != popInt () )
+							if ( popOperand () != popOperand () )
 							{
 								return false;
 							}
@@ -565,23 +611,23 @@ public class ScriptEvaluation
 						case OP_NUMNOTEQUAL:// 0x9e a b out Returns 1 if the
 											// numbers
 											// are not equal, 0 otherwise.
-							pushInt (popInt () != popInt () ? 1 : 0);
+							pushInt (popOperand () != popOperand () ? 1 : 0);
 							break;
 
 						case OP_LESSTHAN:// 0x9f a b out Returns 1 if a is less
 											// than
 											// b, 0 otherwise.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
 							pushInt (b < a ? 1 : 0);
 						}
 							break;
 						case OP_GREATERTHAN:// 0xa0 a b out Returns 1 if a is
 											// greater than b, 0 otherwise.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
 							pushInt (b > a ? 1 : 0);
 						}
 							break;
@@ -590,8 +636,8 @@ public class ScriptEvaluation
 												// less than or equal to b, 0
 												// otherwise.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
 							pushInt (b <= a ? 1 : 0);
 						}
 							break;
@@ -601,26 +647,26 @@ public class ScriptEvaluation
 													// b, 0
 													// otherwise.
 						{
-							long a = popInt ();
-							long b = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
 							pushInt (b >= a ? 1 : 0);
 						}
 							break;
 						case OP_MIN:// 0xa3 a b out Returns the smaller of a and
 									// b.
-							pushInt (Math.min (popInt (), popInt ()));
+							pushInt (Math.min (popOperand (), popOperand ()));
 							break;
 						case OP_MAX:// 0xa4 a b out Returns the larger of a and
 									// b.
-							pushInt (Math.max (popInt (), popInt ()));
+							pushInt (Math.max (popOperand (), popOperand ()));
 							break;
 						case OP_WITHIN: // 0xa5 x min max out Returns 1 if x is
 										// within the specified range
 										// (left-inclusive), 0 otherwise.
 						{
-							long a = popInt ();
-							long b = popInt ();
-							long c = popInt ();
+							long a = popOperand ();
+							long b = popOperand ();
+							long c = popOperand ();
 							pushInt (c >= b && c < a ? 1 : 0);
 						}
 							break;
@@ -633,7 +679,7 @@ public class ScriptEvaluation
 							digest.update (data, 0, data.length);
 							byte[] hash = new byte[20];
 							digest.doFinal (hash, 0);
-							stack.push (hash);
+							push (hash);
 						}
 							break;
 						case OP_SHA1: // 0xa7 in hash The input is hashed using
@@ -642,7 +688,7 @@ public class ScriptEvaluation
 							try
 							{
 								MessageDigest a = MessageDigest.getInstance ("SHA-1");
-								stack.push (a.digest (stack.pop ()));
+								push (a.digest (stack.pop ()));
 							}
 							catch ( NoSuchAlgorithmException e )
 							{
@@ -654,7 +700,7 @@ public class ScriptEvaluation
 										// using
 										// SHA-256.
 						{
-							stack.push (Hash.sha256 (stack.pop ()));
+							push (Hash.sha256 (stack.pop ()));
 						}
 							break;
 						case OP_HASH160: // 0xa9 in hash The input is hashed
@@ -662,13 +708,13 @@ public class ScriptEvaluation
 											// first with SHA-256 and then with
 											// RIPEMD-160.
 						{
-							stack.push (Hash.keyHash (stack.pop ()));
+							push (Hash.keyHash (stack.pop ()));
 						}
 							break;
 						case OP_HASH256: // 0xaa in hash The input is hashed two
 											// times with SHA-256.
 						{
-							stack.push (Hash.hash (stack.pop ()));
+							push (Hash.hash (stack.pop ()));
 						}
 							break;
 						case OP_CODESEPARATOR: // 0xab Nothing Nothing All of
@@ -802,6 +848,10 @@ public class ScriptEvaluation
 			}
 		}
 		catch ( Exception e )
+		{
+			return false;
+		}
+		if ( ifdepth != 0 )
 		{
 			return false;
 		}
