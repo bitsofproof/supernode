@@ -618,8 +618,7 @@ public abstract class CachedBlockStore implements BlockStore
 			b.checkHash ();
 
 			BigInteger hashAsInteger = new Hash (b.getHash ()).toBigInteger ();
-			if ( chain.isProduction ()
-					&& (hashAsInteger.compareTo (BigInteger.ZERO) < 0 || hashAsInteger.compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0) )
+			if ( chain.isProduction () && hashAsInteger.compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
 			{
 				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
 			}
