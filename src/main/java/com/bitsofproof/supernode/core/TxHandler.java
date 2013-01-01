@@ -131,6 +131,8 @@ public class TxHandler implements TrunkListener
 							@Override
 							protected void doInTransactionWithoutResult (TransactionStatus status)
 							{
+								status.setRollbackOnly ();
+
 								try
 								{
 									boolean relay = network.getStore ().validateTransaction (t, availableOutput);
