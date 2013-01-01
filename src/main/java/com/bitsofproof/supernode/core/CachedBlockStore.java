@@ -35,8 +35,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.Difficulty;
@@ -58,8 +62,12 @@ public abstract class CachedBlockStore implements BlockStore
 	// not allowed to branch further back on trunk
 	private static final int FORCE_TRUNK = 100;
 	private static final long MIN_RELAY_TX_FEE = 10000;
+
 	@Autowired
 	private Chain chain;
+
+	@Autowired
+	PlatformTransactionManager transactionManager;
 
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
@@ -522,27 +530,45 @@ public abstract class CachedBlockStore implements BlockStore
 		TxOutCache resolvedInputs = new ImplementTxOutCache ();
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
-	public void storeBlock (Blk b) throws ValidationException
+	public void storeBlock (final Blk b) throws ValidationException
 	{
 		try
 		{
+			// have to lock before transaction starts and unlock after finished.
+			// otherwise updates to transient vs. persistent structures are out of sync for a
+			// concurrent tx. This does not apply to methods using MANDATORY transaction annotation
+			// context since they must have been invoked within a transaction.
 			lock.writeLock ().lock ();
 
-			startBatch ();
-			lockedStoreBlock (b);
-			endBatch ();
-		}
-		catch ( ValidationException e )
-		{
-			cancelBatch ();
-			throw e;
-		}
-		catch ( Exception e )
-		{
-			cancelBatch ();
-			throw new ValidationException ("OTHER exception " + b.toWireDump (), e);
+			ValidationException e = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
+			{
+				@Override
+				public ValidationException doInTransaction (TransactionStatus status)
+				{
+					try
+					{
+						startBatch ();
+						lockedStoreBlock (b);
+						endBatch ();
+					}
+					catch ( ValidationException e )
+					{
+						cancelBatch ();
+						return e;
+					}
+					catch ( Exception e )
+					{
+						cancelBatch ();
+						return new ValidationException ("OTHER exception " + b.toWireDump (), e);
+					}
+					return null;
+				}
+			});
+			if ( e != null )
+			{
+				throw e;
+			}
 		}
 		finally
 		{
@@ -1317,7 +1343,7 @@ public abstract class CachedBlockStore implements BlockStore
 		return retrieveBlock (cached);
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public void resolveTransactionInputs (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
@@ -1333,7 +1359,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public boolean validateTransaction (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
