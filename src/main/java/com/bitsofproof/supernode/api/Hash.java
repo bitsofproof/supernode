@@ -21,9 +21,6 @@ import java.security.NoSuchAlgorithmException;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
-
-
-
 public class Hash
 {
 	private final byte[] bytes;
@@ -110,7 +107,7 @@ public class Hash
 		byte[] hashAsNumber = new byte[32];
 		System.arraycopy (bytes, 0, hashAsNumber, 0, 32);
 		ByteUtils.reverse (hashAsNumber);
-		return new BigInteger (hashAsNumber);
+		return new BigInteger (1, hashAsNumber);
 	}
 
 	@Override
