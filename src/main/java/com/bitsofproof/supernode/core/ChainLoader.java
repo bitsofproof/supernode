@@ -273,6 +273,10 @@ public class ChainLoader
 		GetDataMessage gdm = (GetDataMessage) peer.createMessage ("getdata");
 		synchronized ( knownInventory )
 		{
+			if ( !knownInventory.containsKey (peer) )
+			{
+				return;
+			}
 			for ( KnownBlock b : knownInventory.get (peer) )
 			{
 				boolean askedElswhere = false;
