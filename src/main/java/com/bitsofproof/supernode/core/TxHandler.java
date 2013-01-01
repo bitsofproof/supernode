@@ -25,6 +25,10 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -46,12 +50,18 @@ public class TxHandler implements TrunkListener
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private TxOutCache availableOutput = null;
+	private PlatformTransactionManager transactionManager;
 
 	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
 
 	public void addTransactionListener (TransactionListener listener)
 	{
 		transactionListener.add (listener);
+	}
+
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
 	}
 
 	public TxHandler (final BitcoinNetwork network)
@@ -112,29 +122,36 @@ public class TxHandler implements TrunkListener
 			@Override
 			public void run (TxOutCache cache)
 			{
-				try
+				synchronized ( unconfirmed )
 				{
-					synchronized ( unconfirmed )
+					if ( !unconfirmed.containsKey (t.getHash ()) )
 					{
-						if ( !unconfirmed.containsKey (t.getHash ()) )
+						new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 						{
-							boolean relay = network.getStore ().validateTransaction (t, availableOutput);
-							cacheTransaction (t);
-							if ( relay )
+							@Override
+							protected void doInTransactionWithoutResult (TransactionStatus status)
 							{
-								sendTransaction (t, peer);
+								try
+								{
+									boolean relay = network.getStore ().validateTransaction (t, availableOutput);
+									cacheTransaction (t);
+									if ( relay )
+									{
+										sendTransaction (t, peer);
+									}
+									else
+									{
+										log.trace ("Not relaying transaction " + t.getHash ());
+									}
+									notifyListener (t);
+								}
+								catch ( ValidationException e )
+								{
+									log.trace ("Rejeting transaction " + t.getHash () + " from " + peer.getAddress ());
+								}
 							}
-							else
-							{
-								log.trace ("Not relaying transaction " + t.getHash ());
-							}
-							notifyListener (t);
-						}
+						});
 					}
-				}
-				catch ( ValidationException e )
-				{
-					log.trace ("Rejeting transaction " + t.getHash () + " from " + peer.getAddress ());
 				}
 			}
 		});
