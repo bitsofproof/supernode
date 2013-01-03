@@ -40,7 +40,7 @@ public class GetBlocksHandler implements BitcoinMessageListener<GetBlocksMessage
 	@Override
 	public void process (GetBlocksMessage m, BitcoinPeer peer)
 	{
-		log.trace ("received gedblocks from " + peer.getAddress ());
+		log.trace ("received getblocks from " + peer.getAddress ());
 		List<String> locator = new ArrayList<String> ();
 		for ( byte[] h : m.getHashes () )
 		{
