@@ -482,7 +482,7 @@ public class ScriptFormat
 	}
 
 	@SuppressWarnings ("incomplete-switch")
-	public static int sigOpCount (byte[] script) throws ValidationException
+	public static int sigOpCount (byte[] script, boolean accurate) throws ValidationException
 	{
 		int nsig = 0;
 		ScriptFormat.Opcode last = ScriptFormat.Opcode.OP_FALSE;
@@ -502,7 +502,7 @@ public class ScriptFormat
 					case OP_CHECKMULTISIG:
 					case OP_CHECKMULTISIGVERIFY:
 						// https://en.bitcoin.it/wiki/BIP_0016
-						if ( last.o >= 0 && last.o <= 16 )
+						if ( accurate && last.o >= 0 && last.o <= 16 )
 						{
 							nsig += last.o;
 						}
@@ -641,7 +641,8 @@ public class ScriptFormat
 		try
 		{
 			List<ScriptFormat.Token> parsed = parse (script);
-			return parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG;
+			return parsed.size () == 2 && parsed.get (0).data != null && parsed.get (0).data.length >= 33 && parsed.get (0).data.length <= 120
+					&& parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG;
 		}
 		catch ( ValidationException e )
 		{
@@ -655,7 +656,7 @@ public class ScriptFormat
 		{
 			List<ScriptFormat.Token> parsed = parse (script);
 			return parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
-					&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
+					&& parsed.get (2).data != null && parsed.get (2).data.length == 20 && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
 					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG;
 		}
 		catch ( ValidationException e )
