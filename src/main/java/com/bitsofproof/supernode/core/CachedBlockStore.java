@@ -64,7 +64,18 @@ public abstract class CachedBlockStore implements BlockStore
 	private static final long MIN_RELAY_TX_FEE = 10000;
 	private static final int COINBASE_MATURITY = 100;
 
-	private static final long LOCKTIME_THRESHOLD = 500000000;
+	private static final Map<Integer, String> checkPoints = new HashMap<Integer, String> ();
+
+	static
+	{
+		checkPoints.put (11111, "0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d");
+		checkPoints.put (33333, "000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6");
+		checkPoints.put (74000, "0000000000573993a3c9e41ce34471c079dcf5f52a0e824a81e7f953b8661a20");
+		checkPoints.put (105000, "00000000000291ce28027faea320c8d2b054b2e0fe44a773f3eefb151d6bdc97");
+		checkPoints.put (134444, "00000000000005b12ffd4cd315cd34ffd4a594f430ac814c91184a0d42d2b0fe");
+		checkPoints.put (168000, "000000000000099e61ea72015e79632f216fe6cb33d7899acb35b75c8303b763");
+		checkPoints.put (193000, "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+	}
 
 	@Autowired
 	private Chain chain;
@@ -217,13 +228,14 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected static class CachedBlock
 	{
-		public CachedBlock (String hash, Long id, CachedBlock previous, long time, int height)
+		public CachedBlock (String hash, Long id, CachedBlock previous, long time, int height, int version)
 		{
 			this.hash = hash;
 			this.id = id;
 			this.previous = previous;
 			this.time = time;
 			this.height = height;
+			this.version = version;
 		}
 
 		private final String hash;
@@ -231,6 +243,7 @@ public abstract class CachedBlockStore implements BlockStore
 		private final CachedBlock previous;
 		private final long time;
 		private final int height;
+		private final int version;
 
 		public Long getId ()
 		{
@@ -255,6 +268,11 @@ public abstract class CachedBlockStore implements BlockStore
 		public int getHeight ()
 		{
 			return height;
+		}
+
+		public int getVersion ()
+		{
+			return version;
 		}
 
 		@Override
@@ -323,6 +341,20 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		CachedBlock b = cachedBlocks.get (block);
 		return isBlockOnBranch (b, currentHead);
+	}
+
+	private boolean isSuperMajority (int minVersion, CachedBlock from, int nRequired, int nToCheck)
+	{
+		int nFound = 0;
+		for ( int i = 0; i < nToCheck && nFound < nRequired && from != null; i++ )
+		{
+			if ( from.version >= minVersion )
+			{
+				++nFound;
+			}
+			from = from.previous;
+		}
+		return (nFound >= nRequired);
 	}
 
 	@Override
@@ -587,6 +619,7 @@ public abstract class CachedBlockStore implements BlockStore
 			return;
 		}
 		log.trace ("Start storing block " + b.getHash ());
+
 		// find previous block
 		CachedBlock cachedPrevious = cachedBlocks.get (b.getPreviousHash ());
 		if ( cachedPrevious != null )
@@ -597,6 +630,11 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
 			{
 				throw new ValidationException ("Future generation attempt " + b.getHash ());
+			}
+
+			if ( chain.isProduction () && b.getVersion () < 2 && isSuperMajority (2, cachedPrevious, 950, 1000) )
+			{
+				throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
 			}
 
 			Head head;
@@ -645,6 +683,14 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 
 			b.checkHash ();
+
+			if ( chain.isProduction () && checkPoints.containsKey (b.getHeight ()) )
+			{
+				if ( !checkPoints.get (b.getHeight ()).equals (b.getHash ()) )
+				{
+					throw new ValidationException ("Checkpoint missed");
+				}
+			}
 
 			BigInteger hashAsInteger = new Hash (b.getHash ()).toBigInteger ();
 			if ( chain.isProduction () && hashAsInteger.compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
@@ -723,7 +769,7 @@ public abstract class CachedBlockStore implements BlockStore
 						}
 						try
 						{
-							if ( b.getVersion () == 2 && tcontext.coinbase )
+							if ( b.getVersion () == 2 )
 							{
 								try
 								{
@@ -839,7 +885,9 @@ public abstract class CachedBlockStore implements BlockStore
 			insertBlock (b);
 
 			// modify transient caches only after persistent changes
-			CachedBlock m = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight ());
+			CachedBlock m =
+					new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (),
+							(int) b.getVersion ());
 			cachedBlocks.put (b.getHash (), m);
 
 			CachedHead usingHead = cachedHeads.get (head.getId ());
@@ -1072,28 +1120,6 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void checkFinal (Tx t, TransactionContext tcontext) throws TransactionValidationException
-	{
-		for ( TxIn in : t.getInputs () )
-		{
-			if ( in.getSequence () != 0xFFFFFFFFL )
-			{
-				throw new TransactionValidationException ("The input should be final (sequence)", t);
-			}
-			if ( tcontext.block != null )
-			{
-				if ( in.getBlockTime () < LOCKTIME_THRESHOLD && tcontext.block.getHeight () < in.getBlockTime () )
-				{
-					throw new TransactionValidationException ("The input should be final (blocktime)", t);
-				}
-				if ( in.getBlockTime () >= LOCKTIME_THRESHOLD && in.getBlockTime () < tcontext.block.getCreateTime () )
-				{
-					throw new TransactionValidationException ("The input should be final (blocktime)", t);
-				}
-			}
-		}
-	}
-
 	private boolean isCoinBase (Tx t)
 	{
 		return t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH_STRING);
@@ -1173,11 +1199,6 @@ public abstract class CachedBlockStore implements BlockStore
 			Map<String, HashSet<Long>> inputUse = new HashMap<String, HashSet<Long>> ();
 			for ( TxIn i : t.getInputs () )
 			{
-				if ( chain.isProduction () )
-				{
-					checkFinal (t, tcontext);
-				}
-
 				HashSet<Long> seen = inputUse.get (i.getSourceHash ());
 				if ( seen == null )
 				{
@@ -1195,7 +1216,20 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					synchronized ( tcontext )
 					{
-						tcontext.nsigs += ScriptFormat.sigOpCount (i.getScript (), false);
+						if ( ScriptFormat.isPayToScriptHash (source.getScript ()) )
+						{
+							ScriptFormat.Tokenizer tokenizer = new ScriptFormat.Tokenizer (i.getScript ());
+							byte[] last = null;
+							while ( tokenizer.hashMoreElements () )
+							{
+								last = tokenizer.nextToken ().data;
+							}
+							tcontext.nsigs += ScriptFormat.sigOpCount (last, true);
+						}
+						else
+						{
+							tcontext.nsigs += ScriptFormat.sigOpCount (i.getScript (), false);
+						}
 						tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (source.getValue ()));
 					}
 				}

@@ -53,6 +53,8 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 	private static final int MAX_BLOCK_SIZE = 1000000;
 	private static final int MAX_BLOCK_SIGOPS = 20000;
 
+	private static final long LOCKTIME_THRESHOLD = 500000000;
+
 	private String coinbaseAddress;
 
 	private final ChainParameter chain;

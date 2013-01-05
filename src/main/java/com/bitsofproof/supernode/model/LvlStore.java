@@ -437,11 +437,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			CachedBlock cb = null;
 			if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				cb = new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight ());
+				cb =
+						new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (),
+								(int) b.getVersion ());
 			}
 			else
 			{
-				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime (), b.getHeight ());
+				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime (), b.getHeight (), (int) b.getVersion ());
 			}
 			cachedBlocks.put (b.getHash (), cb);
 			b.setHead (readHead (b.getHeadId ()));
