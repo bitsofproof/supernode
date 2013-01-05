@@ -62,6 +62,9 @@ public abstract class CachedBlockStore implements BlockStore
 	// not allowed to branch further back on trunk
 	private static final int FORCE_TRUNK = 100;
 	private static final long MIN_RELAY_TX_FEE = 10000;
+	private static final int COINBASE_MATURITY = 100;
+
+	private static final long LOCKTIME_THRESHOLD = 500000000;
 
 	@Autowired
 	private Chain chain;
@@ -714,17 +717,40 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					if ( tcontext.coinbase )
 					{
+						if ( !isCoinBase (t) )
+						{
+							throw new ValidationException ("The first transaction of a block must be coinbase");
+						}
 						try
 						{
+							if ( b.getVersion () == 2 && tcontext.coinbase )
+							{
+								try
+								{
+									if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
+									{
+										throw new TransactionValidationException ("Block height mismatch in coinbase", t);
+									}
+								}
+								catch ( ValidationException e )
+								{
+									throw new TransactionValidationException (e, t);
+								}
+							}
 							validateTransaction (tcontext, t);
 						}
 						catch ( TransactionValidationException e )
 						{
 							throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
 						}
+						tcontext.coinbase = false;
 					}
 					else
 					{
+						if ( isCoinBase (t) )
+						{
+							throw new ValidationException ("Only the first transaction of a block can be coinbase");
+						}
 						callables.add (new Callable<TransactionValidationException> ()
 						{
 							@Override
@@ -769,6 +795,10 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					throw new ValidationException ("interrupted", e1);
 				}
+			}
+			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+			{
+				throw new ValidationException ("too many signatures in this block ");
 			}
 			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
 			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
@@ -1003,7 +1033,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				if ( height != 0 && out.isCoinbase () )
 				{
-					if ( out.getHeight () > height - 100 )
+					if ( out.getHeight () > height - COINBASE_MATURITY )
 					{
 						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 					}
@@ -1012,152 +1042,167 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
+	private void checkStandard (Tx t) throws ValidationException
+	{
+		if ( t.getVersion () != 1 )
+		{
+			throw new ValidationException ("Transaction version must be 1");
+		}
+		for ( TxIn in : t.getInputs () )
+		{
+			if ( in.getScript ().length > 500 )
+			{
+				throw new ValidationException ("script length limit exceeded");
+			}
+			if ( !ScriptFormat.isPushOnly (in.getScript ()) )
+			{
+				throw new ValidationException ("input script should be push only");
+			}
+		}
+		for ( TxOut out : t.getOutputs () )
+		{
+			if ( !ScriptFormat.isStandard (out.getScript ()) )
+			{
+				throw new ValidationException ("not a standard output script");
+			}
+			if ( out.getValue () == 0 )
+			{
+				throw new ValidationException ("zero output");
+			}
+		}
+	}
+
+	private void checkFinal (Tx t, TransactionContext tcontext) throws TransactionValidationException
+	{
+		for ( TxIn in : t.getInputs () )
+		{
+			if ( in.getSequence () != 0xFFFFFFFFL )
+			{
+				throw new TransactionValidationException ("The input should be final (sequence)", t);
+			}
+			if ( tcontext.block != null )
+			{
+				if ( in.getBlockTime () < LOCKTIME_THRESHOLD && tcontext.block.getHeight () < in.getBlockTime () )
+				{
+					throw new TransactionValidationException ("The input should be final (blocktime)", t);
+				}
+				if ( in.getBlockTime () >= LOCKTIME_THRESHOLD && in.getBlockTime () < tcontext.block.getCreateTime () )
+				{
+					throw new TransactionValidationException ("The input should be final (blocktime)", t);
+				}
+			}
+		}
+	}
+
+	private boolean isCoinBase (Tx t)
+	{
+		return t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH_STRING);
+	}
+
 	private void validateTransaction (final TransactionContext tcontext, final Tx t) throws TransactionValidationException
 	{
-		if ( tcontext.block == null || tcontext.block != null && tcontext.block.getHeight () > 200000 )
+		if ( t.getInputs () == null || t.getInputs ().isEmpty () )
 		{
-			// BIP 0034
-			if ( t.getVersion () != 1 )
+			throw new TransactionValidationException ("a transaction must have inputs", t);
+		}
+		if ( t.getOutputs () == null || t.getOutputs ().isEmpty () )
+		{
+			throw new TransactionValidationException ("a transaction must have outputs", t);
+		}
+
+		if ( isCoinBase (t) )
+		{
+			if ( tcontext.block == null )
 			{
-				throw new TransactionValidationException ("Transaction version must be 1", t);
+				throw new TransactionValidationException ("coinbase only allowed in a block", t);
+			}
+			if ( t.getInputs ().get (0).getScript ().length < 2 || t.getInputs ().get (0).getScript ().length > 100 )
+			{
+				throw new TransactionValidationException ("coinbase script length out of bounds", t);
 			}
 		}
-		if ( t.getLockTime () != 0 && chain.isProduction () )
+
+		if ( t.getLockTime () > Integer.MAX_VALUE || t.getLockTime () < 0 )
 		{
-			throw new TransactionValidationException ("Transaction must be locked", t);
+			throw new TransactionValidationException ("not accepting nLockTime beyond 2038", t);
 		}
-		if ( tcontext.block != null && tcontext.coinbase )
+
+		if ( chain.isProduction () )
 		{
-			if ( t.getInputs ().size () != 1 || !t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
+			try
 			{
-				throw new TransactionValidationException ("first transaction must be coinbase ", t);
+				checkStandard (t);
 			}
-			if ( t.getInputs ().get (0).getScript ().length > 100 || t.getInputs ().get (0).getScript ().length < 2 )
+			catch ( ValidationException e )
 			{
-				throw new TransactionValidationException ("coinbase scriptsig must be in 2-100 ", t);
+				throw new TransactionValidationException (e, t);
 			}
-			tcontext.coinbase = false;
-			for ( TxOut o : t.getOutputs () )
+		}
+
+		long sumOut = 0;
+		for ( TxOut o : t.getOutputs () )
+		{
+			if ( o.getValue () < 0 )
 			{
-				try
+				throw new TransactionValidationException ("negative output is not allowed", t);
+			}
+			if ( o.getValue () > Tx.MAX_MONEY )
+			{
+				throw new TransactionValidationException ("output too high", t);
+			}
+			try
+			{
+				synchronized ( tcontext )
 				{
+					tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript (), false);
 					tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-					tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript ());
-				}
-				catch ( ValidationException e )
-				{
-					throw new TransactionValidationException (e, t);
 				}
 			}
-			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+			catch ( ValidationException e )
 			{
-				throw new TransactionValidationException ("too many signatures in this block ", t);
+				throw new TransactionValidationException (e, t);
 			}
+			sumOut += o.getValue ();
 		}
-		else
+
+		if ( isCoinBase (t) == false )
 		{
-			if ( t.getInputs ().size () == 1 && t.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH.toString ()) )
-			{
-				throw new TransactionValidationException ("coinbase only first in a block", t);
-			}
-			if ( t.getOutputs ().isEmpty () )
-			{
-				throw new TransactionValidationException ("Transaction must have outputs ", t);
-			}
-			if ( t.getInputs ().isEmpty () )
-			{
-				throw new TransactionValidationException ("Transaction must have inputs ", t);
-			}
-			if ( tcontext.block != null && tcontext.block.getHeight () > 200000 )
-			{
-				// BIP 0034
-				if ( tcontext.block.getVersion () == 2 && tcontext.coinbase )
-				{
-					try
-					{
-						if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != tcontext.block.getHeight () )
-						{
-							throw new TransactionValidationException ("Block height mismatch in coinbase", t);
-						}
-					}
-					catch ( ValidationException e )
-					{
-						throw new TransactionValidationException (e, t);
-					}
-				}
-			}
-
-			long sumOut = 0;
-			for ( TxOut o : t.getOutputs () )
-			{
-				if ( o.getScript ().length > 520 )
-				{
-					if ( tcontext.block != null && tcontext.block.getHeight () < 200000 )
-					{
-						log.trace ("Old DoS at [" + tcontext.block.getHeight () + "]" + tcontext.block.getHash ());
-					}
-					else
-					{
-						throw new TransactionValidationException ("script too long ", t);
-					}
-				}
-				try
-				{
-					if ( tcontext.block == null && chain.isProduction () && !ScriptFormat.isStandard (o.getScript ()) )
-					{
-						throw new TransactionValidationException ("Nonstandard script rejected", t);
-					}
-				}
-				catch ( ValidationException e )
-				{
-					throw new TransactionValidationException (e, t);
-				}
-				if ( tcontext.block != null )
-				{
-					try
-					{
-						tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript ());
-					}
-					catch ( ValidationException e )
-					{
-						throw new TransactionValidationException (e, t);
-					}
-					if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
-					{
-						throw new TransactionValidationException ("too many signatures in this block ", t);
-					}
-				}
-				if ( o.getValue () < 0 || o.getValue () > Tx.MAX_MONEY )
-				{
-					throw new TransactionValidationException ("Transaction output not in money range ", t);
-				}
-				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-				sumOut += o.getValue ();
-				if ( sumOut < 0 || sumOut > Tx.MAX_MONEY )
-				{
-					throw new TransactionValidationException ("Transaction output not in money range ", t);
-				}
-			}
-
 			long sumIn = 0;
 			int inNumber = 0;
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
-			for ( final TxIn i : t.getInputs () )
+			Map<String, HashSet<Long>> inputUse = new HashMap<String, HashSet<Long>> ();
+			for ( TxIn i : t.getInputs () )
 			{
-				if ( i.getSequence () != 0xFFFFFFFFL && chain.isProduction () )
+				if ( chain.isProduction () )
 				{
-					throw new TransactionValidationException ("Input sequencing is disabled ", t);
+					checkFinal (t, tcontext);
 				}
-				if ( i.getScript ().length > 520 )
+
+				HashSet<Long> seen = inputUse.get (i.getSourceHash ());
+				if ( seen == null )
 				{
-					if ( tcontext.block == null || tcontext.block.getHeight () > 200000 )
-					{
-						throw new TransactionValidationException ("script too long ", t);
-					}
+					inputUse.put (i.getSourceHash (), seen = new HashSet<Long> ());
 				}
+				if ( seen.contains (i.getIx ()) )
+				{
+					throw new TransactionValidationException ("duplicate input", t);
+				}
+				seen.add (i.getIx ());
 
 				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
 				sumIn += source.getValue ();
+				try
+				{
+					synchronized ( tcontext )
+					{
+						tcontext.nsigs += ScriptFormat.sigOpCount (i.getScript (), false);
+						tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (source.getValue ()));
+					}
+				}
+				catch ( ValidationException e )
+				{
+					throw new TransactionValidationException (e, t);
+				}
 
 				final int nr = inNumber;
 				callables.add (new Callable<TransactionValidationException> ()
@@ -1170,11 +1215,6 @@ public abstract class CachedBlockStore implements BlockStore
 							if ( !new ScriptEvaluation (t, nr, source).evaluate (chain.isProduction ()) )
 							{
 								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
-							}
-
-							synchronized ( tcontext )
-							{
-								tcontext.blkSumInput = tcontext.blkSumInput.add (BigInteger.valueOf (source.getValue ()));
 							}
 						}
 						catch ( Exception e )

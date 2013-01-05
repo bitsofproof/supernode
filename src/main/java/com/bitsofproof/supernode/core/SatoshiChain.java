@@ -96,7 +96,7 @@ public class SatoshiChain implements Chain
 	@Override
 	public int getValidateFrom ()
 	{
-		return 213900;
+		return 0;
 	}
 
 	@Override

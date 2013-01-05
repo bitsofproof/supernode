@@ -227,7 +227,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 						{
 							try
 							{
-								sigOpCount += ScriptFormat.sigOpCount (out.getScript ());
+								sigOpCount += ScriptFormat.sigOpCount (out.getScript (), false);
 							}
 							catch ( ValidationException e )
 							{
