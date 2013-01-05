@@ -65,6 +65,7 @@ public abstract class CachedBlockStore implements BlockStore
 	private static final int COINBASE_MATURITY = 100;
 
 	private static final Map<Integer, String> checkPoints = new HashMap<Integer, String> ();
+	private static final int lastCheckPoint;
 
 	static
 	{
@@ -75,6 +76,8 @@ public abstract class CachedBlockStore implements BlockStore
 		checkPoints.put (134444, "00000000000005b12ffd4cd315cd34ffd4a594f430ac814c91184a0d42d2b0fe");
 		checkPoints.put (168000, "000000000000099e61ea72015e79632f216fe6cb33d7899acb35b75c8303b763");
 		checkPoints.put (193000, "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+
+		lastCheckPoint = 193000;
 	}
 
 	@Autowired
@@ -755,7 +758,7 @@ public abstract class CachedBlockStore implements BlockStore
 					tcontext.resolvedInputs.add (o);
 				}
 			}
-			if ( b.getHeight () > chain.getValidateFrom () )
+			if ( !chain.isProduction () || b.getHeight () > lastCheckPoint )
 			{
 				log.trace ("validating block " + b.getHash ());
 				List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();

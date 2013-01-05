@@ -94,12 +94,6 @@ public class SatoshiChain implements Chain
 	}
 
 	@Override
-	public int getValidateFrom ()
-	{
-		return 0;
-	}
-
-	@Override
 	public Blk getGenesis ()
 	{
 		Blk block = new Blk ();
