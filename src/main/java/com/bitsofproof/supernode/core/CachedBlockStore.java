@@ -88,6 +88,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
+	private int blockV2Majority = 0;
+
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
@@ -635,9 +637,22 @@ public abstract class CachedBlockStore implements BlockStore
 				throw new ValidationException ("Future generation attempt " + b.getHash ());
 			}
 
-			if ( chain.isProduction () && b.getVersion () < 2 && isSuperMajority (2, cachedPrevious, 950, 1000) )
+			boolean enforceV2Block = false;
+			if ( chain.isProduction () )
 			{
-				throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
+				if ( b.getVersion () < 2 && isSuperMajority (2, cachedPrevious, 950, 1000) )
+				{
+					throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
+				}
+				if ( b.getVersion () >= 2 && (blockV2Majority != 0 || isSuperMajority (2, cachedPrevious, 750, 1000)) )
+				{
+					if ( blockV2Majority == 0 )
+					{
+						blockV2Majority = b.getHeight ();
+						log.trace ("Majority for V2 blocks reached, enforcing");
+					}
+					enforceV2Block = true;
+				}
 			}
 
 			Head head;
@@ -772,18 +787,15 @@ public abstract class CachedBlockStore implements BlockStore
 						}
 						try
 						{
-							if ( b.getVersion () == 2 )
+							if ( enforceV2Block )
 							{
-								try
+								if ( b.getVersion () < 2 )
 								{
-									if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
-									{
-										throw new TransactionValidationException ("Block height mismatch in coinbase", t);
-									}
+									throw new ValidationException ("Version 1 blocks are no longer accepted");
 								}
-								catch ( ValidationException e )
+								if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
 								{
-									throw new TransactionValidationException (e, t);
+									throw new ValidationException ("Block height mismatch in coinbase");
 								}
 							}
 							validateTransaction (tcontext, t);
