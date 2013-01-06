@@ -30,7 +30,7 @@ public interface BlockStore
 		public void run (TxOutCache cache);
 	}
 
-	public void cache (int cacheSize) throws ValidationException;
+	public void cache (Chain chain, int cacheSize) throws ValidationException;
 
 	public void runInCacheContext (CacheContextRunnable runnable);
 

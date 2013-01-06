@@ -66,7 +66,7 @@ public class Supernode extends Main implements Main.App
 				network.getStore ().resetStore (network.getChain ());
 			}
 			log.debug ("Caching ...");
-			network.getStore ().cache (cacheSize);
+			network.getStore ().cache (network.getChain (), cacheSize);
 			log.debug ("Starting network ...");
 			network.start ();
 		}

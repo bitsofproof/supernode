@@ -2,6 +2,7 @@ package com.bitsofproof.supernode.test;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.jbehave.core.annotations.Configure;
@@ -22,6 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import com.bitsofproof.supernode.api.BCSAPIDirect;
+import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
 
@@ -40,7 +43,19 @@ public class StoriesRunner extends JUnitStories
 	BitcoinNetwork network;
 
 	@Autowired
-	Chain chain;
+	@Qualifier ("feederNetwork")
+	BitcoinNetwork feeder;
+
+	@Autowired
+	@Qualifier ("production")
+	Chain production;
+
+	@Autowired
+	@Qualifier ("test")
+	Chain test;
+
+	@Autowired
+	BCSAPIDirect directAPI;
 
 	@Override
 	protected List<String> storyPaths ()
@@ -53,13 +68,26 @@ public class StoriesRunner extends JUnitStories
 		this.network = network;
 	}
 
-	@Given ("a new node")
-	public void storeCleared () throws Exception
+	@Given ("an empty node on $chain")
+	public void storeCleared (String chain) throws Exception
 	{
 		try
 		{
-			network.getStore ().resetStore (chain);
-			network.getStore ().cache (0);
+			Chain c = null;
+			if ( chain.equals ("production") )
+			{
+				c = production;
+			}
+			else
+			{
+				c = test;
+			}
+			feeder.setChain (c);
+			feeder.start ();
+
+			network.setChain (c);
+			network.getStore ().resetStore (c);
+			network.getStore ().cache (c, 0);
 			network.start ();
 			Thread.sleep (1000);
 		}
@@ -75,4 +103,18 @@ public class StoriesRunner extends JUnitStories
 	{
 		assertTrue (network.getNumberOfConnections () == 1);
 	}
+
+	@Then ("balance for $address is $amount")
+	public void thenBalanceIs (String address, long amount)
+	{
+		List<String> addresses = new ArrayList<String> ();
+		addresses.add (address);
+		long sum = 0;
+		for ( TransactionOutput o : directAPI.getBalance (addresses) )
+		{
+			sum += o.getValue ();
+		}
+		assertTrue (sum == amount);
+	}
+
 }

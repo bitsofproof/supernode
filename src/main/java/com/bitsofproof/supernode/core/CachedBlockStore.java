@@ -80,7 +80,6 @@ public abstract class CachedBlockStore implements BlockStore
 		lastCheckPoint = 193000;
 	}
 
-	@Autowired
 	private Chain chain;
 
 	@Autowired
@@ -304,8 +303,10 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
-	public void cache (int size) throws ValidationException
+	public void cache (Chain chain, int size) throws ValidationException
 	{
+		this.chain = chain;
+
 		try
 		{
 			lock.writeLock ().lock ();
@@ -1393,6 +1394,8 @@ public abstract class CachedBlockStore implements BlockStore
 	@Override
 	public void resetStore (Chain chain) throws TransactionValidationException
 	{
+		this.chain = chain;
+
 		Blk genesis = chain.getGenesis ();
 		TxOut out = genesis.getTransactions ().get (0).getOutputs ().get (0);
 		parseOwners (out);

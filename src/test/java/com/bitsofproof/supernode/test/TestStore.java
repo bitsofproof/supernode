@@ -40,7 +40,7 @@ public class TestStore implements BlockStore, PeerStore
 	}
 
 	@Override
-	public void cache (int cacheSize) throws ValidationException
+	public void cache (Chain chain, int cacheSize) throws ValidationException
 	{
 		// TODO Auto-generated method stub
 

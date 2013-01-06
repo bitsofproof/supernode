@@ -8,7 +8,8 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
 
-	<description>supernode behaviour test spring assembly (c) 2012 Tamas Blummer
+	<description>supernode behaviour test spring assembly (c) 2012 Tamas
+		Blummer
 		tamas@bitsofproof.com
 	</description>
 
@@ -16,11 +17,12 @@
 
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 
-	<!-- a node that does not listen, uses the unit test genesis block, 
-	     connects to localhost and has in memory database
-	 -->
+	<bean id="test" class="com.bitsofproof.supernode.test.UnitTestChain" />
+	<bean id="production" class="com.bitsofproof.supernode.core.SatoshiChain" />
+
+	<!-- a node that does not listen, connects 
+		to localhost and has in memory database -->
 	<bean id="store" class="com.bitsofproof.supernode.model.JpaStore" />
-	<bean id="testChain" class="com.bitsofproof.supernode.test.UnitTestChain" />
 	<bean id="localhost" class="com.bitsofproof.supernode.core.FixedAddressDiscovery">
 		<property name="connectTo" value="localhost" />
 	</bean>
@@ -30,28 +32,51 @@
 		</constructor-arg>
 		<property name="listen" value="false" />
 		<property name="discovery" ref="localhost" />
-		<property name="chain" ref="testChain" />
 		<property name="store" ref="store" />
 	</bean>
 
-	<!-- an other node that listens to localhost but does not connect actively
-		and uses a dummy store
-	 -->
+	<!-- an other node that listens to localhost but does not connect actively 
+		and uses a dummy store -->
 	<bean id="testStore" class="com.bitsofproof.supernode.test.TestStore" />
 	<bean id="resultless" class="com.bitsofproof.supernode.core.ResultlessDiscovery" />
-	<bean id="feederNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork"
-		init-method="start">
+	<bean id="feederNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>
 			<value>1</value>
 		</constructor-arg>
 		<property name="listen" value="true" />
 		<property name="discovery" ref="resultless" />
-		<property name="chain" ref="testChain" />
 		<property name="store" ref="testStore" />
 	</bean>
 
-	<jdbc:embedded-database id="dataSource" type="DERBY" />
+	<!-- serve API -->
+	<bean id="BCSAPIDirectServer" class="com.bitsofproof.supernode.core.ImplementBCSAPIDirect">
+		<constructor-arg>
+			<ref bean="store" />
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="tx" />
+		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+
+	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
+		<property name="serviceName" value="BCSAPI" />
+		<property name="service" ref="BCSAPIDirectServer" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
+		<property name="registryPort" value="1199" />
+	</bean>
+
+	<!-- use API -->
+	<bean id="BCSAPIDirect" class="org.springframework.remoting.rmi.RmiProxyFactoryBean">
+		<property name="serviceUrl" value="rmi://localhost:1199/BCSAPI" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
+	</bean>
 	
+
+	<!-- in memory database -->
+
+	<jdbc:embedded-database id="dataSource" type="DERBY" />
+
 	<!-- below this is just like in real -->
 
 	<bean id="entityManagerFactory"
