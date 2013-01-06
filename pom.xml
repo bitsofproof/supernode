@@ -43,8 +43,8 @@
 	</scm>
 
 	<properties>
-       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
- 		<springframework.version>3.1.2.RELEASE</springframework.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<springframework.version>3.1.2.RELEASE</springframework.version>
 		<spring-data.version>1.1.2.RELEASE</spring-data.version>
 		<querydsl.version>2.9.0</querydsl.version>
 		<derby.version>10.9.1.0</derby.version>
@@ -277,6 +277,18 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jbehave</groupId>
+			<artifactId>jbehave-core</artifactId>
+			<version>3.7</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jbehave</groupId>
+			<artifactId>jbehave-spring</artifactId>
+			<version>3.7</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

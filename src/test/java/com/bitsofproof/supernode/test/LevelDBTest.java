@@ -1,4 +1,4 @@
-package com.bitsofproof.supernode.model;
+package com.bitsofproof.supernode.test;
 
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
 import static org.junit.Assert.assertTrue;

@@ -15,20 +15,22 @@
  */
 package com.bitsofproof.supernode.test;
 
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.List;
+import org.junit.Test;
 
-import org.springframework.stereotype.Component;
+import com.bitsofproof.supernode.core.SatoshiChain;
+import com.bitsofproof.supernode.core.Testnet3Chain;
 
-import com.bitsofproof.supernode.core.Discovery;
-
-@Component ("resultlessDiscovery")
-public class ResultlessDiscovery implements Discovery
+public class GenesisTest
 {
-	@Override
-	public List<InetAddress> discover ()
+	@Test
+	public void productionChainTest ()
 	{
-		return new ArrayList<InetAddress> ();
+		new SatoshiChain ().getGenesis ().getHash ().toString ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
+	}
+
+	@Test
+	public void testChainTest ()
+	{
+		new Testnet3Chain ().getGenesis ().getHash ().toString ().equals ("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943");
 	}
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.core;
+package com.bitsofproof.supernode.test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -26,6 +26,7 @@ import org.json.JSONException;
 import org.junit.Test;
 
 import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.core.ScriptEvaluation;
 
 public class ScriptTest
 {

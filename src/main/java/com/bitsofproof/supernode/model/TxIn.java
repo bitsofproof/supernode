@@ -158,20 +158,13 @@ public class TxIn implements Serializable, Cloneable
 		{
 			o.put ("sourceHash", sourceHash);
 			o.put ("sourceIx", ix);
-			if ( !sourceHash.equals (Hash.ZERO_HASH.toString ()) )
+			try
 			{
-				try
-				{
-					o.put ("script", ScriptFormat.toReadable (script));
-				}
-				catch ( ValidationException e )
-				{
-					o.put ("invalidScript", ByteUtils.toHex (script));
-				}
+				o.put ("script", ScriptFormat.toReadable (script));
 			}
-			else
+			catch ( ValidationException e )
 			{
-				o.put ("script", ByteUtils.toHex (script));
+				o.put ("invalidScript", ByteUtils.toHex (script));
 			}
 			o.put ("sequence", sequence);
 		}

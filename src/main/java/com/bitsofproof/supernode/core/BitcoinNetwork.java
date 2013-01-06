@@ -57,9 +57,13 @@ public class BitcoinNetwork extends P2P
 	@Override
 	public void start () throws IOException
 	{
-		setPort (chain.getPort ());
+		int port = getPort ();
+		if ( port == 0 )
+		{
+			port = chain.getPort ();
+		}
+		setPort (port);
 
-		log.trace ("Starting network on port " + chain.getPort ());
 		super.start ();
 	}
 

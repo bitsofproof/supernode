@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+	<description>supernode behaviour test spring assembly (c) 2012 Tamas Blummer
+		tamas@bitsofproof.com
+	</description>
+
+	<context:property-placeholder />
+
+	<context:component-scan base-package="com.bitsofproof.supernode" />
+
+	<!-- a node that does not listen, uses the unit test genesis block, 
+	     connects to localhost and has in memory database
+	 -->
+	<bean id="store" class="com.bitsofproof.supernode.model.JpaStore" />
+	<bean id="testChain" class="com.bitsofproof.supernode.test.UnitTestChain" />
+	<bean id="localhost" class="com.bitsofproof.supernode.core.FixedAddressDiscovery">
+		<property name="connectTo" value="localhost" />
+	</bean>
+	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
+		<constructor-arg>
+			<value>1</value>
+		</constructor-arg>
+		<property name="listen" value="false" />
+		<property name="discovery" ref="localhost" />
+		<property name="chain" ref="testChain" />
+		<property name="store" ref="store" />
+	</bean>
+
+	<!-- an other node that listens to localhost but does not connect actively
+		and uses a dummy store
+	 -->
+	<bean id="testStore" class="com.bitsofproof.supernode.test.TestStore" />
+	<bean id="resultless" class="com.bitsofproof.supernode.core.ResultlessDiscovery" />
+	<bean id="feederNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork"
+		init-method="start">
+		<constructor-arg>
+			<value>1</value>
+		</constructor-arg>
+		<property name="listen" value="true" />
+		<property name="discovery" ref="resultless" />
+		<property name="chain" ref="testChain" />
+		<property name="store" ref="testStore" />
+	</bean>
+
+	<jdbc:embedded-database id="dataSource" type="DERBY" />
+	
+	<!-- below this is just like in real -->
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="persistenceXmlLocation" value="classpath:context/persistence.xml" />
+		<property name="jpaVendorAdapter" ref="jpaVendorAdapter" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.DerbyDialect</prop>
+				<prop key="hibernate.cache.provider_class">org.hibernate.cache.HashtableCacheProvider</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<bean id="jpaVendorAdapter"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+		<property name="showSql" value="false" />
+		<property name="generateDdl" value="true" />
+		<property name="database" value="DERBY" />
+	</bean>
+
+
+	<bean id="chainloader" class="com.bitsofproof.supernode.core.ChainLoader">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="timeout" value="180" />
+	</bean>
+
+	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+	<bean id="alert" class="com.bitsofproof.supernode.core.AlertHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+	<bean id="heartbeat" class="com.bitsofproof.supernode.core.HeartbeatHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="delay" value="180" />
+		<property name="timeout" value="180" />
+	</bean>
+	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="txHandler" ref="tx" />
+
+	</bean>
+	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+	<bean id="getheaders" class="com.bitsofproof.supernode.core.GetHeadersHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<property name="delay" value="60" />
+		<property name="startDelay" value="60" />
+	</bean>
+
+
+
+</beans>

@@ -13,7 +13,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class TestChain implements Chain
+public class UnitTestChain implements Chain
 {
 
 	public static final byte[] SATOSHI_KEY = Hex
@@ -28,7 +28,7 @@ public class TestChain implements Chain
 	@Override
 	public int getPort ()
 	{
-		return 18333;
+		return 8334;
 	}
 
 	@Override

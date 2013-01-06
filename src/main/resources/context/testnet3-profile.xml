@@ -11,9 +11,9 @@
 
 	<description>supernode spring assembly (c) 2012 Tamas Blummer tamas@bitsofproof.com</description>
 
-	<bean id="chain" class="com.bitsofproof.supernode.test.TestChain" />
+	<bean id="chain" class="com.bitsofproof.supernode.core.Testnet3Chain" />
 	
-	<bean id="discovery" class="com.bitsofproof.supernode.test.IRCDiscovery">
+	<bean id="discovery" class="com.bitsofproof.supernode.core.IRCDiscovery">
 		<property name="server" value="irc.lfnet.org"/>
 		<property name="port" value="6667"/>
 		<property name="channel" value="#bitcoinTEST3"/>

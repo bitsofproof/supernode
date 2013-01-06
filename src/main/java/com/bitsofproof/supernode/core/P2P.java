@@ -377,6 +377,13 @@ public abstract class P2P
 
 	private int port;
 
+	private boolean listen = true;
+
+	public void setListen (boolean listen)
+	{
+		this.listen = listen;
+	}
+
 	public void setPort (int port)
 	{
 		this.port = port;
@@ -448,7 +455,7 @@ public abstract class P2P
 	{
 		desiredConnections = connections;
 		connectSlot = new Semaphore (desiredConnections);
-		unsolicitedConnectSlot = new Semaphore (desiredConnections / 2);
+		unsolicitedConnectSlot = new Semaphore (Math.max (desiredConnections / 2, 1));
 		// create a pool of threads
 		peerThreads =
 				(ThreadPoolExecutor) Executors.newFixedThreadPool (Math.min (desiredConnections, Runtime.getRuntime ().availableProcessors () * 2),
@@ -692,11 +699,16 @@ public abstract class P2P
 						InetSocketAddress address = null;
 						do
 						{
-							while ( (address = runqueue.poll ()) == null )
+							if ( (address = runqueue.poll ()) == null )
 							{
 								log.trace ("Need to discover new adresses.");
 								discover ();
-								log.trace ("Runqueue size " + runqueue.size ());
+								if ( (address = runqueue.poll ()) == null )
+								{
+									log.warn ("Could not discover peers");
+									return;
+								}
+								log.trace ("Runqueue size " + (runqueue.size () + 1));
 							}
 						} while ( !address.getAddress ().isReachable (1000) );
 
@@ -737,12 +749,15 @@ public abstract class P2P
 
 	public void start () throws IOException
 	{
-		final ServerSocketChannel serverChannel = ServerSocketChannel.open ();
-		serverChannel.socket ().bind (new InetSocketAddress (port));
-		serverChannel.configureBlocking (false);
+		if ( listen )
+		{
+			final ServerSocketChannel serverChannel = ServerSocketChannel.open ();
+			serverChannel.socket ().bind (new InetSocketAddress (port));
+			serverChannel.configureBlocking (false);
 
-		selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT, null));
-
+			selectorChanges.add (new ChangeRequest (serverChannel, ChangeRequest.REGISTER, SelectionKey.OP_ACCEPT, null));
+			log.trace ("Listening on port " + port);
+		}
 		selectorThread.start ();
 
 		connector.start ();
