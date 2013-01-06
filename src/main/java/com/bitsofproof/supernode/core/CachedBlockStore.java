@@ -1449,11 +1449,7 @@ public abstract class CachedBlockStore implements BlockStore
 			tcontext.nsigs = 0;
 			tcontext.resolvedInputs = resolvedInputs;
 
-			boolean relay = true;
-			if ( chain.isProduction () )
-			{
-				relay = checkForRelay (t, resolvedInputs);
-			}
+			boolean relay = !chain.isProduction () || checkForRelay (t, resolvedInputs);
 
 			validateTransaction (tcontext, t);
 
