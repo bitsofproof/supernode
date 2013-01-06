@@ -1452,14 +1452,7 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean relay = true;
 			if ( chain.isProduction () )
 			{
-				try
-				{
-					relay = checkForRelay (t, resolvedInputs);
-				}
-				catch ( ValidationException e )
-				{
-					throw new TransactionValidationException (e, t);
-				}
+				relay = checkForRelay (t, resolvedInputs);
 			}
 
 			validateTransaction (tcontext, t);
