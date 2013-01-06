@@ -1,17 +1,15 @@
 package com.bitsofproof.supernode.test;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 
-import org.jbehave.core.annotations.BeforeScenario;
 import org.jbehave.core.annotations.Configure;
+import org.jbehave.core.annotations.Given;
 import org.jbehave.core.annotations.Then;
 import org.jbehave.core.annotations.UsingEmbedder;
 import org.jbehave.core.annotations.UsingSteps;
-import org.jbehave.core.annotations.When;
 import org.jbehave.core.annotations.spring.UsingSpring;
 import org.jbehave.core.embedder.Embedder;
 import org.jbehave.core.io.CodeLocations;
@@ -32,7 +30,7 @@ import com.bitsofproof.supernode.core.Chain;
 @Component
 @RunWith (SpringAnnotatedEmbedderRunner.class)
 @Configure
-@UsingEmbedder (embedder = Embedder.class, generateViewAfterStories = false, ignoreFailureInStories = false, ignoreFailureInView = true, stepsFactory = true)
+@UsingEmbedder (embedder = Embedder.class, threads = 1, generateViewAfterStories = false, ignoreFailureInStories = false, ignoreFailureInView = true, stepsFactory = true)
 @UsingSpring (resources = "classpath:context/stories.xml")
 @UsingSteps
 public class StoriesRunner extends JUnitStories
@@ -57,7 +55,7 @@ public class StoriesRunner extends JUnitStories
 		this.network = network;
 	}
 
-	@BeforeScenario
+	@Given ("a new client")
 	public void init ()
 	{
 		try
@@ -65,6 +63,7 @@ public class StoriesRunner extends JUnitStories
 			network.getStore ().resetStore (chain);
 			network.getStore ().cache (0);
 			network.start ();
+			Thread.sleep (1000);
 		}
 		catch ( ValidationException e )
 		{
@@ -80,15 +79,9 @@ public class StoriesRunner extends JUnitStories
 		}
 	}
 
-	@When ("version message arrives")
-	public void whenVersionMessage ()
-	{
-		assertFalse (false);
-	}
-
 	@Then ("connected")
 	public void thenConnected ()
 	{
-		assertTrue (true);
+		assertTrue (network.getNumberOfConnections () == 1);
 	}
 }

@@ -1,5 +1,3 @@
-Given enough time
-
-When version message arrives
+Given a new client
 
 Then connected
