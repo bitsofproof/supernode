@@ -1,6 +1,6 @@
 Scenario: Start up and connect
 
-Given an empty node on production
+Given an empty node using production
 
 Then connected
 

@@ -68,7 +68,7 @@ public class StoriesRunner extends JUnitStories
 		this.network = network;
 	}
 
-	@Given ("an empty node on $chain")
+	@Given ("an empty node using $chain")
 	public void storeCleared (String chain) throws Exception
 	{
 		try
