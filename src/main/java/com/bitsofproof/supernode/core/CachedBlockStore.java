@@ -89,6 +89,7 @@ public abstract class CachedBlockStore implements BlockStore
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private boolean enforceV2Block = false;
+	private boolean checkV2BlockCoinBase = false;
 
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
@@ -639,17 +640,22 @@ public abstract class CachedBlockStore implements BlockStore
 
 			if ( chain.isProduction () )
 			{
-				if ( enforceV2Block || isSuperMajority (2, cachedPrevious, 750, 1000) )
+				if ( enforceV2Block || isSuperMajority (2, cachedPrevious, 950, 1000) )
 				{
 					if ( !enforceV2Block )
 					{
 						log.trace ("Majority for V2 blocks reached, enforcing");
 					}
 					enforceV2Block = true;
+					checkV2BlockCoinBase = true;
+					if ( b.getVersion () < 2 )
+					{
+						throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
+					}
 				}
-				if ( b.getVersion () < 2 && (enforceV2Block || isSuperMajority (2, cachedPrevious, 950, 1000)) )
+				if ( checkV2BlockCoinBase || isSuperMajority (2, cachedPrevious, 750, 1000) )
 				{
-					throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
+					checkV2BlockCoinBase = true;
 				}
 			}
 
@@ -785,16 +791,10 @@ public abstract class CachedBlockStore implements BlockStore
 						}
 						try
 						{
-							if ( enforceV2Block )
+							if ( checkV2BlockCoinBase
+									&& ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
 							{
-								if ( b.getVersion () < 2 )
-								{
-									throw new ValidationException ("Version 1 blocks are no longer accepted");
-								}
-								if ( ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
-								{
-									throw new ValidationException ("Block height mismatch in coinbase");
-								}
+								throw new ValidationException ("Block height mismatch in coinbase");
 							}
 							validateTransaction (tcontext, t);
 						}
