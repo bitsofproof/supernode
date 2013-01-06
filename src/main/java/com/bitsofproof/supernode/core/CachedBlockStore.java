@@ -1093,12 +1093,22 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void checkStandard (Tx t) throws ValidationException
+	private boolean checkForRelay (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
 		if ( t.getVersion () != 1 )
 		{
 			throw new ValidationException ("Transaction version must be 1");
 		}
+		if ( t.getInputs () == null || t.getInputs ().isEmpty () )
+		{
+			throw new TransactionValidationException ("a transaction must have inputs", t);
+		}
+		if ( t.getOutputs () == null || t.getOutputs ().isEmpty () )
+		{
+			throw new TransactionValidationException ("a transaction must have outputs", t);
+		}
+
+		long fee = 0;
 		for ( TxIn in : t.getInputs () )
 		{
 			if ( in.getScript ().length > 500 )
@@ -1109,6 +1119,7 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new ValidationException ("input script should be push only");
 			}
+			fee += resolvedInputs.get (in.getSourceHash (), in.getIx ()).getValue ();
 		}
 		for ( TxOut out : t.getOutputs () )
 		{
@@ -1120,7 +1131,10 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new ValidationException ("zero output");
 			}
+			fee -= out.getValue ();
 		}
+		// This node will not relay transactions not paying a minimal fee.
+		return fee >= MIN_RELAY_TX_FEE;
 	}
 
 	private boolean isCoinBase (Tx t)
@@ -1148,23 +1162,6 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( t.getInputs ().get (0).getScript ().length < 2 || t.getInputs ().get (0).getScript ().length > 100 )
 			{
 				throw new TransactionValidationException ("coinbase script length out of bounds", t);
-			}
-		}
-
-		if ( t.getLockTime () > Integer.MAX_VALUE || t.getLockTime () < 0 )
-		{
-			throw new TransactionValidationException ("not accepting nLockTime beyond 2038", t);
-		}
-
-		if ( tcontext.block == null && chain.isProduction () )
-		{
-			try
-			{
-				checkStandard (t);
-			}
-			catch ( ValidationException e )
-			{
-				throw new TransactionValidationException (e, t);
 			}
 		}
 
@@ -1452,24 +1449,22 @@ public abstract class CachedBlockStore implements BlockStore
 			tcontext.nsigs = 0;
 			tcontext.resolvedInputs = resolvedInputs;
 
+			boolean relay = true;
+			if ( chain.isProduction () )
+			{
+				try
+				{
+					relay = checkForRelay (t, resolvedInputs);
+				}
+				catch ( ValidationException e )
+				{
+					throw new TransactionValidationException (e, t);
+				}
+			}
+
 			validateTransaction (tcontext, t);
 
-			// This node will not relay transactions not paying a minimal fee.
-			long fee = 0;
-			for ( TxIn in : t.getInputs () )
-			{
-				fee += resolvedInputs.get (in.getSourceHash (), in.getIx ()).getValue ();
-			}
-			for ( TxOut out : t.getOutputs () )
-			{
-				fee -= out.getValue ();
-			}
-			if ( fee < MIN_RELAY_TX_FEE )
-			{
-				return false;
-			}
-
-			return true;
+			return relay;
 		}
 		finally
 		{
