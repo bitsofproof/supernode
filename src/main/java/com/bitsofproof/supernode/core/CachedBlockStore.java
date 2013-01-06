@@ -1105,7 +1105,7 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new ValidationException ("script length limit exceeded");
 			}
-			if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) && !ScriptFormat.isPushOnly (in.getScript ()) )
+			if ( !ScriptFormat.isPushOnly (in.getScript ()) )
 			{
 				throw new ValidationException ("input script should be push only");
 			}
@@ -1156,7 +1156,7 @@ public abstract class CachedBlockStore implements BlockStore
 			throw new TransactionValidationException ("not accepting nLockTime beyond 2038", t);
 		}
 
-		if ( chain.isProduction () )
+		if ( tcontext.block == null && chain.isProduction () )
 		{
 			try
 			{
