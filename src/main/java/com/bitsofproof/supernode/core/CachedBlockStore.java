@@ -1454,6 +1454,11 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			lock.readLock ().lock ();
 
+			if ( t.getInputs () == null )
+			{
+				throw new ValidationException ("a transaction must have inputs");
+			}
+			
 			resolveInputs (resolvedInputs, 0, t);
 
 			TransactionContext tcontext = new TransactionContext ();
