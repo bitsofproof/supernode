@@ -61,13 +61,7 @@ public class AddressSeeder implements Runnable
 			{
 				AddrMessage m = new AddrMessage (peer);
 				m.setAddresses (al);
-				try
-				{
-					peer.send (m);
-				}
-				catch ( Exception e )
-				{
-				}
+				peer.send (m);
 			}
 		}
 		log.trace ("Sent an address to peers " + pick.getAddress ().getAddress ());

@@ -7,7 +7,6 @@ import org.bouncycastle.util.encoders.Hex;
 
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
@@ -16,7 +15,7 @@ import com.bitsofproof.supernode.model.TxOut;
 public class Testnet3Chain implements Chain
 {
 
-	public static final byte[] SATOSHI_KEY = Hex
+	static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
 	@Override

@@ -147,12 +147,26 @@ public class TxOut implements Serializable
 
 	public byte[] getScript ()
 	{
+		if ( script != null )
+		{
+			byte[] s = new byte[script.length];
+			System.arraycopy (script, 0, s, 0, script.length);
+			return s;
+		}
 		return script;
 	}
 
 	public void setScript (byte[] script)
 	{
-		this.script = script;
+		if ( script != null )
+		{
+			this.script = new byte[script.length];
+			System.arraycopy (script, 0, this.script, 0, script.length);
+		}
+		else
+		{
+			script = null;
+		}
 	}
 
 	public Tx getTransaction ()

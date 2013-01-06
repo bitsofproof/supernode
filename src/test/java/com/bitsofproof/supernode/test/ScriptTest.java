@@ -30,8 +30,8 @@ import com.bitsofproof.supernode.core.ScriptEvaluation;
 
 public class ScriptTest
 {
-	private final String SCRIPT_VALID = "script_valid.json";
-	private final String SCRIPT_INVALID = "script_invalid.json";
+	private static final String SCRIPT_VALID = "script_valid.json";
+	private static final String SCRIPT_INVALID = "script_invalid.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{

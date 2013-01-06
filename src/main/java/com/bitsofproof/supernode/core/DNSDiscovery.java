@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,19 +38,18 @@ public class DNSDiscovery implements Discovery
 		for ( String hostName : seedHosts )
 		{
 			log.trace ("Obtain addresses from " + hostName);
+			InetAddress[] hostAddresses;
 			try
 			{
-				InetAddress[] hostAddresses = InetAddress.getAllByName (hostName);
-
+				hostAddresses = InetAddress.getAllByName (hostName);
 				for ( InetAddress inetAddress : hostAddresses )
 				{
 					al.add (inetAddress);
 					++n;
 				}
 			}
-			catch ( Exception e )
+			catch ( UnknownHostException e )
 			{
-				log.trace ("DNS lookup for " + hostName + " failed.");
 			}
 		}
 		Collections.shuffle (al);

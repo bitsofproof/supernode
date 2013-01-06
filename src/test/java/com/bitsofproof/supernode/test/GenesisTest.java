@@ -15,6 +15,8 @@
  */
 package com.bitsofproof.supernode.test;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import com.bitsofproof.supernode.core.SatoshiChain;
@@ -25,12 +27,12 @@ public class GenesisTest
 	@Test
 	public void productionChainTest ()
 	{
-		new SatoshiChain ().getGenesis ().getHash ().toString ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f");
+		assertTrue (new SatoshiChain ().getGenesis ().getHash ().toString ().equals ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"));
 	}
 
 	@Test
 	public void testChainTest ()
 	{
-		new Testnet3Chain ().getGenesis ().getHash ().toString ().equals ("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943");
+		assertTrue (new Testnet3Chain ().getGenesis ().getHash ().toString ().equals ("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"));
 	}
 }

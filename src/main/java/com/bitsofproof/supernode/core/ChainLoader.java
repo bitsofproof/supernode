@@ -56,7 +56,7 @@ public class ChainLoader
 
 	private final static int ORPHANLIMIT = 1000;
 
-	private class KnownBlock
+	private static class KnownBlock
 	{
 		private int nr;
 		private String hash;

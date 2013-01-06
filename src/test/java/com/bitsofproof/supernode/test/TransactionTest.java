@@ -30,8 +30,8 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public class TransactionTest
 {
-	private final String TX_VALID = "tx_valid.json";
-	private final String TX_INVALID = "tx_invalid.json";
+	private static final String TX_VALID = "tx_valid.json";
+	private static final String TX_INVALID = "tx_invalid.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{

@@ -40,7 +40,7 @@ import com.bitsofproof.supernode.api.WireFormat;
 
 @Entity
 @Table (name = "txin")
-public class TxIn implements Serializable, Cloneable
+public class TxIn implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
@@ -123,12 +123,26 @@ public class TxIn implements Serializable, Cloneable
 
 	public byte[] getScript ()
 	{
+		if ( script != null )
+		{
+			byte[] s = new byte[script.length];
+			System.arraycopy (script, 0, s, 0, script.length);
+			return s;
+		}
 		return script;
 	}
 
 	public void setScript (byte[] script)
 	{
-		this.script = script;
+		if ( script != null )
+		{
+			this.script = new byte[script.length];
+			System.arraycopy (script, 0, this.script, 0, script.length);
+		}
+		else
+		{
+			script = null;
+		}
 	}
 
 	public Tx getTransaction ()
