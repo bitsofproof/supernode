@@ -126,13 +126,6 @@ public class ImplementBCSAPIDirect implements BCSAPIDirect
 	}
 
 	@Override
-	public String getPreviousBlockHash (String hash)
-	{
-		log.trace ("get previous block " + hash);
-		return store.getPreviousBlockHash (hash);
-	}
-
-	@Override
 	public List<TransactionOutput> getBalance (final List<String> address)
 	{
 		try
