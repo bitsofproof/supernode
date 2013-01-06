@@ -7,7 +7,6 @@ import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.PeerStore;
-import com.bitsofproof.supernode.core.TransactionValidationException;
 import com.bitsofproof.supernode.core.TrunkListener;
 import com.bitsofproof.supernode.core.TxOutCache;
 import com.bitsofproof.supernode.model.Blk;
@@ -118,7 +117,7 @@ public class TestStore implements BlockStore, PeerStore
 	}
 
 	@Override
-	public void resetStore (Chain chain) throws TransactionValidationException
+	public void resetStore (Chain chain)
 	{
 		// TODO Auto-generated method stub
 

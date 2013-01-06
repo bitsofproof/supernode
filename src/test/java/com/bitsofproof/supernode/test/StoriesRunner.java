@@ -2,7 +2,6 @@ package com.bitsofproof.supernode.test;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.jbehave.core.annotations.Configure;
@@ -23,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
 
@@ -55,8 +53,8 @@ public class StoriesRunner extends JUnitStories
 		this.network = network;
 	}
 
-	@Given ("a new client")
-	public void init ()
+	@Given ("a new node")
+	public void storeCleared () throws Exception
 	{
 		try
 		{
@@ -65,17 +63,10 @@ public class StoriesRunner extends JUnitStories
 			network.start ();
 			Thread.sleep (1000);
 		}
-		catch ( ValidationException e )
-		{
-			log.error ("can not set up story", e);
-		}
-		catch ( IOException e )
-		{
-			log.error ("can not set up story", e);
-		}
 		catch ( Exception e )
 		{
-			log.error ("bad luck", e);
+			log.error ("can not start new node", e);
+			throw e;
 		}
 	}
 

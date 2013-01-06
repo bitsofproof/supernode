@@ -52,7 +52,7 @@ public interface BlockStore
 
 	public String getHeadHash ();
 
-	public void resetStore (Chain chain) throws TransactionValidationException;
+	public void resetStore (Chain chain) throws ValidationException;
 
 	public Blk getBlock (String hash);
 

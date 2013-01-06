@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
-import com.bitsofproof.supernode.core.TransactionValidationException;
 
 public class Supernode extends Main implements Main.App
 {
@@ -36,7 +35,7 @@ public class Supernode extends Main implements Main.App
 	private BitcoinNetwork network;
 
 	@Override
-	public void start (String[] args) throws IOException, TransactionValidationException
+	public void start (String[] args) throws IOException
 	{
 		final CommandLineParser parser = new GnuParser ();
 		final Options gnuOptions = new Options ();
@@ -60,12 +59,12 @@ public class Supernode extends Main implements Main.App
 			return;
 		}
 
-		if ( network.getStore ().isEmpty () )
-		{
-			network.getStore ().resetStore (network.getChain ());
-		}
 		try
 		{
+			if ( network.getStore ().isEmpty () )
+			{
+				network.getStore ().resetStore (network.getChain ());
+			}
 			log.debug ("Caching ...");
 			network.getStore ().cache (cacheSize);
 			log.debug ("Starting network ...");
