@@ -76,8 +76,9 @@ public abstract class CachedBlockStore implements BlockStore
 		checkPoints.put (134444, "00000000000005b12ffd4cd315cd34ffd4a594f430ac814c91184a0d42d2b0fe");
 		checkPoints.put (168000, "000000000000099e61ea72015e79632f216fe6cb33d7899acb35b75c8303b763");
 		checkPoints.put (193000, "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
+		checkPoints.put (210000, "000000000000048b95347e83192f69cf0366076336c639f9b7228e9ba171342e");
 
-		lastCheckPoint = 193000;
+		lastCheckPoint = 210000;
 	}
 
 	private Chain chain;
@@ -1458,7 +1459,7 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new ValidationException ("a transaction must have inputs");
 			}
-			
+
 			resolveInputs (resolvedInputs, 0, t);
 
 			TransactionContext tcontext = new TransactionContext ();
