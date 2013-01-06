@@ -49,6 +49,7 @@
 		<querydsl.version>2.9.0</querydsl.version>
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
+		<jbehave.version>3.7</jbehave.version>
 	</properties>
 	<build>
 		<plugins>
@@ -105,6 +106,48 @@
 					<descriptor>src/main/assembly/supernode.xml</descriptor>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.jbehave</groupId>
+				<artifactId>jbehave-maven-plugin</artifactId>
+				<version>${jbehave.version}</version>
+				<executions>
+					<execution>
+						<id>run-stories-with-annotated-embedder</id>
+						<phase>integration-test</phase>
+						<configuration>
+							<scope>test</scope>
+							<includes>
+								<include>**/StoriesRunner.java</include>
+							</includes>
+						</configuration>
+						<goals>
+							<goal>run-stories-with-annotated-embedder</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>	
+					<dependency>
+						<groupId>com.bitsofproof</groupId>
+						<artifactId>supernode</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>junit</groupId>
+						<artifactId>junit</artifactId>
+						<version>4.10</version>
+					</dependency>
+					<dependency>
+						<groupId>org.jbehave</groupId>
+						<artifactId>jbehave-core</artifactId>
+						<version>${jbehave.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>org.jbehave</groupId>
+						<artifactId>jbehave-spring</artifactId>
+						<version>${jbehave.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>
@@ -150,7 +193,7 @@
 		<dependency>
 			<groupId>com.bitsofproof</groupId>
 			<artifactId>supernode-api</artifactId>
-			<version>0.7-SNAPSHOT</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
@@ -282,13 +325,13 @@
 		<dependency>
 			<groupId>org.jbehave</groupId>
 			<artifactId>jbehave-core</artifactId>
-			<version>3.7</version>
+			<version>${jbehave.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.jbehave</groupId>
 			<artifactId>jbehave-spring</artifactId>
-			<version>3.7</version>
+			<version>${jbehave.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
