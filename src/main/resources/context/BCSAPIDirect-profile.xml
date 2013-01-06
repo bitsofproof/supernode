@@ -19,6 +19,7 @@
 		<constructor-arg>
 			<ref bean="tx"/>
 		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	
 	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
