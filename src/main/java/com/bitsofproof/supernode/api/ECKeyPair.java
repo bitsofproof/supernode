@@ -38,8 +38,6 @@ import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.signers.ECDSASigner;
 
-
-
 public class ECKeyPair
 {
 	private static final SecureRandom secureRandom = new SecureRandom ();
@@ -69,7 +67,13 @@ public class ECKeyPair
 
 	public byte[] getPublic ()
 	{
-		return pub;
+		if ( pub != null )
+		{
+			byte[] p = new byte[pub.length];
+			System.arraycopy (pub, 0, p, 0, pub.length);
+			return p;
+		}
+		return null;
 	}
 
 	public byte[] getAddress ()

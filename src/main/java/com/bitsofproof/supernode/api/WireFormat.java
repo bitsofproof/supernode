@@ -21,9 +21,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-
-
-
 public class WireFormat
 {
 
@@ -42,7 +39,8 @@ public class WireFormat
 
 		public Reader (byte[] bytes)
 		{
-			this.bytes = bytes;
+			this.bytes = new byte[bytes.length];
+			System.arraycopy (bytes, 0, this.bytes, 0, bytes.length);
 			this.cursor = 0;
 		}
 
@@ -172,7 +170,7 @@ public class WireFormat
 			}
 			if ( i == 0 )
 			{
-				return new String ();
+				return "";
 			}
 
 			byte[] sb = new byte[i];
@@ -183,7 +181,7 @@ public class WireFormat
 			}
 			catch ( UnsupportedEncodingException e )
 			{
-				return new String ();
+				return "";
 			}
 		}
 

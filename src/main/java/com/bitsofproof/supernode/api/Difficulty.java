@@ -23,7 +23,7 @@ public class Difficulty
 
 	public static BigInteger getTarget (long compactTarget)
 	{
-		return new BigInteger (new Long (compactTarget & 0x7fffffL).toString (), 10).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
+		return new BigInteger (Long.valueOf (compactTarget & 0x7fffffL).toString (), 10).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
 	}
 
 	public static double getDifficulty (long compactTarget)

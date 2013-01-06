@@ -29,7 +29,7 @@ import org.junit.Test;
  */
 public class BitcoindTests
 {
-	private final String BASE58_ENCODE = "base58_encode_decode.json";
+	private static final String BASE58_ENCODE = "base58_encode_decode.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{

@@ -33,7 +33,8 @@ public class Hash
 		{
 			throw new IllegalArgumentException ("Digest length must be 32 bytes for Hash");
 		}
-		this.bytes = bytes;
+		this.bytes = new byte[32];
+		System.arraycopy (bytes, 0, this.bytes, 0, 32);
 	}
 
 	public Hash (String hex)
