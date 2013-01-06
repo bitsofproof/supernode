@@ -607,7 +607,29 @@ public class ScriptFormat
 			{
 				if ( token.data.length > 0 )
 				{
-					b.append ("0x" + ByteUtils.toHex (token.data));
+					boolean printable = true;
+					for ( int i = 0; printable && i < token.data.length; ++i )
+					{
+						byte c = token.data[i];
+						if ( c < 32 )
+						{
+							printable = false;
+						}
+					}
+					if ( printable )
+					{
+						try
+						{
+							b.append ("\"" + new String (token.data, "US-ASCII") + "\"");
+						}
+						catch ( UnsupportedEncodingException e )
+						{
+						}
+					}
+					else
+					{
+						b.append ("0x" + ByteUtils.toHex (new byte[] { (byte) (token.op.o & 0xff) }) + ByteUtils.toHex (token.data));
+					}
 				}
 				else
 				{
@@ -616,7 +638,7 @@ public class ScriptFormat
 			}
 			else
 			{
-				b.append (token.op.toString ().substring (2));
+				b.append (token.op.toString ());
 			}
 		}
 		return b.toString ();
