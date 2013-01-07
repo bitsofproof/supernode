@@ -192,7 +192,7 @@ public class ScriptEvaluation
 	@SuppressWarnings ("incomplete-switch")
 	public boolean evaluateSingleScript (byte[] script)
 	{
-		if ( script.length == 0 || script.length > 10000 )
+		if ( script.length > 10000 )
 		{
 			return false;
 		}
