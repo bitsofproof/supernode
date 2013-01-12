@@ -42,12 +42,6 @@ public class AddressTest
 	@Test
 	public void satoshiAddressTest () throws ValidationException, UnsupportedEncodingException
 	{
-		// some real addresses
-		assertTrue (AddressConverter.toSatoshiStyle (ByteUtils.fromHex ("9e969049aefe972e41aaefac385296ce18f30751"), false, chain).equals (
-				"1FTY8etSpSW3xv6s2XRrYE77rrRfza8aJJ"));
-		assertTrue (AddressConverter.toSatoshiStyle (ByteUtils.fromHex ("623dbe779a29c6bc2615cd7bf5a35453f495e229"), false, chain).equals (
-				"19xTBrDcnZiJSMuzirE7SfcsjkG1ghp1RL"));
-
 		// some random
 		SecureRandom rnd = new SecureRandom ();
 		for ( int i = 0; i < 10000; ++i )

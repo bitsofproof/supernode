@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.api;
 
 import static com.bitsofproof.supernode.api.Difficulty.getCompactTarget;
-import static com.bitsofproof.supernode.api.Difficulty.getDifficulty;
 import static com.bitsofproof.supernode.api.Difficulty.getNextTarget;
 import static com.bitsofproof.supernode.api.Difficulty.getTarget;
 import static org.junit.Assert.assertTrue;
@@ -53,12 +52,5 @@ public class DifficultyTest
 	public void nextTargetTest ()
 	{
 		assertTrue (getNextTarget (841428L, 454983370L, chain) == 454375064L);
-	}
-
-	@Test
-	public void difficultyTest ()
-	{
-		assertTrue (getDifficulty (456101533L, chain) == 1378.0);
-		assertTrue (getDifficulty (486604799L, chain) == 1.0);
 	}
 }
