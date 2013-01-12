@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.bouncycastle.asn1.ASN1InputStream;
@@ -174,31 +175,35 @@ public class ECKeyPair
 				return true;
 			}
 		}
-		ECDSASigner signer = new ECDSASigner ();
-		signer.init (false, new ECPublicKeyParameters (curve.getCurve ().decodePoint (pub), domain));
 		ASN1InputStream asn1 = new ASN1InputStream (signature);
 		try
 		{
+			ECDSASigner signer = new ECDSASigner ();
+			signer.init (false, new ECPublicKeyParameters (curve.getCurve ().decodePoint (pub), domain));
+
 			DLSequence seq = (DLSequence) asn1.readObject ();
 			BigInteger r = ((DERInteger) seq.getObjectAt (0)).getPositiveValue ();
 			BigInteger s = ((DERInteger) seq.getObjectAt (1)).getPositiveValue ();
 			asn1.close ();
-			boolean valid = signer.verifySignature (hash, r, s);
-			if ( valid )
+			if ( signer.verifySignature (hash, r, s) )
 			{
 				synchronized ( validSignatures )
 				{
 					validSignatures.add (cacheKey);
 					if ( validSignatures.size () >= signatureCacheLimit )
 					{
-						validSignatures.iterator ().remove ();
+						Iterator<String> i = validSignatures.iterator ();
+						i.next ();
+						i.remove ();
 					}
 				}
+				return true;
 			}
-			return valid;
 		}
-		catch ( IOException e )
+		catch ( Exception e )
 		{
+			// threat format errors as invalid signatures
+			return false;
 		}
 		finally
 		{
