@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +33,14 @@ public class SatoshiChain implements Chain
 
 	static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
+
+	static final BigInteger minTarget = BigInteger.valueOf (0xFFFFL).shiftLeft (8 * (0x1d - 3));
+
+	@Override
+	public BigInteger getMinimumTarget ()
+	{
+		return minTarget;
+	}
 
 	@Override
 	public long getMagic ()

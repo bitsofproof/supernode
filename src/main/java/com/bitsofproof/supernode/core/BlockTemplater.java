@@ -296,7 +296,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			{
 				nextDifficulty =
 						Difficulty.getNextTarget (network.getStore ().getPeriodLength (previousHash, chain.getDifficultyReviewBlocks ()),
-								blk.getDifficultyTarget (), chain.getTargetBlockTime ());
+								blk.getDifficultyTarget (), chain);
 			}
 			else
 			{

@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.test;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,28 +14,36 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class UnitTestChain implements Chain
+public class BlueMattChain implements Chain
 {
 
 	static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
+	static final BigInteger minTarget = BigInteger.valueOf (1L).shiftLeft (255).subtract (BigInteger.valueOf (1L));
+
+	@Override
+	public BigInteger getMinimumTarget ()
+	{
+		return minTarget;
+	}
+
 	@Override
 	public long getMagic ()
 	{
-		return 0x0709110bL;
+		return 0xDAB5BFFAL;
 	}
 
 	@Override
 	public int getPort ()
 	{
-		return 8334;
+		return 8333;
 	}
 
 	@Override
 	public int getDifficultyReviewBlocks ()
 	{
-		return 2016;
+		return 150;
 	}
 
 	@Override
@@ -46,7 +55,7 @@ public class UnitTestChain implements Chain
 	@Override
 	public long getRewardForHeight (int height)
 	{
-		return (50L * Tx.COIN) >> (height / 210000L);
+		return (50L * Tx.COIN) >> (height / getDifficultyReviewBlocks ());
 	}
 
 	@Override
@@ -89,8 +98,8 @@ public class UnitTestChain implements Chain
 
 		block.setVersion (1);
 		block.setCreateTime (1296688602L);
-		block.setDifficultyTarget (0x1d00ffffL);
-		block.setNonce (414098458L);
+		block.setDifficultyTarget (0x207fffffL);
+		block.setNonce (2L);
 		block.setPreviousHash (Hash.ZERO_HASH_STRING);
 
 		List<Tx> transactions = new ArrayList<Tx> ();

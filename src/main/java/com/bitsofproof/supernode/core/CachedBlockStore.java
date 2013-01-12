@@ -672,7 +672,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 				head.setLeaf (b.getHash ());
 				head.setHeight (head.getHeight () + 1);
-				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
+				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
 				head = updateHead (head);
 			}
 			else
@@ -683,7 +683,7 @@ public abstract class CachedBlockStore implements BlockStore
 				head.setPrevious (prev.getHead ());
 				head.setLeaf (b.getHash ());
 				head.setHeight (prev.getHeight () + 1);
-				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget ()));
+				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
 				insertHead (head);
 			}
 			b.setHead (head);
@@ -694,7 +694,7 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				long periodLength = computePeriodLength (cachedPrevious, prev.getCreateTime (), chain.getDifficultyReviewBlocks ());
 
-				long next = Difficulty.getNextTarget (periodLength, prev.getDifficultyTarget (), chain.getTargetBlockTime ());
+				long next = Difficulty.getNextTarget (periodLength, prev.getDifficultyTarget (), chain);
 				if ( chain.isProduction () && next != b.getDifficultyTarget () )
 				{
 					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
@@ -1407,7 +1407,7 @@ public abstract class CachedBlockStore implements BlockStore
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);
-		h.setChainWork (Difficulty.getDifficulty (genesis.getDifficultyTarget ()));
+		h.setChainWork (Difficulty.getDifficulty (genesis.getDifficultyTarget (), chain));
 		insertHead (h);
 		genesis.setHead (h);
 		insertBlock (genesis);
