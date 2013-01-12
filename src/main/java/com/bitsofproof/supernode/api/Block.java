@@ -21,6 +21,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class Block implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 2846027750944390897L;
@@ -256,4 +260,52 @@ public class Block implements Serializable, Cloneable
 		return ByteUtils.toHex (writer.toByteArray ());
 	}
 
+	public JSONObject toJSON ()
+	{
+		JSONObject o = new JSONObject ();
+		try
+		{
+			o.put ("hash", hash);
+			o.put ("version", version);
+			o.put ("previous", previousHash);
+			o.put ("merkleRoot", merkleRoot);
+			o.put ("createTime", createTime);
+			o.put ("difficultyTarget", difficultyTarget);
+			o.put ("nonce", nonce);
+			if ( transactions != null )
+			{
+				List<JSONObject> txJSON = new ArrayList<JSONObject> ();
+				for ( Transaction t : transactions )
+				{
+					txJSON.add (t.toJSON ());
+				}
+				o.put ("transactions", txJSON);
+			}
+		}
+		catch ( JSONException e )
+		{
+		}
+		return o;
+	}
+
+	public static Block fromJSON (JSONObject o) throws JSONException
+	{
+		Block block = new Block ();
+		block.version = o.getLong ("version");
+		block.createTime = o.getLong ("createTime");
+		block.difficultyTarget = o.getLong ("difficultyTarget");
+		block.nonce = o.getLong ("nonce");
+		block.previousHash = o.getString ("previous");
+		block.transactions = new ArrayList<Transaction> ();
+		JSONArray tl = o.getJSONArray ("transactions");
+		if ( tl != null )
+		{
+			for ( int i = 0; i < tl.length (); ++i )
+			{
+				block.transactions.add (Transaction.fromJSON (tl.getJSONObject (i)));
+			}
+		}
+		block.computeHash ();
+		return block;
+	}
 }

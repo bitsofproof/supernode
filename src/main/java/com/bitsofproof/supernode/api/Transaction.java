@@ -19,6 +19,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class Transaction implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 690918485496086537L;
@@ -243,6 +247,60 @@ public class Transaction implements Serializable, Cloneable
 
 		t.blockHash = blockHash;
 
+		return t;
+	}
+
+	public JSONObject toJSON () throws JSONException
+	{
+		JSONObject o = new JSONObject ();
+		o.put ("hash", getHash ());
+		o.put ("version", version);
+		if ( inputs != null )
+		{
+			List<JSONObject> ins = new ArrayList<JSONObject> ();
+			for ( TransactionInput input : inputs )
+			{
+				ins.add (input.toJSON ());
+			}
+			o.put ("inputs", ins);
+		}
+		if ( outputs != null )
+		{
+			List<JSONObject> outs = new ArrayList<JSONObject> ();
+			for ( TransactionOutput output : outputs )
+			{
+				outs.add (output.toJSON ());
+			}
+			o.put ("outputs", outs);
+		}
+		o.put ("lockTime", lockTime);
+		return o;
+	}
+
+	public static Transaction fromJSON (JSONObject o) throws JSONException
+	{
+		Transaction t = new Transaction ();
+		t.version = o.getLong ("version");
+		t.lockTime = o.getLong ("lockTime");
+		JSONArray ti = o.getJSONArray ("inputs");
+		if ( ti != null && ti.length () > 0 )
+		{
+			t.inputs = new ArrayList<TransactionInput> ();
+			for ( int i = 0; i < ti.length (); ++i )
+			{
+				t.inputs.add (TransactionInput.fromJSON (ti.getJSONObject (i)));
+			}
+		}
+		JSONArray to = o.getJSONArray ("outputs");
+		if ( to != null && to.length () > 0 )
+		{
+			t.outputs = new ArrayList<TransactionOutput> ();
+			for ( int i = 0; i < ti.length (); ++i )
+			{
+				t.outputs.add (TransactionOutput.fromJSON (to.getJSONObject (i)));
+			}
+		}
+		t.computeHash ();
 		return t;
 	}
 }

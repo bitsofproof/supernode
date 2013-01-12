@@ -17,6 +17,9 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class TransactionInput implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = -7019826355856117874L;
@@ -135,5 +138,32 @@ public class TransactionInput implements Serializable, Cloneable
 		}
 
 		return i;
+	}
+
+	public JSONObject toJSON () throws JSONException
+	{
+		JSONObject o = new JSONObject ();
+		o.put ("sourceHash", sourceHash);
+		o.put ("sourceIx", ix);
+		try
+		{
+			o.put ("script", ScriptFormat.toReadable (script));
+		}
+		catch ( Exception e )
+		{
+			o.put ("script", "0x" + ByteUtils.toHex (script));
+		}
+		o.put ("sequence", sequence);
+		return o;
+	}
+
+	public static TransactionInput fromJSON (JSONObject o) throws JSONException
+	{
+		TransactionInput in = new TransactionInput ();
+		in.ix = o.getLong ("sourceIx");
+		in.sourceHash = o.getString ("sourceHash");
+		in.sequence = o.getLong ("sequence");
+		in.script = ScriptFormat.fromReadable (o.getString ("script"));
+		return in;
 	}
 }
