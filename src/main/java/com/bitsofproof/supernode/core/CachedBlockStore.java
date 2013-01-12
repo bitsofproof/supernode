@@ -47,6 +47,7 @@ import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.Tx;
@@ -61,7 +62,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	// not allowed to branch further back on trunk
 	private static final int FORCE_TRUNK = 100;
-	private static final long MIN_RELAY_TX_FEE = 10000;
+	private static final long MIN_RELAY_TX_FEE = 100000;
+	private static final long KB_RELAY_TX_FEE = 50000;
 	private static final int COINBASE_MATURITY = 100;
 
 	private static final Map<Integer, String> checkPoints = new HashMap<Integer, String> ();
@@ -1145,8 +1147,11 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			fee -= out.getValue ();
 		}
+
 		// This node will not relay transactions not paying a minimal fee.
-		return fee >= MIN_RELAY_TX_FEE;
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		t.toWire (writer);
+		return fee >= Math.max (MIN_RELAY_TX_FEE, writer.toByteArray ().length / 1024 * KB_RELAY_TX_FEE);
 	}
 
 	private boolean isCoinBase (Tx t)
