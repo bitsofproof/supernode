@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 
-
 public class TransactionOutput implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 3028618872354766234L;
@@ -85,9 +84,9 @@ public class TransactionOutput implements Serializable, Cloneable
 	}
 
 	@Override
-	public TransactionOutput clone ()
+	public TransactionOutput clone () throws CloneNotSupportedException
 	{
-		TransactionOutput o = new TransactionOutput ();
+		TransactionOutput o = (TransactionOutput) super.clone ();
 		o.value = value;
 		if ( script != null )
 		{

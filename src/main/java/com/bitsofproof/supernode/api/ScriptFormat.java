@@ -161,10 +161,10 @@ public class ScriptFormat
 		private final byte[] bytes;
 		int cursor;
 
-		public Reader (byte[] script)
+		public Reader (byte[] s)
 		{
-			this.bytes = new byte[script.length];
-			System.arraycopy (script, 0, this.bytes, 0, script.length);
+			this.bytes = new byte[s.length];
+			System.arraycopy (s, 0, this.bytes, 0, s.length);
 			this.cursor = 0;
 		}
 
@@ -526,7 +526,6 @@ public class ScriptFormat
 		while ( tokenizer.hasMoreElements () )
 		{
 			String token = tokenizer.nextToken ();
-			ScriptFormat.Opcode op;
 			if ( token.startsWith ("0x") )
 			{
 				byte[] data = ByteUtils.fromHex (token.substring (2));
@@ -578,6 +577,7 @@ public class ScriptFormat
 			}
 			else
 			{
+				ScriptFormat.Opcode op;
 				if ( token.startsWith ("OP_") )
 				{
 					op = ScriptFormat.Opcode.valueOf (token);

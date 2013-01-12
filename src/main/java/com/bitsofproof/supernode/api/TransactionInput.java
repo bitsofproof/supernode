@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 
-
 public class TransactionInput implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = -7019826355856117874L;
@@ -121,9 +120,9 @@ public class TransactionInput implements Serializable, Cloneable
 	}
 
 	@Override
-	public TransactionInput clone ()
+	public TransactionInput clone () throws CloneNotSupportedException
 	{
-		TransactionInput i = new TransactionInput ();
+		TransactionInput i = (TransactionInput) super.clone ();
 
 		i.sourceHash = sourceHash;
 		i.ix = ix;

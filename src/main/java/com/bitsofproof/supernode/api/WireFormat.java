@@ -37,10 +37,10 @@ public class WireFormat
 		private final byte[] bytes;
 		private int cursor;
 
-		public Reader (byte[] bytes)
+		public Reader (byte[] s)
 		{
-			this.bytes = new byte[bytes.length];
-			System.arraycopy (bytes, 0, this.bytes, 0, bytes.length);
+			this.bytes = new byte[s.length];
+			System.arraycopy (s, 0, this.bytes, 0, s.length);
 			this.cursor = 0;
 		}
 

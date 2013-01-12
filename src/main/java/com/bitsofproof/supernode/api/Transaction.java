@@ -215,9 +215,9 @@ public class Transaction implements Serializable, Cloneable
 	}
 
 	@Override
-	public Transaction clone ()
+	public Transaction clone () throws CloneNotSupportedException
 	{
-		Transaction t = new Transaction ();
+		Transaction t = (Transaction) super.clone ();
 
 		t.version = version;
 		if ( inputs != null )

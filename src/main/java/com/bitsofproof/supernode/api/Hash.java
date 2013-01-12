@@ -27,14 +27,14 @@ public class Hash
 	public static final Hash ZERO_HASH = new Hash (new byte[32]);
 	public static final String ZERO_HASH_STRING = new Hash (new byte[32]).toString ();
 
-	public Hash (byte[] bytes)
+	public Hash (byte[] hash)
 	{
-		if ( bytes.length != 32 )
+		if ( hash.length != 32 )
 		{
 			throw new IllegalArgumentException ("Digest length must be 32 bytes for Hash");
 		}
 		this.bytes = new byte[32];
-		System.arraycopy (bytes, 0, this.bytes, 0, 32);
+		System.arraycopy (hash, 0, this.bytes, 0, 32);
 	}
 
 	public Hash (String hex)

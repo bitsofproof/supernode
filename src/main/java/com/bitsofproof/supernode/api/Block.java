@@ -35,9 +35,9 @@ public class Block implements Serializable, Cloneable
 	List<Transaction> transactions;
 
 	@Override
-	public Block clone ()
+	public Block clone () throws CloneNotSupportedException
 	{
-		Block c = new Block ();
+		Block c = (Block) super.clone ();
 		c.hash = hash;
 		c.version = version;
 		c.previousHash = previousHash;
@@ -101,37 +101,40 @@ public class Block implements Serializable, Cloneable
 
 	public void computeMerkleRoot ()
 	{
-		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
-		int nt = transactions.size ();
-
-		for ( Transaction t : transactions )
+		if ( transactions != null )
 		{
-			tree.add (new Hash (t.getHash ()).toByteArray ());
-		}
-		int levelOffset = 0;
-		try
-		{
-			MessageDigest digest = MessageDigest.getInstance ("SHA-256");
+			ArrayList<byte[]> tree = new ArrayList<byte[]> ();
+			int nt = transactions.size ();
 
-			for ( int levelSize = nt; levelSize > 1; levelSize = (levelSize + 1) / 2 )
+			for ( Transaction t : transactions )
 			{
-				for ( int left = 0; left < levelSize; left += 2 )
-				{
-					int right = Math.min (left + 1, levelSize - 1);
-					byte[] leftBytes = tree.get (levelOffset + left);
-					byte[] rightBytes = tree.get (levelOffset + right);
-					digest.update (leftBytes);
-					digest.update (rightBytes);
-					tree.add (digest.digest (digest.digest ()));
-				}
-				levelOffset += levelSize;
+				tree.add (new Hash (t.getHash ()).toByteArray ());
 			}
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-		}
+			int levelOffset = 0;
+			try
+			{
+				MessageDigest digest = MessageDigest.getInstance ("SHA-256");
 
-		merkleRoot = new Hash (tree.get (tree.size () - 1)).toString ();
+				for ( int levelSize = nt; levelSize > 1; levelSize = (levelSize + 1) / 2 )
+				{
+					for ( int left = 0; left < levelSize; left += 2 )
+					{
+						int right = Math.min (left + 1, levelSize - 1);
+						byte[] leftBytes = tree.get (levelOffset + left);
+						byte[] rightBytes = tree.get (levelOffset + right);
+						digest.update (leftBytes);
+						digest.update (rightBytes);
+						tree.add (digest.digest (digest.digest ()));
+					}
+					levelOffset += levelSize;
+				}
+			}
+			catch ( NoSuchAlgorithmException e )
+			{
+			}
+
+			merkleRoot = new Hash (tree.get (tree.size () - 1)).toString ();
+		}
 	}
 
 	public String getMerkleRoot ()
