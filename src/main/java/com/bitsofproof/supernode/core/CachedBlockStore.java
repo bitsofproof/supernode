@@ -604,6 +604,7 @@ public abstract class CachedBlockStore implements BlockStore
 					catch ( ValidationException e )
 					{
 						cancelBatch ();
+						status.setRollbackOnly ();
 						return e;
 					}
 					catch ( Exception e )
