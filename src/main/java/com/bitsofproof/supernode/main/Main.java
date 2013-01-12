@@ -93,9 +93,16 @@ public class Main
 		File master = new File ("BCSAPIPASSWORD");
 		if ( master.exists () )
 		{
-			FileReader reader = new FileReader (master);
-			password = new BufferedReader (reader).readLine ();
-			reader.close ();
+			FileReader reader = null;
+			try
+			{
+				reader = new FileReader (master);
+				password = new BufferedReader (reader).readLine ();
+			}
+			finally
+			{
+				reader.close ();
+			}
 		}
 		if ( password == null )
 		{

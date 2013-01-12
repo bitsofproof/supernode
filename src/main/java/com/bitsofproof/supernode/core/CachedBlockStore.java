@@ -300,7 +300,11 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				return true;
 			}
-			return hash.equals (((CachedBlock) o).hash);
+			if ( o instanceof CachedBlock )
+			{
+				return hash.equals (((CachedBlock) o).hash);
+			}
+			return false;
 		}
 	}
 
