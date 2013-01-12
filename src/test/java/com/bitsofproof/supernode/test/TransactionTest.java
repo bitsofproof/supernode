@@ -161,7 +161,14 @@ public class TransactionTest
 						TxOut source = new TxOut ();
 						source.setScript (sourceScript);
 						in.setSource (source);
-						assertFalse (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+						try
+						{
+							assertFalse (new ScriptEvaluation (tx, inr).evaluate (evaluatePSH));
+						}
+						catch ( Exception e )
+						{
+							// exceptions are OK here
+						}
 					}
 				}
 			}
@@ -486,7 +493,11 @@ public class TransactionTest
 		List<Future<ValidationException>> results = executor.invokeAll (callables);
 		for ( Future<ValidationException> e : results )
 		{
-			assertTrue (e.get () == null);
+			if ( e.get () != null )
+			{
+				e.get ().printStackTrace ();
+				throw e.get ();
+			}
 		}
 
 		// send to OP_1

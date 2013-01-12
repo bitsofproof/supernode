@@ -42,6 +42,11 @@ public class ScriptEvaluation
 	private TxOut source;
 	private int inr;
 
+	public int getInr ()
+	{
+		return inr;
+	}
+
 	private void push (byte[] data) throws ValidationException
 	{
 		if ( data.length > 520 )
@@ -147,50 +152,43 @@ public class ScriptEvaluation
 	@SuppressWarnings ("unchecked")
 	public boolean evaluateScripts (boolean validatePSH, byte[] s1, byte[] s2) throws ValidationException
 	{
-		try
+		Stack<byte[]> copy = new Stack<byte[]> ();
+		if ( !evaluateSingleScript (s1) )
 		{
-			Stack<byte[]> copy = new Stack<byte[]> ();
-			if ( !evaluateSingleScript (s1) )
-			{
-				return false;
-			}
-			boolean psh = ScriptFormat.isPayToScriptHash (s2) && validatePSH;
-			if ( psh )
-			{
-				copy = (Stack<byte[]>) stack.clone ();
-			}
-			if ( !evaluateSingleScript (s2) )
-			{
-				return false;
-			}
-			if ( popBoolean () == false )
-			{
-				return false;
-			}
-			if ( psh )
-			{
-				if ( !ScriptFormat.isPushOnly (s1) )
-				{
-					throw new ValidationException ("input script for PTH should be push only.");
-				}
-				stack = copy;
-				byte[] script = stack.pop ();
-				if ( !evaluateSingleScript (script) )
-				{
-					return false;
-				}
-				return popBoolean ();
-			}
+			return false;
 		}
-		catch ( Exception e )
+		boolean psh = ScriptFormat.isPayToScriptHash (s2) && validatePSH;
+		if ( psh )
 		{
-			throw new ValidationException ("Exception in script validation", e);
+			copy = (Stack<byte[]>) stack.clone ();
+		}
+		if ( !evaluateSingleScript (s2) )
+		{
+			return false;
+		}
+		if ( popBoolean () == false )
+		{
+			return false;
+		}
+		if ( psh )
+		{
+			if ( !ScriptFormat.isPushOnly (s1) )
+			{
+				throw new ValidationException ("input script for PTH should be push only.");
+			}
+			stack = copy;
+			byte[] script = stack.pop ();
+			if ( !evaluateSingleScript (script) )
+			{
+				return false;
+			}
+			return popBoolean ();
 		}
 		return true;
 	}
 
 	@SuppressWarnings ("incomplete-switch")
-	public boolean evaluateSingleScript (byte[] script)
+	public boolean evaluateSingleScript (byte[] script) throws ValidationException
 	{
 		if ( script.length > 10000 )
 		{
@@ -207,102 +205,322 @@ public class ScriptEvaluation
 
 		int ifdepth = 0;
 		int opcodeCount = 0;
-		try
+		while ( tokenizer.hashMoreElements () )
 		{
-			while ( tokenizer.hashMoreElements () )
+			ScriptFormat.Token token = null;
+			try
 			{
-				ScriptFormat.Token token = null;
-				try
+				token = tokenizer.nextToken ();
+				if ( token.op.ordinal () > Opcode.OP_16.ordinal () && ++opcodeCount > 201 )
 				{
-					token = tokenizer.nextToken ();
-					if ( token.op.ordinal () > Opcode.OP_16.ordinal () && ++opcodeCount > 201 )
+					return false;
+				}
+			}
+			catch ( ValidationException e )
+			{
+				if ( ignoreStack.peek () )
+				{
+					continue;
+				}
+				throw e;
+			}
+			if ( token.data != null )
+			{
+				if ( !ignoreStack.peek () )
+				{
+					push (token.data);
+				}
+				else
+				{
+					if ( token.data.length > 520 )
 					{
 						return false;
 					}
 				}
-				catch ( ValidationException e )
-				{
-					if ( ignoreStack.peek () )
+				continue;
+			}
+			switch ( token.op )
+			{
+				case OP_CAT:
+				case OP_SUBSTR:
+				case OP_LEFT:
+				case OP_RIGHT:
+					return false;
+				case OP_INVERT:
+				case OP_AND:
+				case OP_OR:
+				case OP_XOR:
+					return false;
+				case OP_VERIF:
+				case OP_VERNOTIF:
+					return false;
+				case OP_MUL:
+				case OP_DIV:
+				case OP_MOD:
+				case OP_LSHIFT:
+				case OP_RSHIFT:
+					return false;
+				case OP_2MUL:
+				case OP_2DIV:
+					return false;
+
+				case OP_IF:
+					++ifdepth;
+					if ( !ignoreStack.peek () && popBoolean () )
 					{
-						continue;
-					}
-					throw e;
-				}
-				if ( token.data != null )
-				{
-					if ( !ignoreStack.peek () )
-					{
-						push (token.data);
+						ignoreStack.push (false);
 					}
 					else
 					{
-						if ( token.data.length > 520 )
+						ignoreStack.push (true);
+					}
+					break;
+				case OP_NOTIF:
+					++ifdepth;
+					if ( !ignoreStack.peek () && !popBoolean () )
+					{
+						ignoreStack.push (false);
+					}
+					else
+					{
+						ignoreStack.push (true);
+					}
+					break;
+				case OP_ENDIF:
+					--ifdepth;
+					ignoreStack.pop ();
+					break;
+				case OP_ELSE:
+					ignoreStack.push (!ignoreStack.pop () || ignoreStack.peek ());
+					break;
+			}
+			if ( !ignoreStack.peek () )
+			{
+				switch ( token.op )
+				{
+					case OP_VERIFY:
+						if ( !isTrue (stack.peek ()) )
 						{
 							return false;
 						}
-					}
-					continue;
-				}
-				switch ( token.op )
-				{
-					case OP_CAT:
-					case OP_SUBSTR:
-					case OP_LEFT:
-					case OP_RIGHT:
-						return false;
-					case OP_INVERT:
-					case OP_AND:
-					case OP_OR:
-					case OP_XOR:
-						return false;
-					case OP_VERIF:
-					case OP_VERNOTIF:
-						return false;
-					case OP_MUL:
-					case OP_DIV:
-					case OP_MOD:
-					case OP_LSHIFT:
-					case OP_RSHIFT:
-						return false;
-					case OP_2MUL:
-					case OP_2DIV:
-						return false;
-
-					case OP_IF:
-						++ifdepth;
-						if ( !ignoreStack.peek () && popBoolean () )
-						{
-							ignoreStack.push (false);
-						}
 						else
 						{
-							ignoreStack.push (true);
+							stack.pop ();
 						}
 						break;
-					case OP_NOTIF:
-						++ifdepth;
-						if ( !ignoreStack.peek () && !popBoolean () )
-						{
-							ignoreStack.push (false);
-						}
-						else
-						{
-							ignoreStack.push (true);
-						}
+					case OP_RETURN:
+						return false;
+					case OP_NOP:
 						break;
-					case OP_ENDIF:
-						--ifdepth;
-						ignoreStack.pop ();
+					case OP_1NEGATE:
+						pushInt (-1);
 						break;
-					case OP_ELSE:
-						ignoreStack.push (!ignoreStack.pop () || ignoreStack.peek ());
+					case OP_FALSE:
+						push (new byte[0]);
 						break;
-				}
-				if ( !ignoreStack.peek () )
-				{
-					switch ( token.op )
+					case OP_1:
+						pushInt (1);
+						break;
+					case OP_2:
+						pushInt (2);
+						break;
+					case OP_3:
+						pushInt (3);
+						break;
+					case OP_4:
+						pushInt (4);
+						break;
+					case OP_5:
+						pushInt (5);
+						break;
+					case OP_6:
+						pushInt (6);
+						break;
+					case OP_7:
+						pushInt (7);
+						break;
+					case OP_8:
+						pushInt (8);
+						break;
+					case OP_9:
+						pushInt (9);
+						break;
+					case OP_10:
+						pushInt (10);
+						break;
+					case OP_11:
+						pushInt (11);
+						break;
+					case OP_12:
+						pushInt (12);
+						break;
+					case OP_13:
+						pushInt (13);
+						break;
+					case OP_14:
+						pushInt (14);
+						break;
+					case OP_15:
+						pushInt (15);
+						break;
+					case OP_16:
+						pushInt (16);
+						break;
+					case OP_TOALTSTACK:
+						alt.push (stack.pop ());
+						break;
+					case OP_FROMALTSTACK:
+						push (alt.pop ());
+						break;
+					case OP_2DROP:
+						stack.pop ();
+						stack.pop ();
+						break;
+					case OP_2DUP:
 					{
-						case OP_VERIFY:
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						push (a2);
+						push (a1);
+						push (a2);
+						push (a1);
+					}
+						break;
+					case OP_3DUP:
+					{
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						byte[] a3 = stack.pop ();
+						push (a3);
+						push (a2);
+						push (a1);
+						push (a3);
+						push (a2);
+						push (a1);
+					}
+						break;
+					case OP_2OVER:
+					{
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						byte[] a3 = stack.pop ();
+						byte[] a4 = stack.pop ();
+						push (a4);
+						push (a3);
+						push (a2);
+						push (a1);
+						push (a4);
+						push (a3);
+					}
+						break;
+					case OP_2ROT:
+					{
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						byte[] a3 = stack.pop ();
+						byte[] a4 = stack.pop ();
+						byte[] a5 = stack.pop ();
+						byte[] a6 = stack.pop ();
+						push (a4);
+						push (a3);
+						push (a2);
+						push (a1);
+						push (a6);
+						push (a5);
+					}
+						break;
+					case OP_2SWAP:
+					{
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						byte[] a3 = stack.pop ();
+						byte[] a4 = stack.pop ();
+						push (a2);
+						push (a1);
+						push (a4);
+						push (a3);
+					}
+						break;
+					case OP_IFDUP:
+						if ( peekBoolean () )
+						{
+							push (stack.peek ());
+						}
+						break;
+					case OP_DEPTH:
+						pushInt (stack.size ());
+						break;
+					case OP_DROP:
+						stack.pop ();
+						break;
+					case OP_DUP:
+					{
+						push (stack.peek ());
+					}
+						break;
+					case OP_NIP:
+					{
+						byte[] a1 = stack.pop ();
+						stack.pop ();
+						push (a1);
+					}
+						break;
+					case OP_OVER:
+					{
+						byte[] a1 = stack.pop ();
+						byte[] a2 = stack.pop ();
+						push (a2);
+						push (a1);
+						push (a2);
+					}
+						break;
+					case OP_PICK:
+					{
+						long n = popInt ();
+						push (stack.get (stack.size () - 1 - (int) n));
+					}
+						break;
+					case OP_ROLL:
+					{
+						long n = popInt ();
+						byte[] a = stack.get (stack.size () - 1 - (int) n);
+						stack.remove ((int) (stack.size () - 1 - n));
+						push (a);
+					}
+						break;
+					case OP_ROT:
+					{
+						byte[] a = stack.get (stack.size () - 1 - 2);
+						stack.remove (stack.size () - 1 - 2);
+						push (a);
+					}
+						break;
+					case OP_SWAP:
+					{
+						byte[] a = stack.pop ();
+						byte[] b = stack.pop ();
+						push (a);
+						push (b);
+					}
+						break;
+					case OP_TUCK:
+					{
+						byte[] a = stack.pop ();
+						byte[] b = stack.pop ();
+						push (a);
+						push (b);
+						push (a);
+					}
+						break;
+					case OP_SIZE:
+						pushInt (stack.peek ().length);
+						break;
+					case OP_EQUAL:
+					case OP_EQUALVERIFY:
+					{
+						pushInt (equals (stack.pop (), stack.pop ()) == true ? 1 : 0);
+						if ( token.op == ScriptFormat.Opcode.OP_EQUALVERIFY )
+						{
 							if ( !isTrue (stack.peek ()) )
 							{
 								return false;
@@ -311,539 +529,320 @@ public class ScriptEvaluation
 							{
 								stack.pop ();
 							}
-							break;
-						case OP_RETURN:
-							return false;
-						case OP_NOP:
-							break;
-						case OP_1NEGATE:
-							pushInt (-1);
-							break;
-						case OP_FALSE:
-							push (new byte[0]);
-							break;
-						case OP_1:
-							pushInt (1);
-							break;
-						case OP_2:
-							pushInt (2);
-							break;
-						case OP_3:
-							pushInt (3);
-							break;
-						case OP_4:
-							pushInt (4);
-							break;
-						case OP_5:
-							pushInt (5);
-							break;
-						case OP_6:
-							pushInt (6);
-							break;
-						case OP_7:
-							pushInt (7);
-							break;
-						case OP_8:
-							pushInt (8);
-							break;
-						case OP_9:
-							pushInt (9);
-							break;
-						case OP_10:
-							pushInt (10);
-							break;
-						case OP_11:
-							pushInt (11);
-							break;
-						case OP_12:
-							pushInt (12);
-							break;
-						case OP_13:
-							pushInt (13);
-							break;
-						case OP_14:
-							pushInt (14);
-							break;
-						case OP_15:
-							pushInt (15);
-							break;
-						case OP_16:
-							pushInt (16);
-							break;
-						case OP_TOALTSTACK:
-							alt.push (stack.pop ());
-							break;
-						case OP_FROMALTSTACK:
-							push (alt.pop ());
-							break;
-						case OP_2DROP:
-							stack.pop ();
-							stack.pop ();
-							break;
-						case OP_2DUP:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							push (a2);
-							push (a1);
-							push (a2);
-							push (a1);
 						}
-							break;
-						case OP_3DUP:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							byte[] a3 = stack.pop ();
-							push (a3);
-							push (a2);
-							push (a1);
-							push (a3);
-							push (a2);
-							push (a1);
-						}
-							break;
-						case OP_2OVER:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							byte[] a3 = stack.pop ();
-							byte[] a4 = stack.pop ();
-							push (a4);
-							push (a3);
-							push (a2);
-							push (a1);
-							push (a4);
-							push (a3);
-						}
-							break;
-						case OP_2ROT:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							byte[] a3 = stack.pop ();
-							byte[] a4 = stack.pop ();
-							byte[] a5 = stack.pop ();
-							byte[] a6 = stack.pop ();
-							push (a4);
-							push (a3);
-							push (a2);
-							push (a1);
-							push (a6);
-							push (a5);
-						}
-							break;
-						case OP_2SWAP:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							byte[] a3 = stack.pop ();
-							byte[] a4 = stack.pop ();
-							push (a2);
-							push (a1);
-							push (a4);
-							push (a3);
-						}
-							break;
-						case OP_IFDUP:
-							if ( peekBoolean () )
-							{
-								push (stack.peek ());
-							}
-							break;
-						case OP_DEPTH:
-							pushInt (stack.size ());
-							break;
-						case OP_DROP:
-							stack.pop ();
-							break;
-						case OP_DUP:
-						{
-							push (stack.peek ());
-						}
-							break;
-						case OP_NIP:
-						{
-							byte[] a1 = stack.pop ();
-							stack.pop ();
-							push (a1);
-						}
-							break;
-						case OP_OVER:
-						{
-							byte[] a1 = stack.pop ();
-							byte[] a2 = stack.pop ();
-							push (a2);
-							push (a1);
-							push (a2);
-						}
-							break;
-						case OP_PICK:
-						{
-							long n = popInt ();
-							push (stack.get (stack.size () - 1 - (int) n));
-						}
-							break;
-						case OP_ROLL:
-						{
-							long n = popInt ();
-							byte[] a = stack.get (stack.size () - 1 - (int) n);
-							stack.remove ((int) (stack.size () - 1 - n));
-							push (a);
-						}
-							break;
-						case OP_ROT:
-						{
-							byte[] a = stack.get (stack.size () - 1 - 2);
-							stack.remove (stack.size () - 1 - 2);
-							push (a);
-						}
-							break;
-						case OP_SWAP:
-						{
-							byte[] a = stack.pop ();
-							byte[] b = stack.pop ();
-							push (a);
-							push (b);
-						}
-							break;
-						case OP_TUCK:
-						{
-							byte[] a = stack.pop ();
-							byte[] b = stack.pop ();
-							push (a);
-							push (b);
-							push (a);
-						}
-							break;
-						case OP_SIZE:
-							pushInt (stack.peek ().length);
-							break;
-						case OP_EQUAL:
-						case OP_EQUALVERIFY:
-						{
-							pushInt (equals (stack.pop (), stack.pop ()) == true ? 1 : 0);
-							if ( token.op == ScriptFormat.Opcode.OP_EQUALVERIFY )
-							{
-								if ( !isTrue (stack.peek ()) )
-								{
-									return false;
-								}
-								else
-								{
-									stack.pop ();
-								}
-							}
-						}
-							break;
-						case OP_VER:
-						case OP_RESERVED:
-						case OP_RESERVED1:
-						case OP_RESERVED2:
-							return false;
-						case OP_1ADD:// 0x8b in out 1 is added to the input.
-							pushInt (popOperand () + 1);
-							break;
-						case OP_1SUB:// 0x8c in out 1 is subtracted from the
-										// input.
-							pushInt (popOperand () - 1);
-							break;
-						case OP_NEGATE:// 0x8f in out The sign of the input is
-										// flipped.
-							pushInt (-popOperand ());
-							break;
-						case OP_ABS:// 0x90 in out The input is made positive.
-							pushInt (Math.abs (popOperand ()));
-							break;
-						case OP_NOT: // 0x91 in out If the input is 0 or 1, it
+					}
+						break;
+					case OP_VER:
+					case OP_RESERVED:
+					case OP_RESERVED1:
+					case OP_RESERVED2:
+						return false;
+					case OP_1ADD:// 0x8b in out 1 is added to the input.
+						pushInt (popOperand () + 1);
+						break;
+					case OP_1SUB:// 0x8c in out 1 is subtracted from the
+									// input.
+						pushInt (popOperand () - 1);
+						break;
+					case OP_NEGATE:// 0x8f in out The sign of the input is
+									// flipped.
+						pushInt (-popOperand ());
+						break;
+					case OP_ABS:// 0x90 in out The input is made positive.
+						pushInt (Math.abs (popOperand ()));
+						break;
+					case OP_NOT: // 0x91 in out If the input is 0 or 1, it
+									// is
+									// flipped. Otherwise the output will be
+									// 0.
+						pushInt (popOperand () == 0 ? 1 : 0);
+						break;
+					case OP_0NOTEQUAL:// 0x92 in out Returns 0 if the input
 										// is
-										// flipped. Otherwise the output will be
-										// 0.
-							pushInt (popOperand () == 0 ? 1 : 0);
-							break;
-						case OP_0NOTEQUAL:// 0x92 in out Returns 0 if the input
+										// 0. 1 otherwise.
+						pushInt (popOperand () == 0 ? 0 : 1);
+						break;
+					case OP_ADD:// 0x93 a b out a is added to b.
+						pushInt (popOperand () + popOperand ());
+						break;
+					case OP_SUB:// 0x94 a b out b is subtracted from a.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (b - a);
+					}
+						break;
+					case OP_BOOLAND:// 0x9a a b out If both a and b are not
+									// 0,
+									// the output is 1. Otherwise 0.
+						pushInt (popOperand () != 0 && popOperand () != 0 ? 1 : 0);
+						break;
+					case OP_BOOLOR:// 0x9b a b out If a or b is not 0, the
+									// output is 1. Otherwise 0.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (a != 0 || b != 0 ? 1 : 0);
+					}
+						break;
+					case OP_NUMEQUAL:// 0x9c a b out Returns 1 if the
+										// numbers
+										// are equal, 0 otherwise.
+						pushInt (popOperand () == popOperand () ? 1 : 0);
+						break;
+					case OP_NUMEQUALVERIFY:// 0x9d a b out Same as
+											// OP_NUMEQUAL,
+											// but runs OP_VERIFY afterward.
+						if ( popOperand () != popOperand () )
+						{
+							return false;
+						}
+						break;
+					case OP_NUMNOTEQUAL:// 0x9e a b out Returns 1 if the
+										// numbers
+										// are not equal, 0 otherwise.
+						pushInt (popOperand () != popOperand () ? 1 : 0);
+						break;
+
+					case OP_LESSTHAN:// 0x9f a b out Returns 1 if a is less
+										// than
+										// b, 0 otherwise.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (b < a ? 1 : 0);
+					}
+						break;
+					case OP_GREATERTHAN:// 0xa0 a b out Returns 1 if a is
+										// greater than b, 0 otherwise.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (b > a ? 1 : 0);
+					}
+						break;
+					case OP_LESSTHANOREQUAL:// 0xa1 a b out Returns 1 if a
 											// is
-											// 0. 1 otherwise.
-							pushInt (popOperand () == 0 ? 0 : 1);
-							break;
-						case OP_ADD:// 0x93 a b out a is added to b.
-							pushInt (popOperand () + popOperand ());
-							break;
-						case OP_SUB:// 0x94 a b out b is subtracted from a.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (b - a);
-						}
-							break;
-						case OP_BOOLAND:// 0x9a a b out If both a and b are not
-										// 0,
-										// the output is 1. Otherwise 0.
-							pushInt (popOperand () != 0 && popOperand () != 0 ? 1 : 0);
-							break;
-						case OP_BOOLOR:// 0x9b a b out If a or b is not 0, the
-										// output is 1. Otherwise 0.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (a != 0 || b != 0 ? 1 : 0);
-						}
-							break;
-						case OP_NUMEQUAL:// 0x9c a b out Returns 1 if the
-											// numbers
-											// are equal, 0 otherwise.
-							pushInt (popOperand () == popOperand () ? 1 : 0);
-							break;
-						case OP_NUMEQUALVERIFY:// 0x9d a b out Same as
-												// OP_NUMEQUAL,
-												// but runs OP_VERIFY afterward.
-							if ( popOperand () != popOperand () )
-							{
-								return false;
-							}
-							break;
-						case OP_NUMNOTEQUAL:// 0x9e a b out Returns 1 if the
-											// numbers
-											// are not equal, 0 otherwise.
-							pushInt (popOperand () != popOperand () ? 1 : 0);
-							break;
-
-						case OP_LESSTHAN:// 0x9f a b out Returns 1 if a is less
-											// than
-											// b, 0 otherwise.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (b < a ? 1 : 0);
-						}
-							break;
-						case OP_GREATERTHAN:// 0xa0 a b out Returns 1 if a is
-											// greater than b, 0 otherwise.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (b > a ? 1 : 0);
-						}
-							break;
-						case OP_LESSTHANOREQUAL:// 0xa1 a b out Returns 1 if a
-												// is
-												// less than or equal to b, 0
-												// otherwise.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (b <= a ? 1 : 0);
-						}
-							break;
-						case OP_GREATERTHANOREQUAL:// 0xa2 a b out Returns 1 if
-													// a is
-													// greater than or equal to
-													// b, 0
-													// otherwise.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							pushInt (b >= a ? 1 : 0);
-						}
-							break;
-						case OP_MIN:// 0xa3 a b out Returns the smaller of a and
-									// b.
-							pushInt (Math.min (popOperand (), popOperand ()));
-							break;
-						case OP_MAX:// 0xa4 a b out Returns the larger of a and
-									// b.
-							pushInt (Math.max (popOperand (), popOperand ()));
-							break;
-						case OP_WITHIN: // 0xa5 x min max out Returns 1 if x is
-										// within the specified range
-										// (left-inclusive), 0 otherwise.
-						{
-							long a = popOperand ();
-							long b = popOperand ();
-							long c = popOperand ();
-							pushInt (c >= b && c < a ? 1 : 0);
-						}
-							break;
-						case OP_RIPEMD160: // 0xa6 in hash The input is hashed
-											// using
-											// RIPEMD-160.
-						{
-							RIPEMD160Digest digest = new RIPEMD160Digest ();
-							byte[] data = stack.pop ();
-							digest.update (data, 0, data.length);
-							byte[] hash = new byte[20];
-							digest.doFinal (hash, 0);
-							push (hash);
-						}
-							break;
-						case OP_SHA1: // 0xa7 in hash The input is hashed using
-										// SHA-1.
-						{
-							try
-							{
-								MessageDigest a = MessageDigest.getInstance ("SHA-1");
-								push (a.digest (stack.pop ()));
-							}
-							catch ( NoSuchAlgorithmException e )
-							{
-								return false;
-							}
-						}
-							break;
-						case OP_SHA256: // 0xa8 in hash The input is hashed
-										// using
-										// SHA-256.
-						{
-							push (Hash.sha256 (stack.pop ()));
-						}
-							break;
-						case OP_HASH160: // 0xa9 in hash The input is hashed
-											// twice:
-											// first with SHA-256 and then with
-											// RIPEMD-160.
-						{
-							push (Hash.keyHash (stack.pop ()));
-						}
-							break;
-						case OP_HASH256: // 0xaa in hash The input is hashed two
-											// times with SHA-256.
-						{
-							push (Hash.hash (stack.pop ()));
-						}
-							break;
-						case OP_CODESEPARATOR: // 0xab Nothing Nothing All of
-												// the
-												// signature checking words will
-												// only match signatures to the
-												// data
-												// after the most
-												// recently-executed
-												// OP_CODESEPARATOR.
-							codeseparator = tokenizer.getCursor ();
-							break;
-						case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
-							// Same
-							// as OP_CHECKSIG, but OP_VERIFY
-							// is
-							// executed afterward.
-							// / no break;
-						case OP_CHECKSIG: // 0xac sig pubkey True / false The
-											// entire
-											// transaction's outputs, inputs,
-											// and
-											// script (from the most
-											// recently-executed
-											// OP_CODESEPARATOR to
-											// the end) are hashed. The
-											// signature
-											// used by OP_CHECKSIG must be a
-											// valid
-											// signature for this hash and
-											// public
-											// key. If it is, 1 is returned, 0
+											// less than or equal to b, 0
 											// otherwise.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (b <= a ? 1 : 0);
+					}
+						break;
+					case OP_GREATERTHANOREQUAL:// 0xa2 a b out Returns 1 if
+												// a is
+												// greater than or equal to
+												// b, 0
+												// otherwise.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						pushInt (b >= a ? 1 : 0);
+					}
+						break;
+					case OP_MIN:// 0xa3 a b out Returns the smaller of a and
+								// b.
+						pushInt (Math.min (popOperand (), popOperand ()));
+						break;
+					case OP_MAX:// 0xa4 a b out Returns the larger of a and
+								// b.
+						pushInt (Math.max (popOperand (), popOperand ()));
+						break;
+					case OP_WITHIN: // 0xa5 x min max out Returns 1 if x is
+									// within the specified range
+									// (left-inclusive), 0 otherwise.
+					{
+						long a = popOperand ();
+						long b = popOperand ();
+						long c = popOperand ();
+						pushInt (c >= b && c < a ? 1 : 0);
+					}
+						break;
+					case OP_RIPEMD160: // 0xa6 in hash The input is hashed
+										// using
+										// RIPEMD-160.
+					{
+						RIPEMD160Digest digest = new RIPEMD160Digest ();
+						byte[] data = stack.pop ();
+						digest.update (data, 0, data.length);
+						byte[] hash = new byte[20];
+						digest.doFinal (hash, 0);
+						push (hash);
+					}
+						break;
+					case OP_SHA1: // 0xa7 in hash The input is hashed using
+									// SHA-1.
+					{
+						try
 						{
-							byte[] pubkey = stack.pop ();
-							byte[] sig = stack.pop ();
+							MessageDigest a = MessageDigest.getInstance ("SHA-1");
+							push (a.digest (stack.pop ()));
+						}
+						catch ( NoSuchAlgorithmException e )
+						{
+							return false;
+						}
+					}
+						break;
+					case OP_SHA256: // 0xa8 in hash The input is hashed
+									// using
+									// SHA-256.
+					{
+						push (Hash.sha256 (stack.pop ()));
+					}
+						break;
+					case OP_HASH160: // 0xa9 in hash The input is hashed
+										// twice:
+										// first with SHA-256 and then with
+										// RIPEMD-160.
+					{
+						push (Hash.keyHash (stack.pop ()));
+					}
+						break;
+					case OP_HASH256: // 0xaa in hash The input is hashed two
+										// times with SHA-256.
+					{
+						push (Hash.hash (stack.pop ()));
+					}
+						break;
+					case OP_CODESEPARATOR: // 0xab Nothing Nothing All of
+											// the
+											// signature checking words will
+											// only match signatures to the
+											// data
+											// after the most
+											// recently-executed
+											// OP_CODESEPARATOR.
+						codeseparator = tokenizer.getCursor ();
+						break;
+					case OP_CHECKSIGVERIFY: // 0xad sig pubkey True / false
+						// Same
+						// as OP_CHECKSIG, but OP_VERIFY
+						// is
+						// executed afterward.
+						// / no break;
+					case OP_CHECKSIG: // 0xac sig pubkey True / false The
+										// entire
+										// transaction's outputs, inputs,
+										// and
+										// script (from the most
+										// recently-executed
+										// OP_CODESEPARATOR to
+										// the end) are hashed. The
+										// signature
+										// used by OP_CHECKSIG must be a
+										// valid
+										// signature for this hash and
+										// public
+										// key. If it is, 1 is returned, 0
+										// otherwise.
+					{
+						byte[] pubkey = stack.pop ();
+						byte[] sig = stack.pop ();
 
-							byte[] sts = scriptToSign (script, codeseparator);
-							sts = ScriptFormat.deleteSignatureFromScript (sts, sig);
+						byte[] sts = scriptToSign (script, codeseparator);
+						sts = ScriptFormat.deleteSignatureFromScript (sts, sig);
 
-							pushInt (validateSignature (pubkey, sig, sts) ? 1 : 0);
-							if ( token.op == ScriptFormat.Opcode.OP_CHECKSIGVERIFY )
+						pushInt (validateSignature (pubkey, sig, sts) ? 1 : 0);
+						if ( token.op == ScriptFormat.Opcode.OP_CHECKSIGVERIFY )
+						{
+							if ( !isTrue (stack.peek ()) )
 							{
-								if ( !isTrue (stack.peek ()) )
-								{
-									return false;
-								}
-								else
-								{
-									stack.pop ();
-								}
+								return false;
+							}
+							else
+							{
+								stack.pop ();
 							}
 						}
-							break;
-						case OP_CHECKMULTISIG: // 0xae x sig1 sig2 ... <number
-												// of
-												// signatures> pub1 pub2 <number
-												// of
-												// public keys> True / False For
-												// each signature and public key
-												// pair, OP_CHECKSIG is
-												// executed. If
-												// more public keys than
-												// signatures
-												// are listed, some key/sig
-												// pairs
-												// can fail. All signatures need
-												// to
-												// match a public key. If all
-												// signatures are valid, 1 is
-												// returned, 0 otherwise. Due to
-												// a
-												// bug, one extra unused value
-												// is
-												// removed from the stack.
-												// / no break;
-						case OP_CHECKMULTISIGVERIFY:// 0xaf x sig1 sig2 ...
-													// <number
-													// of signatures> pub1 pub2
-													// ...
-													// <number of public keys>
-													// True
-													// / False Same as
-													// OP_CHECKMULTISIG, but
-													// OP_VERIFY is executed
-													// afterward.
+					}
+						break;
+					case OP_CHECKMULTISIG: // 0xae x sig1 sig2 ... <number
+											// of
+											// signatures> pub1 pub2 <number
+											// of
+											// public keys> True / False For
+											// each signature and public key
+											// pair, OP_CHECKSIG is
+											// executed. If
+											// more public keys than
+											// signatures
+											// are listed, some key/sig
+											// pairs
+											// can fail. All signatures need
+											// to
+											// match a public key. If all
+											// signatures are valid, 1 is
+											// returned, 0 otherwise. Due to
+											// a
+											// bug, one extra unused value
+											// is
+											// removed from the stack.
+											// / no break;
+					case OP_CHECKMULTISIGVERIFY:// 0xaf x sig1 sig2 ...
+												// <number
+												// of signatures> pub1 pub2
+												// ...
+												// <number of public keys>
+												// True
+												// / False Same as
+												// OP_CHECKMULTISIG, but
+												// OP_VERIFY is executed
+												// afterward.
+					{
+						int nkeys = (int) popInt ();
+						if ( nkeys <= 0 || nkeys > 20 )
 						{
-							int nkeys = (int) popInt ();
-							if ( nkeys <= 0 || nkeys > 20 )
-							{
-								return false;
-							}
-							byte[][] keys = new byte[nkeys][];
-							for ( int i = 0; i < nkeys; ++i )
-							{
-								keys[i] = stack.pop ();
-							}
-							int required = (int) popInt ();
-							if ( required <= 0 )
-							{
-								return false;
-							}
+							return false;
+						}
+						byte[][] keys = new byte[nkeys][];
+						for ( int i = 0; i < nkeys; ++i )
+						{
+							keys[i] = stack.pop ();
+						}
+						int required = (int) popInt ();
+						if ( required <= 0 )
+						{
+							return false;
+						}
 
-							byte[] sts = scriptToSign (script, codeseparator);
+						byte[] sts = scriptToSign (script, codeseparator);
 
-							int havesig = 0;
-							byte[][] sigs = new byte[nkeys][];
-							for ( int i = 0; i < nkeys && stack.size () > 1; ++i )
+						int havesig = 0;
+						byte[][] sigs = new byte[nkeys][];
+						for ( int i = 0; i < nkeys && stack.size () > 1; ++i )
+						{
+							sigs[i] = stack.pop ();
+							++havesig;
+							sts = ScriptFormat.deleteSignatureFromScript (sts, sigs[i]);
+						}
+						stack.pop (); // reproduce Satoshi client bug
+						int successCounter = 0;
+						for ( int i = 0; (required - successCounter) <= (nkeys - i) && i < nkeys; ++i )
+						{
+							for ( int j = 0; successCounter < required && j < havesig; ++j )
 							{
-								sigs[i] = stack.pop ();
-								++havesig;
-								sts = ScriptFormat.deleteSignatureFromScript (sts, sigs[i]);
-							}
-							stack.pop (); // reproduce Satoshi client bug
-							int successCounter = 0;
-							for ( int i = 0; (required - successCounter) <= (nkeys - i) && i < nkeys; ++i )
-							{
-								for ( int j = 0; successCounter < required && j < havesig; ++j )
+								try
 								{
 									if ( validateSignature (keys[i], sigs[j], sts) )
 									{
 										++successCounter;
 									}
 								}
+								catch ( Exception e )
+								{
+									// attempt to validate other no matter if there are
+									// format error in this
+								}
 							}
-							pushInt (successCounter == required ? 1 : 0);
 						}
-							break;
+						pushInt (successCounter == required ? 1 : 0);
 					}
+						break;
 				}
 			}
-		}
-		catch ( Exception e )
-		{
-			return false;
 		}
 		if ( ifdepth != 0 )
 		{
@@ -941,13 +940,6 @@ public class ScriptEvaluation
 		{
 			return false;
 		}
-		try
-		{
-			return ECKeyPair.verify (hash, sig, pubkey);
-		}
-		catch ( Exception e )
-		{
-			return false;
-		}
+		return ECKeyPair.verify (hash, sig, pubkey);
 	}
 }

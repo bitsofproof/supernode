@@ -1222,7 +1222,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				seen.add (i.getIx ());
 
-				final TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
+				TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
 				sumIn += source.getValue ();
 				try
 				{
@@ -1250,7 +1250,7 @@ public abstract class CachedBlockStore implements BlockStore
 					throw new TransactionValidationException (e, t);
 				}
 
-				final int nr = inNumber;
+				final ScriptEvaluation evaluation = new ScriptEvaluation (t, inNumber++, source);
 				callables.add (new Callable<TransactionValidationException> ()
 				{
 					@Override
@@ -1258,19 +1258,18 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						try
 						{
-							if ( !new ScriptEvaluation (t, nr, source).evaluate (chain.isProduction ()) )
+							if ( !evaluation.evaluate (chain.isProduction ()) )
 							{
-								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, nr);
+								return new TransactionValidationException ("The transaction script does not evaluate to true in input", t, evaluation.getInr ());
 							}
 						}
 						catch ( Exception e )
 						{
-							return new TransactionValidationException (e, t, nr);
+							return new TransactionValidationException (e, t, evaluation.getInr ());
 						}
 						return null;
 					}
 				});
-				++inNumber;
 			}
 			if ( sumOut > sumIn )
 			{

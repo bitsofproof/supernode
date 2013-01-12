@@ -75,9 +75,9 @@ public class ScriptTest
 				assertFalse (script.evaluateScripts (true, ScriptFormat.fromReadable (test.get (0).toString ()),
 						ScriptFormat.fromReadable (test.get (1).toString ())));
 			}
-			catch ( ValidationException e )
+			catch ( Exception e )
 			{
-				// validation errors are OK here
+				// exceptions are OK here
 			}
 		}
 	}
