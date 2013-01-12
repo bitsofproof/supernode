@@ -484,32 +484,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void cacheUTXO (final int after, final TxOutCache cache)
 	{
-		final AtomicInteger n = new AtomicInteger (0);
-		forAllBackward (KeyType.BLOCK, new DataProcessor ()
-		{
-			@Override
-			public boolean process (byte[] key, byte[] data)
-			{
-				if ( n.incrementAndGet () > after )
-				{
-					return false;
-				}
-
-				Blk b = Blk.fromLevelDB (data, true);
-				for ( String txHash : b.getTxHashes () )
-				{
-					Tx t = readTx (txHash);
-					for ( TxOut o : t.getOutputs () )
-					{
-						if ( o.isAvailable () )
-						{
-							cache.add (o);
-						}
-					}
-				}
-				return true;
-			}
-		});
+		// not implemented for leveldb
 	}
 
 	@Override
