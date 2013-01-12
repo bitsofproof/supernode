@@ -189,13 +189,13 @@ public class ECKeyPair
 			{
 				synchronized ( validSignatures )
 				{
-					validSignatures.add (cacheKey);
 					if ( validSignatures.size () >= signatureCacheLimit )
 					{
 						Iterator<String> i = validSignatures.iterator ();
 						i.next ();
 						i.remove ();
 					}
+					validSignatures.add (cacheKey);
 				}
 				return true;
 			}
