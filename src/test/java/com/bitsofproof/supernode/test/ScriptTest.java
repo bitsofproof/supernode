@@ -63,15 +63,22 @@ public class ScriptTest
 	}
 
 	@Test
-	public void bitcoindInvalidScriptTest () throws IOException, JSONException, ValidationException
+	public void bitcoindInvalidScriptTest () throws IOException, JSONException
 	{
 		JSONArray testData = readObjectArray (SCRIPT_INVALID);
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ScriptEvaluation script = new ScriptEvaluation ();
-			assertFalse (script.evaluateScripts (true, ScriptFormat.fromReadable (test.get (0).toString ()),
-					ScriptFormat.fromReadable (test.get (1).toString ())));
+			try
+			{
+				assertFalse (script.evaluateScripts (true, ScriptFormat.fromReadable (test.get (0).toString ()),
+						ScriptFormat.fromReadable (test.get (1).toString ())));
+			}
+			catch ( ValidationException e )
+			{
+				// validation errors are OK here
+			}
 		}
 	}
 }
