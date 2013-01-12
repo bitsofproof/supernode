@@ -26,44 +26,7 @@ import org.junit.Test;
 
 public class AddressTest
 {
-	private static final ChainParameter chain = new ChainParameter ()
-	{
-		@Override
-		public int getDifficultyReviewBlocks ()
-		{
-			return 2016;
-		}
-
-		@Override
-		public int getTargetBlockTime ()
-		{
-			return 1209600;
-		}
-
-		@Override
-		public boolean isProduction ()
-		{
-			return true;
-		}
-
-		@Override
-		public int getAddressFlag ()
-		{
-			return 0x00;
-		}
-
-		@Override
-		public int getMultisigAddressFlag ()
-		{
-			return 0x05;
-		}
-
-		@Override
-		public long getRewardForHeight (int height)
-		{
-			return 50L;
-		}
-	};
+	private static final ChainParameter chain = new UnitTestChain ();
 
 	@Test
 	public void base58Test () throws ValidationException

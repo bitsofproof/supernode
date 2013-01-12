@@ -19,16 +19,14 @@ import java.math.BigInteger;
 
 public class Difficulty
 {
-	static final BigInteger minTarget = new BigInteger ("FFFF", 16).shiftLeft (8 * (0x1d - 3));
-
 	public static BigInteger getTarget (long compactTarget)
 	{
-		return new BigInteger (Long.valueOf (compactTarget & 0x7fffffL).toString (), 10).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
+		return BigInteger.valueOf (compactTarget & 0x7fffffL).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
 	}
 
-	public static double getDifficulty (long compactTarget)
+	public static double getDifficulty (long compactTarget, ChainParameter chain)
 	{
-		return minTarget.divide (getTarget (compactTarget)).doubleValue ();
+		return chain.getMinimumTarget ().divide (getTarget (compactTarget)).doubleValue ();
 	}
 
 	public static long getCompactTarget (BigInteger target)
@@ -36,18 +34,19 @@ public class Difficulty
 		int log2 = target.bitLength ();
 		int s = (log2 / 8 + 1) * 8;
 
-		return (target.shiftRight (s - 24)).or (new BigInteger (String.valueOf ((s - 24) / 8 + 3)).shiftLeft (24)).longValue ();
+		return (target.shiftRight (s - 24)).or (BigInteger.valueOf ((s - 24) / 8 + 3).shiftLeft (24)).longValue ();
 	}
 
-	public static long getNextTarget (long periodLength, long currentTarget, long targetTime)
+	public static long getNextTarget (long periodLength, long currentTarget, ChainParameter chain)
 	{
 		// Limit the adjustment step.
-		periodLength = Math.max (Math.min (periodLength, targetTime * 4), targetTime / 4);
-		BigInteger newTarget = (getTarget (currentTarget).multiply (BigInteger.valueOf (periodLength))).divide (BigInteger.valueOf (targetTime));
+		periodLength = Math.max (Math.min (periodLength, chain.getTargetBlockTime () * 4), chain.getTargetBlockTime () / 4);
+		BigInteger newTarget =
+				(getTarget (currentTarget).multiply (BigInteger.valueOf (periodLength))).divide (BigInteger.valueOf (chain.getTargetBlockTime ()));
 		// not simpler than this
-		if ( newTarget.compareTo (minTarget) > 0 )
+		if ( newTarget.compareTo (chain.getMinimumTarget ()) > 0 )
 		{
-			newTarget = minTarget;
+			newTarget = chain.getMinimumTarget ();
 		}
 		return getCompactTarget (newTarget);
 	}

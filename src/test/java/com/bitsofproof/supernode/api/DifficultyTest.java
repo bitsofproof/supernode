@@ -23,10 +23,18 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class DIfficultyTest
+public class DifficultyTest
 {
+	private static ChainParameter chain;
+
+	@BeforeClass
+	public static void before ()
+	{
+		chain = new UnitTestChain ();
+	}
 
 	@Test
 	public void targetTest ()
@@ -44,13 +52,13 @@ public class DIfficultyTest
 	@Test
 	public void nextTargetTest ()
 	{
-		assertTrue (getNextTarget (841428L, 454983370L, 1209600) == 454375064L);
+		assertTrue (getNextTarget (841428L, 454983370L, chain) == 454375064L);
 	}
 
 	@Test
 	public void difficultyTest ()
 	{
-		assertTrue (getDifficulty (456101533L) == 1378.0);
-		assertTrue (getDifficulty (486604799L) == 1.0);
+		assertTrue (getDifficulty (456101533L, chain) == 1378.0);
+		assertTrue (getDifficulty (486604799L, chain) == 1.0);
 	}
 }

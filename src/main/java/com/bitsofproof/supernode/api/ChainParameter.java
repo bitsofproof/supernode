@@ -15,8 +15,12 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.math.BigInteger;
+
 public interface ChainParameter
 {
+	public BigInteger getMinimumTarget ();
+
 	public long getRewardForHeight (int height);
 
 	public int getDifficultyReviewBlocks ();
