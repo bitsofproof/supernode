@@ -62,7 +62,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	// not allowed to branch further back on trunk
 	private static final int FORCE_TRUNK = 100;
-	private static final long MIN_RELAY_TX_FEE = 100000;
+	private static final long MIN_RELAY_TX_FEE = 10000;
 	private static final long KB_RELAY_TX_FEE = 50000;
 	private static final int COINBASE_MATURITY = 100;
 
