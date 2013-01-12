@@ -26,6 +26,7 @@ import org.json.JSONException;
 import org.junit.Test;
 
 import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.ScriptEvaluation;
 
 public class ScriptTest
@@ -49,7 +50,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void bitcoindValidScriptTest () throws IOException, JSONException
+	public void bitcoindValidScriptTest () throws IOException, JSONException, ValidationException
 	{
 		JSONArray testData = readObjectArray (SCRIPT_VALID);
 		for ( int i = 0; i < testData.length (); ++i )
@@ -62,7 +63,7 @@ public class ScriptTest
 	}
 
 	@Test
-	public void bitcoindInvalidScriptTest () throws IOException, JSONException
+	public void bitcoindInvalidScriptTest () throws IOException, JSONException, ValidationException
 	{
 		JSONArray testData = readObjectArray (SCRIPT_INVALID);
 		for ( int i = 0; i < testData.length (); ++i )

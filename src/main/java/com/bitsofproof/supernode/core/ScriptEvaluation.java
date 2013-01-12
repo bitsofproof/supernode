@@ -136,7 +136,7 @@ public class ScriptEvaluation
 		this.source = source;
 	}
 
-	public boolean evaluate (boolean production)
+	public boolean evaluate (boolean production) throws ValidationException
 	{
 		byte[] s1 = tx.getInputs ().get (inr).getScript ();
 		byte[] s2 = source.getScript ();
@@ -145,7 +145,7 @@ public class ScriptEvaluation
 	}
 
 	@SuppressWarnings ("unchecked")
-	public boolean evaluateScripts (boolean validatePSH, byte[] s1, byte[] s2)
+	public boolean evaluateScripts (boolean validatePSH, byte[] s1, byte[] s2) throws ValidationException
 	{
 		try
 		{
@@ -184,7 +184,7 @@ public class ScriptEvaluation
 		}
 		catch ( Exception e )
 		{
-			return false;
+			throw new ValidationException ("Exception in script validation", e);
 		}
 		return true;
 	}
