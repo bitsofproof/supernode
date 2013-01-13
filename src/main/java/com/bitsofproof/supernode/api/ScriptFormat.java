@@ -483,38 +483,45 @@ public class ScriptFormat
 	}
 
 	@SuppressWarnings ("incomplete-switch")
-	public static int sigOpCount (byte[] script, boolean accurate) throws ValidationException
+	public static int sigOpCount (byte[] script, boolean accurate)
 	{
 		int nsig = 0;
-		ScriptFormat.Opcode last = ScriptFormat.Opcode.OP_FALSE;
-		ScriptFormat.Tokenizer tokenizer = new ScriptFormat.Tokenizer (script);
-		while ( tokenizer.hashMoreElements () )
+		try
 		{
-			ScriptFormat.Token token = tokenizer.nextToken ();
-
-			if ( token.data == null )
+			ScriptFormat.Opcode last = ScriptFormat.Opcode.OP_FALSE;
+			ScriptFormat.Tokenizer tokenizer = new ScriptFormat.Tokenizer (script);
+			while ( tokenizer.hashMoreElements () )
 			{
-				switch ( token.op )
+				ScriptFormat.Token token = tokenizer.nextToken ();
+
+				if ( token.data == null )
 				{
-					case OP_CHECKSIG:
-					case OP_CHECKSIGVERIFY:
-						++nsig;
-						break;
-					case OP_CHECKMULTISIG:
-					case OP_CHECKMULTISIGVERIFY:
-						// https://en.bitcoin.it/wiki/BIP_0016
-						if ( accurate && last.o >= 0 && last.o <= 16 )
-						{
-							nsig += last.o;
-						}
-						else
-						{
-							nsig += 20;
-						}
-						break;
+					switch ( token.op )
+					{
+						case OP_CHECKSIG:
+						case OP_CHECKSIGVERIFY:
+							++nsig;
+							break;
+						case OP_CHECKMULTISIG:
+						case OP_CHECKMULTISIGVERIFY:
+							// https://en.bitcoin.it/wiki/BIP_0016
+							if ( accurate && last.o >= 0 && last.o <= 16 )
+							{
+								nsig += last.o;
+							}
+							else
+							{
+								nsig += 20;
+							}
+							break;
+					}
+					last = token.op;
 				}
-				last = token.op;
 			}
+		}
+		catch ( Exception e )
+		{
+			// count until possible.
 		}
 		return nsig;
 	}
