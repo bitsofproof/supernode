@@ -1101,7 +1101,7 @@ public abstract class CachedBlockStore implements BlockStore
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 							+ t.toWireDump ());
 				}
-				if ( height != 0 && out.isCoinbase () )
+				if ( height != 0 && out.isCoinbase () && !chain.isUnitTest () )
 				{
 					if ( out.getHeight () > height - COINBASE_MATURITY )
 					{
@@ -1317,7 +1317,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void parseOwners (TxOut out) throws TransactionValidationException
+	private void parseOwners (TxOut out)
 	{
 		List<ScriptFormat.Token> parsed;
 		try
@@ -1379,9 +1379,9 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 			}
 		}
-		catch ( ValidationException e )
+		catch ( Exception e )
 		{
-			throw new TransactionValidationException (e, out.getTransaction ());
+			// parsing owner is a nice to have
 		}
 	}
 

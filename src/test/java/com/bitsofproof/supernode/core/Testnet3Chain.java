@@ -135,4 +135,10 @@ public class Testnet3Chain implements Chain
 		block.computeHash ();
 		return block;
 	}
+
+	@Override
+	public boolean isUnitTest ()
+	{
+		return false;
+	}
 }

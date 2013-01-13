@@ -37,6 +37,12 @@ public class SatoshiChain implements Chain
 	static final BigInteger minTarget = BigInteger.valueOf (0xFFFFL).shiftLeft (8 * (0x1d - 3));
 
 	@Override
+	public boolean isUnitTest ()
+	{
+		return false;
+	}
+
+	@Override
 	public BigInteger getMinimumTarget ()
 	{
 		return minTarget;
