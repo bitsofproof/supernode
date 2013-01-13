@@ -21,14 +21,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import com.bitsofproof.supernode.api.BCSAPIDirect;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
 
-@Component
 @RunWith (SpringAnnotatedEmbedderRunner.class)
 @Configure
 @UsingEmbedder (embedder = Embedder.class, threads = 1, generateViewAfterStories = false, ignoreFailureInStories = false, ignoreFailureInView = true, stepsFactory = true)
@@ -49,10 +47,6 @@ public class StoriesRunner extends JUnitStories
 	@Autowired
 	@Qualifier ("production")
 	Chain production;
-
-	@Autowired
-	@Qualifier ("test")
-	Chain test;
 
 	@Autowired
 	BCSAPIDirect directAPI;
@@ -78,10 +72,7 @@ public class StoriesRunner extends JUnitStories
 			{
 				c = production;
 			}
-			else
-			{
-				c = test;
-			}
+
 			feeder.setChain (c);
 			feeder.start ();
 

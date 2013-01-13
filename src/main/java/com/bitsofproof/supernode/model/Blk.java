@@ -27,7 +27,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -68,14 +67,11 @@ public class Blk implements Serializable
 	private int height;
 	private long nonce;
 
-	@ManyToOne (optional = false, fetch = FetchType.LAZY)
-	private Head head;
-
 	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
 	private transient ArrayList<String> txHashes;
-	private transient Long headId;
+	private Long headId;
 
 	public static Blk fromLevelDB (byte[] data, boolean txhashes)
 	{
@@ -113,7 +109,7 @@ public class Blk implements Serializable
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
-		writer.writeUint64 (headId = head.getId ());
+		writer.writeUint64 (headId);
 		writer.writeVarInt (transactions.size ());
 		for ( long i = 0; i < transactions.size (); ++i )
 		{
@@ -254,16 +250,6 @@ public class Blk implements Serializable
 	public void setHeight (int height)
 	{
 		this.height = height;
-	}
-
-	public Head getHead ()
-	{
-		return head;
-	}
-
-	public void setHead (Head head)
-	{
-		this.head = head;
 	}
 
 	public String getPreviousHash ()

@@ -84,7 +84,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime (), b.getHeight (), (int) b.getVersion ());
 			}
 			cachedBlocks.put (b.getHash (), cb);
-			CachedHead h = cachedHeads.get (b.getHead ().getId ());
+			CachedHead h = cachedHeads.get (b.getHeadId ());
 			h.getBlocks ().add (cb);
 			h.setLast (cb);
 		}
@@ -101,9 +101,10 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			sh.setId (h.getId ());
 			sh.setChainWork (h.getChainWork ());
 			sh.setHeight (h.getHeight ());
-			if ( h.getPrevious () != null )
+			if ( h.getPreviousId () != null )
 			{
-				sh.setPrevious (cachedHeads.get (h.getId ()));
+				sh.setPrevious (cachedHeads.get (h.getPreviousId ()));
+				sh.setPreviousHeight (h.getPreviousHeight ());
 			}
 			cachedHeads.put (h.getId (), sh);
 			if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
@@ -275,6 +276,12 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	protected Head updateHead (Head head)
 	{
 		return entityManager.merge (head);
+	}
+
+	@Override
+	protected Head retrieveHead (CachedHead cached)
+	{
+		return entityManager.find (Head.class, cached.getId ());
 	}
 
 	@Override

@@ -19,10 +19,8 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.api.Hash;
@@ -39,8 +37,8 @@ public class Head implements Serializable
 	private double chainWork;
 	private int height;
 
-	@ManyToOne (fetch = FetchType.LAZY, optional = true)
-	private Head previous;
+	private Long previousId;
+	private int previousHeight;
 
 	@Column (length = 64, nullable = false)
 	private String leaf;
@@ -53,6 +51,12 @@ public class Head implements Serializable
 		h.chainWork = Double.longBitsToDouble (reader.readUint64 ());
 		h.height = (int) reader.readUint32 ();
 		h.leaf = reader.readHash ().toString ();
+		long pid = reader.readUint64 ();
+		if ( pid != 0L )
+		{
+			h.previousId = pid;
+		}
+		h.previousHeight = (int) reader.readUint32 ();
 		return h;
 	}
 
@@ -63,6 +67,15 @@ public class Head implements Serializable
 		writer.writeUint64 (Double.doubleToLongBits (chainWork));
 		writer.writeUint32 (height);
 		writer.writeHash (new Hash (leaf));
+		if ( previousId != null )
+		{
+			writer.writeUint64 (previousId);
+		}
+		else
+		{
+			writer.writeUint64 (0L);
+		}
+		writer.writeUint32 (previousHeight);
 		return writer.toByteArray ();
 	}
 
@@ -96,16 +109,6 @@ public class Head implements Serializable
 		this.height = height;
 	}
 
-	public Head getPrevious ()
-	{
-		return previous;
-	}
-
-	public void setPrevious (Head previous)
-	{
-		this.previous = previous;
-	}
-
 	public String getLeaf ()
 	{
 		return leaf;
@@ -114,5 +117,25 @@ public class Head implements Serializable
 	public void setLeaf (String leaf)
 	{
 		this.leaf = leaf;
+	}
+
+	public Long getPreviousId ()
+	{
+		return previousId;
+	}
+
+	public void setPreviousId (Long previousId)
+	{
+		this.previousId = previousId;
+	}
+
+	public int getPreviousHeight ()
+	{
+		return previousHeight;
+	}
+
+	public void setPreviousHeight (int previousHeight)
+	{
+		this.previousHeight = previousHeight;
 	}
 }

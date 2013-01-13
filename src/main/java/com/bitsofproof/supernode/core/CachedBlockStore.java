@@ -152,6 +152,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Head updateHead (Head head);
 
+	protected abstract Head retrieveHead (CachedHead cached);
+
 	protected abstract Blk retrieveBlock (CachedBlock cached);
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
@@ -169,8 +171,9 @@ public abstract class CachedBlockStore implements BlockStore
 		private Long id;
 		private CachedBlock last;
 		private double chainWork;
-		private long height;
+		private int height;
 		private CachedHead previous;
+		private int previousHeight;
 		private final Set<CachedBlock> blocks = new HashSet<CachedBlock> ();
 
 		public CachedHead ()
@@ -202,7 +205,7 @@ public abstract class CachedBlockStore implements BlockStore
 			this.chainWork = chainWork;
 		}
 
-		public void setHeight (long height)
+		public void setHeight (int height)
 		{
 			this.height = height;
 		}
@@ -230,6 +233,16 @@ public abstract class CachedBlockStore implements BlockStore
 		public void setLast (CachedBlock last)
 		{
 			this.last = last;
+		}
+
+		public int getPreviousHeight ()
+		{
+			return previousHeight;
+		}
+
+		public void setPreviousHeight (int previousHeight)
+		{
+			this.previousHeight = previousHeight;
 		}
 
 	}
@@ -338,23 +351,23 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch)
+	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch, int untilHeight)
 	{
 		if ( branch.getBlocks ().contains (block) )
 		{
-			return true;
+			return block.getHeight () <= untilHeight;
 		}
 		if ( branch.getPrevious () == null )
 		{
 			return false;
 		}
-		return isBlockOnBranch (block, branch.getPrevious ());
+		return isBlockOnBranch (block, branch.getPrevious (), branch.getPreviousHeight ());
 	}
 
 	private boolean isOnTrunk (String block)
 	{
 		CachedBlock b = cachedBlocks.get (block);
-		return isBlockOnBranch (b, currentHead);
+		return isBlockOnBranch (b, currentHead, (int) currentHead.getHeight ());
 	}
 
 	private boolean isSuperMajority (int minVersion, CachedBlock from, int nRequired, int nToCheck)
@@ -637,344 +650,350 @@ public abstract class CachedBlockStore implements BlockStore
 
 		// find previous block
 		CachedBlock cachedPrevious = cachedBlocks.get (b.getPreviousHash ());
-		if ( cachedPrevious != null )
+		if ( cachedPrevious == null )
 		{
-			Blk prev = null;
-			prev = retrieveBlockHeader (cachedPrevious);
+			throw new ValidationException ("Does not connect to a known block " + b.getHash ());
+		}
+		Blk prev = null;
+		prev = retrieveBlockHeader (cachedPrevious);
 
-			if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
+		if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
+		{
+			throw new ValidationException ("Future generation attempt " + b.getHash ());
+		}
+
+		if ( chain.isProduction () )
+		{
+			if ( enforceV2Block || isSuperMajority (2, cachedPrevious, 950, 1000) )
 			{
-				throw new ValidationException ("Future generation attempt " + b.getHash ());
+				if ( !enforceV2Block )
+				{
+					log.trace ("Majority for V2 blocks reached, enforcing");
+				}
+				enforceV2Block = true;
+				checkV2BlockCoinBase = true;
+				if ( b.getVersion () < 2 )
+				{
+					throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
+				}
+			}
+			if ( checkV2BlockCoinBase || isSuperMajority (2, cachedPrevious, 750, 1000) )
+			{
+				checkV2BlockCoinBase = true;
+			}
+		}
+
+		Head head;
+
+		CachedHead cachedPreviousHead = cachedHeads.get (prev.getHeadId ());
+		Head previousHead = retrieveHead (cachedPreviousHead);
+
+		if ( previousHead.getLeaf ().equals (prev.getHash ()) )
+		{
+			// continuing
+			head = previousHead;
+
+			head.setLeaf (b.getHash ());
+			head.setHeight (head.getHeight () + 1);
+			head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
+			head = updateHead (head);
+		}
+		else
+		{
+			// branching
+			head = new Head ();
+
+			head.setPreviousId (prev.getHeadId ());
+			head.setPreviousHeight (prev.getHeight ());
+			head.setLeaf (b.getHash ());
+			head.setHeight (prev.getHeight () + 1);
+			head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
+			insertHead (head);
+		}
+		b.setHeadId (head.getId ());
+		b.setHeight (head.getHeight ());
+		b.setChainWork (head.getChainWork ());
+
+		if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
+		{
+			long periodLength = computePeriodLength (cachedPrevious, prev.getCreateTime (), chain.getDifficultyReviewBlocks ());
+
+			long next = Difficulty.getNextTarget (periodLength, prev.getDifficultyTarget (), chain);
+			if ( chain.isProduction () && next != b.getDifficultyTarget () )
+			{
+				throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
+			}
+		}
+		else
+		{
+			if ( chain.isProduction () && b.getDifficultyTarget () != prev.getDifficultyTarget () )
+			{
+				throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
+			}
+		}
+
+		b.checkHash ();
+
+		if ( chain.isProduction () && checkPoints.containsKey (b.getHeight ()) )
+		{
+			if ( !checkPoints.get (b.getHeight ()).equals (b.getHash ()) )
+			{
+				throw new ValidationException ("Checkpoint missed");
+			}
+		}
+
+		BigInteger hashAsInteger = new Hash (b.getHash ()).toBigInteger ();
+		if ( chain.isProduction () && hashAsInteger.compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
+		{
+			throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
+		}
+
+		b.parseTransactions ();
+
+		if ( b.getTransactions ().isEmpty () )
+		{
+			throw new ValidationException ("Block must have transactions " + b.getHash () + " " + b.toWireDump ());
+		}
+
+		b.checkMerkleRoot ();
+
+		ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
+
+		CachedBlock trunkBlock = cachedPrevious;
+		List<CachedBlock> pathFromTrunkToPrev = new ArrayList<CachedBlock> ();
+		while ( !isOnTrunk (trunkBlock.getHash ()) )
+		{
+			pathFromTrunkToPrev.add (trunkBlock);
+			trunkBlock = trunkBlock.getPrevious ();
+		}
+		Collections.reverse (pathFromTrunkToPrev);
+
+		if ( trunkBlock.getHeight () < (currentHead.getLast ().getHeight () - FORCE_TRUNK) )
+		{
+			throw new ValidationException ("Attempt to build on or create a branch too far back in history");
+		}
+
+		if ( currentHead.getLast () != cachedPrevious )
+		{
+			CachedBlock q = currentHead.getLast ();
+			CachedBlock p = q.previous;
+			while ( !q.getHash ().equals (trunkBlock.getHash ()) )
+			{
+				Blk block = retrieveBlock (q);
+				backwardCache (block, deltaUTXO, false);
+
+				q = p;
+				p = q.previous;
 			}
 
-			if ( chain.isProduction () )
+			for ( CachedBlock block : pathFromTrunkToPrev )
 			{
-				if ( enforceV2Block || isSuperMajority (2, cachedPrevious, 950, 1000) )
+				forwardCache (retrieveBlock (block), deltaUTXO, false);
+			}
+		}
+
+		final TransactionContext tcontext = new TransactionContext ();
+		tcontext.block = b;
+		tcontext.resolvedInputs = deltaUTXO;
+
+		log.trace ("resolving inputs for block " + b.getHash ());
+		for ( Tx t : b.getTransactions () )
+		{
+			resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
+			for ( TxOut o : t.getOutputs () )
+			{
+				tcontext.resolvedInputs.add (o);
+			}
+		}
+		if ( !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.isUnitTest () )
+		{
+			log.trace ("validating block " + b.getHash ());
+			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
+			for ( final Tx t : b.getTransactions () )
+			{
+				if ( tcontext.coinbase )
 				{
-					if ( !enforceV2Block )
+					if ( !isCoinBase (t) )
 					{
-						log.trace ("Majority for V2 blocks reached, enforcing");
+						throw new ValidationException ("The first transaction of a block must be coinbase");
 					}
-					enforceV2Block = true;
-					checkV2BlockCoinBase = true;
-					if ( b.getVersion () < 2 )
+					try
 					{
-						throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
-					}
-				}
-				if ( checkV2BlockCoinBase || isSuperMajority (2, cachedPrevious, 750, 1000) )
-				{
-					checkV2BlockCoinBase = true;
-				}
-			}
-
-			Head head;
-
-			if ( prev.getHead ().getLeaf ().equals (prev.getHash ()) )
-			{
-				// continuing
-				head = prev.getHead ();
-
-				head.setLeaf (b.getHash ());
-				head.setHeight (head.getHeight () + 1);
-				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
-				head = updateHead (head);
-			}
-			else
-			{
-				// branching
-				head = new Head ();
-
-				head.setPrevious (prev.getHead ());
-				head.setLeaf (b.getHash ());
-				head.setHeight (prev.getHeight () + 1);
-				head.setChainWork (prev.getChainWork () + Difficulty.getDifficulty (b.getDifficultyTarget (), chain));
-				insertHead (head);
-			}
-			b.setHead (head);
-			b.setHeight (head.getHeight ());
-			b.setChainWork (head.getChainWork ());
-
-			if ( b.getHeight () >= chain.getDifficultyReviewBlocks () && b.getHeight () % chain.getDifficultyReviewBlocks () == 0 )
-			{
-				long periodLength = computePeriodLength (cachedPrevious, prev.getCreateTime (), chain.getDifficultyReviewBlocks ());
-
-				long next = Difficulty.getNextTarget (periodLength, prev.getDifficultyTarget (), chain);
-				if ( chain.isProduction () && next != b.getDifficultyTarget () )
-				{
-					throw new ValidationException ("Difficulty does not match expectation " + b.getHash () + " " + b.toWireDump ());
-				}
-			}
-			else
-			{
-				if ( chain.isProduction () && b.getDifficultyTarget () != prev.getDifficultyTarget () )
-				{
-					throw new ValidationException ("Illegal attempt to change difficulty " + b.getHash ());
-				}
-			}
-
-			b.checkHash ();
-
-			if ( chain.isProduction () && checkPoints.containsKey (b.getHeight ()) )
-			{
-				if ( !checkPoints.get (b.getHeight ()).equals (b.getHash ()) )
-				{
-					throw new ValidationException ("Checkpoint missed");
-				}
-			}
-
-			BigInteger hashAsInteger = new Hash (b.getHash ()).toBigInteger ();
-			if ( chain.isProduction () && hashAsInteger.compareTo (Difficulty.getTarget (b.getDifficultyTarget ())) > 0 )
-			{
-				throw new ValidationException ("Insufficuent proof of work for current difficulty " + b.getHash () + " " + b.toWireDump ());
-			}
-
-			b.parseTransactions ();
-
-			if ( b.getTransactions ().isEmpty () )
-			{
-				throw new ValidationException ("Block must have transactions " + b.getHash () + " " + b.toWireDump ());
-			}
-
-			b.checkMerkleRoot ();
-
-			ImplementTxOutCacheDelta deltaUTXO = new ImplementTxOutCacheDelta (cachedUTXO);
-
-			CachedBlock trunkBlock = cachedPrevious;
-			List<CachedBlock> pathFromTrunkToPrev = new ArrayList<CachedBlock> ();
-			while ( !isBlockOnBranch (trunkBlock, currentHead) )
-			{
-				pathFromTrunkToPrev.add (trunkBlock);
-				trunkBlock = trunkBlock.getPrevious ();
-			}
-			Collections.reverse (pathFromTrunkToPrev);
-
-			if ( trunkBlock.getHeight () < (currentHead.getLast ().getHeight () - FORCE_TRUNK) )
-			{
-				throw new ValidationException ("Attempt to build on or create a branch too far back in history");
-			}
-
-			if ( currentHead.getLast () != cachedPrevious )
-			{
-				CachedBlock q = currentHead.getLast ();
-				CachedBlock p = q.previous;
-				while ( !q.getHash ().equals (trunkBlock.getHash ()) )
-				{
-					Blk block = retrieveBlock (q);
-					backwardCache (block, deltaUTXO, false);
-
-					q = p;
-					p = q.previous;
-				}
-
-				for ( CachedBlock block : pathFromTrunkToPrev )
-				{
-					forwardCache (retrieveBlock (block), deltaUTXO, false);
-				}
-			}
-
-			final TransactionContext tcontext = new TransactionContext ();
-			tcontext.block = b;
-			tcontext.resolvedInputs = deltaUTXO;
-
-			log.trace ("resolving inputs for block " + b.getHash ());
-			for ( Tx t : b.getTransactions () )
-			{
-				resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
-				for ( TxOut o : t.getOutputs () )
-				{
-					tcontext.resolvedInputs.add (o);
-				}
-			}
-			if ( !chain.isProduction () || b.getHeight () > lastCheckPoint )
-			{
-				log.trace ("validating block " + b.getHash ());
-				List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
-				for ( final Tx t : b.getTransactions () )
-				{
-					if ( tcontext.coinbase )
-					{
-						if ( !isCoinBase (t) )
+						if ( checkV2BlockCoinBase
+								&& ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
 						{
-							throw new ValidationException ("The first transaction of a block must be coinbase");
+							throw new ValidationException ("Block height mismatch in coinbase");
 						}
-						try
+						validateTransaction (tcontext, t);
+					}
+					catch ( TransactionValidationException e )
+					{
+						throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
+					}
+					tcontext.coinbase = false;
+				}
+				else
+				{
+					if ( isCoinBase (t) )
+					{
+						throw new ValidationException ("Only the first transaction of a block can be coinbase");
+					}
+					callables.add (new Callable<TransactionValidationException> ()
+					{
+						@Override
+						public TransactionValidationException call ()
 						{
-							if ( checkV2BlockCoinBase
-									&& ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
+							try
 							{
-								throw new ValidationException ("Block height mismatch in coinbase");
+								validateTransaction (tcontext, t);
 							}
-							validateTransaction (tcontext, t);
+							catch ( TransactionValidationException e )
+							{
+								return e;
+							}
+							catch ( Exception e )
+							{
+								return new TransactionValidationException (e, t);
+							}
+							return null;
 						}
-						catch ( TransactionValidationException e )
+					});
+				}
+			}
+			try
+			{
+				for ( Future<TransactionValidationException> e : transactionsProcessor.invokeAll (callables) )
+				{
+					try
+					{
+						if ( e.get () != null )
 						{
-							throw new ValidationException (e.getMessage () + " " + t.toWireDump (), e);
+							throw new ValidationException (e.get ().getMessage () + " " + e.get ().getIn () + " " + e.get ().getTx ().toWireDump (), e.get ());
 						}
-						tcontext.coinbase = false;
+					}
+					catch ( ExecutionException e1 )
+					{
+						throw new ValidationException ("corrupted transaction processor", e1);
+					}
+				}
+			}
+			catch ( InterruptedException e1 )
+			{
+				throw new ValidationException ("interrupted", e1);
+			}
+		}
+		if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+		{
+			throw new ValidationException ("too many signatures in this block ");
+		}
+		// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
+		if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
+		{
+			throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
+		}
+
+		// this is last loop before persist since modifying the entities.
+		for ( Tx t : b.getTransactions () )
+		{
+			t.setBlock (b);
+			for ( TxIn i : t.getInputs () )
+			{
+				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+				{
+					TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
+					if ( source.getId () == null )
+					{
+						i.setSource (source);
 					}
 					else
 					{
-						if ( isCoinBase (t) )
-						{
-							throw new ValidationException ("Only the first transaction of a block can be coinbase");
-						}
-						callables.add (new Callable<TransactionValidationException> ()
-						{
-							@Override
-							public TransactionValidationException call ()
-							{
-								try
-								{
-									validateTransaction (tcontext, t);
-								}
-								catch ( TransactionValidationException e )
-								{
-									return e;
-								}
-								catch ( Exception e )
-								{
-									return new TransactionValidationException (e, t);
-								}
-								return null;
-							}
-						});
+						i.setSource (getSourceReference (source));
 					}
 				}
-				try
-				{
-					for ( Future<TransactionValidationException> e : transactionsProcessor.invokeAll (callables) )
-					{
-						try
-						{
-							if ( e.get () != null )
-							{
-								throw new ValidationException (e.get ().getMessage () + " " + e.get ().getIn () + " " + e.get ().getTx ().toWireDump (),
-										e.get ());
-							}
-						}
-						catch ( ExecutionException e1 )
-						{
-							throw new ValidationException ("corrupted transaction processor", e1);
-						}
-					}
-				}
-				catch ( InterruptedException e1 )
-				{
-					throw new ValidationException ("interrupted", e1);
-				}
+				i.setBlockTime (b.getCreateTime ());
 			}
-			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+			for ( TxOut o : t.getOutputs () )
 			{
-				throw new ValidationException ("too many signatures in this block ");
+				parseOwners (o);
+				o.setTxHash (t.getHash ());
+				o.setHeight (b.getHeight ());
+				o.setBlockTime (b.getCreateTime ());
 			}
-			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
-			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
+		}
+
+		log.trace ("storing block " + b.getHash ());
+		insertBlock (b);
+
+		// modify transient caches only after persistent changes
+		CachedBlock m =
+				new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (), (int) b.getVersion ());
+		cachedBlocks.put (b.getHash (), m);
+
+		CachedHead usingHead = cachedHeads.get (head.getId ());
+		if ( usingHead == null )
+		{
+			cachedHeads.put (head.getId (), usingHead = new CachedHead ());
+			usingHead.id = head.getId ();
+			usingHead.previous = cachedHeads.get (head.getPreviousId ());
+			usingHead.previousHeight = b.getHeight () - 1;
+		}
+		usingHead.setChainWork (b.getChainWork ());
+		usingHead.setHeight (b.getHeight ());
+		usingHead.getBlocks ().add (m);
+
+		final List<Blk> removedBlocks = new ArrayList<Blk> ();
+		final List<Blk> addedBlocks = new ArrayList<Blk> ();
+
+		if ( usingHead.getChainWork () > currentHead.getChainWork () )
+		{
+			// we have a new trunk
+			CachedBlock p = currentHead.getLast ();
+			CachedBlock q = p.previous;
+			while ( !p.equals (trunkBlock) )
 			{
-				throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
-			}
-
-			// this is last loop before persist since modifying the entities.
-			for ( Tx t : b.getTransactions () )
-			{
-				t.setBlock (b);
-				for ( TxIn i : t.getInputs () )
-				{
-					if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-					{
-						TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
-						if ( source.getId () == null )
-						{
-							i.setSource (source);
-						}
-						else
-						{
-							i.setSource (getSourceReference (source));
-						}
-					}
-					i.setBlockTime (b.getCreateTime ());
-				}
-				for ( TxOut o : t.getOutputs () )
-				{
-					parseOwners (o);
-					o.setTxHash (t.getHash ());
-					o.setHeight (b.getHeight ());
-					o.setBlockTime (b.getCreateTime ());
-				}
-			}
-
-			log.trace ("storing block " + b.getHash ());
-			insertBlock (b);
-
-			// modify transient caches only after persistent changes
-			CachedBlock m =
-					new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (),
-							(int) b.getVersion ());
-			cachedBlocks.put (b.getHash (), m);
-
-			CachedHead usingHead = cachedHeads.get (head.getId ());
-			if ( usingHead == null )
-			{
-				cachedHeads.put (head.getId (), usingHead = new CachedHead ());
-			}
-			usingHead.setChainWork (b.getChainWork ());
-			usingHead.setHeight (b.getHeight ());
-			usingHead.getBlocks ().add (m);
-
-			final List<Blk> removedBlocks = new ArrayList<Blk> ();
-			final List<Blk> addedBlocks = new ArrayList<Blk> ();
-
-			if ( usingHead.getChainWork () > currentHead.getChainWork () )
-			{
-				// we have a new trunk
-				CachedBlock p = currentHead.getLast ();
-				CachedBlock q = p.previous;
-				while ( !p.equals (trunkBlock) )
-				{
-					Blk block = retrieveBlock (p);
-					backwardCache (block, cachedUTXO, true);
-					removedBlocks.add (block);
-					p = q;
-					q = p.previous;
-				}
-				List<CachedBlock> pathToNewHead = new ArrayList<CachedBlock> ();
-				p = m;
+				Blk block = retrieveBlock (p);
+				backwardCache (block, cachedUTXO, true);
+				removedBlocks.add (block);
+				p = q;
 				q = p.previous;
-				while ( !q.equals (trunkBlock) )
-				{
-					pathToNewHead.add (q);
-					p = q;
-					q = p.previous;
-				}
-				Collections.reverse (pathToNewHead);
-
-				for ( CachedBlock cb : pathToNewHead )
-				{
-					Blk block = retrieveBlock (cb);
-					forwardCache (block, cachedUTXO, true);
-					addedBlocks.add (block);
-				}
-
-				forwardCache (b, cachedUTXO, true);
-				addedBlocks.add (b);
-				currentHead = usingHead;
 			}
-			else if ( currentHead.getLast () == cachedPrevious )
+			List<CachedBlock> pathToNewHead = new ArrayList<CachedBlock> ();
+			p = m;
+			q = p.previous;
+			while ( !q.equals (trunkBlock) )
 			{
-				forwardCache (b, cachedUTXO, true);
-				addedBlocks.add (b);
-				currentHead = usingHead;
+				pathToNewHead.add (q);
+				p = q;
+				q = p.previous;
+			}
+			Collections.reverse (pathToNewHead);
+
+			for ( CachedBlock cb : pathToNewHead )
+			{
+				Blk block = retrieveBlock (cb);
+				forwardCache (block, cachedUTXO, true);
+				addedBlocks.add (block);
 			}
 
-			usingHead.setLast (m);
+			forwardCache (b, cachedUTXO, true);
+			addedBlocks.add (b);
+			currentHead = usingHead;
+		}
+		else if ( currentHead.getLast () == cachedPrevious )
+		{
+			forwardCache (b, cachedUTXO, true);
+			addedBlocks.add (b);
+			currentHead = usingHead;
+		}
 
-			log.info ("stored block " + b.getHeight () + " " + b.getHash ());
-			if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
+		usingHead.setLast (m);
+
+		log.info ("stored block " + b.getHeight () + " " + b.getHash ());
+		if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
+		{
+			for ( TrunkListener l : trunkListener )
 			{
-				for ( TrunkListener l : trunkListener )
-				{
-					l.trunkUpdate (removedBlocks, addedBlocks);
-				}
+				l.trunkUpdate (removedBlocks, addedBlocks);
 			}
 		}
 	}
@@ -1198,17 +1217,10 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new TransactionValidationException ("output too high", t);
 			}
-			try
+			synchronized ( tcontext )
 			{
-				synchronized ( tcontext )
-				{
-					tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript (), false);
-					tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
-				}
-			}
-			catch ( ValidationException e )
-			{
-				throw new TransactionValidationException (e, t);
+				tcontext.nsigs += ScriptFormat.sigOpCount (o.getScript (), false);
+				tcontext.blkSumOutput = tcontext.blkSumOutput.add (BigInteger.valueOf (o.getValue ()));
 			}
 			sumOut += o.getValue ();
 		}
@@ -1414,7 +1426,7 @@ public abstract class CachedBlockStore implements BlockStore
 		h.setHeight (0);
 		h.setChainWork (Difficulty.getDifficulty (genesis.getDifficultyTarget (), chain));
 		insertHead (h);
-		genesis.setHead (h);
+		genesis.setHeadId (h.getId ());
 		insertBlock (genesis);
 	}
 

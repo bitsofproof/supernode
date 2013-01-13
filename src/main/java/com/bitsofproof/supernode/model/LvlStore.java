@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -365,7 +364,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		if ( data != null )
 		{
 			Blk b = Blk.fromLevelDB (data, true);
-			b.setHead (readHead (b.getHeadId ()));
 			if ( full )
 			{
 				b.setTransactions (new ArrayList<Tx> ());
@@ -446,8 +444,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				cb = new CachedBlock (b.getHash (), b.getId (), null, b.getCreateTime (), b.getHeight (), (int) b.getVersion ());
 			}
 			cachedBlocks.put (b.getHash (), cb);
-			b.setHead (readHead (b.getHeadId ()));
-			CachedHead h = cachedHeads.get (b.getHead ().getId ());
+			CachedHead h = cachedHeads.get (b.getHeadId ());
 			h.getBlocks ().add (cb);
 			h.setLast (cb);
 		}
@@ -467,9 +464,10 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				sh.setId (h.getId ());
 				sh.setChainWork (h.getChainWork ());
 				sh.setHeight (h.getHeight ());
-				if ( h.getPrevious () != null )
+				if ( h.getPreviousId () != null )
 				{
-					sh.setPrevious (cachedHeads.get (h.getId ()));
+					sh.setPrevious (cachedHeads.get (h.getPreviousId ()));
+					sh.setPreviousHeight (h.getPreviousHeight ());
 				}
 				cachedHeads.put (h.getId (), sh);
 				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
@@ -616,7 +614,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void insertBlock (Blk b)
 	{
-		writeHead (b.getHead ());
 		writeBlk (b);
 	}
 
@@ -624,7 +621,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	protected void insertHead (Head head)
 	{
 		long id = rnd.nextLong ();
-		while ( readHead (id) != null )
+		while ( id == 0L || readHead (id) != null )
 		{
 			id = rnd.nextLong ();
 		}
@@ -637,6 +634,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		writeHead (head);
 		return head;
+	}
+
+	@Override
+	protected Head retrieveHead (CachedHead cached)
+	{
+		return readHead (cached.getId ());
 	}
 
 	@Override
@@ -814,5 +817,4 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 		return peers;
 	}
-
 }

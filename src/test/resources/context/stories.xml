@@ -17,7 +17,7 @@
 
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 
-	<bean id="test" class="com.bitsofproof.supernode.test.UnitTestChain" />
+	<bean id="p2prunner" class="com.bitsofproof.supernode.test.StoriesRunner"/>
 	<bean id="production" class="com.bitsofproof.supernode.core.SatoshiChain" />
 
 	<!-- a node that does not listen, connects 
