@@ -882,17 +882,16 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				throw new ValidationException ("interrupted", e1);
 			}
+			if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
+			{
+				throw new ValidationException ("too many signatures in this block ");
+			}
+			// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
+			if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
+			{
+				throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
+			}
 		}
-		if ( tcontext.nsigs > MAX_BLOCK_SIGOPS )
-		{
-			throw new ValidationException ("too many signatures in this block ");
-		}
-		// block reward could actually be less... as in 0000000000004c78956f8643262f3622acf22486b120421f893c0553702ba7b5
-		if ( tcontext.blkSumOutput.subtract (tcontext.blkSumInput).longValue () > chain.getRewardForHeight (b.getHeight ()) )
-		{
-			throw new ValidationException ("Invalid block reward " + b.getHash () + " " + b.toWireDump ());
-		}
-
 		// this is last loop before persist since modifying the entities.
 		for ( Tx t : b.getTransactions () )
 		{
