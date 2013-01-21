@@ -28,10 +28,11 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,14 +97,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 				@Override
 				public void onMessage (Message arg0)
 				{
-					ObjectMessage o = (ObjectMessage) arg0;
+					TextMessage o = (TextMessage) arg0;
 					for ( TransactionListener l : transactionListener )
 					{
 						try
 						{
-							l.process ((Transaction) o.getObject ());
+							l.process (Transaction.fromJSON (new JSONObject (o.getText ())));
 						}
-						catch ( JMSException e )
+						catch ( Exception e )
 						{
 							log.error ("Transaction message error", e);
 						}
@@ -117,13 +118,13 @@ public class ClientBusAdaptor implements BCSAPIBus
 				{
 					try
 					{
-						TrunkUpdateMessage tu = (TrunkUpdateMessage) ((ObjectMessage) arg0).getObject ();
+						TrunkUpdateMessage tu = TrunkUpdateMessage.fromJSON (new JSONObject (((TextMessage) arg0).getText ()));
 						for ( TrunkListener l : trunkListener )
 						{
 							l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
 						}
 					}
-					catch ( JMSException e )
+					catch ( Exception e )
 					{
 						log.error ("Block message error", e);
 					}
@@ -134,14 +135,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 				@Override
 				public void onMessage (Message arg0)
 				{
-					ObjectMessage o = (ObjectMessage) arg0;
+					TextMessage o = (TextMessage) arg0;
 					for ( TemplateListener l : blockTemplateListener )
 					{
 						try
 						{
-							l.workOn ((Block) o.getObject ());
+							l.workOn (Block.fromJSON (new JSONObject (o.getText ())));
 						}
-						catch ( JMSException e )
+						catch ( Exception e )
 						{
 							log.error ("Block message error", e);
 						}
@@ -208,14 +209,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 						@Override
 						public void onMessage (Message arg0)
 						{
-							ObjectMessage o = (ObjectMessage) arg0;
+							TextMessage o = (TextMessage) arg0;
 							for ( TransactionListener l : addressListener.get (address) )
 							{
 								try
 								{
-									l.process ((Transaction) o.getObject ());
+									l.process (Transaction.fromJSON (new JSONObject (o.getText ())));
 								}
-								catch ( JMSException e )
+								catch ( Exception e )
 								{
 									log.error ("Transaction message error", e);
 								}
@@ -237,9 +238,9 @@ public class ClientBusAdaptor implements BCSAPIBus
 	{
 		try
 		{
-			transactionProducer.send (session.createObjectMessage (transaction));
+			transactionProducer.send (session.createTextMessage (transaction.toJSON ().toString ()));
 		}
-		catch ( JMSException e )
+		catch ( Exception e )
 		{
 			log.error ("Can not send transaction", e);
 		}
@@ -250,7 +251,7 @@ public class ClientBusAdaptor implements BCSAPIBus
 	{
 		try
 		{
-			blockProducer.send (session.createObjectMessage (block));
+			blockProducer.send (session.createTextMessage (block.toJSON ().toString ()));
 		}
 		catch ( JMSException e )
 		{

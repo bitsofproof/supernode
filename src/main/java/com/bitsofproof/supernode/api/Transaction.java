@@ -295,7 +295,7 @@ public class Transaction implements Serializable, Cloneable
 		if ( to != null && to.length () > 0 )
 		{
 			t.outputs = new ArrayList<TransactionOutput> ();
-			for ( int i = 0; i < ti.length (); ++i )
+			for ( int i = 0; i < to.length (); ++i )
 			{
 				t.outputs.add (TransactionOutput.fromJSON (to.getJSONObject (i)));
 			}
