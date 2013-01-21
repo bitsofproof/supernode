@@ -25,10 +25,11 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,18 +94,14 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 				@Override
 				public void onMessage (Message arg0)
 				{
-					ObjectMessage o = (ObjectMessage) arg0;
+					TextMessage o = (TextMessage) arg0;
 					try
 					{
-						sendTransaction ((Transaction) o.getObject ());
+						sendTransaction (Transaction.fromJSON (new JSONObject (o.getText ())));
 					}
-					catch ( ValidationException e )
+					catch ( Exception e )
 					{
 						log.trace ("Rejected invalid transaction ", e);
-					}
-					catch ( JMSException e )
-					{
-						log.trace ("Rejected invalid transaction", e);
 					}
 				}
 			});
@@ -113,18 +110,14 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 				@Override
 				public void onMessage (Message arg0)
 				{
-					ObjectMessage o = (ObjectMessage) arg0;
+					TextMessage o = (TextMessage) arg0;
 					try
 					{
-						sendBlock ((Block) o.getObject ());
+						sendBlock (Block.fromJSON (new JSONObject (o.getText ())));
 					}
-					catch ( ValidationException e )
+					catch ( Exception e )
 					{
 						log.trace ("Rejected invalid block ", e);
-					}
-					catch ( JMSException e )
-					{
-						log.trace ("Rejected invalid block", e);
 					}
 				}
 			});
@@ -203,10 +196,10 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 			WireFormat.Writer writer = new WireFormat.Writer ();
 			tx.toWire (writer);
 			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			ObjectMessage m = session.createObjectMessage (t);
+			TextMessage m = session.createTextMessage (t.toJSON ().toString ());
 			transactionProducer.send (m);
 		}
-		catch ( JMSException e )
+		catch ( Exception e )
 		{
 			log.error ("Can not send JMS message ", e);
 		}
@@ -217,7 +210,7 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	{
 		try
 		{
-			ObjectMessage m = session.createObjectMessage (template);
+			TextMessage m = session.createTextMessage (template.toJSON ().toString ());
 			templateProducer.send (m);
 		}
 		catch ( JMSException e )
@@ -246,10 +239,10 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		try
 		{
 			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
-			ObjectMessage om = session.createObjectMessage (tu);
+			TextMessage om = session.createTextMessage (tu.toJSON ().toString ());
 			trunkProducer.send (om);
 		}
-		catch ( JMSException e )
+		catch ( Exception e )
 		{
 			log.error ("Can not send JMS message ", e);
 		}
