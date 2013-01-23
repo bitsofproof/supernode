@@ -43,6 +43,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AddressConverter;
+import com.bitsofproof.supernode.api.ChainParameter;
 import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
@@ -658,9 +659,9 @@ public abstract class CachedBlockStore implements BlockStore
 		Blk prev = null;
 		prev = retrieveBlockHeader (cachedPrevious);
 
-		if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 )
+		if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 || b.getCreateTime () <= getMedianTimePast (cachedPrevious) )
 		{
-			throw new ValidationException ("Future generation attempt " + b.getHash ());
+			throw new ValidationException ("Block timestamp out of bounds " + b.getHash ());
 		}
 
 		if ( chain.isProduction () )
@@ -754,6 +755,14 @@ public abstract class CachedBlockStore implements BlockStore
 		if ( b.getTransactions ().isEmpty () )
 		{
 			throw new ValidationException ("Block must have transactions " + b.getHash () + " " + b.toWireDump ());
+		}
+
+		for ( Tx t : b.getTransactions () )
+		{
+			if ( !isFinal (t, b) )
+			{
+				throw new ValidationException ("Transactions in a block must be final");
+			}
 		}
 
 		b.checkMerkleRoot ();
@@ -914,7 +923,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			for ( TxOut o : t.getOutputs () )
 			{
-				parseOwners (o);
+				parseOwners (o, chain);
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
 				o.setBlockTime (b.getCreateTime ());
@@ -996,6 +1005,55 @@ public abstract class CachedBlockStore implements BlockStore
 				l.trunkUpdate (removedBlocks, addedBlocks);
 			}
 		}
+	}
+
+	private boolean isFinal (Tx t, Blk b)
+	{
+		if ( t.getLockTime () == 0 )
+		{
+			return true;
+		}
+
+		long nBlockTime = b.getCreateTime ();
+		if ( nBlockTime == 0 )
+		{
+			nBlockTime = System.currentTimeMillis () / 1000;
+		}
+
+		if ( t.getLockTime () < (t.getLockTime () < 500000000 ? (int) b.getHeight () : nBlockTime) )
+		{
+			return true;
+		}
+
+		for ( TxIn in : t.getInputs () )
+		{
+			if ( in.getSequence () != 0xFFFFFFFFL )
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private long getMedianTimePast (CachedBlock prev)
+	{
+		List<Long> times = new ArrayList<Long> ();
+		CachedBlock c = prev;
+		CachedBlock p = c.previous;
+		int i = 0;
+		while ( p != null && i++ < 11 )
+		{
+			times.add (c.time);
+			c = p;
+			p = c.previous;
+		}
+		if ( times.size () == 0 )
+		{
+			return 0;
+		}
+
+		Collections.sort (times);
+		return times.get (Math.min (5, times.size () - 1));
 	}
 
 	private long computePeriodLength (CachedBlock cachedPrevious, long previousTime, int reviewPeriod)
@@ -1329,7 +1387,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private void parseOwners (TxOut out)
+	private static void parseOwners (TxOut out, ChainParameter chain)
 	{
 		List<ScriptFormat.Token> parsed;
 		try
@@ -1420,7 +1478,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 		Blk genesis = chain.getGenesis ();
 		TxOut out = genesis.getTransactions ().get (0).getOutputs ().get (0);
-		parseOwners (out);
+		parseOwners (out, chain);
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);
