@@ -72,6 +72,8 @@ public class ChainLoader
 			@Override
 			public void process (BlockMessage m, final BitcoinPeer peer)
 			{
+				boolean validatedBlock = false;
+
 				Blk block = m.getBlock ();
 				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
@@ -80,6 +82,7 @@ public class ChainLoader
 					{
 						havePending.remove (block.getHash ());
 						store.storeBlock (block);
+						validatedBlock = true;
 
 						if ( pendingOn.containsKey (block.getHash ()) )
 						{
@@ -94,7 +97,7 @@ public class ChainLoader
 						peer.ban ("Sent invalid block");
 					}
 				}
-				else
+				else if ( !havePending.containsKey (block.getHash ()) )
 				{
 					ArrayList<Blk> pendingList = pendingOn.get (block.getPreviousHash ());
 					if ( pendingList == null )
@@ -103,6 +106,7 @@ public class ChainLoader
 						pendingOn.put (block.getPreviousHash (), pendingList);
 					}
 					pendingList.add (block);
+
 					havePending.put (block.getHash (), block);
 					if ( havePending.size () > ORPHANLIMIT )
 					{
@@ -111,6 +115,7 @@ public class ChainLoader
 						log.warn ("Orphan block limit exceeded. Resetting cache.");
 					}
 				}
+
 				HashSet<String> peerRequests;
 				synchronized ( knownInventory )
 				{
@@ -121,7 +126,11 @@ public class ChainLoader
 					}
 					if ( peerRequests.size () == 1 )
 					{
-						sendBlock (block, peer);
+						// TODO: this will send last block of every bulk request, not just single blocks received.
+						if ( validatedBlock )
+						{
+							sendBlock (block, peer);
+						}
 					}
 					peerRequests.remove (block.getHash ());
 				}
