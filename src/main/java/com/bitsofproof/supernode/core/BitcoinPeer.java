@@ -334,7 +334,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 	}
 
-	private static final int MAX_BLOCK_SIZE = 1000000;
+	private static final int MAX_BLOCK_SIZE = 1000000 + 80;
 
 	@Override
 	protected Message parse (InputStream readIn) throws IOException
