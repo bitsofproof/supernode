@@ -137,7 +137,6 @@ public class TransactionOutput implements Serializable, Cloneable
 	public BCSAPIMessage.TransactionOutput toProtobuf ()
 	{
 		BCSAPIMessage.TransactionOutput.Builder builder = BCSAPIMessage.TransactionOutput.newBuilder ();
-		builder.setBcsapiversion (1);
 		builder.setScript (ByteString.copyFrom (script));
 		builder.setValue (value);
 		if ( transactionHash != null )

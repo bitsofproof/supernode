@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * This is the API extensions to the bitsofproof supernode should build on
  */
-public interface BCSAPIBus
+public interface BCSAPI
 {
 	/**
 	 * get block for the hash
@@ -29,6 +29,14 @@ public interface BCSAPIBus
 	 * @return block or null if hash is unknown
 	 */
 	public Block getBlock (String hash);
+
+	/**
+	 * get the transaction identified by the hash on the trunk
+	 * 
+	 * @param hash
+	 * @return transaction or null if no transaction with that hash on the trunk
+	 */
+	public Transaction getTransaction (String hash);
 
 	/**
 	 * send a signed transaction
@@ -69,11 +77,12 @@ public interface BCSAPIBus
 	public void registerBlockTemplateListener (TemplateListener listener);
 
 	/**
-	 * Register a listener for transactions involving the given addresses
+	 * Get account statement and register for altering transactions atomically
 	 * 
 	 * @param addresses
-	 * @param listener
+	 * @param from
+	 *            - unix time point the account statement should start from
 	 * @return
 	 */
-	public void registerAccountListener (List<String> addresses, TransactionListener listener);
+	public AccountStatement registerAccount (List<String> addresses, long from, TransactionListener listener);
 }

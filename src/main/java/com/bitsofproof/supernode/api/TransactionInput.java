@@ -153,7 +153,6 @@ public class TransactionInput implements Serializable, Cloneable
 	public BCSAPIMessage.TransactionInput toProtobuf ()
 	{
 		BCSAPIMessage.TransactionInput.Builder builder = BCSAPIMessage.TransactionInput.newBuilder ();
-		builder.setBcsapiversion (1);
 		builder.setScript (ByteString.copyFrom (script));
 		builder.setSequence ((int) sequence);
 		builder.setSource (ByteString.copyFrom (new Hash (sourceHash).toByteArray ()));

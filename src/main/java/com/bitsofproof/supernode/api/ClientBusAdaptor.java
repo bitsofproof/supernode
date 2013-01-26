@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
 
-public class ClientBusAdaptor implements BCSAPIBus
+public class ClientBusAdaptor implements BCSAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 	private Connection connection;
@@ -59,6 +59,8 @@ public class ClientBusAdaptor implements BCSAPIBus
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
 	private MessageProducer blockRequestProducer;
+	private MessageProducer transactionRequestProducer;
+	private MessageProducer accountRequestProducer;
 
 	public void setClientId (String clientId)
 	{
@@ -163,6 +165,8 @@ public class ClientBusAdaptor implements BCSAPIBus
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
+			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
+			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -199,52 +203,6 @@ public class ClientBusAdaptor implements BCSAPIBus
 	public void registerBlockTemplateListener (TemplateListener listener)
 	{
 		blockTemplateListener.add (listener);
-	}
-
-	@Override
-	public void registerAccountListener (List<String> addresses, TransactionListener listener)
-	{
-		try
-		{
-			for ( final String address : addresses )
-			{
-				ArrayList<TransactionListener> al = addressListener.get (address);
-				if ( al == null )
-				{
-					al = new ArrayList<TransactionListener> ();
-					addressListener.put (address, al);
-
-					Destination blockDestination = session.createTopic (address);
-					MessageConsumer blockConsumer = session.createConsumer (blockDestination);
-					blockConsumer.setMessageListener (new MessageListener ()
-					{
-						@Override
-						public void onMessage (Message arg0)
-						{
-							BytesMessage o = (BytesMessage) arg0;
-							for ( TransactionListener l : addressListener.get (address) )
-							{
-								try
-								{
-									byte[] body = new byte[(int) o.getBodyLength ()];
-									o.readBytes (body);
-									l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
-								}
-								catch ( Exception e )
-								{
-									log.error ("Transaction message error", e);
-								}
-							}
-						}
-					});
-				}
-				al.add (listener);
-			}
-		}
-		catch ( JMSException e )
-		{
-			log.error ("Can not create JMS session", e);
-		}
 	}
 
 	private byte[] synchronousRequest (MessageProducer producer, Message m)
@@ -331,6 +289,31 @@ public class ClientBusAdaptor implements BCSAPIBus
 	}
 
 	@Override
+	public Transaction getTransaction (String hash)
+	{
+		try
+		{
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (transactionRequestProducer, m);
+			if ( response != null )
+			{
+				Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (response));
+				t.computeHash ();
+				return t;
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not get transaction", e);
+		}
+		return null;
+	}
+
+	@Override
 	public Block getBlock (String hash)
 	{
 		try
@@ -351,6 +334,71 @@ public class ClientBusAdaptor implements BCSAPIBus
 		catch ( Exception e )
 		{
 			log.error ("Can not get block", e);
+		}
+		return null;
+	}
+
+	@Override
+	public AccountStatement registerAccount (List<String> addresses, long from, TransactionListener listener)
+	{
+		try
+		{
+			if ( listener != null )
+			{
+				for ( final String address : addresses )
+				{
+					ArrayList<TransactionListener> al = addressListener.get (address);
+					if ( al == null )
+					{
+						al = new ArrayList<TransactionListener> ();
+						addressListener.put (address, al);
+
+						Destination blockDestination = session.createTopic (address);
+						MessageConsumer blockConsumer = session.createConsumer (blockDestination);
+						blockConsumer.setMessageListener (new MessageListener ()
+						{
+							@Override
+							public void onMessage (Message arg0)
+							{
+								BytesMessage o = (BytesMessage) arg0;
+								for ( TransactionListener l : addressListener.get (address) )
+								{
+									try
+									{
+										byte[] body = new byte[(int) o.getBodyLength ()];
+										o.readBytes (body);
+										l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
+									}
+									catch ( Exception e )
+									{
+										log.error ("Transaction message error", e);
+									}
+								}
+							}
+						});
+					}
+					al.add (listener);
+				}
+			}
+
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.AccountRequest.Builder ab = BCSAPIMessage.AccountRequest.newBuilder ();
+			ab.setBcsapiversion (1);
+			for ( String a : addresses )
+			{
+				ab.addAddress (a);
+			}
+			ab.setFrom ((int) from);
+			m.writeBytes (ab.build ().toByteArray ());
+			byte[] response = synchronousRequest (accountRequestProducer, m);
+			if ( response != null )
+			{
+				return AccountStatement.fromProtobuf (BCSAPIMessage.AccountStatement.parseFrom (response));
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not register account", e);
 		}
 		return null;
 	}

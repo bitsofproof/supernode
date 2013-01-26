@@ -1,77 +1,106 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+
+import com.google.protobuf.ByteString;
 
 public class AccountStatement implements Serializable
 {
-	private static final long serialVersionUID = 5769209959467508424L;
+	private static final long serialVersionUID = 4980228520214476462L;
 
-	private long extracted;
-	private String mostRecentBlock;
-	private List<String> addresses;
-	private long opening;
-	private List<TransactionOutput> openingBalances;
-	private List<AccountPosting> postings;
+	private String lastBlock;
+	private long timestamp;
+	private List<TransactionOutput> opening;
+	private List<Posting> posting;
 
-	public long getExtracted ()
+	public String getLastBlock ()
 	{
-		return extracted;
+		return lastBlock;
 	}
 
-	public void setExtracted (long extracted)
+	public void setLastBlock (String lastBlock)
 	{
-		this.extracted = extracted;
+		this.lastBlock = lastBlock;
 	}
 
-	public String getMostRecentBlock ()
+	public long getTimestamp ()
 	{
-		return mostRecentBlock;
+		return timestamp;
 	}
 
-	public void setMostRecentBlock (String mostRecentBlock)
+	public void setTimestamp (long timestamp)
 	{
-		this.mostRecentBlock = mostRecentBlock;
+		this.timestamp = timestamp;
 	}
 
-	public List<String> getAddresses ()
-	{
-		return addresses;
-	}
-
-	public void setAddresses (List<String> addresses)
-	{
-		this.addresses = addresses;
-	}
-
-	public long getOpening ()
+	public List<TransactionOutput> getOpening ()
 	{
 		return opening;
 	}
 
-	public void setOpening (long opening)
+	public void setOpening (List<TransactionOutput> opening)
 	{
 		this.opening = opening;
 	}
 
-	public List<TransactionOutput> getOpeningBalances ()
+	public List<Posting> getPosting ()
 	{
-		return openingBalances;
+		return posting;
 	}
 
-	public void setOpeningBalances (List<TransactionOutput> openingBalances)
+	public void setPosting (List<Posting> posting)
 	{
-		this.openingBalances = openingBalances;
+		this.posting = posting;
 	}
 
-	public List<AccountPosting> getPostings ()
+	public BCSAPIMessage.AccountStatement toProtobuf ()
 	{
-		return postings;
+		BCSAPIMessage.AccountStatement.Builder builder = BCSAPIMessage.AccountStatement.newBuilder ();
+
+		builder.setLastBlock (ByteString.copyFrom (new Hash (lastBlock).toByteArray ()));
+		builder.setBcsapiversion (1);
+		builder.setTimestamp ((int) timestamp);
+		if ( opening != null )
+		{
+			for ( TransactionOutput o : opening )
+			{
+				builder.addOpening (o.toProtobuf ());
+			}
+		}
+		if ( posting != null )
+		{
+			for ( Posting p : posting )
+			{
+				builder.addPosting (p.toProtobuf ());
+			}
+		}
+
+		return builder.build ();
 	}
 
-	public void setPostings (List<AccountPosting> postings)
+	public static AccountStatement fromProtobuf (BCSAPIMessage.AccountStatement pa)
 	{
-		this.postings = postings;
+		AccountStatement a = new AccountStatement ();
+		a.setLastBlock (new Hash (pa.getLastBlock ().toByteArray ()).toString ());
+		a.setTimestamp (pa.getTimestamp ());
+		if ( pa.getOpeningCount () > 0 )
+		{
+			a.setOpening (new ArrayList<TransactionOutput> ());
+			for ( BCSAPIMessage.TransactionOutput o : pa.getOpeningList () )
+			{
+				a.getOpening ().add (TransactionOutput.fromProtobuf (o));
+			}
+		}
+		if ( pa.getPostingCount () > 0 )
+		{
+			a.setPosting (new ArrayList<Posting> ());
+			for ( BCSAPIMessage.AccountStatement.Posting o : pa.getPostingList () )
+			{
+				a.getPosting ().add (Posting.fromProtobuf (o));
+			}
+		}
+		return a;
 	}
-
 }
