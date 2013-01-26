@@ -1,0 +1,98 @@
+/*
+ * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bitsofproof.supernode.api;
+
+// input point of a transaction. 
+message TransactionInput {
+	required bytes source = 1; 				// source transaction hash
+	required uint32 sourceix = 2;    		// index of the output in the source stransaction
+	required uint32 sequence = 3; 			// higher wins
+	required bytes script = 4;    			// inputs to the script of the transaction output
+	optional bytes transaction = 5;			// the transaction this input is part of
+	optional uint32 selfix = 6;				// self index within the transaction this input is part of
+}
+
+// output point of a transaction. 
+message TransactionOutput {
+	required uint64 value = 1; 				// value that can be claimed ...
+	required bytes script = 2; 				// ... if satisfying this output script
+	repeated string address = 3;			// address(es) output was sent (if standard tx)
+	optional uint32 votes = 4;				// number of signatures from owner(s) needed to redeem
+	optional bytes transaction = 5;			// the transaction this input is part of
+	optional uint32 selfix = 6;				// self index within the transaction this input is part of
+}
+
+// a transaction. 
+message Transaction {
+	required uint32 version = 1;
+	required uint32 locktime = 2;   		// block number or time this is valid from
+	repeated TransactionInput inputs = 3;
+	repeated TransactionOutput outputs = 4;
+}
+
+// a block. 
+// matches the P2P Bitcoin protocol message
+message Block {
+	required uint32 version = 1;
+	required bytes previousBlock = 2;		// previos block hash
+	required bytes merkleRoot = 3;			// block content hash tree root
+	required uint32 timestamp = 4;			// the block was mined at
+	required uint32 difficulty = 5;			// encoded difficulty for POW
+	required uint32 nonce = 6;				// parameter of POW
+	repeated Transaction transactions = 7;
+}
+
+
+// a block chain reorg is a transaction removing and adding a few blocks at once
+message TrunkUpdate {
+	repeated Block added = 1;				// blocks added to trunk
+	repeated Block removed = 2;				// blocks no longer on trunk
+}
+
+message Address {
+	repeated string address = 1;			// indicate interest in addresses
+}
+
+message Hash {
+	repeated bytes hash = 1;
+}
+
+// balance is a list of unspent outputs
+message Balance {
+	repeated TransactionOutput output = 1;
+}
+
+message Received {
+	required TransactionOutput output = 1;			// the output received
+	required bytes  block = 4;				// the block that contains the transaction
+	required uint32 timestamp = 5;			// timestamp of the block
+	required uint32 height = 6;				// height of the block	
+}
+
+message Spent {
+	required Transaction spend = 1;			// spending transaction, note that only some inputs might apply
+	required bytes  block = 3;				// the block that contains the spending transaction (input)
+	required uint32 timestamp = 4;			// timestamp of the block
+	required uint32 height = 5;				// height of the block
+	repeated string address = 6;			// address(es) the spend came from (if standard tx)
+}
+
+message AccountStatement {
+	required Balance opening = 1;
+	repeated Received received = 2;			
+	repeated Spent spent = 3;
+}
