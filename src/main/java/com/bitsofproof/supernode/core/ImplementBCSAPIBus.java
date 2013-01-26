@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.core;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.jms.BytesMessage;
 import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -26,13 +27,12 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
-import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
@@ -94,10 +94,12 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 				@Override
 				public void onMessage (Message arg0)
 				{
-					TextMessage o = (TextMessage) arg0;
+					BytesMessage o = (BytesMessage) arg0;
 					try
 					{
-						sendTransaction (Transaction.fromJSON (new JSONObject (o.getText ())));
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						sendTransaction (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
 					}
 					catch ( Exception e )
 					{
@@ -110,10 +112,12 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 				@Override
 				public void onMessage (Message arg0)
 				{
-					TextMessage o = (TextMessage) arg0;
+					BytesMessage o = (BytesMessage) arg0;
 					try
 					{
-						sendBlock (Block.fromJSON (new JSONObject (o.getText ())));
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						sendBlock (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
 					}
 					catch ( Exception e )
 					{
@@ -195,8 +199,9 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		{
 			WireFormat.Writer writer = new WireFormat.Writer ();
 			tx.toWire (writer);
-			Transaction t = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			TextMessage m = session.createTextMessage (t.toJSON ().toString ());
+			Transaction transaction = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
 		}
 		catch ( Exception e )
@@ -210,7 +215,8 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	{
 		try
 		{
-			TextMessage m = session.createTextMessage (template.toJSON ().toString ());
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (template.toProtobuf ().toByteArray ());
 			templateProducer.send (m);
 		}
 		catch ( JMSException e )
@@ -239,8 +245,9 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		try
 		{
 			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
-			TextMessage om = session.createTextMessage (tu.toJSON ().toString ());
-			trunkProducer.send (om);
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (tu.toProtobuf ().toByteArray ());
+			trunkProducer.send (m);
 		}
 		catch ( Exception e )
 		{
