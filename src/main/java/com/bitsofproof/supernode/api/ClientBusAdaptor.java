@@ -339,7 +339,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement registerAccount (List<String> addresses, long from, TransactionListener listener)
+	public AccountStatement registerAccountListener (List<String> addresses, long from, TransactionListener listener)
 	{
 		try
 		{

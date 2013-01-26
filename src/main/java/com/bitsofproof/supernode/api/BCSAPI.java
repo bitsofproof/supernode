@@ -84,5 +84,5 @@ public interface BCSAPI
 	 *            - unix time point the account statement should start from
 	 * @return
 	 */
-	public AccountStatement registerAccount (List<String> addresses, long from, TransactionListener listener);
+	public AccountStatement registerAccountListener (List<String> addresses, long from, TransactionListener listener);
 }
