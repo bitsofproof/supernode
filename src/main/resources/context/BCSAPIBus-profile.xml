@@ -32,6 +32,7 @@
 		<constructor-arg>
 			<ref bean="blocktemplater"/>
 		</constructor-arg>
+		<property name="transactionManager" ref="transactionManager" />
 		<property name="brokerURL" value="ssl://localhost:61613"/>
 		<property name="user" value="admin"/>
 		<property name="password" value="password"/>

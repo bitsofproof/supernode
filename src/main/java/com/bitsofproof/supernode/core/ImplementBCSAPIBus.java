@@ -31,9 +31,14 @@ import javax.jms.Session;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -49,6 +54,8 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	private final BitcoinNetwork network;
 	private final BlockStore store;
 	private final TxHandler txhandler;
+
+	private PlatformTransactionManager transactionManager;
 
 	private Connection connection;
 	private Session session;
@@ -72,6 +79,11 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		blockTemplater.addTemplateListener (this);
 	}
 
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
+
 	private void addMessageListener (String topic, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
@@ -85,6 +97,8 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		{
 			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
 			connection = connectionFactory.createConnection ();
+			connection.setClientID ("bitsofproof supernode");
+			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
@@ -125,10 +139,66 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 					}
 				}
 			});
+			addMessageListener ("blockRequest", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					BytesMessage o = (BytesMessage) arg0;
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+						Block b = getBlock (hash);
+						if ( b != null )
+						{
+							reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
+						}
+						else
+						{
+							reply (o.getJMSReplyTo (), null);
+						}
+					}
+					catch ( Exception e )
+					{
+						log.trace ("Rejected invalid block ", e);
+					}
+				}
+			});
 		}
 		catch ( JMSException e )
 		{
 			log.error ("Error creating JMS producer", e);
+		}
+	}
+
+	private void reply (Destination destination, byte[] msg)
+	{
+		MessageProducer replier = null;
+		try
+		{
+			replier = session.createProducer (destination);
+			BytesMessage m = session.createBytesMessage ();
+			if ( msg != null )
+			{
+				m.writeBytes (msg);
+			}
+			replier.send (m);
+		}
+		catch ( JMSException e )
+		{
+			log.trace ("can not reply", e);
+		}
+		finally
+		{
+			try
+			{
+				replier.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 
@@ -157,6 +227,38 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	public void setPassword (String password)
 	{
 		this.password = password;
+	}
+
+	public Block getBlock (final String hash)
+	{
+		try
+		{
+			log.trace ("get block " + hash);
+			final WireFormat.Writer writer = new WireFormat.Writer ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			{
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					Blk b = store.getBlock (hash);
+					if ( b != null )
+					{
+						b.toWire (writer);
+					}
+				}
+			});
+			byte[] blockdump = writer.toByteArray ();
+			if ( blockdump != null && blockdump.length > 0 )
+			{
+				return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			}
+			return null;
+		}
+		finally
+		{
+			log.trace ("get block returned " + hash);
+		}
 	}
 
 	private void sendTransaction (Transaction transaction) throws ValidationException
