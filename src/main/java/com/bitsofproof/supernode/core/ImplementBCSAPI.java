@@ -16,6 +16,9 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.jms.BytesMessage;
@@ -36,20 +39,25 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.Posting;
 import com.bitsofproof.supernode.api.Transaction;
+import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
+import com.bitsofproof.supernode.model.TxIn;
+import com.bitsofproof.supernode.model.TxOut;
 
-public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, TemplateListener
+public class ImplementBCSAPI implements TrunkListener, TransactionListener, TemplateListener
 {
-	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPIBus.class);
+	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
 	private final BitcoinNetwork network;
 	private final BlockStore store;
@@ -68,7 +76,7 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	private MessageProducer trunkProducer;
 	private MessageProducer templateProducer;
 
-	public ImplementBCSAPIBus (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
+	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
 	{
 		this.network = network;
 		this.txhandler = txHandler;
@@ -162,7 +170,61 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 					}
 					catch ( Exception e )
 					{
-						log.trace ("Rejected invalid block ", e);
+						log.trace ("Rejected invalid block request ", e);
+					}
+				}
+			});
+			addMessageListener ("transactionRequest", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					BytesMessage o = (BytesMessage) arg0;
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+						Transaction t = getTransaction (hash);
+						if ( t != null )
+						{
+							reply (o.getJMSReplyTo (), t.toProtobuf ().toByteArray ());
+						}
+						else
+						{
+							reply (o.getJMSReplyTo (), null);
+						}
+					}
+					catch ( Exception e )
+					{
+						log.trace ("Rejected invalid transaction request ", e);
+					}
+				}
+			});
+			addMessageListener ("accountRequest", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					BytesMessage o = (BytesMessage) arg0;
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
+						AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
+						if ( as != null )
+						{
+							reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
+						}
+						else
+						{
+							reply (o.getJMSReplyTo (), null);
+						}
+					}
+					catch ( Exception e )
+					{
+						log.trace ("Rejected invalid account request ", e);
 					}
 				}
 			});
@@ -227,6 +289,38 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 	public void setPassword (String password)
 	{
 		this.password = password;
+	}
+
+	public Transaction getTransaction (final String hash)
+	{
+		try
+		{
+			log.trace ("get transaction " + hash);
+			Tx tx = txhandler.getTransaction (hash);
+			final WireFormat.Writer writer = new WireFormat.Writer ();
+			if ( tx == null )
+			{
+				new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+				{
+					@Override
+					protected void doInTransactionWithoutResult (TransactionStatus status)
+					{
+						status.setRollbackOnly ();
+						Tx t = store.getTransaction (hash);
+						t.toWire (writer);
+					}
+				});
+			}
+			else
+			{
+				tx.toWire (writer);
+			}
+			return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		}
+		finally
+		{
+			log.trace ("get transaction returned " + hash);
+		}
 	}
 
 	public Block getBlock (final String hash)
@@ -354,6 +448,133 @@ public class ImplementBCSAPIBus implements TrunkListener, TransactionListener, T
 		catch ( Exception e )
 		{
 			log.error ("Can not send JMS message ", e);
+		}
+	}
+
+	public AccountStatement getAccountStatement (final List<String> addresses, final long from)
+	{
+		log.trace ("get account statement ");
+		try
+		{
+			final AccountStatement statement = new AccountStatement ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			{
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					List<TransactionOutput> balances = new ArrayList<TransactionOutput> ();
+					statement.setOpening (balances);
+
+					Blk trunk = store.getBlock (store.getHeadHash ());
+					statement.setTimestamp (trunk.getCreateTime ());
+					statement.setLastBlock (store.getHeadHash ());
+
+					log.trace ("retrieve balance");
+					HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
+					for ( TxOut o : store.getUnspentOutput (addresses) )
+					{
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs == null )
+						{
+							outs = new HashMap<Long, TxOut> ();
+							utxo.put (o.getTxHash (), outs);
+						}
+						outs.put (o.getIx (), o);
+					}
+
+					List<Posting> postings = new ArrayList<Posting> ();
+					statement.setPosting (postings);
+
+					log.trace ("retrieve spent");
+					for ( TxIn spent : store.getSpent (addresses, from) )
+					{
+						Posting p = new Posting ();
+						postings.add (p);
+
+						p.setTimestamp (spent.getBlockTime ());
+
+						TxOut o = spent.getSource ();
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs == null )
+						{
+							outs = new HashMap<Long, TxOut> ();
+							utxo.put (o.getTxHash (), outs);
+						}
+						outs.put (o.getIx (), o);
+
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						p.setOutput (out);
+						p.setSpent (spent.getTransaction ().getHash ());
+					}
+
+					log.trace ("retrieve received");
+					for ( TxOut o : store.getReceived (addresses, from) )
+					{
+						Posting p = new Posting ();
+						postings.add (p);
+
+						p.setTimestamp (o.getBlockTime ());
+						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+						if ( outs != null )
+						{
+							outs.remove (o.getIx ());
+							if ( outs.size () == 0 )
+							{
+								utxo.remove (o.getTxHash ());
+							}
+						}
+
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						o.toWire (writer);
+						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+						out.setTransactionHash (o.getTxHash ());
+						p.setOutput (out);
+					}
+					for ( HashMap<Long, TxOut> outs : utxo.values () )
+					{
+						for ( TxOut o : outs.values () )
+						{
+							WireFormat.Writer writer = new WireFormat.Writer ();
+							o.toWire (writer);
+							TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+							out.setTransactionHash (o.getTxHash ());
+							balances.add (out);
+						}
+					}
+					Collections.sort (postings, new Comparator<Posting> ()
+					{
+						@Override
+						public int compare (Posting arg0, Posting arg1)
+						{
+							if ( arg0.getTimestamp () != arg1.getTimestamp () )
+							{
+								return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
+							}
+							else
+							{
+								if ( arg0.getSpent () == null && arg1.getSpent () != null )
+								{
+									return -1;
+								}
+								if ( arg0.getSpent () != null && arg1.getSpent () == null )
+								{
+									return 1;
+								}
+								return 0;
+							}
+						}
+					});
+				}
+			});
+			return statement;
+		}
+		finally
+		{
+			log.trace ("get account statement returned");
 		}
 	}
 }

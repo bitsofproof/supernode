@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import com.bitsofproof.supernode.api.BCSAPIDirect;
+import com.bitsofproof.supernode.api.AccountStatement;
+import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.core.BitcoinNetwork;
 import com.bitsofproof.supernode.core.Chain;
@@ -49,7 +50,7 @@ public class StoriesRunner extends JUnitStories
 	Chain production;
 
 	@Autowired
-	BCSAPIDirect directAPI;
+	BCSAPI directAPI;
 
 	@Override
 	protected List<String> storyPaths ()
@@ -101,7 +102,8 @@ public class StoriesRunner extends JUnitStories
 		List<String> addresses = new ArrayList<String> ();
 		addresses.add (address);
 		long sum = 0;
-		for ( TransactionOutput o : directAPI.getBalance (addresses) )
+		AccountStatement as = directAPI.registerAccount (addresses, 0, null);
+		for ( TransactionOutput o : as.getOpening () )
 		{
 			sum += o.getValue ();
 		}

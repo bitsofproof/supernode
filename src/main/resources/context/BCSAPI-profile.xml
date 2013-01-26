@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans profile="BCSAPIDirect" 
+<beans profile="BCSAPI" 
 	xmlns="http://www.springframework.org/schema/beans"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
@@ -12,27 +12,29 @@
 	<description>supernode spring assembly (c) 2012 Tamas Blummer
 		tamas@bitsofproof.com</description>
 
-	<bean id="BCSAPIDirect" class="com.bitsofproof.supernode.core.ImplementBCSAPIDirect">
+	<bean id="blocktemplater" class="com.bitsofproof.supernode.core.BlockTemplater">
 		<constructor-arg>
-			<ref bean="store"/>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+		<constructor-arg>
+			<ref bean="tx" />
+		</constructor-arg>
+		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
+	</bean>
+
+	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork"/>
 		</constructor-arg>
 		<constructor-arg>
 			<ref bean="tx"/>
 		</constructor-arg>
+		<constructor-arg>
+			<ref bean="blocktemplater"/>
+		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
+		<property name="brokerURL" value="ssl://localhost:61613"/>
+		<property name="user" value="admin"/>
+		<property name="password" value="password"/>
 	</bean>
-	
-	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
-		<property name="serviceName" value="BCSAPI" />
-		<property name="service" ref="BCSAPIDirect" />
-		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
-		<property name="registryPort" value="1199" />
-		<property name="serverSocketFactory">
-			<bean class="javax.rmi.ssl.SslRMIServerSocketFactory"/>
-		</property>
-		<property name="clientSocketFactory">
-			<bean class="javax.rmi.ssl.SslRMIClientSocketFactory" />
-		</property>
-	</bean>
-
 </beans>
