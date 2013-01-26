@@ -21,9 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.protobuf.ByteString;
 
 public class Block implements Serializable, Cloneable
 {
@@ -112,6 +110,7 @@ public class Block implements Serializable, Cloneable
 
 			for ( Transaction t : transactions )
 			{
+				t.computeHash ();
 				tree.add (new Hash (t.getHash ()).toByteArray ());
 			}
 			int levelOffset = 0;
@@ -260,52 +259,42 @@ public class Block implements Serializable, Cloneable
 		return ByteUtils.toHex (writer.toByteArray ());
 	}
 
-	public JSONObject toJSON ()
+	public BCSAPIMessage.Block toProtobuf ()
 	{
-		JSONObject o = new JSONObject ();
-		try
+		BCSAPIMessage.Block.Builder builder = BCSAPIMessage.Block.newBuilder ();
+		builder.setBcsapiversion (1);
+		builder.setVersion ((int) version);
+		builder.setDifficulty ((int) difficultyTarget);
+		builder.setNonce ((int) nonce);
+		builder.setTimestamp ((int) createTime);
+		builder.setMerkleRoot (ByteString.copyFrom (new Hash (merkleRoot).toByteArray ()));
+		builder.setPreviousBlock (ByteString.copyFrom (new Hash (previousHash).toByteArray ()));
+		if ( transactions != null )
 		{
-			o.put ("hash", hash);
-			o.put ("version", version);
-			o.put ("previous", previousHash);
-			o.put ("merkleRoot", merkleRoot);
-			o.put ("createTime", createTime);
-			o.put ("difficultyTarget", difficultyTarget);
-			o.put ("nonce", nonce);
-			if ( transactions != null )
+			for ( Transaction t : transactions )
 			{
-				List<JSONObject> txJSON = new ArrayList<JSONObject> ();
-				for ( Transaction t : transactions )
-				{
-					txJSON.add (t.toJSON ());
-				}
-				o.put ("transactions", txJSON);
+				builder.addTransactions (t.toProtobuf ());
 			}
 		}
-		catch ( JSONException e )
-		{
-		}
-		return o;
+		return builder.build ();
 	}
 
-	public static Block fromJSON (JSONObject o) throws JSONException
+	public static Block fromProtobuf (BCSAPIMessage.Block pb)
 	{
 		Block block = new Block ();
-		block.version = o.getLong ("version");
-		block.createTime = o.getLong ("createTime");
-		block.difficultyTarget = o.getLong ("difficultyTarget");
-		block.nonce = o.getLong ("nonce");
-		block.previousHash = o.getString ("previous");
-		block.transactions = new ArrayList<Transaction> ();
-		JSONArray tl = o.getJSONArray ("transactions");
-		if ( tl != null )
+		block.setVersion (pb.getVersion ());
+		block.setDifficultyTarget (pb.getDifficulty ());
+		block.setNonce (pb.getNonce ());
+		block.setCreateTime (pb.getTimestamp ());
+		block.setPreviousHash (new Hash (pb.getPreviousBlock ().toByteArray ()).toString ());
+		if ( pb.getTransactionsCount () > 0 )
 		{
-			for ( int i = 0; i < tl.length (); ++i )
+			block.setTransactions (new ArrayList<Transaction> ());
+			for ( BCSAPIMessage.Transaction t : pb.getTransactionsList () )
 			{
-				block.transactions.add (Transaction.fromJSON (tl.getJSONObject (i)));
+				block.getTransactions ().add (Transaction.fromProtobuf (t));
 			}
 		}
-		block.computeHash ();
 		return block;
 	}
 }

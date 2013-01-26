@@ -18,73 +18,83 @@ package com.bitsofproof.supernode.api;
 
 // input point of a transaction. 
 message TransactionInput {
-	required bytes source = 1; 				// source transaction hash
-	required uint32 sourceix = 2;    		// index of the output in the source stransaction
-	required uint32 sequence = 3; 			// higher wins
-	required bytes script = 4;    			// inputs to the script of the transaction output
-	optional bytes transaction = 5;			// the transaction this input is part of
-	optional uint32 selfix = 6;				// self index within the transaction this input is part of
+	required uint32 bcsapiversion = 1;
+	required bytes source = 2; 				// source transaction hash
+	required uint32 sourceix = 3;    		// index of the output in the source stransaction
+	required uint32 sequence = 4; 			// higher wins
+	required bytes script = 5;    			// inputs to the script of the transaction output
+	optional bytes transaction = 6;			// the transaction this input is part of
+	optional uint32 selfix = 7;				// self index within the transaction this input is part of
 }
 
 // output point of a transaction. 
 message TransactionOutput {
-	required uint64 value = 1; 				// value that can be claimed ...
-	required bytes script = 2; 				// ... if satisfying this output script
-	repeated string address = 3;			// address(es) output was sent (if standard tx)
-	optional uint32 votes = 4;				// number of signatures from owner(s) needed to redeem
-	optional bytes transaction = 5;			// the transaction this input is part of
-	optional uint32 selfix = 6;				// self index within the transaction this input is part of
+	required uint32 bcsapiversion = 1;
+	required uint64 value = 2; 				// value that can be claimed ...
+	required bytes script = 3; 				// ... if satisfying this output script
+	repeated string address = 4;			// address(es) output was sent (if standard tx)
+	optional uint32 votes = 5;				// number of signatures from owner(s) needed to redeem
+	optional bytes transaction = 6;			// the transaction this input is part of
+	optional uint32 selfix = 7;				// self index within the transaction this input is part of
 }
 
 // a transaction. 
 message Transaction {
-	required uint32 version = 1;
-	required uint32 locktime = 2;   		// block number or time this is valid from
-	repeated TransactionInput inputs = 3;
-	repeated TransactionOutput outputs = 4;
+	required uint32 bcsapiversion = 1;
+	required uint32 version = 3;
+	required uint32 locktime = 4;   		// block number or time this is valid from
+	repeated TransactionInput inputs = 5;
+	repeated TransactionOutput outputs = 6;
 }
 
 // a block. 
 // matches the P2P Bitcoin protocol message
 message Block {
-	required uint32 version = 1;
-	required bytes previousBlock = 2;		// previos block hash
-	required bytes merkleRoot = 3;			// block content hash tree root
-	required uint32 timestamp = 4;			// the block was mined at
-	required uint32 difficulty = 5;			// encoded difficulty for POW
-	required uint32 nonce = 6;				// parameter of POW
-	repeated Transaction transactions = 7;
+	required uint32 bcsapiversion = 1;
+	required uint32 version = 2;
+	required bytes previousBlock = 3;		// previos block hash
+	required bytes merkleRoot = 4;			// block content hash tree root
+	required uint32 timestamp = 5;			// the block was mined at
+	required uint32 difficulty = 6;			// encoded difficulty for POW
+	required uint32 nonce = 7;				// parameter of POW
+	repeated Transaction transactions = 8;
 }
 
 
 // a block chain reorg is a transaction removing and adding a few blocks at once
 message TrunkUpdate {
-	repeated Block added = 1;				// blocks added to trunk
-	repeated Block removed = 2;				// blocks no longer on trunk
+	required uint32 bcsapiversion = 1;
+	repeated Block added = 2;				// blocks added to trunk
+	repeated Block removed = 3;				// blocks no longer on trunk
 }
 
 message Address {
-	repeated string address = 1;			// indicate interest in addresses
+	required uint32 bcsapiversion = 1;
+	repeated string address = 2;			// indicate interest in addresses
 }
 
 message Hash {
-	repeated bytes hash = 1;
+	required uint32 bcsapiversion = 1;
+	repeated bytes hash = 2;
 }
 
 // balance is a list of unspent outputs
 message Balance {
-	repeated TransactionOutput output = 1;
+	required uint32 bcsapiversion = 1;
+	repeated TransactionOutput output = 2;
 }
 
 message Received {
-	required TransactionOutput output = 1;			// the output received
-	required bytes  block = 4;				// the block that contains the transaction
-	required uint32 timestamp = 5;			// timestamp of the block
-	required uint32 height = 6;				// height of the block	
+	required uint32 bcsapiversion = 1;
+	required TransactionOutput output = 2;			// the output received
+	required bytes  block = 3;				// the block that contains the transaction
+	required uint32 timestamp = 4;			// timestamp of the block
+	required uint32 height = 5;				// height of the block	
 }
 
 message Spent {
-	required Transaction spend = 1;			// spending transaction, note that only some inputs might apply
+	required uint32 bcsapiversion = 1;
+	required Transaction spend = 2;			// spending transaction, note that only some inputs might apply
 	required bytes  block = 3;				// the block that contains the spending transaction (input)
 	required uint32 timestamp = 4;			// timestamp of the block
 	required uint32 height = 5;				// height of the block
@@ -92,7 +102,8 @@ message Spent {
 }
 
 message AccountStatement {
-	required Balance opening = 1;
-	repeated Received received = 2;			
-	repeated Spent spent = 3;
+	required uint32 bcsapiversion = 1;
+	required Balance opening = 2;
+	repeated Received received = 3;			
+	repeated Spent spent = 4;
 }

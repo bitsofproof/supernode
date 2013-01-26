@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.jms.BytesMessage;
 import javax.jms.Connection;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -29,10 +30,8 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
-import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,12 +96,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 				@Override
 				public void onMessage (Message arg0)
 				{
-					TextMessage o = (TextMessage) arg0;
+					BytesMessage o = (BytesMessage) arg0;
 					for ( TransactionListener l : transactionListener )
 					{
 						try
 						{
-							l.process (Transaction.fromJSON (new JSONObject (o.getText ())));
+							byte[] body = new byte[(int) o.getBodyLength ()];
+							o.readBytes (body);
+							l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
 						}
 						catch ( Exception e )
 						{
@@ -118,7 +119,10 @@ public class ClientBusAdaptor implements BCSAPIBus
 				{
 					try
 					{
-						TrunkUpdateMessage tu = TrunkUpdateMessage.fromJSON (new JSONObject (((TextMessage) arg0).getText ()));
+						BytesMessage m = (BytesMessage) arg0;
+						byte[] body = new byte[(int) m.getBodyLength ()];
+						m.readBytes (body);
+						TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
 						for ( TrunkListener l : trunkListener )
 						{
 							l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
@@ -135,12 +139,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 				@Override
 				public void onMessage (Message arg0)
 				{
-					TextMessage o = (TextMessage) arg0;
+					BytesMessage o = (BytesMessage) arg0;
 					for ( TemplateListener l : blockTemplateListener )
 					{
 						try
 						{
-							l.workOn (Block.fromJSON (new JSONObject (o.getText ())));
+							byte[] body = new byte[(int) o.getBodyLength ()];
+							o.readBytes (body);
+							l.workOn (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
 						}
 						catch ( Exception e )
 						{
@@ -209,12 +215,14 @@ public class ClientBusAdaptor implements BCSAPIBus
 						@Override
 						public void onMessage (Message arg0)
 						{
-							TextMessage o = (TextMessage) arg0;
+							BytesMessage o = (BytesMessage) arg0;
 							for ( TransactionListener l : addressListener.get (address) )
 							{
 								try
 								{
-									l.process (Transaction.fromJSON (new JSONObject (o.getText ())));
+									byte[] body = new byte[(int) o.getBodyLength ()];
+									o.readBytes (body);
+									l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
 								}
 								catch ( Exception e )
 								{
@@ -238,7 +246,9 @@ public class ClientBusAdaptor implements BCSAPIBus
 	{
 		try
 		{
-			transactionProducer.send (session.createTextMessage (transaction.toJSON ().toString ()));
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (transaction.toProtobuf ().toByteArray ());
+			transactionProducer.send (m);
 		}
 		catch ( Exception e )
 		{
@@ -251,7 +261,9 @@ public class ClientBusAdaptor implements BCSAPIBus
 	{
 		try
 		{
-			blockProducer.send (session.createTextMessage (block.toJSON ().toString ()));
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (block.toProtobuf ().toByteArray ());
+			blockProducer.send (m);
 		}
 		catch ( JMSException e )
 		{

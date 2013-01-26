@@ -17,8 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.protobuf.ByteString;
 
 public class TransactionInput implements Serializable, Cloneable
 {
@@ -29,6 +28,7 @@ public class TransactionInput implements Serializable, Cloneable
 	private long sequence = 0xFFFFFFFFL;
 	private byte[] script;
 	private String transactionHash;
+	private long selfIx;
 
 	public String getTransactionHash ()
 	{
@@ -58,6 +58,16 @@ public class TransactionInput implements Serializable, Cloneable
 	public void setIx (long ix)
 	{
 		this.ix = ix;
+	}
+
+	public long getSelfIx ()
+	{
+		return selfIx;
+	}
+
+	public void setSelfIx (long selfIx)
+	{
+		this.selfIx = selfIx;
 	}
 
 	public long getSequence ()
@@ -140,30 +150,34 @@ public class TransactionInput implements Serializable, Cloneable
 		return i;
 	}
 
-	public JSONObject toJSON () throws JSONException
+	public BCSAPIMessage.TransactionInput toProtobuf ()
 	{
-		JSONObject o = new JSONObject ();
-		o.put ("sourceHash", sourceHash);
-		o.put ("sourceIx", ix);
-		try
+		BCSAPIMessage.TransactionInput.Builder builder = BCSAPIMessage.TransactionInput.newBuilder ();
+		builder.setBcsapiversion (1);
+		builder.setScript (ByteString.copyFrom (script));
+		builder.setSequence ((int) sequence);
+		builder.setSource (ByteString.copyFrom (new Hash (sourceHash).toByteArray ()));
+		builder.setSourceix ((int) ix);
+		if ( transactionHash != null )
 		{
-			o.put ("script", ScriptFormat.toReadable (script));
+			builder.setSelfix ((int) selfIx);
+			builder.setTransaction (ByteString.copyFrom (new Hash (transactionHash).toByteArray ()));
 		}
-		catch ( Exception e )
-		{
-			o.put ("script", "0x" + ByteUtils.toHex (script));
-		}
-		o.put ("sequence", sequence);
-		return o;
+		return builder.build ();
 	}
 
-	public static TransactionInput fromJSON (JSONObject o) throws JSONException
+	public static TransactionInput fromProtobuf (BCSAPIMessage.TransactionInput pi)
 	{
-		TransactionInput in = new TransactionInput ();
-		in.ix = o.getLong ("sourceIx");
-		in.sourceHash = o.getString ("sourceHash");
-		in.sequence = o.getLong ("sequence");
-		in.script = ScriptFormat.fromReadable (o.getString ("script"));
-		return in;
+		TransactionInput input = new TransactionInput ();
+		input.setIx (pi.getSourceix ());
+		input.setScript (pi.getScript ().toByteArray ());
+		input.setSequence (pi.getSequence ());
+		input.setSourceHash (new Hash (pi.getSource ().toByteArray ()).toString ());
+		if ( pi.hasTransaction () )
+		{
+			input.setSelfIx (pi.getSelfix ());
+			input.setTransactionHash (new Hash (pi.getTransaction ().toByteArray ()).toString ());
+		}
+		return input;
 	}
 }

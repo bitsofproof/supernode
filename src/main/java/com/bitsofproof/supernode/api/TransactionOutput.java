@@ -16,9 +16,9 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.util.List;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.protobuf.ByteString;
 
 public class TransactionOutput implements Serializable, Cloneable
 {
@@ -27,6 +27,9 @@ public class TransactionOutput implements Serializable, Cloneable
 	private long value;
 	private byte[] script;
 	private String transactionHash;
+	private long selfIx;
+	private long votes;
+	private List<String> addresses;
 
 	public String getTransactionHash ()
 	{
@@ -72,6 +75,36 @@ public class TransactionOutput implements Serializable, Cloneable
 		}
 	}
 
+	public long getSelfIx ()
+	{
+		return selfIx;
+	}
+
+	public void setSelfIx (long selfIx)
+	{
+		this.selfIx = selfIx;
+	}
+
+	public long getVotes ()
+	{
+		return votes;
+	}
+
+	public void setVotes (long votes)
+	{
+		this.votes = votes;
+	}
+
+	public List<String> getAddresses ()
+	{
+		return addresses;
+	}
+
+	public void setAddresses (List<String> addresses)
+	{
+		this.addresses = addresses;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint64 (value);
@@ -101,32 +134,43 @@ public class TransactionOutput implements Serializable, Cloneable
 
 	}
 
-	public JSONObject toJSON ()
+	public BCSAPIMessage.TransactionOutput toProtobuf ()
 	{
-		JSONObject o = new JSONObject ();
-		try
+		BCSAPIMessage.TransactionOutput.Builder builder = BCSAPIMessage.TransactionOutput.newBuilder ();
+		builder.setBcsapiversion (1);
+		builder.setScript (ByteString.copyFrom (script));
+		builder.setValue (value);
+		if ( transactionHash != null )
 		{
-			o.put ("value", value);
-			try
-			{
-				o.put ("script", ScriptFormat.toReadable (script));
-			}
-			catch ( Exception e )
-			{
-				o.put ("script", "0x" + ByteUtils.toHex (script));
-			}
+			builder.setTransaction (ByteString.copyFrom (new Hash (transactionHash).toByteArray ()));
+			builder.setSelfix ((int) selfIx);
 		}
-		catch ( JSONException e )
+		if ( addresses != null )
 		{
+			for ( int i = 0; i < addresses.size (); ++i )
+			{
+				builder.setAddress (i, addresses.get (i));
+			}
+			builder.setVotes ((int) votes);
 		}
-		return o;
+		return builder.build ();
 	}
 
-	public static TransactionOutput fromJSON (JSONObject o) throws JSONException
+	public static TransactionOutput fromProtobuf (BCSAPIMessage.TransactionOutput po)
 	{
-		TransactionOutput out = new TransactionOutput ();
-		out.value = o.getLong ("value");
-		out.script = ScriptFormat.fromReadable (o.getString ("script"));
-		return out;
+		TransactionOutput output = new TransactionOutput ();
+		output.setScript (po.getScript ().toByteArray ());
+		output.setValue (po.getValue ());
+		if ( po.hasTransaction () )
+		{
+			output.setTransactionHash (new Hash (po.getTransaction ().toByteArray ()).toString ());
+			output.setSelfIx (po.getSelfix ());
+		}
+		if ( po.hasVotes () )
+		{
+			output.setAddresses (po.getAddressList ());
+			output.setVotes (po.getVotes ());
+		}
+		return output;
 	}
 }

@@ -19,10 +19,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 public class Transaction implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 690918485496086537L;
@@ -74,16 +70,20 @@ public class Transaction implements Serializable, Cloneable
 		hash = reader.hash ().toString ();
 		if ( inputs != null )
 		{
+			int i = 0;
 			for ( TransactionInput in : inputs )
 			{
 				in.setTransactionHash (hash);
+				in.setSelfIx (i++);
 			}
 		}
 		if ( outputs != null )
 		{
+			int i = 0;
 			for ( TransactionOutput out : outputs )
 			{
 				out.setTransactionHash (hash);
+				out.setSelfIx (i++);
 			}
 		}
 	}
@@ -250,57 +250,51 @@ public class Transaction implements Serializable, Cloneable
 		return t;
 	}
 
-	public JSONObject toJSON () throws JSONException
+	public BCSAPIMessage.Transaction toProtobuf ()
 	{
-		JSONObject o = new JSONObject ();
-		o.put ("hash", getHash ());
-		o.put ("version", version);
+		BCSAPIMessage.Transaction.Builder builder = BCSAPIMessage.Transaction.newBuilder ();
+		builder.setBcsapiversion (1);
+		builder.setLocktime ((int) lockTime);
+		builder.setVersion ((int) version);
 		if ( inputs != null )
 		{
-			List<JSONObject> ins = new ArrayList<JSONObject> ();
-			for ( TransactionInput input : inputs )
+			for ( TransactionInput i : inputs )
 			{
-				ins.add (input.toJSON ());
+				builder.addInputs (i.toProtobuf ());
 			}
-			o.put ("inputs", ins);
 		}
-		if ( outputs != null )
+		if ( outputs != null && outputs.size () > 0 )
 		{
-			List<JSONObject> outs = new ArrayList<JSONObject> ();
-			for ( TransactionOutput output : outputs )
+			for ( TransactionOutput o : outputs )
 			{
-				outs.add (output.toJSON ());
+				builder.addOutputs (o.toProtobuf ());
 			}
-			o.put ("outputs", outs);
 		}
-		o.put ("lockTime", lockTime);
-		return o;
+		return builder.build ();
 	}
 
-	public static Transaction fromJSON (JSONObject o) throws JSONException
+	public static Transaction fromProtobuf (BCSAPIMessage.Transaction pt)
 	{
-		Transaction t = new Transaction ();
-		t.version = o.getLong ("version");
-		t.lockTime = o.getLong ("lockTime");
-		JSONArray ti = o.getJSONArray ("inputs");
-		if ( ti != null && ti.length () > 0 )
+		Transaction transaction = new Transaction ();
+		transaction.setLockTime (pt.getLocktime ());
+		transaction.setVersion (pt.getVersion ());
+		if ( pt.getInputsCount () > 0 )
 		{
-			t.inputs = new ArrayList<TransactionInput> ();
-			for ( int i = 0; i < ti.length (); ++i )
+			transaction.setInputs (new ArrayList<TransactionInput> ());
+			for ( BCSAPIMessage.TransactionInput i : pt.getInputsList () )
 			{
-				t.inputs.add (TransactionInput.fromJSON (ti.getJSONObject (i)));
+				transaction.getInputs ().add (TransactionInput.fromProtobuf (i));
 			}
 		}
-		JSONArray to = o.getJSONArray ("outputs");
-		if ( to != null && to.length () > 0 )
+
+		if ( pt.getOutputsCount () > 0 )
 		{
-			t.outputs = new ArrayList<TransactionOutput> ();
-			for ( int i = 0; i < to.length (); ++i )
+			transaction.setOutputs (new ArrayList<TransactionOutput> ());
+			for ( BCSAPIMessage.TransactionOutput o : pt.getOutputsList () )
 			{
-				t.outputs.add (TransactionOutput.fromJSON (to.getJSONObject (i)));
+				transaction.getOutputs ().add (TransactionOutput.fromProtobuf (o));
 			}
 		}
-		t.computeHash ();
-		return t;
+		return transaction;
 	}
 }
