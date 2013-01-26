@@ -287,6 +287,7 @@ public class Block implements Serializable, Cloneable
 		block.setNonce (pb.getNonce ());
 		block.setCreateTime (pb.getTimestamp ());
 		block.setPreviousHash (new Hash (pb.getPreviousBlock ().toByteArray ()).toString ());
+		block.setMerkleRoot (new Hash (pb.getMerkleRoot ().toByteArray ()).toString ());
 		if ( pb.getTransactionsCount () > 0 )
 		{
 			block.setTransactions (new ArrayList<Transaction> ());

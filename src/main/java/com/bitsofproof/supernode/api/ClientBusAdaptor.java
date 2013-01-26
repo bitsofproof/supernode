@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Exchanger;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -30,10 +31,13 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
+import javax.jms.TemporaryQueue;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.protobuf.ByteString;
 
 public class ClientBusAdaptor implements BCSAPIBus
 {
@@ -54,6 +58,7 @@ public class ClientBusAdaptor implements BCSAPIBus
 
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
+	private MessageProducer blockRequestProducer;
 
 	public void setClientId (String clientId)
 	{
@@ -157,6 +162,7 @@ public class ClientBusAdaptor implements BCSAPIBus
 			});
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
+			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -239,6 +245,114 @@ public class ClientBusAdaptor implements BCSAPIBus
 		{
 			log.error ("Can not create JMS session", e);
 		}
+	}
+
+	private byte[] synchronousRequest (MessageProducer producer, Message m)
+	{
+		byte[] result = null;
+		final Exchanger<byte[]> exchanger = new Exchanger<byte[]> ();
+
+		TemporaryQueue answerQueue = null;
+		MessageConsumer consumer = null;
+		try
+		{
+			answerQueue = session.createTemporaryQueue ();
+			m.setJMSReplyTo (answerQueue);
+			consumer = session.createConsumer (answerQueue);
+			consumer.setMessageListener (new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message message)
+				{
+					BytesMessage m = (BytesMessage) message;
+					byte[] body;
+					try
+					{
+						if ( m.getBodyLength () == 0 )
+						{
+							try
+							{
+								exchanger.exchange (null);
+							}
+							catch ( InterruptedException e )
+							{
+							}
+						}
+						else
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							try
+							{
+								exchanger.exchange (body);
+							}
+							catch ( InterruptedException e )
+							{
+							}
+						}
+					}
+					catch ( JMSException e )
+					{
+						log.trace ("Can not parse reply", e);
+					}
+				}
+			});
+			producer.send (m);
+			try
+			{
+				result = exchanger.exchange (null);
+			}
+			catch ( InterruptedException e )
+			{
+			}
+		}
+		catch ( JMSException e )
+		{
+			log.error ("Can not send request", e);
+		}
+		finally
+		{
+			try
+			{
+				if ( consumer != null )
+				{
+					consumer.close ();
+				}
+				if ( answerQueue != null )
+				{
+					answerQueue.delete ();
+				}
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Block getBlock (String hash)
+	{
+		try
+		{
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (blockRequestProducer, m);
+			if ( response != null )
+			{
+				Block b = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (response));
+				b.computeHash ();
+				return b;
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not get block", e);
+		}
+		return null;
 	}
 
 	@Override

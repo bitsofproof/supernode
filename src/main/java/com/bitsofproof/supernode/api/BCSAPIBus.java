@@ -23,6 +23,14 @@ import java.util.List;
 public interface BCSAPIBus
 {
 	/**
+	 * get block for the hash
+	 * 
+	 * @param hash
+	 * @return block or null if hash is unknown
+	 */
+	public Block getBlock (String hash);
+
+	/**
 	 * send a signed transaction
 	 * 
 	 * @param transaction
