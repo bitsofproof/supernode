@@ -50,6 +50,7 @@
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<jbehave.version>3.7</jbehave.version>
+		<postgresql.version>9.1-901.jdbc4</postgresql.version>
 	</properties>
 	<build>
 		<plugins>
@@ -125,7 +126,7 @@
 						</goals>
 					</execution>
 				</executions>
-				<dependencies>	
+				<dependencies>
 					<dependency>
 						<groupId>com.bitsofproof</groupId>
 						<artifactId>supernode</artifactId>
@@ -214,6 +215,11 @@
 			<groupId>org.apache.derby</groupId>
 			<artifactId>derby</artifactId>
 			<version>${derby.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>${postgresql.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
