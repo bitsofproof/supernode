@@ -13,7 +13,7 @@
 
 	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
 		<property name="driverClassName" value="org.postgresql.Driver" />
-		<property name="url" value="jdbc:postgresql://localhost:5432/data;create=true" />
+		<property name="url" value="jdbc:postgresql://localhost:5432/data" />
 		<property name="username" value="bitsofproof" />
 		<property name="password" value="bitsofproof" />
 	</bean>
