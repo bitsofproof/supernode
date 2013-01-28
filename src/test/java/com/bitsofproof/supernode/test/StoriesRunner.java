@@ -102,7 +102,7 @@ public class StoriesRunner extends JUnitStories
 		List<String> addresses = new ArrayList<String> ();
 		addresses.add (address);
 		long sum = 0;
-		AccountStatement as = directAPI.registerAccount (addresses, 0, null);
+		AccountStatement as = directAPI.registerAccountListener (addresses, 0, null);
 		for ( TransactionOutput o : as.getOpening () )
 		{
 			sum += o.getValue ();
