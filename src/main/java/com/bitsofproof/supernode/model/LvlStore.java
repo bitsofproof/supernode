@@ -96,7 +96,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		if ( batch != null )
 		{
 			db.write (batch);
-			batch.close ();
+			try
+			{
+				batch.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 			batchCache.clear ();
 		}
 	}
@@ -106,7 +112,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		if ( batch != null )
 		{
-			batch.close ();
+			try
+			{
+				batch.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 			batchCache.clear ();
 		}
 	}
@@ -207,7 +219,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 		finally
 		{
-			iterator.close ();
+			try
+			{
+				iterator.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 		}
 	}
 
@@ -246,7 +264,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 		finally
 		{
-			iterator.close ();
+			try
+			{
+				iterator.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 		}
 	}
 
@@ -271,7 +295,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 		finally
 		{
-			iterator.close ();
+			try
+			{
+				iterator.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 		}
 	}
 
@@ -453,6 +483,8 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	@Override
 	protected void cacheHeads ()
 	{
+		final Map<CachedHead, Long> prevIds = new HashMap<CachedHead, Long> ();
+
 		forAll (KeyType.HEAD, new DataProcessor ()
 		{
 			@Override
@@ -466,7 +498,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				sh.setHeight (h.getHeight ());
 				if ( h.getPreviousId () != null )
 				{
-					sh.setPrevious (cachedHeads.get (h.getPreviousId ()));
+					prevIds.put (sh, h.getPreviousId ());
 					sh.setPreviousHeight (h.getPreviousHeight ());
 				}
 				cachedHeads.put (h.getId (), sh);
@@ -477,6 +509,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				return true;
 			}
 		});
+		for ( CachedHead head : cachedHeads.values () )
+		{
+			if ( prevIds.containsKey (head) )
+			{
+				head.setPrevious (cachedHeads.get (prevIds.get (head)));
+			}
+		}
 	}
 
 	@Override
@@ -746,7 +785,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 		finally
 		{
-			iterator.close ();
+			try
+			{
+				iterator.close ();
+			}
+			catch ( IOException e )
+			{
+			}
 		}
 	}
 

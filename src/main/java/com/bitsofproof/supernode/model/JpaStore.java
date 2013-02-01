@@ -95,7 +95,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	{
 		QHead head = QHead.head;
 		JPAQuery q = new JPAQuery (entityManager);
-		for ( Head h : q.from (head).list (head) )
+		for ( Head h : q.from (head).orderBy (head.id.asc ()).list (head) )
 		{
 			CachedHead sh = new CachedHead ();
 			sh.setId (h.getId ());
