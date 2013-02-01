@@ -204,7 +204,7 @@
 		<dependency>
 			<groupId>org.fusesource.leveldbjni</groupId>
 			<artifactId>leveldbjni-all</artifactId>
-			<version>99-master-SNAPSHOT</version>
+			<version>1.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.derby</groupId>
