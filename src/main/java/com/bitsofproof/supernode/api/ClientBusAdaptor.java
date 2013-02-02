@@ -139,7 +139,7 @@ public class ClientBusAdaptor implements BCSAPI
 					}
 				}
 			});
-			addMessageListener ("work", new MessageListener ()
+			addMessageListener ("template", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
