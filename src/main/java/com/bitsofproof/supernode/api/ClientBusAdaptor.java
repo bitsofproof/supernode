@@ -17,9 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Exchanger;
 
 import javax.jms.BytesMessage;
@@ -30,6 +28,7 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
+import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TemporaryQueue;
 
@@ -38,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ClientBusAdaptor implements BCSAPI
 {
@@ -53,8 +53,6 @@ public class ClientBusAdaptor implements BCSAPI
 	private final List<TransactionListener> transactionListener = Collections.synchronizedList (new ArrayList<TransactionListener> ());
 	private final List<TrunkListener> trunkListener = Collections.synchronizedList (new ArrayList<TrunkListener> ());
 	private final List<TemplateListener> blockTemplateListener = Collections.synchronizedList (new ArrayList<TemplateListener> ());
-	private final Map<String, ArrayList<TransactionListener>> addressListener = Collections
-			.synchronizedMap (new HashMap<String, ArrayList<TransactionListener>> ());
 
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
@@ -207,14 +205,40 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private byte[] synchronousRequest (MessageProducer producer, Message m)
 	{
+		TemporaryQueue answerQueue = null;
+		try
+		{
+			try
+			{
+				answerQueue = session.createTemporaryQueue ();
+			}
+			catch ( JMSException e )
+			{
+				return null;
+			}
+			return synchronousRequest (producer, m, answerQueue);
+		}
+		finally
+		{
+			try
+			{
+				answerQueue.delete ();
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
+	}
+
+	private byte[] synchronousRequest (MessageProducer producer, Message m, Queue answerQueue)
+	{
 		byte[] result = null;
 		final Exchanger<byte[]> exchanger = new Exchanger<byte[]> ();
 
-		TemporaryQueue answerQueue = null;
 		MessageConsumer consumer = null;
+
 		try
 		{
-			answerQueue = session.createTemporaryQueue ();
 			m.setJMSReplyTo (answerQueue);
 			consumer = session.createConsumer (answerQueue);
 			consumer.setMessageListener (new MessageListener ()
@@ -276,10 +300,6 @@ public class ClientBusAdaptor implements BCSAPI
 				{
 					consumer.close ();
 				}
-				if ( answerQueue != null )
-				{
-					answerQueue.delete ();
-				}
 			}
 			catch ( JMSException e )
 			{
@@ -339,47 +359,11 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement registerAccountListener (List<String> addresses, long from, TransactionListener listener)
+	public AccountStatement registerAccountListener (List<String> addresses, long from, final TransactionListener listener)
 	{
 		try
 		{
-			if ( listener != null )
-			{
-				for ( final String address : addresses )
-				{
-					ArrayList<TransactionListener> al = addressListener.get (address);
-					if ( al == null )
-					{
-						al = new ArrayList<TransactionListener> ();
-						addressListener.put (address, al);
-
-						Destination blockDestination = session.createTopic ("address" + address);
-						MessageConsumer blockConsumer = session.createConsumer (blockDestination);
-						blockConsumer.setMessageListener (new MessageListener ()
-						{
-							@Override
-							public void onMessage (Message arg0)
-							{
-								BytesMessage o = (BytesMessage) arg0;
-								for ( TransactionListener l : addressListener.get (address) )
-								{
-									try
-									{
-										byte[] body = new byte[(int) o.getBodyLength ()];
-										o.readBytes (body);
-										l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
-									}
-									catch ( Exception e )
-									{
-										log.error ("Transaction message error", e);
-									}
-								}
-							}
-						});
-					}
-					al.add (listener);
-				}
-			}
+			Queue replyQueue = session.createTemporaryQueue ();
 
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.AccountRequest.Builder ab = BCSAPIMessage.AccountRequest.newBuilder ();
@@ -390,7 +374,32 @@ public class ClientBusAdaptor implements BCSAPI
 			}
 			ab.setFrom ((int) from);
 			m.writeBytes (ab.build ().toByteArray ());
-			byte[] response = synchronousRequest (accountRequestProducer, m);
+			if ( listener != null )
+			{
+				MessageConsumer blockConsumer = session.createConsumer (replyQueue);
+				blockConsumer.setMessageListener (new MessageListener ()
+				{
+					@Override
+					public void onMessage (Message arg0)
+					{
+						BytesMessage o = (BytesMessage) arg0;
+						byte[] body;
+						try
+						{
+							body = new byte[(int) o.getBodyLength ()];
+							o.readBytes (body);
+							listener.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
+						}
+						catch ( JMSException e )
+						{
+						}
+						catch ( InvalidProtocolBufferException e )
+						{
+						}
+					}
+				});
+			}
+			byte[] response = synchronousRequest (accountRequestProducer, m, replyQueue);
 			if ( response != null )
 			{
 				return AccountStatement.fromProtobuf (BCSAPIMessage.AccountStatement.parseFrom (response));
