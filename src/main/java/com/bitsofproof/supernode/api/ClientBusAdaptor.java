@@ -353,7 +353,7 @@ public class ClientBusAdaptor implements BCSAPI
 						al = new ArrayList<TransactionListener> ();
 						addressListener.put (address, al);
 
-						Destination blockDestination = session.createTopic (address);
+						Destination blockDestination = session.createTopic ("address" + address);
 						MessageConsumer blockConsumer = session.createConsumer (blockDestination);
 						blockConsumer.setMessageListener (new MessageListener ()
 						{
