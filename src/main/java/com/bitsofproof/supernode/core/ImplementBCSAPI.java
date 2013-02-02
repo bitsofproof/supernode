@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -75,6 +76,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
 	private MessageProducer templateProducer;
+	private final Map<String, ArrayList<MessageProducer>> addressProducer = new HashMap<String, ArrayList<MessageProducer>> ();
 
 	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
 	{
@@ -212,10 +214,22 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 						byte[] body = new byte[(int) o.getBodyLength ()];
 						o.readBytes (body);
 						BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
+
 						AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
 						if ( as != null )
 						{
 							reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
+							MessageProducer producer = session.createProducer (o.getJMSReplyTo ());
+							for ( String a : ar.getAddressList () )
+							{
+								ArrayList<MessageProducer> ap = addressProducer.get (a);
+								if ( ap == null )
+								{
+									ap = new ArrayList<MessageProducer> ();
+									addressProducer.put (a, ap);
+								}
+								ap.add (producer);
+							}
 						}
 						else
 						{
