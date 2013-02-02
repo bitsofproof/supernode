@@ -112,7 +112,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			templateProducer = session.createProducer (session.createTopic ("work"));
+			templateProducer = session.createProducer (session.createTopic ("template"));
 			addMessageListener ("newTransaction", new MessageListener ()
 			{
 				@Override
