@@ -85,6 +85,7 @@ public class Blk implements Serializable
 		b.createTime = reader.readUint32 ();
 		b.difficultyTarget = reader.readUint32 ();
 		b.nonce = reader.readUint32 ();
+		b.chainWork = Double.longBitsToDouble (reader.readUint64 ());
 		b.headId = reader.readUint64 ();
 		if ( txhashes )
 		{
@@ -109,6 +110,7 @@ public class Blk implements Serializable
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
+		writer.writeUint64 (Double.doubleToLongBits (chainWork));
 		writer.writeUint64 (headId);
 		writer.writeVarInt (transactions.size ());
 		for ( long i = 0; i < transactions.size (); ++i )
