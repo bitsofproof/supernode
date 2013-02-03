@@ -461,18 +461,19 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			do
 			{
+				if ( locator.contains (curr.getHash ()) || curr.getHeight () < 1 )
+				{
+					break;
+				}
 				inventory.add (0, curr.getHash ());
 				if ( inventory.size () > limit )
 				{
 					inventory.remove (limit);
 				}
-				if ( locator.contains (curr.getHash ()) || curr.getHeight () < 1 )
-				{
-					break;
-				}
 				curr = prev;
 				prev = curr.getPrevious ();
 			} while ( prev != null );
+			Collections.reverse (inventory);
 			return inventory;
 		}
 		finally
