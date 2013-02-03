@@ -246,11 +246,11 @@ public class BitcoinPeer extends P2P.Peer
 							network.getPeerStore ().store (p);
 						}
 					}
+					peer.send (peer.createMessage ("verack"));
 					if ( !outgoing )
 					{
 						onConnect ();
 					}
-					peer.send (peer.createMessage ("verack"));
 				}
 			}
 		});
