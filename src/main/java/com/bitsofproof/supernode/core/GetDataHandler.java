@@ -85,6 +85,10 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 					}
 				}
+				if ( m.getBlocks ().size () > 1 )
+				{
+					log.debug ("sent " + m.getBlocks ().size () + " blocks to " + peer.getAddress ());
+				}
 				InvMessage inv = (InvMessage) peer.createMessage ("inv");
 				inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
 				peer.send (inv);
