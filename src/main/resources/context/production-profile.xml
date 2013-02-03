@@ -24,4 +24,13 @@
 		</property>
 	</bean>
 	
+	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
+		<constructor-arg>
+			<value>10</value>
+		</constructor-arg> <!-- Number of connections desired -->
+		<property name="discovery" ref="discovery" />
+		<property name="chain" ref="chain" />
+		<property name="store" ref="store" />
+	</bean>
+
 </beans>
