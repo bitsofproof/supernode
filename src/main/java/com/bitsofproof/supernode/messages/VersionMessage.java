@@ -49,6 +49,9 @@ public class VersionMessage extends BitcoinPeer.Message
 		writer.writeUint64 (services);
 		writer.writeUint64 (timestamp);
 		WireFormat.Address a = new WireFormat.Address ();
+		a.address = peer;
+		a.port = remotePort;
+		writer.writeAddress (a, getVersion (), true);
 		a.services = services;
 		a.time = System.currentTimeMillis () / 1000;
 		try
@@ -60,10 +63,6 @@ public class VersionMessage extends BitcoinPeer.Message
 		catch ( UnknownHostException e )
 		{
 		}
-		a.address = peer;
-		a.port = remotePort;
-		writer.writeAddress (a, getVersion (), true);
-
 		writer.writeUint64 (nonce);
 		writer.writeString (agent);
 		writer.writeUint32 (height);
