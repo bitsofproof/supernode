@@ -80,13 +80,13 @@ public class BlocktesterChain implements Chain
 	@Override
 	public long getMagic ()
 	{
-		return 0;
+		return 0xDAB5BFFA;
 	}
 
 	@Override
 	public int getPort ()
 	{
-		return 0;
+		return 8333;
 	}
 
 	@Override
