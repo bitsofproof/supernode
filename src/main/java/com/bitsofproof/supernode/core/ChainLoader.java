@@ -259,8 +259,8 @@ public class ChainLoader
 		{
 			if ( p != peer )
 			{
-				BlockMessage bm = (BlockMessage) p.createMessage ("block");
-				bm.setBlock (b);
+				InvMessage bm = (InvMessage) p.createMessage ("inv");
+				bm.getBlockHashes ().add (new Hash (b.getHash ()).toByteArray ());
 				p.send (bm);
 			}
 		}

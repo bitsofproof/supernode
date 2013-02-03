@@ -186,8 +186,8 @@ public class TxHandler implements TrunkListener
 		{
 			if ( p != peer )
 			{
-				TxMessage tm = (TxMessage) p.createMessage ("tx");
-				tm.setTx (tx);
+				InvMessage tm = (InvMessage) p.createMessage ("inv");
+				tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
 				p.send (tm);
 			}
 		}
