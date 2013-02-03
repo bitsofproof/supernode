@@ -97,22 +97,29 @@ public class ChainLoader
 						peer.ban ("Sent invalid block");
 					}
 				}
-				else if ( !havePending.containsKey (block.getHash ()) )
+				else
 				{
-					ArrayList<Blk> pendingList = pendingOn.get (block.getPreviousHash ());
-					if ( pendingList == null )
-					{
-						pendingList = new ArrayList<Blk> ();
-						pendingOn.put (block.getPreviousHash (), pendingList);
-					}
-					pendingList.add (block);
+					GetDataMessage getparent = (GetDataMessage) peer.createMessage ("getdata");
+					getparent.getBlocks ().add (new Hash (block.getPreviousHash ()).toByteArray ());
+					peer.send (getparent);
 
-					havePending.put (block.getHash (), block);
-					if ( havePending.size () > ORPHANLIMIT )
+					if ( !havePending.containsKey (block.getHash ()) )
 					{
-						havePending.clear ();
-						pendingOn.clear ();
-						log.warn ("Orphan block limit exceeded. Resetting cache.");
+						ArrayList<Blk> pendingList = pendingOn.get (block.getPreviousHash ());
+						if ( pendingList == null )
+						{
+							pendingList = new ArrayList<Blk> ();
+							pendingOn.put (block.getPreviousHash (), pendingList);
+						}
+						pendingList.add (block);
+
+						havePending.put (block.getHash (), block);
+						if ( havePending.size () > ORPHANLIMIT )
+						{
+							havePending.clear ();
+							pendingOn.clear ();
+							log.warn ("Orphan block limit exceeded. Resetting cache.");
+						}
 					}
 				}
 
