@@ -70,17 +70,20 @@ public class GetHeadersHandler implements BitcoinMessageListener<GetHeadersMessa
 					status.setRollbackOnly ();
 
 					Blk b = store.getBlock (h);
-					WireFormat.Writer writer = new WireFormat.Writer ();
-					b.toWireHeaderOnly (writer);
-					hm.getBlockHeader ().add (writer.toByteArray ());
+					if ( b != null )
+					{
+						WireFormat.Writer writer = new WireFormat.Writer ();
+						b.toWireHeaderOnly (writer);
+						hm.getBlockHeader ().add (writer.toByteArray ());
+					}
 				}
 			});
 		}
 		if ( hm.getBlockHeader ().size () > 0 )
 		{
 			peer.send (hm);
+			log.debug ("sent  " + hm.getBlockHeader ().size () + " block headers to " + peer.getAddress ());
 		}
-		log.trace ("delivered inventory to " + peer.getAddress ());
 	}
 
 }

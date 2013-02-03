@@ -49,6 +49,7 @@ public class HeadersMessage extends BitcoinPeer.Message
 		for ( byte[] b : blockHeader )
 		{
 			writer.writeBytes (b);
+			writer.writeByte (0);
 		}
 	}
 
@@ -58,7 +59,8 @@ public class HeadersMessage extends BitcoinPeer.Message
 		int n = (int) Math.min (reader.readVarInt (), 2000L);
 		for ( int i = 0; i < n; ++i )
 		{
-			blockHeader.add (reader.readBytes (81));
+			blockHeader.add (reader.readBytes (80));
+			reader.readByte ();
 		}
 	}
 }
