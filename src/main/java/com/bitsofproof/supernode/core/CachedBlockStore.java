@@ -997,7 +997,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 		usingHead.setLast (m);
 
-		log.info ("stored block " + b.getHeight () + " " + b.getHash ());
+		log.debug ("stored block " + b.getHeight () + " " + b.getHash ());
 		if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
 		{
 			for ( TrunkListener l : trunkListener )

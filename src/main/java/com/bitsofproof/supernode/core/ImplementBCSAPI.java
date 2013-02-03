@@ -398,7 +398,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 		}
 		catch ( ValidationException e )
 		{
-			log.info ("Attempt to send invalid block " + b.getHash ());
+			log.debug ("Attempt to send invalid block " + b.getHash ());
 		}
 	}
 

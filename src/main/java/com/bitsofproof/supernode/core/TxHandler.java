@@ -191,7 +191,7 @@ public class TxHandler implements TrunkListener
 				p.send (tm);
 			}
 		}
-		log.info ("sent validated transaction to peers " + tx.getHash ());
+		log.debug ("sent validated transaction to peers " + tx.getHash ());
 	}
 
 	private void notifyListener (Tx tx)
