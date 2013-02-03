@@ -551,9 +551,9 @@ public abstract class P2P
 											client = ((ServerSocketChannel) key.channel ()).accept ();
 											client.configureBlocking (false);
 											InetSocketAddress address = (InetSocketAddress) client.socket ().getRemoteSocketAddress ();
-											log.trace ("Unsolicited connection from " + address.getAddress ());
 											if ( client.isOpen () )
 											{
+												log.debug ("unsolicited connection from " + address.getAddress ());
 												final Peer peer;
 												peer = createPeer (address, false);
 												peer.channel = client;

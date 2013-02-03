@@ -143,13 +143,13 @@ public class TxHandler implements TrunkListener
 									}
 									else
 									{
-										log.debug ("not relaying transaction " + t.getHash ());
+										log.debug ("NOT relaying transaction " + t.getHash ());
 									}
 									notifyListener (t);
 								}
 								catch ( ValidationException e )
 								{
-									log.debug ("rejeting transaction " + t.getHash () + " from " + peer.getAddress ());
+									log.debug ("REJECTING transaction " + t.getHash () + " from " + peer.getAddress ());
 								}
 							}
 						});
