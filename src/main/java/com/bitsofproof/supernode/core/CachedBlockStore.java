@@ -453,7 +453,6 @@ public abstract class CachedBlockStore implements BlockStore
 			CachedBlock prev = curr.getPrevious ();
 			if ( !last.equals (Hash.ZERO_HASH.toString ()) )
 			{
-				// find last on the trunk
 				while ( prev != null && !curr.getHash ().equals (last) )
 				{
 					curr = prev;
@@ -462,14 +461,14 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			do
 			{
-				if ( last.equals (curr.getHash ()) || curr.getHeight () < 1 )
-				{
-					break;
-				}
 				inventory.add (0, curr.getHash ());
 				if ( inventory.size () > limit )
 				{
 					inventory.remove (limit);
+				}
+				if ( locator.contains (curr.getHash ()) || curr.getHeight () < 1 )
+				{
+					break;
 				}
 				curr = prev;
 				prev = curr.getPrevious ();
