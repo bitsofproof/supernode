@@ -182,8 +182,11 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new Message (command);
 		}
-		log.trace ("Peer sent unknown message. Banned. " + getAddress ());
-		ban ("Sent unknown message");
+		else if ( command.equals ("getaddr") )
+		{
+			return new Message (command);
+		}
+		log.trace ("Peer sent unknown message: " + command + " " + getAddress ());
 		return new Message (command);
 	}
 
