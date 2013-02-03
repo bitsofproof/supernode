@@ -385,7 +385,8 @@ public class BitcoinPeer extends P2P.Peer
 
 				m.fromWire (new WireFormat.Reader (buf));
 			}
-			if ( command.equals ("inv") || command.equals ("tx") || command.equals ("block") )
+			if ( command.equals ("inv") || command.equals ("tx") || command.equals ("block") || command.equals ("getblocks") || command.equals ("getheaders")
+					|| command.equals ("getdata") )
 			{
 				lastSpoken = System.currentTimeMillis () / 1000;
 			}
