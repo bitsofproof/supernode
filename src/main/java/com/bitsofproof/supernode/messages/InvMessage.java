@@ -64,7 +64,7 @@ public class InvMessage extends BitcoinPeer.Message
 		long numberOfEntries = reader.readVarInt ();
 		for ( long i = 0; i < numberOfEntries; ++i )
 		{
-			long t = reader.readVarInt ();
+			long t = reader.readUint32 ();
 			byte[] hash = reader.readBytes (32);
 			if ( t == 1 )
 			{
