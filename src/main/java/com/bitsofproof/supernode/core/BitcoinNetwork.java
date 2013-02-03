@@ -22,10 +22,10 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -51,7 +51,7 @@ public class BitcoinNetwork extends P2P
 
 	private final Map<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> listener = Collections
 			.synchronizedMap (new HashMap<BitcoinMessageListener<? extends BitcoinPeer.Message>, ArrayList<String>> ());
-	private final Set<BitcoinPeer> connectedPeers = new CopyOnWriteArraySet<BitcoinPeer> ();
+	private final Set<BitcoinPeer> connectedPeers = Collections.synchronizedSet (new HashSet<BitcoinPeer> ());
 	private final List<BitcoinPeerListener> peerListener = Collections.synchronizedList (new ArrayList<BitcoinPeerListener> ());
 
 	@Override
@@ -141,13 +141,15 @@ public class BitcoinNetwork extends P2P
 
 	public BitcoinPeer[] getConnectPeers ()
 	{
-		return connectedPeers.toArray (new BitcoinPeer[0]);
+		synchronized ( connectedPeers )
+		{
+			return connectedPeers.toArray (new BitcoinPeer[0]);
+		}
 	}
 
 	public void addPeer (final BitcoinPeer peer)
 	{
 		connectedPeers.add (peer);
-
 		synchronized ( listener )
 		{
 			for ( BitcoinMessageListener<? extends BitcoinPeer.Message> l : listener.keySet () )
