@@ -473,7 +473,6 @@ public abstract class CachedBlockStore implements BlockStore
 				curr = prev;
 				prev = curr.getPrevious ();
 			} while ( prev != null );
-			Collections.reverse (inventory);
 			return inventory;
 		}
 		finally
