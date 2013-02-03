@@ -92,7 +92,7 @@ public class ChainLoader
 					}
 					catch ( ValidationException e )
 					{
-						log.debug ("Rejecting block " + block.getHash () + " from " + peer.getAddress ());
+						log.debug ("rejecting block " + block.getHash () + " from " + peer.getAddress ());
 					}
 				}
 				else
