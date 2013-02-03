@@ -44,6 +44,11 @@ public class GetHeadersHandler implements BitcoinMessageListener<GetHeadersMessa
 		store = network.getStore ();
 	}
 
+	public void setTransactionManager (PlatformTransactionManager transactionManager)
+	{
+		this.transactionManager = transactionManager;
+	}
+
 	@Override
 	public void process (GetHeadersMessage m, BitcoinPeer peer)
 	{
