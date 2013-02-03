@@ -75,7 +75,7 @@ public class ChainLoader
 				boolean validatedBlock = false;
 
 				Blk block = m.getBlock ();
-				log.trace ("received block " + block.getHash () + " from " + peer.getAddress ());
+				log.debug ("received block " + block.getHash () + " from " + peer.getAddress ());
 				if ( store.isStoredBlock (block.getPreviousHash ()) )
 				{
 					try
@@ -93,8 +93,6 @@ public class ChainLoader
 					catch ( ValidationException e )
 					{
 						log.debug ("Rejecting block " + block.getHash () + " from " + peer.getAddress ());
-						log.trace ("Rejecting block " + block.getHash () + " from " + peer.getAddress (), e);
-						peer.ban ("Sent invalid block");
 					}
 				}
 				else
@@ -133,7 +131,6 @@ public class ChainLoader
 					}
 					if ( peerRequests.size () == 1 )
 					{
-						// TODO: this will send last block of every bulk request, not just single blocks received.
 						if ( validatedBlock )
 						{
 							sendBlock (block, peer);
