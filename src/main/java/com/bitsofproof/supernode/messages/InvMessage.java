@@ -45,7 +45,7 @@ public class InvMessage extends BitcoinPeer.Message
 			return;
 		}
 		long n = transactionHashes.size () + blockHashes.size ();
-		writer.writeUint32 (n);
+		writer.writeVarInt (n);
 		for ( byte[] b : transactionHashes )
 		{
 			writer.writeUint32 (1);
@@ -64,7 +64,7 @@ public class InvMessage extends BitcoinPeer.Message
 		long numberOfEntries = reader.readVarInt ();
 		for ( long i = 0; i < numberOfEntries; ++i )
 		{
-			long t = reader.readUint32 ();
+			long t = reader.readVarInt ();
 			byte[] hash = reader.readBytes (32);
 			if ( t == 1 )
 			{
