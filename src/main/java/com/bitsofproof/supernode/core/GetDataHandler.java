@@ -26,6 +26,7 @@ import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
+import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
@@ -84,6 +85,9 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 					}
 				}
+				InvMessage inv = (InvMessage) peer.createMessage ("inv");
+				inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
+				peer.send (inv);
 			}
 		});
 	}
