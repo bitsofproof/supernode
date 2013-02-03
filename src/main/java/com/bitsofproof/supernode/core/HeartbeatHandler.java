@@ -68,7 +68,7 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 					log.trace ("Disconnected silent peer " + peer.getAddress ());
 					peer.disconnect ();
 				}
-				if ( peer.getLastSpoken () < (System.currentTimeMillis () / 1000 - delay) )
+				else if ( peer.getLastSpoken () < (System.currentTimeMillis () / 1000 - delay) )
 				{
 					ping (peer);
 				}
