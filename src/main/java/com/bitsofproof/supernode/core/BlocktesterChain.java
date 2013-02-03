@@ -80,7 +80,7 @@ public class BlocktesterChain implements Chain
 	@Override
 	public long getMagic ()
 	{
-		return 0xDAB5BFFA;
+		return 0xDAB5BFFAL;
 	}
 
 	@Override
