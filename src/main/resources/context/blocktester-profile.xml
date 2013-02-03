@@ -24,7 +24,6 @@
 		<property name="discovery" ref="discovery" />
 		<property name="chain" ref="chain" />
 		<property name="store" ref="store" />
-		<property name="listen" value="false" />
 	</bean>
 
 </beans>
