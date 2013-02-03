@@ -558,6 +558,7 @@ public abstract class P2P
 												peer = createPeer (address, false);
 												peer.channel = client;
 												peer.unsolicited = true;
+												peer.hasConnectionSlot.release ();
 												SelectionKey reg = client.register (selector, SelectionKey.OP_READ);
 												reg.attach (peer);
 												openConnections.incrementAndGet ();
