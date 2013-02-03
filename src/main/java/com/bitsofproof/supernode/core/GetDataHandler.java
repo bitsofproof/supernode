@@ -66,34 +66,37 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 			}
 		}
 
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		if ( m.getBlocks ().size () > 0 )
 		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
-				status.setRollbackOnly ();
-
-				for ( final byte[] h : m.getBlocks () )
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
-					final Blk b = store.getBlock (new Hash (h).toString ());
-					if ( b != null )
+					status.setRollbackOnly ();
+
+					for ( final byte[] h : m.getBlocks () )
 					{
-						final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
+						final Blk b = store.getBlock (new Hash (h).toString ());
+						if ( b != null )
+						{
+							final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
 
-						bm.setBlock (b);
-						peer.send (bm);
-						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
+							bm.setBlock (b);
+							peer.send (bm);
+							log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
+						}
 					}
+					if ( m.getBlocks ().size () > 1 )
+					{
+						log.debug ("sent " + m.getBlocks ().size () + " blocks to " + peer.getAddress ());
+					}
+					InvMessage inv = (InvMessage) peer.createMessage ("inv");
+					inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
+					peer.send (inv);
 				}
-				if ( m.getBlocks ().size () > 1 )
-				{
-					log.debug ("sent " + m.getBlocks ().size () + " blocks to " + peer.getAddress ());
-				}
-				InvMessage inv = (InvMessage) peer.createMessage ("inv");
-				inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
-				peer.send (inv);
-			}
-		});
+			});
+		}
 	}
 
 	public void setTxHandler (TxHandler txHandler)
