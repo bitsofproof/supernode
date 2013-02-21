@@ -325,6 +325,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		return null;
 	}
 
+	private boolean hasTx (String hash)
+	{
+		return get (Key.createKey (KeyType.TX, new Hash (hash).toByteArray ())) != null;
+	}
+
 	private void writeTx (Tx t)
 	{
 		put (Key.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
@@ -412,7 +417,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		put (Key.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
 		for ( Tx t : b.getTransactions () )
 		{
-			writeTx (t);
+			// do not overwrite if there since that would reset its available flag
+			if ( !hasTx (t.getHash ()) )
+			{
+				writeTx (t);
+			}
 		}
 	}
 
