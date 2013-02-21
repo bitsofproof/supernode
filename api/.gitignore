@@ -1,0 +1,9 @@
+target
+.classpath
+.project
+.settings
+.factorypath
+bcsapi_server.keystore
+bcsapi_client.keystore
+BCSAPIPASSWORD
+/jms_server.keystore
