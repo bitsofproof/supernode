@@ -64,6 +64,15 @@ public class AddressConverter
 		return s.reverse ().toString ();
 	}
 
+	public static String toBase58WithChecksum (byte[] b)
+	{
+		byte[] cs = Hash.hash (b);
+		byte[] extended = new byte[b.length + 4];
+		System.arraycopy (b, 0, extended, 0, b.length);
+		System.arraycopy (cs, 0, extended, b.length, 4);
+		return toBase58 (extended);
+	}
+
 	public static byte[] fromBase58WithChecksum (String s) throws ValidationException
 	{
 		byte[] b = fromBase58 (s);
