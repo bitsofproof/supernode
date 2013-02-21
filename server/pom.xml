@@ -2,12 +2,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bitsofproof</groupId>
-	<artifactId>supernode</artifactId>
-	<version>0.7-SNAPSHOT</version>
-	<name>supernode</name>
-	<description>The bitsofproof supernode implementation of the Bitcoin protocol</description>
+	<artifactId>bitsofproof-server</artifactId>
+	<version>0.8-SNAPSHOT</version>
+	<name>bitsofproof-server</name>
+	<description>The bitsofproof implementation of the Bitcoin protocol</description>
 	<packaging>jar</packaging>
-	<url>https://github.com/bitsofproof/supernode</url>
 
 	<organization>
 		<url>bitsofproof.com</url>
@@ -36,11 +35,6 @@
 			<email>bartfaitamas@gmail.com</email>
 		</contributor>
 	</contributors>
-
-	<scm>
-		<connection>scm:git:git://github.com/bitsofproof/supernode.git</connection>
-		<url>https://github.com/bitsofproof/supernode</url>
-	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -129,7 +123,7 @@
 				<dependencies>
 					<dependency>
 						<groupId>com.bitsofproof</groupId>
-						<artifactId>supernode</artifactId>
+						<artifactId>bitsofproof-server</artifactId>
 						<version>${project.version}</version>
 					</dependency>
 					<dependency>
@@ -193,7 +187,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>com.bitsofproof</groupId>
-			<artifactId>supernode-api</artifactId>
+			<artifactId>bitsofproof-server-api</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
