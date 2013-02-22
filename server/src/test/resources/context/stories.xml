@@ -49,7 +49,7 @@
 	</bean>
 
 	<!-- serve API -->
-	<bean id="BCSAPIDirectServer" class="com.bitsofproof.supernode.core.ImplementBCSAPIDirect">
+	<bean id="BCSAPIDirectServer" class="com.bitsofproof.supernode.core.ImplementBCSAPI">
 		<constructor-arg>
 			<ref bean="store" />
 		</constructor-arg>
@@ -62,14 +62,14 @@
 	<bean class="org.springframework.remoting.rmi.RmiServiceExporter">
 		<property name="serviceName" value="BCSAPI" />
 		<property name="service" ref="BCSAPIDirectServer" />
-		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPI" />
 		<property name="registryPort" value="1199" />
 	</bean>
 
 	<!-- use API -->
 	<bean id="BCSAPIDirect" class="org.springframework.remoting.rmi.RmiProxyFactoryBean">
 		<property name="serviceUrl" value="rmi://localhost:1199/BCSAPI" />
-		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPIDirect" />
+		<property name="serviceInterface" value="com.bitsofproof.supernode.api.BCSAPI" />
 	</bean>
 	
 
