@@ -6,6 +6,3 @@ target
 .settings
 .factorypath
 data
-/bcsapi_server.keystore
-/BCSAPIPASSWORD
-/derby.log
