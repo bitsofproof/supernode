@@ -53,8 +53,8 @@ public class BitcoindTests
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			JSONArray test = testData.getJSONArray (i);
-			assertTrue (AddressConverter.toBase58 (ByteUtils.fromHex (test.getString (0))).equals (test.get (1)));
-			assertTrue (ByteUtils.toHex (AddressConverter.fromBase58 (test.getString (1))).equals (test.get (0)));
+			assertTrue (ByteUtils.toBase58 (ByteUtils.fromHex (test.getString (0))).equals (test.get (1)));
+			assertTrue (ByteUtils.toHex (ByteUtils.fromBase58 (test.getString (1))).equals (test.get (0)));
 		}
 	}
 }
