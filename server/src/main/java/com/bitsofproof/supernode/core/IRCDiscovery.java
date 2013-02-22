@@ -31,9 +31,8 @@ import java.util.StringTokenizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.AddressConverter;
+import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.core.Discovery;
 
 public class IRCDiscovery implements Discovery
 {
@@ -110,7 +109,7 @@ public class IRCDiscovery implements Discovery
 						}
 						try
 						{
-							byte[] m = AddressConverter.fromBase58WithChecksum (w);
+							byte[] m = ByteUtils.fromBase58WithChecksum (w);
 							byte[] addr = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff, 0, 0, 0, 0 };
 							System.arraycopy (m, 0, addr, 12, 4);
 							al.add (InetAddress.getByAddress (addr));

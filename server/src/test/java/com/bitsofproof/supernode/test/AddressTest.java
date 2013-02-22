@@ -48,7 +48,7 @@ public class AddressTest
 		for ( int i = 0; i < 10000; ++i )
 		{
 			BigInteger n = new BigInteger (160, rnd);
-			assertTrue (new BigInteger (AddressConverter.fromBase58 (AddressConverter.toBase58 (n.toByteArray ()))).equals (n));
+			assertTrue (new BigInteger (ByteUtils.fromBase58 (ByteUtils.toBase58 (n.toByteArray ()))).equals (n));
 		}
 	}
 
