@@ -38,7 +38,7 @@ public class Main
 
 	public static void main (String[] args) throws Exception
 	{
-		log.info ("bitsofproof supernode (c) 2013 Tamas Blummer tamas@bitsofproof.com");
+		log.info ("bitsofproof supernode (c) 2012-2013 Tamas Blummer tamas@bitsofproof.com");
 		log.trace ("Spring context setup");
 
 		if ( args.length == 0 )
