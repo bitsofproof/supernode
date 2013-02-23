@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.test;
 
 import static org.junit.Assert.assertTrue;
 
@@ -24,10 +24,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ValidationException;
+
 /**
  * These are the unit tests from bitcoind that are supported with test data in json format
  */
-public class BitcoindTests
+public class Base58Test
 {
 	private static final String BASE58_ENCODE = "base58_encode_decode.json";
 
