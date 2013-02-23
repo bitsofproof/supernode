@@ -24,9 +24,9 @@ public class Difficulty
 		return BigInteger.valueOf (compactTarget & 0x7fffffL).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
 	}
 
-	public static double getDifficulty (long compactTarget, ChainParameter chain)
+	public static long getDifficulty (long compactTarget, ChainParameter chain)
 	{
-		return chain.getMinimumTarget ().divide (getTarget (compactTarget)).doubleValue ();
+		return chain.getMinimumTarget ().divide (getTarget (compactTarget)).longValue ();
 	}
 
 	public static long getCompactTarget (BigInteger target)

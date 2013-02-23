@@ -269,16 +269,16 @@ public class WireFormat
 
 		public void writeVarInt (long n)
 		{
-			if ( isLessThanUnsigned (n, 0xfdl) )
+			if ( ByteUtils.isLessThanUnsigned (n, 0xfdl) )
 			{
 				bs.write ((int) (0xFF & n));
 			}
-			else if ( isLessThanUnsigned (n, 65536) )
+			else if ( ByteUtils.isLessThanUnsigned (n, 65536) )
 			{
 				bs.write (0xfd);
 				writeUint16 (n);
 			}
-			else if ( isLessThanUnsigned (n, 4294967295L) )
+			else if ( ByteUtils.isLessThanUnsigned (n, 4294967295L) )
 			{
 				bs.write (0xfe);
 				writeUint32 (n);
@@ -384,10 +384,5 @@ public class WireFormat
 			bs.write ((int) (0xFF & (address.port >> 8)));
 			bs.write ((int) (0xFF & address.port));
 		}
-	}
-
-	private static boolean isLessThanUnsigned (long n1, long n2)
-	{
-		return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
 	}
 }

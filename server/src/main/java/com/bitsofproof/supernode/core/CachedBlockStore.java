@@ -43,6 +43,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AddressConverter;
+import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ChainParameter;
 import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
@@ -172,7 +173,7 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		private Long id;
 		private CachedBlock last;
-		private double chainWork;
+		private long chainWork;
 		private int height;
 		private CachedHead previous;
 		private int previousHeight;
@@ -192,7 +193,7 @@ public abstract class CachedBlockStore implements BlockStore
 			this.id = id;
 		}
 
-		public double getChainWork ()
+		public long getChainWork ()
 		{
 			return chainWork;
 		}
@@ -202,7 +203,7 @@ public abstract class CachedBlockStore implements BlockStore
 			return height;
 		}
 
-		public void setChainWork (double chainWork)
+		public void setChainWork (long chainWork)
 		{
 			this.chainWork = chainWork;
 		}
@@ -953,7 +954,7 @@ public abstract class CachedBlockStore implements BlockStore
 		final List<Blk> removedBlocks = new ArrayList<Blk> ();
 		final List<Blk> addedBlocks = new ArrayList<Blk> ();
 
-		if ( usingHead.getChainWork () > currentHead.getChainWork () )
+		if ( ByteUtils.isLessThanUnsigned (currentHead.getChainWork (), usingHead.getChainWork ()) )
 		{
 			// we have a new trunk
 			CachedBlock p = currentHead.getLast ();

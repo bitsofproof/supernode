@@ -34,7 +34,7 @@ public class Head implements Serializable
 	@Id
 	@GeneratedValue
 	private Long id;
-	private double chainWork;
+	private long chainWork;
 	private int height;
 
 	private Long previousId;
@@ -48,7 +48,7 @@ public class Head implements Serializable
 		Head h = new Head ();
 		WireFormat.Reader reader = new WireFormat.Reader (data);
 		h.id = reader.readUint64 ();
-		h.chainWork = Double.longBitsToDouble (reader.readUint64 ());
+		h.chainWork = reader.readUint64 ();
 		h.height = (int) reader.readUint32 ();
 		h.leaf = reader.readHash ().toString ();
 		long pid = reader.readUint64 ();
@@ -89,12 +89,12 @@ public class Head implements Serializable
 		this.id = id;
 	}
 
-	public double getChainWork ()
+	public long getChainWork ()
 	{
 		return chainWork;
 	}
 
-	public void setChainWork (double chainWork)
+	public void setChainWork (long chainWork)
 	{
 		this.chainWork = chainWork;
 	}

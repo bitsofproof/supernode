@@ -172,4 +172,9 @@ public class ByteUtils
 	{
 		return Hex.decode (hex);
 	}
+
+	public static boolean isLessThanUnsigned (long n1, long n2)
+	{
+		return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
+	}
 }

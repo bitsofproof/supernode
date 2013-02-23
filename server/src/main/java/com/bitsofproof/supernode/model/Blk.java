@@ -63,7 +63,7 @@ public class Blk implements Serializable
 
 	private long createTime;
 	private long difficultyTarget;
-	private double chainWork;
+	private long chainWork;
 	private int height;
 	private long nonce;
 
@@ -85,7 +85,7 @@ public class Blk implements Serializable
 		b.createTime = reader.readUint32 ();
 		b.difficultyTarget = reader.readUint32 ();
 		b.nonce = reader.readUint32 ();
-		b.chainWork = Double.longBitsToDouble (reader.readUint64 ());
+		b.chainWork = reader.readUint64 ();
 		b.headId = reader.readUint64 ();
 		if ( txhashes )
 		{
@@ -234,12 +234,12 @@ public class Blk implements Serializable
 		this.transactions = transactions;
 	}
 
-	public double getChainWork ()
+	public long getChainWork ()
 	{
 		return chainWork;
 	}
 
-	public void setChainWork (double chainWork)
+	public void setChainWork (long chainWork)
 	{
 		this.chainWork = chainWork;
 	}

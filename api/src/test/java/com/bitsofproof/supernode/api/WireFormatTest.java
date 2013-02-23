@@ -19,7 +19,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
-import java.security.SecureRandom;
 
 import org.junit.Test;
 
@@ -61,24 +60,6 @@ public class WireFormatTest
 		WireFormat.Reader reader = new WireFormat.Reader (bs.toByteArray ());
 		assertEquals (reader.readUint64 (), n);
 		assertTrue (reader.eof ());
-	}
-
-	@Test
-	public void testDouble ()
-	{
-		SecureRandom rnd = new SecureRandom ();
-		for ( int i = 0; i < 100; ++i )
-		{
-			ByteArrayOutputStream bs = new ByteArrayOutputStream ();
-			WireFormat.Writer writer = new WireFormat.Writer (bs);
-			long n = rnd.nextLong ();
-			double d = Double.longBitsToDouble (n);
-			writer.writeUint64 (n);
-
-			WireFormat.Reader reader = new WireFormat.Reader (bs.toByteArray ());
-			assertTrue (Double.longBitsToDouble (reader.readUint64 ()) == d);
-			assertTrue (reader.eof ());
-		}
 	}
 
 	@Test
