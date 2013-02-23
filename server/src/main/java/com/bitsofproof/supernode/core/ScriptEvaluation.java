@@ -19,11 +19,15 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 
 import org.bouncycastle.crypto.digests.RIPEMD160Digest;
 
+import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
@@ -36,6 +40,9 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public class ScriptEvaluation
 {
+	private static final int signatureCacheLimit = 5000;
+	private static final Set<String> validSignatures = new HashSet<String> ();
+
 	private Stack<byte[]> stack = new Stack<byte[]> ();
 	private Stack<byte[]> alt = new Stack<byte[]> ();
 	private final Tx tx;
@@ -940,6 +947,31 @@ public class ScriptEvaluation
 		{
 			return false;
 		}
-		return ECKeyPair.verify (hash, sig, pubkey);
+
+		String cacheKey = ByteUtils.toHex (hash) + ":" + ByteUtils.toHex (sig) + ":" + ByteUtils.toHex (pubkey);
+		synchronized ( validSignatures )
+		{
+			if ( validSignatures.contains (cacheKey) )
+			{
+				validSignatures.remove (cacheKey);
+				return true;
+			}
+		}
+
+		if ( ECKeyPair.verify (hash, sig, pubkey) )
+		{
+			synchronized ( validSignatures )
+			{
+				if ( validSignatures.size () >= signatureCacheLimit )
+				{
+					Iterator<String> it = validSignatures.iterator ();
+					it.next ();
+					it.remove ();
+				}
+				validSignatures.add (cacheKey);
+			}
+			return true;
+		}
+		return false;
 	}
 }

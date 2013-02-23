@@ -19,9 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
 
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.DERInteger;
@@ -43,9 +40,6 @@ public class ECKeyPair
 	private static final SecureRandom secureRandom = new SecureRandom ();
 	private static final X9ECParameters curve = SECNamedCurves.getByName ("secp256k1");
 	private static final ECDomainParameters domain = new ECDomainParameters (curve.getCurve (), curve.getG (), curve.getN (), curve.getH ());
-
-	private static final int signatureCacheLimit = 5000;
-	private static final Set<String> validSignatures = new HashSet<String> ();
 
 	private BigInteger priv;
 	private byte[] pub;
@@ -173,15 +167,6 @@ public class ECKeyPair
 
 	public static boolean verify (byte[] hash, byte[] signature, byte[] pub)
 	{
-		String cacheKey = ByteUtils.toHex (hash) + ":" + ByteUtils.toHex (signature) + ":" + ByteUtils.toHex (pub);
-		synchronized ( validSignatures )
-		{
-			if ( validSignatures.contains (cacheKey) )
-			{
-				validSignatures.remove (cacheKey);
-				return true;
-			}
-		}
 		ASN1InputStream asn1 = new ASN1InputStream (signature);
 		try
 		{
@@ -191,21 +176,7 @@ public class ECKeyPair
 			DLSequence seq = (DLSequence) asn1.readObject ();
 			BigInteger r = ((DERInteger) seq.getObjectAt (0)).getPositiveValue ();
 			BigInteger s = ((DERInteger) seq.getObjectAt (1)).getPositiveValue ();
-			asn1.close ();
-			if ( signer.verifySignature (hash, r, s) )
-			{
-				synchronized ( validSignatures )
-				{
-					if ( validSignatures.size () >= signatureCacheLimit )
-					{
-						Iterator<String> i = validSignatures.iterator ();
-						i.next ();
-						i.remove ();
-					}
-					validSignatures.add (cacheKey);
-				}
-				return true;
-			}
+			return signer.verifySignature (hash, r, s);
 		}
 		catch ( Exception e )
 		{
@@ -222,6 +193,5 @@ public class ECKeyPair
 			{
 			}
 		}
-		return false;
 	}
 }
