@@ -19,12 +19,11 @@
 
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>
-			<value>1</value>
+			<value>0</value>
 		</constructor-arg> <!-- Number of connections desired -->
 		<property name="discovery" ref="discovery" />
 		<property name="chain" ref="chain" />
 		<property name="store" ref="store" />
-		<property name="listen" value="false"/>
 	</bean>
 
 </beans>
