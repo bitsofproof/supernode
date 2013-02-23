@@ -79,12 +79,6 @@ public class Testnet3Chain implements Chain
 	}
 
 	@Override
-	public long getVersion ()
-	{
-		return 60001;
-	}
-
-	@Override
 	public boolean isProduction ()
 	{
 		return false;

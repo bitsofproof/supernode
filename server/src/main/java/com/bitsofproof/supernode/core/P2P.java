@@ -453,13 +453,13 @@ public abstract class P2P
 
 	public P2P (int connections) throws IOException
 	{
-		desiredConnections = connections;
+		desiredConnections = Math.max (connections, 0);
 		connectSlot = new Semaphore (desiredConnections);
-		unsolicitedConnectSlot = new Semaphore (Math.max (desiredConnections / 2, 1));
+		unsolicitedConnectSlot = new Semaphore (Math.max (desiredConnections / 2, listen ? 1 : 0));
 		// create a pool of threads
 		peerThreads =
-				(ThreadPoolExecutor) Executors.newFixedThreadPool (Math.min (desiredConnections, Runtime.getRuntime ().availableProcessors () * 2),
-						new PeerFactory ());
+				(ThreadPoolExecutor) Executors.newFixedThreadPool (
+						Math.min (desiredConnections + desiredConnections / 2 + 1, Runtime.getRuntime ().availableProcessors () * 2), new PeerFactory ());
 
 		selector = Selector.open ();
 		// this thread waits on the selector above and acts on events

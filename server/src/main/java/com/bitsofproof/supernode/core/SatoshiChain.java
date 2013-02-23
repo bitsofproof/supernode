@@ -85,12 +85,6 @@ public class SatoshiChain implements Chain
 	}
 
 	@Override
-	public long getVersion ()
-	{
-		return 60001;
-	}
-
-	@Override
 	public boolean isProduction ()
 	{
 		return true;

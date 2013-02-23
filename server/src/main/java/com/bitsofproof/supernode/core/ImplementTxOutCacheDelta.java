@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.core;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.bitsofproof.supernode.model.TxOut;
 
@@ -26,6 +27,7 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 	private final TxOutCache delegate;
 	private final ImplementTxOutCache added = new ImplementTxOutCache ();
 	private final Map<String, HashSet<Long>> removed = new HashMap<String, HashSet<Long>> ();
+	private final Set<TxOut> used = new HashSet<TxOut> ();
 
 	public ImplementTxOutCacheDelta (TxOutCache cache)
 	{
@@ -45,6 +47,21 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 			return delegate.get (hash, ix);
 		}
 		return a;
+	}
+
+	@Override
+	public TxOut use (String hash, Long ix)
+	{
+		TxOut out = get (hash, ix);
+		if ( out != null )
+		{
+			if ( used.contains (out) )
+			{
+				return null;
+			}
+			used.add (out);
+		}
+		return out;
 	}
 
 	@Override

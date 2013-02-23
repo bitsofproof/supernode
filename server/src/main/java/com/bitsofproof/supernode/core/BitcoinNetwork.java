@@ -46,6 +46,7 @@ public class BitcoinNetwork extends P2P
 	private BlockStore store;
 	private Discovery discovery;
 	private PeerStore peerStore;
+	private long protocolVersion = 60001;
 
 	private final long versionNonce = new SecureRandom ().nextLong ();
 
@@ -293,5 +294,15 @@ public class BitcoinNetwork extends P2P
 	public void setPeerStore (PeerStore peerStore)
 	{
 		this.peerStore = peerStore;
+	}
+
+	public long getProtocolVersion ()
+	{
+		return protocolVersion;
+	}
+
+	public void setProtocolVersion (long protocolVersion)
+	{
+		this.protocolVersion = protocolVersion;
 	}
 }

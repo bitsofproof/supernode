@@ -813,9 +813,12 @@ public abstract class CachedBlockStore implements BlockStore
 			resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
 			for ( TxOut o : t.getOutputs () )
 			{
+				o.setHeight (b.getHeight ());
+				o.setBlockTime (b.getCreateTime ());
 				tcontext.resolvedInputs.add (o);
 			}
 		}
+
 		if ( !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.isUnitTest () )
 		{
 			log.trace ("validating block " + b.getHash ());
@@ -1173,13 +1176,13 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				TxOut out = resolvedInputs.get (i.getSourceHash (), i.getIx ());
+				TxOut out = resolvedInputs.use (i.getSourceHash (), i.getIx ());
 				if ( out == null )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "
 							+ t.toWireDump ());
 				}
-				if ( height != 0 && out.isCoinbase () && !chain.isUnitTest () )
+				if ( height != 0 && out.isCoinbase () )
 				{
 					if ( out.getHeight () > height - COINBASE_MATURITY )
 					{
@@ -1475,6 +1478,7 @@ public abstract class CachedBlockStore implements BlockStore
 	@Override
 	public void resetStore (Chain chain) throws TransactionValidationException
 	{
+		log.info ("Reset block store");
 		this.chain = chain;
 
 		Blk genesis = chain.getGenesis ();

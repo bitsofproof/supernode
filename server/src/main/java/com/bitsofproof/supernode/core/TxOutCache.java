@@ -22,6 +22,8 @@ public interface TxOutCache
 
 	public TxOut get (String hash, Long ix);
 
+	public TxOut use (String hash, Long ix);
+
 	public void copy (TxOutCache other, String hash);
 
 	public void add (TxOut out);

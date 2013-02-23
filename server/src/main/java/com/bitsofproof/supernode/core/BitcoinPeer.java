@@ -205,7 +205,7 @@ public class BitcoinPeer extends P2P.Peer
 		this.outgoing = out;
 
 		// this will be overwritten by the first version message we get
-		peerVersion = network.getChain ().getVersion ();
+		peerVersion = network.getProtocolVersion ();
 
 		addListener ("version", new BitcoinMessageListener<VersionMessage> ()
 		{

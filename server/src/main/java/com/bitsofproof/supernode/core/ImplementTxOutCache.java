@@ -16,13 +16,16 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.bitsofproof.supernode.model.TxOut;
 
 public class ImplementTxOutCache implements TxOutCache
 {
 	private final Map<String, HashMap<Long, TxOut>> map = new HashMap<String, HashMap<Long, TxOut>> ();
+	private final Set<TxOut> used = new HashSet<TxOut> ();
 
 	@Override
 	public TxOut get (String hash, Long ix)
@@ -33,6 +36,21 @@ public class ImplementTxOutCache implements TxOutCache
 			return outs.get (ix);
 		}
 		return null;
+	}
+
+	@Override
+	public TxOut use (String hash, Long ix)
+	{
+		TxOut out = get (hash, ix);
+		if ( out != null )
+		{
+			if ( used.contains (out) )
+			{
+				return null;
+			}
+			used.add (out);
+		}
+		return out;
 	}
 
 	@Override
@@ -75,6 +93,10 @@ public class ImplementTxOutCache implements TxOutCache
 			if ( outs.size () == 0 )
 			{
 				map.remove (hash);
+			}
+			for ( TxOut o : outs.values () )
+			{
+				used.remove (o);
 			}
 		}
 	}

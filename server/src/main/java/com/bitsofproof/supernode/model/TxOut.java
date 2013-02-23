@@ -248,7 +248,9 @@ public class TxOut implements Serializable
 		c.transaction = tc;
 		c.txHash = txHash;
 		c.value = value;
-
+		c.height = height;
+		c.blockTime = blockTime;
+		c.coinbase = coinbase;
 		return c;
 	}
 

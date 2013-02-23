@@ -28,7 +28,5 @@ public interface Chain extends ChainParameter
 
 	public byte[] getAlertKey ();
 
-	public long getVersion ();
-
 	public boolean isUnitTest ();
 }
