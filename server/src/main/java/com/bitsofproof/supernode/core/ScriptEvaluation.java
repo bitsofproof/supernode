@@ -867,6 +867,37 @@ public class ScriptEvaluation
 
 	private boolean validateSignature (byte[] pubkey, byte[] sig, byte[] script) throws ValidationException
 	{
+		byte[] hash = hashTransaction (sig, script);
+
+		String cacheKey = ByteUtils.toHex (hash) + ":" + ByteUtils.toHex (sig) + ":" + ByteUtils.toHex (pubkey);
+		synchronized ( validSignatures )
+		{
+			if ( validSignatures.contains (cacheKey) )
+			{
+				validSignatures.remove (cacheKey);
+				return true;
+			}
+		}
+
+		if ( ECKeyPair.verify (hash, sig, pubkey) )
+		{
+			synchronized ( validSignatures )
+			{
+				if ( validSignatures.size () >= signatureCacheLimit )
+				{
+					Iterator<String> it = validSignatures.iterator ();
+					it.next ();
+					it.remove ();
+				}
+				validSignatures.add (cacheKey);
+			}
+			return true;
+		}
+		return false;
+	}
+
+	private byte[] hashTransaction (byte[] sig, byte[] script) throws ValidationException
+	{
 		byte hashType = sig[sig.length - 1];
 		Tx copy = tx.flatCopy ();
 
@@ -903,7 +934,9 @@ public class ScriptEvaluation
 			int onr = inr;
 			if ( onr >= copy.getOutputs ().size () )
 			{
-				throw new ValidationException ("Must have 1-1 in and output for SIGHASH_SINGLE");
+				// this is a Satoshi client bug.
+				// This case should throw an error but it instead retuns 1 that is not checked and interpreted as below
+				return ByteUtils.fromHex ("0100000000000000000000000000000000000000000000000000000000000000");
 			}
 			for ( i = copy.getOutputs ().size () - 1; i > onr; --i )
 			{
@@ -935,7 +968,7 @@ public class ScriptEvaluation
 		copy.toWire (writer);
 
 		byte[] txwire = writer.toByteArray ();
-		byte[] hash;
+		byte[] hash = null;
 		try
 		{
 			MessageDigest a = MessageDigest.getInstance ("SHA-256");
@@ -945,33 +978,7 @@ public class ScriptEvaluation
 		}
 		catch ( NoSuchAlgorithmException e )
 		{
-			return false;
 		}
-
-		String cacheKey = ByteUtils.toHex (hash) + ":" + ByteUtils.toHex (sig) + ":" + ByteUtils.toHex (pubkey);
-		synchronized ( validSignatures )
-		{
-			if ( validSignatures.contains (cacheKey) )
-			{
-				validSignatures.remove (cacheKey);
-				return true;
-			}
-		}
-
-		if ( ECKeyPair.verify (hash, sig, pubkey) )
-		{
-			synchronized ( validSignatures )
-			{
-				if ( validSignatures.size () >= signatureCacheLimit )
-				{
-					Iterator<String> it = validSignatures.iterator ();
-					it.next ();
-					it.remove ();
-				}
-				validSignatures.add (cacheKey);
-			}
-			return true;
-		}
-		return false;
+		return hash;
 	}
 }
