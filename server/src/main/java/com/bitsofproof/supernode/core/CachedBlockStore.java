@@ -1031,7 +1031,7 @@ public abstract class CachedBlockStore implements BlockStore
 			nBlockTime = System.currentTimeMillis () / 1000;
 		}
 
-		if ( t.getLockTime () < (t.getLockTime () < 500000000 ? (int) b.getHeight () : nBlockTime) )
+		if ( ByteUtils.isLessThanUnsigned (t.getLockTime (), (ByteUtils.isLessThanUnsigned (t.getLockTime (), 500000000) ? (int) b.getHeight () : nBlockTime)) )
 		{
 			return true;
 		}
