@@ -405,31 +405,6 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	public String getPreviousBlockHash (String hash)
-	{
-		try
-		{
-			lock.readLock ().lock ();
-
-			CachedBlock current = cachedBlocks.get (hash);
-			if ( current != null )
-			{
-				CachedBlock previous = current.previous;
-				if ( previous == null )
-				{
-					return Hash.ZERO_HASH_STRING;
-				}
-				return previous.hash;
-			}
-			return null;
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-	}
-
-	@Override
 	public long getChainHeight ()
 	{
 		try

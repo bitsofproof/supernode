@@ -36,8 +36,6 @@ public interface BlockStore
 
 	public void addTrunkListener (TrunkListener l);
 
-	public String getPreviousBlockHash (String hash);
-
 	public long getPeriodLength (String previousHash, int reviewPeriod);
 
 	public List<String> getLocator ();
