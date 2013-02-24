@@ -144,4 +144,14 @@ public class WireFormatTest
 
 		assertTrue (b.toWireDump ().equals (blockdump));
 	}
+
+	@Test
+	public void testEmptyBlock ()
+	{
+		String blockdump =
+				"0100000096ef1f988bbb90c236e2046573812eea72f25d0fe65b5d0cd7ce1ff88149976e0000000000000000000000000000000000000000000000000000000000000000d8c92851ffff7f200000000000";
+		Block b = Block.fromWireDump (blockdump);
+
+		b.computeHash ();
+	}
 }
