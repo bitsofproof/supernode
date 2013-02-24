@@ -264,12 +264,20 @@ public class Blk implements Serializable
 		this.previousHash = previousHash;
 	}
 
-	private String computeMerkleRoot ()
+	private String computeMerkleRoot () throws ValidationException
 	{
 		parseTransactions ();
+		if ( transactions == null )
+		{
+			throw new ValidationException ("block has no transactions");
+		}
 
 		ArrayList<byte[]> tree = new ArrayList<byte[]> ();
 		int nt = transactions.size ();
+		if ( nt == 0 )
+		{
+			throw new ValidationException ("block has no transactions");
+		}
 
 		// Start by adding all the hashes of the transactions as leaves of the tree.
 		for ( Tx t : transactions )
@@ -401,7 +409,7 @@ public class Blk implements Serializable
 		}
 	}
 
-	public void computeHash ()
+	public void computeHash () throws ValidationException
 	{
 		merkleRoot = computeMerkleRoot ();
 
