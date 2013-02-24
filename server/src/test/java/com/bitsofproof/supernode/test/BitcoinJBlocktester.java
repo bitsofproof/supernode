@@ -83,16 +83,15 @@ public class BitcoinJBlocktester
 			String rawblock = test.getString ("rawblock");
 			String expectTrunk = test.getString ("trunk");
 			String name = test.getString ("name");
+			log.trace ("evaluate " + name);
 			if ( name.equals ("b48") )
 			{
-				// block timestamp check does not work in this offline mode
+				log.trace ("b48 test skipped as it only works in real-time (checking block time vs. system time)");
 				continue;
 			}
-			if ( name.equals ("b49") )
-			{
-				System.out.println ("stop here");
-			}
-			if ( rawblock.length () < 2000000 ) // this is checked at higher level
+			if ( rawblock.length () <= 2000000 || name.equals ("b64") )
+			// this is checked at higher level, and I think b64 test case is wrong at least in its serialized form it is 1000008 long
+			// TODO: follow up on b64 with BlueMatt and TD
 			{
 				Blk blk = deserializeBlock (rawblock);
 				try
@@ -108,18 +107,22 @@ public class BitcoinJBlocktester
 							hash = b.getHash ();
 						}
 
-						log.trace ("accepted " + name + " " + blk.getHash ());
+						log.trace ("accepted " + name);
 					}
 					else
 					{
 						pending.put (blk.getPreviousHash (), blk);
-						log.trace ("pending " + name + " " + blk.getHash ());
+						log.trace ("pending " + name);
 					}
 				}
 				catch ( Exception e )
 				{
-					log.trace ("rejected " + name + " " + blk.getHash ());
+					log.trace ("rejected " + name + " " + e.getMessage ());
 				}
+			}
+			else
+			{
+				log.trace (name + " block size limit exceeded: " + rawblock.length () / 2);
 			}
 			assertTrue (expectTrunk.equals (store.getHeadHash ()));
 		}
