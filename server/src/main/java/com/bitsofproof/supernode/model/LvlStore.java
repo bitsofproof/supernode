@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
@@ -630,6 +631,25 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 
 		return outs;
+	}
+
+	@Override
+	protected void checkBIP30Compliance (List<String> txs) throws ValidationException
+	{
+		for ( String hash : txs )
+		{
+			Tx t = readTx (hash);
+			if ( t != null )
+			{
+				for ( TxOut out : t.getOutputs () )
+				{
+					if ( out.isAvailable () )
+					{
+						throw new ValidationException ("BIP30 violation block contains unspent tx " + hash);
+					}
+				}
+			}
+		}
 	}
 
 	private List<Tx> readRelatedTx (List<String> addresses)

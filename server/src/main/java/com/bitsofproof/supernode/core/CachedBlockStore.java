@@ -141,6 +141,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
+	protected abstract void checkBIP30Compliance (List<String> txs) throws ValidationException;
+
 	protected abstract void backwardCache (Blk b, TxOutCache cache, boolean modify);
 
 	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify);
@@ -808,8 +810,10 @@ public abstract class CachedBlockStore implements BlockStore
 		tcontext.resolvedInputs = deltaUTXO;
 
 		log.trace ("resolving inputs for block " + b.getHash ());
+		List<String> txs = new ArrayList<String> ();
 		for ( Tx t : b.getTransactions () )
 		{
+			txs.add (t.getHash ());
 			resolveInputs (tcontext.resolvedInputs, b.getHeight (), t);
 			for ( TxOut o : t.getOutputs () )
 			{
@@ -822,6 +826,9 @@ public abstract class CachedBlockStore implements BlockStore
 		if ( !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.isUnitTest () )
 		{
 			log.trace ("validating block " + b.getHash ());
+
+			checkBIP30Compliance (txs);
+
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();
 			for ( final Tx t : b.getTransactions () )
 			{
@@ -1115,55 +1122,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		if ( !need.isEmpty () )
 		{
-			List<TxOut> all = findTxOuts (need);
-
-			// filter for duplicate transaction hashes.
-			// such transaction is only available if none of its siblings is spent
-			List<TxOut> fromDB = new ArrayList<TxOut> ();
-			Map<String, HashMap<Long, ArrayList<TxOut>>> found = new HashMap<String, HashMap<Long, ArrayList<TxOut>>> ();
-			for ( TxOut o : all )
-			{
-				HashMap<Long, ArrayList<TxOut>> outsByIx = found.get (o.getTxHash ());
-				if ( outsByIx == null )
-				{
-					outsByIx = new HashMap<Long, ArrayList<TxOut>> ();
-					found.put (o.getTxHash (), outsByIx);
-				}
-				ArrayList<TxOut> outs = outsByIx.get (o.getIx ());
-				if ( outs == null )
-				{
-					outs = new ArrayList<TxOut> ();
-					outsByIx.put (o.getIx (), outs);
-				}
-				outs.add (o);
-			}
-			for ( Map.Entry<String, HashMap<Long, ArrayList<TxOut>>> e : found.entrySet () )
-			{
-				for ( Map.Entry<Long, ArrayList<TxOut>> e2 : e.getValue ().entrySet () )
-				{
-					if ( e2.getValue ().size () == 1 )
-					{
-						fromDB.add (e2.getValue ().get (0));
-					}
-					else
-					{
-						boolean allAvailable = true;
-						for ( TxOut o : e2.getValue () )
-						{
-							if ( !o.isAvailable () )
-							{
-								allAvailable = false;
-							}
-						}
-						if ( allAvailable )
-						{
-							fromDB.add (e2.getValue ().get (0));
-						}
-					}
-				}
-			}
-
-			for ( TxOut o : fromDB )
+			for ( TxOut o : findTxOuts (need) )
 			{
 				resolvedInputs.add (o);
 			}

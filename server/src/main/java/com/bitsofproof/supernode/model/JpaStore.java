@@ -35,6 +35,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.PeerStore;
@@ -188,6 +189,20 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			}
 		}
 		return fromDB;
+	}
+
+	@Override
+	protected void checkBIP30Compliance (List<String> txs) throws ValidationException
+	{
+		QTxOut txout = QTxOut.txOut;
+		JPAQuery q = new JPAQuery (entityManager);
+		for ( TxOut o : q.from (txout).where (txout.txHash.in (txs)).list (txout) )
+		{
+			if ( o.isAvailable () )
+			{
+				throw new ValidationException ("BIP30 violation block contains unspent tx " + o.getTxHash ());
+			}
+		}
 	}
 
 	@Override
