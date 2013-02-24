@@ -41,6 +41,13 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
+/*
+ * This test will not run automaticaly with maven since
+ * it requires significant resources.
+ * Run it with at least 1GB of heap otherwise memomry database overflows.
+ * Run it on a strong machine, it does multithreaded validation
+ * for thousands of signatures.
+ */
 @RunWith (SpringJUnit4ClassRunner.class)
 @ContextConfiguration (locations = { "/context/storeonly.xml" })
 public class BitcoinJBlocktester
