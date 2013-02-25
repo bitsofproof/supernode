@@ -275,6 +275,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 		}
 	}
 
+	@SuppressWarnings ("unused")
 	private void forAllBackward (KeyType t, DataProcessor processor)
 	{
 		DBIterator iterator = db.iterator ();
