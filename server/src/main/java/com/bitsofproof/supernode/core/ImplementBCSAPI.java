@@ -368,6 +368,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 
 	private void sendBlock (Block block) throws ValidationException
 	{
+		block.computeHash ();
 		log.trace ("send block " + block.getHash ());
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		block.toWire (writer);

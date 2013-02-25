@@ -301,6 +301,7 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
+			log.trace ("get transaction " + hash);
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
 			builder.setBcsapiversion (1);
@@ -326,6 +327,7 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
+			log.trace ("get block " + hash);
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
 			builder.setBcsapiversion (1);
@@ -351,6 +353,7 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
+			log.trace ("register account listener");
 			Queue replyQueue = session.createTemporaryQueue ();
 
 			BytesMessage m = session.createBytesMessage ();
@@ -403,6 +406,8 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public void sendTransaction (Transaction transaction)
 	{
+		transaction.computeHash ();
+		log.trace ("send transaction " + transaction.getHash ());
 		try
 		{
 			BytesMessage m = session.createBytesMessage ();
@@ -418,6 +423,8 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public void sendBlock (Block block)
 	{
+		block.computeHash ();
+		log.trace ("send block " + block.getHash ());
 		try
 		{
 			BytesMessage m = session.createBytesMessage ();
