@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.api;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.Semaphore;
+
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -32,6 +34,8 @@ import org.junit.Test;
 
 public class InMemoryBusTest
 {
+	private final Semaphore ready = new Semaphore (0);
+
 	@Test
 	public void mockTopicTest () throws JMSException
 	{
@@ -59,26 +63,14 @@ public class InMemoryBusTest
 				{
 					assertTrue (false);
 				}
-				synchronized ( consumer )
-				{
-					consumer.notify ();
-				}
+				ready.release ();
 			}
 		});
 
 		BytesMessage m = session.createBytesMessage ();
 		m.writeBytes ("hello".getBytes ());
 		producer.send (m);
-		try
-		{
-			synchronized ( consumer )
-			{
-				consumer.wait ();
-			}
-		}
-		catch ( InterruptedException e )
-		{
-		}
+		ready.acquireUninterruptibly ();
 	}
 
 	@Test
@@ -135,10 +127,7 @@ public class InMemoryBusTest
 				{
 					assertTrue (false);
 				}
-				synchronized ( replyConsumer )
-				{
-					replyConsumer.notify ();
-				}
+				ready.release ();
 			}
 		});
 
@@ -146,16 +135,6 @@ public class InMemoryBusTest
 		m.writeBytes ("hello".getBytes ());
 		m.setJMSReplyTo (temp);
 		producer.send (m);
-
-		try
-		{
-			synchronized ( replyConsumer )
-			{
-				replyConsumer.wait ();
-			}
-		}
-		catch ( InterruptedException e )
-		{
-		}
+		ready.acquireUninterruptibly ();
 	}
 }

@@ -49,7 +49,7 @@ import javax.jms.TopicSubscriber;
 
 public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
-	private static final MockSession singleSession = new MockSession ();
+	private final MockSession singleSession = new MockSession ();
 
 	private static class MockBytesMessage implements BytesMessage
 	{
