@@ -22,6 +22,7 @@ import java.util.concurrent.Exchanger;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -32,7 +33,6 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TemporaryQueue;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +42,11 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class ClientBusAdaptor implements BCSAPI
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
+
+	private ConnectionFactory connectionFactory;
 	private Connection connection;
 	private Session session;
 
-	private String brokerURL;
-	private String user;
-	private String password;
 	private String clientId;
 
 	private final List<TransactionListener> transactionListener = Collections.synchronizedList (new ArrayList<TransactionListener> ());
@@ -65,19 +64,9 @@ public class ClientBusAdaptor implements BCSAPI
 		this.clientId = clientId;
 	}
 
-	public void setBrokerURL (String brokerUrl)
+	public void setConnectionFactory (ConnectionFactory connectionFactory)
 	{
-		this.brokerURL = brokerUrl;
-	}
-
-	public void setUser (String user)
-	{
-		this.user = user;
-	}
-
-	public void setPassword (String password)
-	{
-		this.password = password;
+		this.connectionFactory = connectionFactory;
 	}
 
 	private void addMessageListener (String topic, MessageListener listener) throws JMSException
@@ -89,7 +78,6 @@ public class ClientBusAdaptor implements BCSAPI
 
 	public void init ()
 	{
-		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
 		try
 		{
 			connection = connectionFactory.createConnection ();

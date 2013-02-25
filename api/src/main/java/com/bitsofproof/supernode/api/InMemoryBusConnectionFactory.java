@@ -47,8 +47,10 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
-public class MockBusConnectionFactory implements ConnectionFactory
+public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
+	private static final MockSession singleSession = new MockSession ();
+
 	private static class MockBytesMessage implements BytesMessage
 	{
 		Destination destination;
@@ -493,6 +495,27 @@ public class MockBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
+	private static class MockTemporaryQueue implements TemporaryQueue
+	{
+		private final String name;
+
+		public MockTemporaryQueue (String name)
+		{
+			this.name = name;
+		}
+
+		@Override
+		public String getQueueName () throws JMSException
+		{
+			return name;
+		}
+
+		@Override
+		public void delete () throws JMSException
+		{
+		}
+	}
+
 	private static class MockProducer implements MessageProducer
 	{
 		private final LinkedBlockingQueue<Message> queue;
@@ -794,6 +817,10 @@ public class MockBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockQueue) destination).getQueueName ();
 			}
+			if ( destination instanceof MockTemporaryQueue )
+			{
+				name = ((MockTemporaryQueue) destination).getQueueName ();
+			}
 
 			LinkedBlockingQueue<Message> list = queue.get (name);
 			if ( list == null )
@@ -815,6 +842,10 @@ public class MockBusConnectionFactory implements ConnectionFactory
 			if ( destination instanceof MockQueue )
 			{
 				name = ((MockQueue) destination).getQueueName ();
+			}
+			if ( destination instanceof MockTemporaryQueue )
+			{
+				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
 			LinkedBlockingQueue<Message> list = queue.get (name);
 			if ( list == null )
@@ -876,19 +907,7 @@ public class MockBusConnectionFactory implements ConnectionFactory
 		@Override
 		public TemporaryQueue createTemporaryQueue () throws JMSException
 		{
-			return new TemporaryQueue ()
-			{
-				@Override
-				public String getQueueName () throws JMSException
-				{
-					return this.toString ();
-				}
-
-				@Override
-				public void delete () throws JMSException
-				{
-				}
-			};
+			return new MockTemporaryQueue (this.toString ());
 		}
 
 		@Override
@@ -905,11 +924,10 @@ public class MockBusConnectionFactory implements ConnectionFactory
 
 	private class MockConnection implements Connection
 	{
-
 		@Override
 		public Session createSession (boolean transacted, int acknowledgeMode) throws JMSException
 		{
-			return new MockSession ();
+			return singleSession;
 		}
 
 		@Override

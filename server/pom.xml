@@ -44,6 +44,7 @@
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<postgresql.version>9.1-901.jdbc4</postgresql.version>
+		<activemq.version>5.7.0</activemq.version>
 	</properties>
 	<build>
 		<plugins>
@@ -262,6 +263,16 @@
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-validator</artifactId>
 			<version>4.3.0.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-jms_1.1_spec</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-core</artifactId>
+			<version>${activemq.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>

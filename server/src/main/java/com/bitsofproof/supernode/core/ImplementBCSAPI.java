@@ -24,6 +24,7 @@ import java.util.Map;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -32,7 +33,6 @@ import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -66,12 +66,10 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 
 	private PlatformTransactionManager transactionManager;
 
+	private ConnectionFactory connectionFactory;
+
 	private Connection connection;
 	private Session session;
-
-	private String brokerURL;
-	private String user;
-	private String password;
 
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
@@ -94,6 +92,11 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 		this.transactionManager = transactionManager;
 	}
 
+	public void setConnectionFactory (ConnectionFactory connectionFactory)
+	{
+		this.connectionFactory = connectionFactory;
+	}
+
 	private void addMessageListener (String topic, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
@@ -105,7 +108,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 	{
 		try
 		{
-			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory (user, password, brokerURL);
 			connection = connectionFactory.createConnection ();
 			connection.setClientID ("bitsofproof supernode");
 			connection.start ();
@@ -288,21 +290,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 		catch ( JMSException e )
 		{
 		}
-	}
-
-	public void setBrokerURL (String brokerURL)
-	{
-		this.brokerURL = brokerURL;
-	}
-
-	public void setUser (String user)
-	{
-		this.user = user;
-	}
-
-	public void setPassword (String password)
-	{
-		this.password = password;
 	}
 
 	public Transaction getTransaction (final String hash)

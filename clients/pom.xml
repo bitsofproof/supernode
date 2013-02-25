@@ -1,0 +1,36 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.bitsofproof</groupId>
+	<artifactId>bitsofproof-clients</artifactId>
+	<version>0.8-SNAPSHOT</version>
+	<name>bitsofproof-clients</name>
+	<description>The bitsofproof supernode implementation of the Bitcoin protocol</description>
+	<packaging>pom</packaging>
+
+	<organization>
+		<url>bitsofproof.com</url>
+	</organization>
+
+	<licenses>
+		<license>
+			<name>Apache License 2.0</name>
+			<url>http://www.spdx.org/licenses/Apache-2.0</url>
+		</license>
+	</licenses>
+
+	<inceptionYear>2013</inceptionYear>
+
+	<developers>
+		<developer>
+			<id>bitsofproof</id>
+			<name>Tamás Blummer</name>
+			<email>tamas@bitsofproof.com</email>
+		</developer>
+	</developers>
+
+	<modules>
+		<module>simple</module>
+	</modules>
+
+</project>

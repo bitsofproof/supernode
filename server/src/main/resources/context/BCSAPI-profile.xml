@@ -22,6 +22,18 @@
 		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
 	</bean>
 
+	<bean id="activeMQ" class="org.apache.activemq.ActiveMQConnectionFactory">
+	    <constructor-arg>
+			<value>admin</value>
+		</constructor-arg>
+		<constructor-arg>
+			<value>password</value>
+		</constructor-arg>
+		<constructor-arg>
+			<value>ssl://localhost:61613</value>
+		</constructor-arg>
+	</bean>
+	
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.core.ImplementBCSAPI" init-method="init" destroy-method="destroy">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork"/>
@@ -33,8 +45,7 @@
 			<ref bean="blocktemplater"/>
 		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
-		<property name="brokerURL" value="ssl://localhost:61613"/>
-		<property name="user" value="admin"/>
-		<property name="password" value="password"/>
+		<property name="connectionFactory" ref="activeMQ"/>
 	</bean>
+		
 </beans>

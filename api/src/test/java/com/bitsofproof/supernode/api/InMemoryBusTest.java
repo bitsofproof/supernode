@@ -30,12 +30,12 @@ import javax.jms.Session;
 
 import org.junit.Test;
 
-public class MockBusTest
+public class InMemoryBusTest
 {
 	@Test
 	public void mockTopicTest () throws JMSException
 	{
-		ConnectionFactory factory = new MockBusConnectionFactory ();
+		ConnectionFactory factory = new InMemoryBusConnectionFactory ();
 		Connection connection = factory.createConnection ();
 		Session session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 		MessageProducer producer = session.createProducer (session.createTopic ("test"));
@@ -84,7 +84,7 @@ public class MockBusTest
 	@Test
 	public void mockQueueTest () throws JMSException
 	{
-		ConnectionFactory factory = new MockBusConnectionFactory ();
+		ConnectionFactory factory = new InMemoryBusConnectionFactory ();
 		Connection connection = factory.createConnection ();
 		final Session session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 		MessageProducer producer = session.createProducer (session.createTopic ("test"));
