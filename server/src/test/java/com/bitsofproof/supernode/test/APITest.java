@@ -4,6 +4,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -70,7 +71,14 @@ public class APITest
 		});
 
 		api.sendBlock (block);
-		ready.acquireUninterruptibly ();
+
+		try
+		{
+			assertTrue (ready.tryAcquire (1, TimeUnit.SECONDS));
+		}
+		catch ( InterruptedException e )
+		{
+		}
 	}
 
 	@AfterClass

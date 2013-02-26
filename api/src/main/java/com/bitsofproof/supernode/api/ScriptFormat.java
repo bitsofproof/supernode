@@ -616,7 +616,15 @@ public class ScriptFormat
 
 	public static String toReadable (byte[] script) throws ValidationException
 	{
-		List<ScriptFormat.Token> tokens = parse (script);
+		List<ScriptFormat.Token> tokens = null;
+		try
+		{
+			tokens = parse (script);
+		}
+		catch ( Exception e )
+		{
+			return "0x" + ByteUtils.toHex (script);
+		}
 		StringBuffer b = new StringBuffer ();
 		boolean first = true;
 		for ( ScriptFormat.Token token : tokens )
