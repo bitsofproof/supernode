@@ -30,8 +30,6 @@ import org.json.JSONException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.KeyFormatter.PassphraseProvider;
-
 public class KeySerializerTest
 {
 	@BeforeClass
@@ -82,22 +80,8 @@ public class KeySerializerTest
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			final JSONArray test = testData.getJSONArray (i);
-			final PassphraseProvider pp = new PassphraseProvider ()
-			{
-				@Override
-				public String getPassphrase ()
-				{
-					try
-					{
-						return test.getString (2);
-					}
-					catch ( JSONException e )
-					{
-						return null;
-					}
-				}
-			};
-			KeyFormatter formatter = new KeyFormatter (pp, chain);
+
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), chain);
 
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String unencrypted = KeyFormatter.serializeWIF (kp);
@@ -114,22 +98,8 @@ public class KeySerializerTest
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			final JSONArray test = testData.getJSONArray (i);
-			final PassphraseProvider pp = new PassphraseProvider ()
-			{
-				@Override
-				public String getPassphrase ()
-				{
-					try
-					{
-						return test.getString (2);
-					}
-					catch ( JSONException e )
-					{
-						return null;
-					}
-				}
-			};
-			KeyFormatter formatter = new KeyFormatter (pp, chain);
+
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), chain);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String unencrypted = KeyFormatter.serializeWIF (kp);
 			assertTrue (test.getString (1).equals (unencrypted));
@@ -142,22 +112,15 @@ public class KeySerializerTest
 		for ( int i = 0; i < 10; ++i )
 		{
 			final long seed = i;
-			PassphraseProvider pp = new PassphraseProvider ()
+			Random r = new Random (seed);
+			StringBuffer p = new StringBuffer ();
+			for ( int j = 0; j < 30; ++j )
 			{
-				@Override
-				public String getPassphrase ()
-				{
-					Random r = new Random (seed);
-					StringBuffer p = new StringBuffer ();
-					for ( int i = 0; i < 30; ++i )
-					{
-						p.append ((char) (r.nextInt () % 0x1FFFFF));
-					}
-					return p.toString ();
-				}
-			};
+				p.append ((char) (r.nextInt () % 0x1FFFFF));
+			}
+			String passphrase = p.toString ();
 
-			KeyFormatter formatter = new KeyFormatter (pp, chain);
+			KeyFormatter formatter = new KeyFormatter (passphrase, chain);
 			ECKeyPair kp = ECKeyPair.createNew (i % 2 == 0);
 			String serialized = formatter.serializeKey (kp);
 			ECKeyPair kp2 = formatter.parseSerializedKey (serialized);

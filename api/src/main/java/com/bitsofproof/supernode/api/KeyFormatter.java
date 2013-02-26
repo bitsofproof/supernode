@@ -34,23 +34,18 @@ import org.bouncycastle.crypto.generators.SCrypt;
 
 public class KeyFormatter
 {
-	public interface PassphraseProvider
-	{
-		public String getPassphrase ();
-	}
-
-	private final PassphraseProvider pp;
 	private final ChainParameter chain;
+	private final String passphrase;
 
-	public KeyFormatter (PassphraseProvider pp, ChainParameter chain)
+	public KeyFormatter (String passphrase, ChainParameter chain)
 	{
-		this.pp = pp;
+		this.passphrase = passphrase;
 		this.chain = chain;
 	}
 
 	public String serializeKey (ECKeyPair key)
 	{
-		if ( pp == null )
+		if ( passphrase == null )
 		{
 			return serializeWIF (key);
 		}
@@ -66,7 +61,7 @@ public class KeyFormatter
 		}
 		else if ( (store[0] & 0xff) == 0x01 )
 		{
-			if ( pp == null )
+			if ( passphrase == null )
 			{
 				throw new ValidationException ("Need passphrase");
 			}
@@ -163,7 +158,7 @@ public class KeyFormatter
 		}
 		try
 		{
-			byte[] prefactor = SCrypt.generate (pp.getPassphrase ().getBytes ("UTF-8"), ownersalt, 16384, 8, 8, 32);
+			byte[] prefactor = SCrypt.generate (passphrase.getBytes ("UTF-8"), ownersalt, 16384, 8, 8, 32);
 			byte[] passfactor = prefactor;
 			if ( lot != 0 )
 			{
@@ -259,7 +254,7 @@ public class KeyFormatter
 		System.arraycopy (store, 3, addressHash, 0, 4);
 		try
 		{
-			byte[] derived = SCrypt.generate (pp.getPassphrase ().getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);
+			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);
 			byte[] key = new byte[32];
 			System.arraycopy (derived, 32, key, 0, 32);
 			SecretKeySpec keyspec = new SecretKeySpec (key, "AES");
@@ -327,7 +322,7 @@ public class KeyFormatter
 		}
 		try
 		{
-			byte[] passfactor = SCrypt.generate (pp.getPassphrase ().getBytes ("UTF-8"), ownersalt, 16384, 8, 8, 32);
+			byte[] passfactor = SCrypt.generate (passphrase.getBytes ("UTF-8"), ownersalt, 16384, 8, 8, 32);
 			if ( hasLot )
 			{
 				byte[] tmp = new byte[40];
@@ -423,7 +418,7 @@ public class KeyFormatter
 			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (key.getAddress (), false, chain).getBytes ("US-ASCII"));
 			System.arraycopy (ac, 0, addressHash, 0, 4);
 			System.arraycopy (ac, 0, store, 3, 4);
-			byte[] derived = SCrypt.generate (pp.getPassphrase ().getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);
+			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);
 			System.arraycopy (derived, 32, aesKey, 0, 32);
 			System.arraycopy (derived, 0, xor, 0, 32);
 		}
