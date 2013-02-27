@@ -35,7 +35,7 @@ import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.signers.ECDSASigner;
 import org.bouncycastle.math.ec.ECPoint;
 
-public class ECKeyPair
+public class ECKeyPair implements Key
 {
 	private static final SecureRandom secureRandom = new SecureRandom ();
 	private static final X9ECParameters curve = SECNamedCurves.getByName ("secp256k1");
@@ -77,17 +77,12 @@ public class ECKeyPair
 		return k;
 	}
 
-	public byte[] getPublic ()
+	public void setPublic (byte[] pub) throws ValidationException
 	{
-		if ( pub != null )
-		{
-			byte[] p = new byte[pub.length];
-			System.arraycopy (pub, 0, p, 0, pub.length);
-			return p;
-		}
-		return null;
+		throw new ValidationException ("Can not set public key if private is present");
 	}
 
+	@Override
 	public byte[] getPrivate ()
 	{
 		byte[] p = priv.toByteArray ();
@@ -100,6 +95,18 @@ public class ECKeyPair
 		}
 
 		return p;
+	}
+
+	@Override
+	public byte[] getPublic ()
+	{
+		if ( pub != null )
+		{
+			byte[] p = new byte[pub.length];
+			System.arraycopy (pub, 0, p, 0, pub.length);
+			return p;
+		}
+		return null;
 	}
 
 	public byte[] getAddress ()
