@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.api;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
 
@@ -67,13 +66,12 @@ public class WalletTest
 	@Test
 	public void testReadOnlyWallet () throws ValidationException
 	{
-		byte[] chainCode = new byte[32];
-		new SecureRandom ().nextBytes (chainCode);
+		Wallet fullControlWallet = Wallet.createWallet ("fullControl");
 
-		ECKeyPair fullKey = ECKeyPair.createNew (true);
+		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic ());
+		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
-		Wallet fullControlWallet = new Wallet ("fullControl", new ExtendedKey (fullKey, chainCode, 0), 0);
-		Wallet readOnlyWallet = new Wallet ("readOnlyTest", new ExtendedKey (new ECPublicKey (fullKey.getPublic ()), chainCode, 0), 0);
+		Wallet readOnlyWallet = Wallet.createWallet ("readOnlyTest", new ExtendedKey (pub, chainCode, 0));
 
 		Wallet account1 = readOnlyWallet.createSubWallet ("1", 0);
 		Wallet fullAccount1 = fullControlWallet.createSubWallet ("1", 0);

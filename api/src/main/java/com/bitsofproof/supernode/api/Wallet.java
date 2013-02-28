@@ -26,7 +26,7 @@ public class Wallet
 	private int nextKey;
 	private List<Wallet> subs;
 
-	public Wallet (String name, ExtendedKey master, int nextKey)
+	private Wallet (String name, ExtendedKey master, int nextKey)
 	{
 		this.name = name;
 		this.master = master;
@@ -41,6 +41,11 @@ public class Wallet
 		random.nextBytes (chainCode);
 		ExtendedKey parent = new ExtendedKey (master, chainCode, 0);
 		return new Wallet (name, parent, 0);
+	}
+
+	public static Wallet createWallet (String name, ExtendedKey master)
+	{
+		return new Wallet (name, master, 0);
 	}
 
 	public Wallet createSubWallet (String name, int sequence) throws ValidationException
