@@ -29,6 +29,9 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
+/**
+ * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032
+ */
 public class KeyGenerator
 {
 	private static final X9ECParameters curve = SECNamedCurves.getByName ("secp256k1");

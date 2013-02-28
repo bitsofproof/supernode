@@ -32,6 +32,9 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.crypto.generators.SCrypt;
 
+/**
+ * Key serializer following BIP38 https://en.bitcoin.it/wiki/BIP_0038 and WIF https://en.bitcoin.it/wiki/Wallet_import_format
+ */
 public class KeyFormatter
 {
 	private final ChainParameter chain;
