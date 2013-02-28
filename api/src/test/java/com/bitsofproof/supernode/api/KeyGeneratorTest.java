@@ -36,13 +36,13 @@ public class KeyGeneratorTest
 	}
 
 	@Test
-	public void test () throws ValidationException
+	public void testGenerator () throws ValidationException
 	{
 		ECKeyPair master = ECKeyPair.createNew (true);
-		byte[] entropy = new byte[32];
-		random.nextBytes (entropy);
-		ExtendedKey ekprivate = new ExtendedKey (master, entropy);
-		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic ()), entropy);
+		byte[] chainCode = new byte[32];
+		random.nextBytes (chainCode);
+		ExtendedKey ekprivate = new ExtendedKey (master, chainCode, 0);
+		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic ()), chainCode, 0);
 		for ( int i = 0; i < 10; ++i )
 		{
 			ExtendedKey k1 = KeyGenerator.generateKey (ekprivate, i);

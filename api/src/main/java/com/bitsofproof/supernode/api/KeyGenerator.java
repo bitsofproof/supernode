@@ -33,7 +33,7 @@ public class KeyGenerator
 {
 	private static final X9ECParameters curve = SECNamedCurves.getByName ("secp256k1");
 
-	public static ExtendedKey generateKey (ExtendedKey parent, long child) throws ValidationException
+	public static ExtendedKey generateKey (ExtendedKey parent, int sequence) throws ValidationException
 	{
 		try
 		{
@@ -44,10 +44,10 @@ public class KeyGenerator
 			byte[] pub = parent.getKey ().getPublic ();
 			byte[] extended = new byte[pub.length + 4];
 			System.arraycopy (pub, 0, extended, 0, pub.length);
-			extended[pub.length] = (byte) ((child >> 24) & 0xff);
-			extended[pub.length + 1] = (byte) ((child >> 16) & 0xff);
-			extended[pub.length + 2] = (byte) ((child >> 8) & 0xff);
-			extended[pub.length + 3] = (byte) (child & 0xff);
+			extended[pub.length] = (byte) ((sequence >> 24) & 0xff);
+			extended[pub.length + 1] = (byte) ((sequence >> 16) & 0xff);
+			extended[pub.length + 2] = (byte) ((sequence >> 8) & 0xff);
+			extended[pub.length + 3] = (byte) (sequence & 0xff);
 			byte[] lr = mac.doFinal (extended);
 			byte[] l = Arrays.copyOfRange (lr, 0, 32);
 			byte[] r = Arrays.copyOfRange (lr, 32, 64);
@@ -55,15 +55,15 @@ public class KeyGenerator
 			BigInteger m = new BigInteger (1, l);
 			if ( parent.getKey ().getPrivate () != null )
 			{
-				BigInteger k = m.multiply (new BigInteger (1, parent.getKey ().getPrivate ()));
-				return new ExtendedKey (new ECKeyPair (k, true), r);
+				BigInteger k = m.multiply (new BigInteger (1, parent.getKey ().getPrivate ())).mod (curve.getN ());
+				return new ExtendedKey (new ECKeyPair (k, true), r, sequence);
 			}
 			else
 			{
 				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
 
-				return new ExtendedKey (new ECPublicKey (pub), r);
+				return new ExtendedKey (new ECPublicKey (pub), r, sequence);
 			}
 		}
 		catch ( NoSuchAlgorithmException e )

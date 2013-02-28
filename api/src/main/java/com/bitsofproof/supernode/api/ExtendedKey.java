@@ -21,12 +21,14 @@ public class ExtendedKey
 {
 	private final Key key;
 	private final byte[] chainCode;
+	private final int sequence;
 
-	public ExtendedKey (Key key, byte[] chainCode)
+	public ExtendedKey (Key key, byte[] chainCode, int sequence)
 	{
 		super ();
 		this.key = key;
 		this.chainCode = chainCode;
+		this.sequence = sequence;
 	}
 
 	public Key getKey ()
@@ -37,5 +39,10 @@ public class ExtendedKey
 	public byte[] getChainCode ()
 	{
 		return Arrays.clone (chainCode);
+	}
+
+	public int getSequence ()
+	{
+		return sequence;
 	}
 }
