@@ -21,34 +21,32 @@ import java.util.List;
 
 public class Wallet
 {
-	private final String name;
 	private final ExtendedKey master;
 	private int nextKey;
 	private List<Wallet> subs;
 
-	private Wallet (String name, ExtendedKey master, int nextKey)
+	private Wallet (ExtendedKey master, int nextKey)
 	{
-		this.name = name;
 		this.master = master;
 		this.nextKey = nextKey;
 	}
 
-	public static Wallet createWallet (String name)
+	public static Wallet createWallet ()
 	{
 		SecureRandom random = new SecureRandom ();
 		ECKeyPair master = ECKeyPair.createNew (true);
 		byte[] chainCode = new byte[32];
 		random.nextBytes (chainCode);
 		ExtendedKey parent = new ExtendedKey (master, chainCode, 0);
-		return new Wallet (name, parent, 0);
+		return new Wallet (parent, 0);
 	}
 
-	public static Wallet createWallet (String name, ExtendedKey master)
+	public static Wallet createWallet (ExtendedKey master)
 	{
-		return new Wallet (name, master, 0);
+		return new Wallet (master, 0);
 	}
 
-	public Wallet createSubWallet (String name, int sequence) throws ValidationException
+	public Wallet createSubWallet (int sequence) throws ValidationException
 	{
 		if ( sequence > nextKey )
 		{
@@ -59,7 +57,7 @@ public class Wallet
 		{
 			subs = new ArrayList<Wallet> ();
 		}
-		Wallet sub = new Wallet (name, getKey (sequence), 0);
+		Wallet sub = new Wallet (getKey (sequence), 0);
 		subs.add (sub);
 		return sub;
 	}
@@ -94,11 +92,6 @@ public class Wallet
 			}
 		}
 		return addresses;
-	}
-
-	public String getName ()
-	{
-		return name;
 	}
 
 	public ExtendedKey getMaster ()

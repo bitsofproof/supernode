@@ -36,10 +36,10 @@ public class WalletTest
 	@Test
 	public void testPrivateWallet () throws ValidationException
 	{
-		Wallet wallet = Wallet.createWallet ("test");
+		Wallet wallet = Wallet.createWallet ();
 		ExtendedKey master = wallet.getMaster ();
-		Wallet account1 = wallet.createSubWallet ("1", 0);
-		Wallet account2 = wallet.createSubWallet ("2", 1);
+		Wallet account1 = wallet.createSubWallet (0);
+		Wallet account2 = wallet.createSubWallet (1);
 		ExtendedKey address10 = account1.generateNextKey ();
 		ExtendedKey address11 = account1.generateNextKey ();
 		ExtendedKey address12 = account1.generateNextKey ();
@@ -48,7 +48,7 @@ public class WalletTest
 		ExtendedKey address21 = account2.generateNextKey ();
 		ExtendedKey address22 = account2.generateNextKey ();
 		assertTrue (account2.getNextKeySequence () == 3);
-		Wallet account21 = account2.createSubWallet ("21", 1);
+		Wallet account21 = account2.createSubWallet (1);
 		ExtendedKey address210 = account21.generateNextKey ();
 		ExtendedKey address211 = account21.generateNextKey ();
 		ExtendedKey address212 = account21.generateNextKey ();
@@ -65,22 +65,22 @@ public class WalletTest
 	@Test
 	public void testReadOnlyWallet () throws ValidationException
 	{
-		Wallet fullControlWallet = Wallet.createWallet ("fullControl");
+		Wallet fullControlWallet = Wallet.createWallet ();
 
 		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic ());
 		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
-		Wallet readOnlyWallet = Wallet.createWallet ("readOnlyTest", new ExtendedKey (pub, chainCode, 0));
+		Wallet readOnlyWallet = Wallet.createWallet (new ExtendedKey (pub, chainCode, 0));
 
-		Wallet account1 = readOnlyWallet.createSubWallet ("1", 0);
-		Wallet fullAccount1 = fullControlWallet.createSubWallet ("1", 0);
+		Wallet account1 = readOnlyWallet.createSubWallet (0);
+		Wallet fullAccount1 = fullControlWallet.createSubWallet (0);
 		ExtendedKey address10 = account1.generateNextKey ();
 		ExtendedKey fullAddress10 = fullAccount1.generateNextKey ();
 
 		assertTrue (Arrays.equals (address10.getKey ().getPublic (), fullAddress10.getKey ().getPublic ()));
 
-		Wallet account2 = readOnlyWallet.createSubWallet ("2", 1);
-		Wallet fullAccount2 = fullControlWallet.createSubWallet ("2", 1);
+		Wallet account2 = readOnlyWallet.createSubWallet (1);
+		Wallet fullAccount2 = fullControlWallet.createSubWallet (1);
 		account2.generateNextKey ();
 		account2.generateNextKey ();
 		account2.generateNextKey ();
@@ -89,8 +89,8 @@ public class WalletTest
 		fullAccount2.generateNextKey ();
 		fullAccount2.generateNextKey ();
 
-		Wallet subWallet = account2.createSubWallet ("sub", 1);
-		Wallet subFullWallet = fullAccount2.createSubWallet ("sub", 1);
+		Wallet subWallet = account2.createSubWallet (1);
+		Wallet subFullWallet = fullAccount2.createSubWallet (1);
 		ExtendedKey a1 = subWallet.generateNextKey ();
 		ExtendedKey fa1 = subFullWallet.generateNextKey ();
 
