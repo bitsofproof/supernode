@@ -27,12 +27,13 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.ChainParameter;
-import com.bitsofproof.supernode.api.Difficulty;
+import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.Transaction;
-import com.bitsofproof.supernode.api.TransactionFactory;
+import com.bitsofproof.supernode.api.TransactionInput;
+import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
@@ -57,7 +58,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 
 	private String coinbaseAddress;
 
-	private final ChainParameter chain;
+	private final Chain chain;
 	private final BitcoinNetwork network;
 
 	private String previousHash;
@@ -121,7 +122,7 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 					template.setTransactions (new ArrayList<Transaction> ());
 					try
 					{
-						template.getTransactions ().add (TransactionFactory.createCoinbase (coinbaseAddress, nextHeight, chain));
+						template.getTransactions ().add (createCoinbase (coinbaseAddress, nextHeight, chain));
 					}
 					catch ( ValidationException e )
 					{
@@ -309,5 +310,36 @@ public class BlockTemplater implements TrunkListener, TransactionListener
 			}
 			template = new Block ();
 		}
+	}
+
+	public static Transaction createCoinbase (String receiver, int blockHeight, Chain chain) throws ValidationException
+	{
+		Transaction coinbase = new Transaction ();
+		coinbase.setVersion (1);
+		coinbase.setLockTime (0);
+
+		TransactionInput input = new TransactionInput ();
+		input.setSourceHash (Hash.ZERO_HASH_STRING);
+		input.setSequence (0xFFFFFFFFL);
+
+		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
+		writer.writeData (new ScriptFormat.Number (blockHeight).toByteArray ());
+		input.setScript (writer.toByteArray ());
+
+		List<TransactionInput> inputs = new ArrayList<TransactionInput> ();
+		inputs.add (input);
+		coinbase.setInputs (inputs);
+
+		TransactionOutput output = new TransactionOutput ();
+		output.setScript (ScriptFormat.getPayToAddressScript (AddressConverter.fromSatoshiStyle (receiver, chain.getAddressFlag ())));
+		output.setValue (chain.getRewardForHeight (blockHeight));
+
+		List<TransactionOutput> outputs = new ArrayList<TransactionOutput> ();
+		outputs.add (output);
+		coinbase.setOutputs (outputs);
+
+		coinbase.computeHash ();
+
+		return coinbase;
 	}
 }

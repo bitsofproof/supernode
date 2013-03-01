@@ -19,7 +19,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.Random;
@@ -60,13 +59,13 @@ public class KeySerializerTest
 	@Test
 	public void wifTest () throws IOException, JSONException, ValidationException
 	{
-		KeyFormatter formatter = new KeyFormatter (null, chain);
+		KeyFormatter formatter = new KeyFormatter (null, 0x0);
 		JSONArray testData = readObjectArray (WIF);
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (1));
-			String address = AddressConverter.toSatoshiStyle (Hash.keyHash (kp.getPublic ()), false, chain);
+			String address = AddressConverter.toSatoshiStyle (Hash.keyHash (kp.getPublic ()), 0x0);
 			assertTrue (test.getString (0).equals (address));
 			String serialized = formatter.serializeKey (kp);
 			assertTrue (test.getString (1).equals (serialized));
@@ -81,7 +80,7 @@ public class KeySerializerTest
 		{
 			final JSONArray test = testData.getJSONArray (i);
 
-			KeyFormatter formatter = new KeyFormatter (test.getString (2), chain);
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String unencrypted = KeyFormatter.serializeWIF (kp);
@@ -99,7 +98,7 @@ public class KeySerializerTest
 		{
 			final JSONArray test = testData.getJSONArray (i);
 
-			KeyFormatter formatter = new KeyFormatter (test.getString (2), chain);
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String unencrypted = KeyFormatter.serializeWIF (kp);
 			assertTrue (test.getString (1).equals (unencrypted));
@@ -120,7 +119,7 @@ public class KeySerializerTest
 			}
 			String passphrase = p.toString ();
 
-			KeyFormatter formatter = new KeyFormatter (passphrase, chain);
+			KeyFormatter formatter = new KeyFormatter (passphrase, 0x0);
 			ECKeyPair kp = ECKeyPair.createNew (i % 2 == 0);
 			String serialized = formatter.serializeKey (kp);
 			ECKeyPair kp2 = formatter.parseSerializedKey (serialized);
@@ -128,50 +127,4 @@ public class KeySerializerTest
 			assertTrue (Arrays.equals (kp.getPrivate (), kp2.getPrivate ()));
 		}
 	}
-
-	private static ChainParameter chain = new ChainParameter ()
-	{
-
-		@Override
-		public BigInteger getMinimumTarget ()
-		{
-			return null;
-		}
-
-		@Override
-		public long getRewardForHeight (int height)
-		{
-			return 0;
-		}
-
-		@Override
-		public int getDifficultyReviewBlocks ()
-		{
-			return 0;
-		}
-
-		@Override
-		public int getTargetBlockTime ()
-		{
-			return 0;
-		}
-
-		@Override
-		public boolean isProduction ()
-		{
-			return true;
-		}
-
-		@Override
-		public int getAddressFlag ()
-		{
-			return 0;
-		}
-
-		@Override
-		public int getMultisigAddressFlag ()
-		{
-			return 5;
-		}
-	};
 }

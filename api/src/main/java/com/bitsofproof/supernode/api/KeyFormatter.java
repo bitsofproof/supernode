@@ -37,13 +37,13 @@ import org.bouncycastle.crypto.generators.SCrypt;
  */
 public class KeyFormatter
 {
-	private final ChainParameter chain;
+	private final int addressFlag;
 	private final String passphrase;
 
-	public KeyFormatter (String passphrase, ChainParameter chain)
+	public KeyFormatter (String passphrase, int addressFlag)
 	{
 		this.passphrase = passphrase;
-		this.chain = chain;
+		this.addressFlag = addressFlag;
 	}
 
 	public String serializeKey (ECKeyPair key)
@@ -270,7 +270,7 @@ public class KeyFormatter
 			}
 			ECKeyPair kp = new ECKeyPair (decrypted, compressed);
 
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), false, chain).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -368,7 +368,7 @@ public class KeyFormatter
 					new BigInteger (1, passfactor).multiply (new BigInteger (1, Hash.hash (seed))).remainder (SECNamedCurves.getByName ("secp256k1").getN ());
 
 			kp = new ECKeyPair (priv, compressed);
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), false, chain).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -418,7 +418,7 @@ public class KeyFormatter
 		byte[] xor = new byte[32];
 		try
 		{
-			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (key.getAddress (), false, chain).getBytes ("US-ASCII"));
+			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (key.getAddress (), addressFlag).getBytes ("US-ASCII"));
 			System.arraycopy (ac, 0, addressHash, 0, 4);
 			System.arraycopy (ac, 0, store, 3, 4);
 			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);

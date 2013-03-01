@@ -15,10 +15,11 @@
  */
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.api.ChainParameter;
+import java.math.BigInteger;
+
 import com.bitsofproof.supernode.model.Blk;
 
-public interface Chain extends ChainParameter
+public interface Chain
 {
 	public Blk getGenesis ();
 
@@ -29,4 +30,18 @@ public interface Chain extends ChainParameter
 	public byte[] getAlertKey ();
 
 	public boolean isUnitTest ();
+
+	public BigInteger getMinimumTarget ();
+
+	public int getDifficultyReviewBlocks ();
+
+	public int getTargetBlockTime ();
+
+	public long getRewardForHeight (int height);
+
+	public boolean isProduction ();
+
+	public int getAddressFlag ();
+
+	public int getMultisigAddressFlag ();
 }

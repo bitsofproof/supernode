@@ -44,8 +44,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.ChainParameter;
-import com.bitsofproof.supernode.api.Difficulty;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -1325,7 +1323,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private static void parseOwners (TxOut out, ChainParameter chain)
+	private static void parseOwners (TxOut out, Chain chain)
 	{
 		List<ScriptFormat.Token> parsed;
 		try
@@ -1334,7 +1332,7 @@ public abstract class CachedBlockStore implements BlockStore
 			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG )
 			{
 				// pay to key
-				out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), false, chain));
+				out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), chain.getAddressFlag ()));
 				out.setVotes (1L);
 			}
 			else if ( parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
@@ -1342,7 +1340,7 @@ public abstract class CachedBlockStore implements BlockStore
 					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG )
 			{
 				// pay to address
-				out.setOwner1 (AddressConverter.toSatoshiStyle (parsed.get (2).data, false, chain));
+				out.setOwner1 (AddressConverter.toSatoshiStyle (parsed.get (2).data, chain.getAddressFlag ()));
 				out.setVotes (1L);
 			}
 			else if ( parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && parsed.get (1).data != null
@@ -1352,7 +1350,7 @@ public abstract class CachedBlockStore implements BlockStore
 				if ( hash.length == 20 )
 				{
 					// BIP 0013
-					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, true, chain));
+					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, chain.getMultisigAddressFlag ()));
 					out.setVotes (1L);
 				}
 			}
@@ -1369,15 +1367,15 @@ public abstract class CachedBlockStore implements BlockStore
 							{
 								if ( j == 0 )
 								{
-									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
 								}
 								if ( j == 1 )
 								{
-									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
 								}
 								if ( j == 2 )
 								{
-									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), true, chain));
+									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
 								}
 							}
 							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);

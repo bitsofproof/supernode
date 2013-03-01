@@ -15,10 +15,10 @@
  */
 package com.bitsofproof.supernode.test;
 
-import static com.bitsofproof.supernode.api.Difficulty.getCompactTarget;
-import static com.bitsofproof.supernode.api.Difficulty.getDifficulty;
-import static com.bitsofproof.supernode.api.Difficulty.getNextTarget;
-import static com.bitsofproof.supernode.api.Difficulty.getTarget;
+import static com.bitsofproof.supernode.core.Difficulty.getCompactTarget;
+import static com.bitsofproof.supernode.core.Difficulty.getDifficulty;
+import static com.bitsofproof.supernode.core.Difficulty.getNextTarget;
+import static com.bitsofproof.supernode.core.Difficulty.getTarget;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
@@ -26,12 +26,12 @@ import java.math.BigInteger;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.ChainParameter;
+import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.SatoshiChain;
 
 public class DifficultyTest
 {
-	private static ChainParameter chain;
+	private static Chain chain;
 
 	@BeforeClass
 	public static void before ()

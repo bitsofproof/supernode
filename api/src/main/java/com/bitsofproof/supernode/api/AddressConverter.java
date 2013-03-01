@@ -17,17 +17,14 @@ package com.bitsofproof.supernode.api;
 
 public class AddressConverter
 {
-	public static byte[] fromSatoshiStyle (String s, ChainParameter chain) throws ValidationException
+	public static byte[] fromSatoshiStyle (String s, int addressFlag) throws ValidationException
 	{
 		try
 		{
 			byte[] raw = ByteUtils.fromBase58 (s);
-			if ( chain.isProduction () )
+			if ( raw[0] != (byte) (addressFlag & 0xff) )
 			{
-				if ( raw[0] != 0 && raw[0] != 5 )
-				{ // 5 is multisig
-					throw new ValidationException ("invalid address for this chain");
-				}
+				throw new ValidationException ("invalid address for this chain");
 			}
 			byte[] check = Hash.hash (raw, 0, raw.length - 4);
 			for ( int i = 0; i < 4; ++i )
@@ -55,10 +52,5 @@ public class AddressConverter
 		byte[] check = Hash.hash (addressBytes, 0, keyDigest.length + 1);
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);
 		return ByteUtils.toBase58 (addressBytes);
-	}
-
-	public static String toSatoshiStyle (byte[] keyDigest, boolean multisig, ChainParameter chain)
-	{
-		return toSatoshiStyle (keyDigest, multisig ? chain.getMultisigAddressFlag () : chain.getAddressFlag ());
 	}
 }

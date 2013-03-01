@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import static org.junit.Assert.assertTrue;
 
-import java.math.BigInteger;
 import java.security.Security;
 import java.util.Arrays;
 
@@ -55,9 +54,9 @@ public class WalletTest
 		ExtendedKey address212 = account21.generateNextKey ();
 		assertTrue (account21.getNextKeySequence () == 3);
 
-		assertTrue (account21.getAddresses (chain).size () == 3);
-		assertTrue (account2.getAddresses (chain).size () == 6);
-		assertTrue (wallet.getAddresses (chain).size () == 11);
+		assertTrue (account21.getAddresses (0x0).size () == 3);
+		assertTrue (account2.getAddresses (0x0).size () == 6);
+		assertTrue (wallet.getAddresses (0x0).size () == 11);
 
 		assertTrue (Arrays.equals (account21.getMaster ().getKey ().getPublic (), account2.getKey (1).getKey ().getPublic ()));
 	}
@@ -98,50 +97,4 @@ public class WalletTest
 		assertTrue (Arrays.equals (a1.getKey ().getPublic (), fa1.getKey ().getPublic ()));
 
 	}
-
-	private static ChainParameter chain = new ChainParameter ()
-	{
-
-		@Override
-		public BigInteger getMinimumTarget ()
-		{
-			return null;
-		}
-
-		@Override
-		public long getRewardForHeight (int height)
-		{
-			return 0;
-		}
-
-		@Override
-		public int getDifficultyReviewBlocks ()
-		{
-			return 0;
-		}
-
-		@Override
-		public int getTargetBlockTime ()
-		{
-			return 0;
-		}
-
-		@Override
-		public boolean isProduction ()
-		{
-			return true;
-		}
-
-		@Override
-		public int getAddressFlag ()
-		{
-			return 0;
-		}
-
-		@Override
-		public int getMultisigAddressFlag ()
-		{
-			return 5;
-		}
-	};
 }

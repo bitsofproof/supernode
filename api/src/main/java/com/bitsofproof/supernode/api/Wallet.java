@@ -78,19 +78,19 @@ public class Wallet
 		return KeyGenerator.generateKey (master, nextKey++);
 	}
 
-	public List<String> getAddresses (ChainParameter chain) throws ValidationException
+	public List<String> getAddresses (int addressFlag) throws ValidationException
 	{
 		ArrayList<String> addresses = new ArrayList<String> ();
 		for ( int i = 0; i < nextKey; ++i )
 		{
 			ExtendedKey k = KeyGenerator.generateKey (master, i);
-			addresses.add (AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), false, chain));
+			addresses.add (AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), addressFlag));
 		}
 		if ( subs != null )
 		{
 			for ( Wallet sub : subs )
 			{
-				addresses.addAll (sub.getAddresses (chain));
+				addresses.addAll (sub.getAddresses (addressFlag));
 			}
 		}
 		return addresses;

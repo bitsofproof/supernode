@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 
@@ -24,7 +24,7 @@ public class Difficulty
 		return BigInteger.valueOf (compactTarget & 0x7fffffL).shiftLeft ((int) (8 * ((compactTarget >>> 24) - 3)));
 	}
 
-	public static long getDifficulty (long compactTarget, ChainParameter chain)
+	public static long getDifficulty (long compactTarget, Chain chain)
 	{
 		return chain.getMinimumTarget ().divide (getTarget (compactTarget)).longValue ();
 	}
@@ -37,7 +37,7 @@ public class Difficulty
 		return (target.shiftRight (s - 24)).or (BigInteger.valueOf ((s - 24) / 8 + 3).shiftLeft (24)).longValue ();
 	}
 
-	public static long getNextTarget (long periodLength, long currentTarget, ChainParameter chain)
+	public static long getNextTarget (long periodLength, long currentTarget, Chain chain)
 	{
 		// Limit the adjustment step.
 		periodLength = Math.max (Math.min (periodLength, chain.getTargetBlockTime () * 4), chain.getTargetBlockTime () / 4);
