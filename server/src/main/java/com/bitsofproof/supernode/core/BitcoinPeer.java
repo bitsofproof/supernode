@@ -44,6 +44,7 @@ import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.GetHeadersMessage;
 import com.bitsofproof.supernode.messages.HeadersMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
+import com.bitsofproof.supernode.messages.MempoolMessage;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
@@ -178,6 +179,10 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new TxMessage (this);
 		}
+		else if ( command.equals ("mempool") )
+		{
+			return new MempoolMessage (this);
+		}
 		else if ( command.equals ("verack") )
 		{
 			return new Message (command);
@@ -267,6 +272,8 @@ public class BitcoinPeer extends P2P.Peer
 				log.info ("Connection to '" + getAgent () + "' [" + peerVersion + "] at " + getAddress () + " Open connections: "
 						+ getNetwork ().getNumberOfConnections ());
 				network.addPeer (peer);
+				MempoolMessage mp = (MempoolMessage) peer.createMessage ("mempool");
+				peer.send (mp);
 			}
 		});
 	}

@@ -35,6 +35,7 @@ import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
+import com.bitsofproof.supernode.messages.MempoolMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
@@ -113,6 +114,25 @@ public class TxHandler implements TrunkListener
 				validateCacheAndSend (txm.getTx (), peer);
 			}
 		});
+		network.addListener ("mempool", new BitcoinMessageListener<MempoolMessage> ()
+		{
+			@Override
+			public void process (final MempoolMessage m, final BitcoinPeer peer)
+			{
+				log.trace ("received mempool request from " + peer.getAddress ());
+				InvMessage tm = (InvMessage) peer.createMessage ("inv");
+				synchronized ( unconfirmed )
+				{
+					for ( Tx tx : unconfirmed.values () )
+					{
+						tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
+					}
+				}
+				peer.send (tm);
+				log.debug ("sent mempool to " + peer.getAddress ());
+			}
+		});
+
 	}
 
 	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer)
