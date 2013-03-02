@@ -17,5 +17,11 @@ package com.bitsofproof.supernode.api;
 
 public interface TransactionListener
 {
-	public void process (Transaction t);
+	public void validated (Transaction t);
+
+	public void spent (Transaction t);
+
+	public void received (Transaction t);
+
+	public void confirmed (Transaction t, int n);
 }

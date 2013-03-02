@@ -74,7 +74,9 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
 	private MessageProducer templateProducer;
-	private final Map<String, ArrayList<MessageProducer>> addressProducer = new HashMap<String, ArrayList<MessageProducer>> ();
+	private final Map<String, MessageProducer> addressFilterProducer = new HashMap<String, MessageProducer> ();
+	private final Map<String, MessageProducer> transactionFilterProducer = new HashMap<String, MessageProducer> ();
+	private final Map<String, MessageProducer> filterProducer = new HashMap<String, MessageProducer> ();
 
 	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
 	{
@@ -221,17 +223,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 						if ( as != null )
 						{
 							reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
-							MessageProducer producer = session.createProducer (o.getJMSReplyTo ());
-							for ( String a : ar.getAddressList () )
-							{
-								ArrayList<MessageProducer> ap = addressProducer.get (a);
-								if ( ap == null )
-								{
-									ap = new ArrayList<MessageProducer> ();
-									addressProducer.put (a, ap);
-								}
-								ap.add (producer);
-							}
 						}
 						else
 						{
@@ -390,6 +381,33 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 		}
 	}
 
+	private void sendToHashFilter (String hash, BytesMessage m) throws JMSException
+	{
+		String key = hash.substring (hash.length () - 3, hash.length ());
+		MessageProducer p = filterProducer.get (key);
+		if ( p == null )
+		{
+			p = session.createProducer (session.createTopic ("filter" + key));
+			filterProducer.put (key, p);
+		}
+		p.send (m);
+	}
+
+	private void sendToAddressFilter (String address, BytesMessage m) throws JMSException
+	{
+		if ( address != null )
+		{
+			String key = address.substring (address.length () - 2, address.length ());
+			MessageProducer p = filterProducer.get (key);
+			if ( p == null )
+			{
+				p = session.createProducer (session.createTopic ("filter" + key));
+				filterProducer.put (key, p);
+			}
+			p.send (m);
+		}
+	}
+
 	@Override
 	public void onTransaction (Tx tx)
 	{
@@ -401,6 +419,17 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
+
+			for ( TxOut o : tx.getOutputs () )
+			{
+				sendToAddressFilter (o.getOwner1 (), m);
+				sendToAddressFilter (o.getOwner2 (), m);
+				sendToAddressFilter (o.getOwner3 (), m);
+			}
+			for ( TxIn i : tx.getInputs () )
+			{
+				sendToHashFilter (i.getSourceHash (), m);
+			}
 		}
 		catch ( Exception e )
 		{

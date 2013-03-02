@@ -34,6 +34,7 @@ import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.signers.ECDSASigner;
 import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.util.Arrays;
 
 public class ECKeyPair implements Key
 {
@@ -44,6 +45,7 @@ public class ECKeyPair implements Key
 	private BigInteger priv;
 	private byte[] pub;
 	private boolean compressed;
+	private int addressFlag = 0x0;
 
 	private ECKeyPair ()
 	{
@@ -54,7 +56,29 @@ public class ECKeyPair implements Key
 		return compressed;
 	}
 
-	public static ECKeyPair createNew (boolean compressed)
+	@Override
+	public int getAddressFlag ()
+	{
+		return addressFlag;
+	}
+
+	public void setAddressFlag (int addressFlag)
+	{
+		this.addressFlag = addressFlag;
+	}
+
+	@Override
+	public ECKeyPair clone () throws CloneNotSupportedException
+	{
+		ECKeyPair c = (ECKeyPair) super.clone ();
+		c.priv = new BigInteger (c.priv.toByteArray ());
+		c.pub = Arrays.clone (pub);
+		c.compressed = compressed;
+		c.addressFlag = addressFlag;
+		return c;
+	}
+
+	public static ECKeyPair createNew (boolean compressed, int addressFlag)
 	{
 		ECKeyPairGenerator generator = new ECKeyPairGenerator ();
 		ECKeyGenerationParameters keygenParams = new ECKeyGenerationParameters (domain, secureRandom);
@@ -65,6 +89,7 @@ public class ECKeyPair implements Key
 		ECKeyPair k = new ECKeyPair ();
 		k.priv = privParams.getD ();
 		k.compressed = compressed;
+		k.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = pubParams.getQ ();
@@ -100,13 +125,7 @@ public class ECKeyPair implements Key
 	@Override
 	public byte[] getPublic ()
 	{
-		if ( pub != null )
-		{
-			byte[] p = new byte[pub.length];
-			System.arraycopy (pub, 0, p, 0, pub.length);
-			return p;
-		}
-		return null;
+		return Arrays.clone (pub);
 	}
 
 	public byte[] getAddress ()
@@ -114,7 +133,7 @@ public class ECKeyPair implements Key
 		return Hash.keyHash (pub);
 	}
 
-	public ECKeyPair (byte[] p, boolean compressed) throws ValidationException
+	public ECKeyPair (byte[] p, boolean compressed, int addressFlag) throws ValidationException
 	{
 		if ( p.length != 32 )
 		{
@@ -122,6 +141,7 @@ public class ECKeyPair implements Key
 		}
 		this.priv = new BigInteger (1, p);
 		this.compressed = compressed;
+		this.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = curve.getG ().multiply (priv);
@@ -133,10 +153,11 @@ public class ECKeyPair implements Key
 		}
 	}
 
-	public ECKeyPair (BigInteger priv, boolean compressed) throws ValidationException
+	public ECKeyPair (BigInteger priv, boolean compressed, int addressFlag)
 	{
 		this.priv = priv;
 		this.compressed = compressed;
+		this.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = curve.getG ().multiply (priv);

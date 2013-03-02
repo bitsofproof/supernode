@@ -19,30 +19,23 @@ import org.bouncycastle.util.Arrays;
 
 public class ExtendedKey
 {
-	private final Key key;
+	private final Key master;
 	private final byte[] chainCode;
-	private final int sequence;
 
-	public ExtendedKey (Key key, byte[] chainCode, int sequence)
+	public ExtendedKey (Key key, byte[] chainCode)
 	{
 		super ();
-		this.key = key;
+		this.master = key;
 		this.chainCode = chainCode;
-		this.sequence = sequence;
 	}
 
-	public Key getKey ()
+	public Key getMaster ()
 	{
-		return key;
+		return master;
 	}
 
 	public byte[] getChainCode ()
 	{
 		return Arrays.clone (chainCode);
-	}
-
-	public int getSequence ()
-	{
-		return sequence;
 	}
 }

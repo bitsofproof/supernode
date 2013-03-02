@@ -44,7 +44,7 @@ public class KeyGenerator
 			SecretKey key = new SecretKeySpec (parent.getChainCode (), "HmacSHA512");
 			mac.init (key);
 
-			byte[] pub = parent.getKey ().getPublic ();
+			byte[] pub = parent.getMaster ().getPublic ();
 			byte[] extended = new byte[pub.length + 4];
 			System.arraycopy (pub, 0, extended, 0, pub.length);
 			extended[pub.length] = (byte) ((sequence >> 24) & 0xff);
@@ -56,17 +56,17 @@ public class KeyGenerator
 			byte[] r = Arrays.copyOfRange (lr, 32, 64);
 
 			BigInteger m = new BigInteger (1, l);
-			if ( parent.getKey ().getPrivate () != null )
+			if ( parent.getMaster ().getPrivate () != null )
 			{
-				BigInteger k = m.multiply (new BigInteger (1, parent.getKey ().getPrivate ())).mod (curve.getN ());
-				return new ExtendedKey (new ECKeyPair (k, true), r, sequence);
+				BigInteger k = m.multiply (new BigInteger (1, parent.getMaster ().getPrivate ())).mod (curve.getN ());
+				return new ExtendedKey (new ECKeyPair (k, true, parent.getMaster ().getAddressFlag ()), r);
 			}
 			else
 			{
 				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
 
-				return new ExtendedKey (new ECPublicKey (pub), r, sequence);
+				return new ExtendedKey (new ECPublicKey (pub, parent.getMaster ().getAddressFlag ()), r);
 			}
 		}
 		catch ( NoSuchAlgorithmException e )

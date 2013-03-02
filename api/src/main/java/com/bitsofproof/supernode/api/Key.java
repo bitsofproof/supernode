@@ -15,9 +15,13 @@
  */
 package com.bitsofproof.supernode.api;
 
-public interface Key
+public interface Key extends Cloneable
 {
 	public byte[] getPrivate ();
 
 	public byte[] getPublic ();
+
+	public int getAddressFlag ();
+
+	public Key clone () throws CloneNotSupportedException;
 }

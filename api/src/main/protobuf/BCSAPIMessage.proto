@@ -93,3 +93,8 @@ message AccountStatement {
 	repeated TransactionOutput opening = 4;
 	repeated Posting posting = 5;
 }
+
+message Address {
+	required uint32 bcsapiversion = 1;
+	repeated string address = 2;
+};

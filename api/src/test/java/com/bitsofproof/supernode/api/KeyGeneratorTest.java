@@ -38,16 +38,16 @@ public class KeyGeneratorTest
 	@Test
 	public void testGenerator () throws ValidationException
 	{
-		ECKeyPair master = ECKeyPair.createNew (true);
+		ECKeyPair master = ECKeyPair.createNew (true, 0x0);
 		byte[] chainCode = new byte[32];
 		random.nextBytes (chainCode);
-		ExtendedKey ekprivate = new ExtendedKey (master, chainCode, 0);
-		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic ()), chainCode, 0);
+		ExtendedKey ekprivate = new ExtendedKey (master, chainCode);
+		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic (), master.getAddressFlag ()), chainCode);
 		for ( int i = 0; i < 10; ++i )
 		{
 			ExtendedKey k1 = KeyGenerator.generateKey (ekprivate, i);
 			ExtendedKey k2 = KeyGenerator.generateKey (ekpublic, i);
-			assertTrue (Arrays.equals (k1.getKey ().getPublic (), k2.getKey ().getPublic ()));
+			assertTrue (Arrays.equals (k1.getMaster ().getPublic (), k2.getMaster ().getPublic ()));
 		}
 	}
 }

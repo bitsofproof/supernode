@@ -17,7 +17,11 @@ package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Exchanger;
 
 import javax.jms.BytesMessage;
@@ -37,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ClientBusAdaptor implements BCSAPI
 {
@@ -59,6 +62,10 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer transactionRequestProducer;
 	private MessageProducer accountRequestProducer;
 
+	private final Map<String, MessageConsumer> filterConsumer = new HashMap<String, MessageConsumer> ();
+	private final Set<String> listenAddresses = new HashSet<String> ();
+	private final Set<String> listenTransactions = new HashSet<String> ();
+
 	public void setClientId (String clientId)
 	{
 		this.clientId = clientId;
@@ -69,7 +76,7 @@ public class ClientBusAdaptor implements BCSAPI
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addMessageListener (String topic, MessageListener listener) throws JMSException
+	private void addTopicListener (String topic, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
 		MessageConsumer consumer = session.createConsumer (destination);
@@ -84,70 +91,7 @@ public class ClientBusAdaptor implements BCSAPI
 			connection.setClientID (clientId);
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-			addMessageListener ("transaction", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					for ( TransactionListener l : transactionListener )
-					{
-						try
-						{
-							byte[] body = new byte[(int) o.getBodyLength ()];
-							o.readBytes (body);
-							l.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
-						}
-						catch ( Exception e )
-						{
-							log.error ("Transaction message error", e);
-						}
-					}
-				}
-			});
-			addMessageListener ("trunk", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					try
-					{
-						BytesMessage m = (BytesMessage) arg0;
-						byte[] body = new byte[(int) m.getBodyLength ()];
-						m.readBytes (body);
-						TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
-						for ( TrunkListener l : trunkListener )
-						{
-							l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
-						}
-					}
-					catch ( Exception e )
-					{
-						log.error ("Block message error", e);
-					}
-				}
-			});
-			addMessageListener ("template", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					for ( TemplateListener l : blockTemplateListener )
-					{
-						try
-						{
-							byte[] body = new byte[(int) o.getBodyLength ()];
-							o.readBytes (body);
-							l.workOn (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
-						}
-						catch ( Exception e )
-						{
-							log.error ("Block message error", e);
-						}
-					}
-				}
-			});
+
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
@@ -174,20 +118,85 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerTransactionListener (TransactionListener listener)
+	public void registerTransactionListener (TransactionListener listener) throws JMSException
 	{
+		addTopicListener ("transaction", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				for ( TransactionListener l : transactionListener )
+				{
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						l.validated (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
+					}
+					catch ( Exception e )
+					{
+						log.error ("Transaction message error", e);
+					}
+				}
+			}
+		});
 		transactionListener.add (listener);
 	}
 
 	@Override
-	public void registerTrunkListener (TrunkListener listener)
+	public void registerTrunkListener (TrunkListener listener) throws JMSException
 	{
+		addTopicListener ("trunk", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				try
+				{
+					BytesMessage m = (BytesMessage) arg0;
+					byte[] body = new byte[(int) m.getBodyLength ()];
+					m.readBytes (body);
+					TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
+					for ( TrunkListener l : trunkListener )
+					{
+						l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
+					}
+				}
+				catch ( Exception e )
+				{
+					log.error ("Block message error", e);
+				}
+			}
+		});
 		trunkListener.add (listener);
 	}
 
 	@Override
-	public void registerBlockTemplateListener (TemplateListener listener)
+	public void registerBlockTemplateListener (TemplateListener listener) throws JMSException
 	{
+		addTopicListener ("template", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				for ( TemplateListener l : blockTemplateListener )
+				{
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						l.workOn (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
+					}
+					catch ( Exception e )
+					{
+						log.error ("Block message error", e);
+					}
+				}
+			}
+		});
+
 		blockTemplateListener.add (listener);
 	}
 
@@ -349,11 +358,11 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement registerAccountListener (List<String> addresses, long from, final TransactionListener listener)
+	public AccountStatement getAccountStatement (List<String> addresses, long from)
 	{
 		try
 		{
-			log.trace ("register account listener");
+			log.trace ("get account statement");
 			Queue replyQueue = session.createTemporaryQueue ();
 
 			BytesMessage m = session.createBytesMessage ();
@@ -365,31 +374,6 @@ public class ClientBusAdaptor implements BCSAPI
 			}
 			ab.setFrom ((int) from);
 			m.writeBytes (ab.build ().toByteArray ());
-			if ( listener != null )
-			{
-				MessageConsumer blockConsumer = session.createConsumer (replyQueue);
-				blockConsumer.setMessageListener (new MessageListener ()
-				{
-					@Override
-					public void onMessage (Message arg0)
-					{
-						BytesMessage o = (BytesMessage) arg0;
-						byte[] body;
-						try
-						{
-							body = new byte[(int) o.getBodyLength ()];
-							o.readBytes (body);
-							listener.process (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
-						}
-						catch ( JMSException e )
-						{
-						}
-						catch ( InvalidProtocolBufferException e )
-						{
-						}
-					}
-				});
-			}
 			byte[] response = synchronousRequest (accountRequestProducer, m, replyQueue);
 			if ( response != null )
 			{
@@ -436,4 +420,109 @@ public class ClientBusAdaptor implements BCSAPI
 			log.error ("Can not send transaction", e);
 		}
 	}
+
+	@Override
+	public void registerAddressListener (List<String> addresses, final TransactionListener listener)
+	{
+		try
+		{
+			for ( String a : addresses )
+			{
+				listenAddresses.add (a);
+				String hash = a.substring (a.length () - 2, a.length ());
+
+				MessageConsumer consumer = filterConsumer.get (hash);
+				if ( consumer == null )
+				{
+					consumer = session.createConsumer (session.createTopic ("filter" + hash));
+					consumer.setMessageListener (new MessageListener ()
+					{
+						@Override
+						public void onMessage (Message message)
+						{
+							BytesMessage m = (BytesMessage) message;
+							try
+							{
+								byte[] body = new byte[(int) m.getBodyLength ()];
+								m.readBytes (body);
+								Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+								for ( TransactionOutput o : t.getOutputs () )
+								{
+									for ( String a : o.getAddresses () )
+									{
+										if ( listenAddresses.contains (a) )
+										{
+											listener.received (t);
+										}
+									}
+								}
+							}
+							catch ( Exception e )
+							{
+								log.error ("Transaction message error", e);
+							}
+						}
+					});
+				}
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not register address", e);
+		}
+	}
+
+	@Override
+	public void registerTransactionListener (List<String> hashes, final TransactionListener listener)
+	{
+		try
+		{
+			for ( String h : hashes )
+			{
+				listenTransactions.add (h);
+				String hash = h.substring (h.length () - 3, h.length ());
+
+				MessageConsumer consumer = filterConsumer.get (hash);
+				if ( consumer == null )
+				{
+					consumer = session.createConsumer (session.createTopic ("filter" + hash));
+					consumer.setMessageListener (new MessageListener ()
+					{
+						@Override
+						public void onMessage (Message message)
+						{
+							BytesMessage m = (BytesMessage) message;
+							try
+							{
+								byte[] body = new byte[(int) m.getBodyLength ()];
+								m.readBytes (body);
+								Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+								t.computeHash ();
+								if ( listenTransactions.contains (t.getHash ()) )
+								{
+									listener.spent (t);
+								}
+							}
+							catch ( Exception e )
+							{
+								log.error ("Transaction message error", e);
+							}
+						}
+					});
+				}
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not register transaction listener", e);
+		}
+	}
+
+	@Override
+	public void registerCofirmationListener (List<String> hashes, TransactionListener listener)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
 }

@@ -15,13 +15,37 @@
  */
 package com.bitsofproof.supernode.api;
 
+import org.bouncycastle.util.Arrays;
+
 public class ECPublicKey implements Key
 {
-	private final byte[] pub;
+	private byte[] pub;
+	private int addressFlag;
 
-	public ECPublicKey (byte[] pub)
+	public ECPublicKey (byte[] pub, int addressFlag)
 	{
 		this.pub = pub;
+		this.addressFlag = addressFlag;
+	}
+
+	@Override
+	public int getAddressFlag ()
+	{
+		return addressFlag;
+	}
+
+	public void setAddressFlag (int addressFlag)
+	{
+		this.addressFlag = addressFlag;
+	}
+
+	@Override
+	public ECPublicKey clone () throws CloneNotSupportedException
+	{
+		ECPublicKey c = (ECPublicKey) super.clone ();
+		c.pub = Arrays.clone (pub);
+		c.addressFlag = addressFlag;
+		return c;
 	}
 
 	@Override
@@ -33,13 +57,7 @@ public class ECPublicKey implements Key
 	@Override
 	public byte[] getPublic ()
 	{
-		if ( pub != null )
-		{
-			byte[] p = new byte[pub.length];
-			System.arraycopy (pub, 0, p, 0, pub.length);
-			return p;
-		}
-		return null;
+		return Arrays.clone (pub);
 	}
 
 }

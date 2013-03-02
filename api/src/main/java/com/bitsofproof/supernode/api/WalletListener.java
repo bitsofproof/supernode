@@ -15,15 +15,7 @@
  */
 package com.bitsofproof.supernode.api;
 
-public interface KeyStore
+public interface WalletListener
 {
-	public void storeKey (Key key);
-
-	public Key getKeyForAddress (String address);
-
-	public Wallet getWallet (String name);
-
-	public Wallet storeWallet (Wallet wallet);
-
-	public Key getKeyForAddress (String address, Wallet wallet);
+	public void notifyNewKey (String address, Key key);
 }
