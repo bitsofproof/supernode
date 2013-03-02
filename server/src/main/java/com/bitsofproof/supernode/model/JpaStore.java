@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -192,7 +193,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void checkBIP30Compliance (List<String> txs) throws ValidationException
+	protected void checkBIP30Compliance (Set<String> txs) throws ValidationException
 	{
 		QTxOut txout = QTxOut.txOut;
 		JPAQuery q = new JPAQuery (entityManager);

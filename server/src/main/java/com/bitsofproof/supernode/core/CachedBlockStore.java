@@ -139,7 +139,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
 
-	protected abstract void checkBIP30Compliance (List<String> txs) throws ValidationException;
+	protected abstract void checkBIP30Compliance (Set<String> txs) throws ValidationException;
 
 	protected abstract void backwardCache (Blk b, TxOutCache cache, boolean modify);
 
@@ -783,7 +783,7 @@ public abstract class CachedBlockStore implements BlockStore
 		tcontext.resolvedInputs = deltaUTXO;
 
 		log.trace ("resolving inputs for block " + b.getHash ());
-		List<String> txs = new ArrayList<String> ();
+		Set<String> txs = new HashSet<String> ();
 		for ( Tx t : b.getTransactions () )
 		{
 			txs.add (t.getHash ());
@@ -800,6 +800,30 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			log.trace ("validating block " + b.getHash ());
 
+			// BIP30
+			if ( currentHead.getLast () != cachedPrevious )
+			{
+				CachedBlock q = currentHead.getLast ();
+				CachedBlock p = q.previous;
+				while ( !q.getHash ().equals (trunkBlock.getHash ()) )
+				{
+					Blk block = retrieveBlock (q);
+					for ( Tx t : block.getTransactions () )
+					{
+						txs.remove (t.getHash ());
+					}
+					q = p;
+					p = q.previous;
+				}
+				for ( CachedBlock bl : pathFromTrunkToPrev )
+				{
+					Blk block = retrieveBlock (bl);
+					for ( Tx t : block.getTransactions () )
+					{
+						txs.add (t.getHash ());
+					}
+				}
+			}
 			checkBIP30Compliance (txs);
 
 			List<Callable<TransactionValidationException>> callables = new ArrayList<Callable<TransactionValidationException>> ();

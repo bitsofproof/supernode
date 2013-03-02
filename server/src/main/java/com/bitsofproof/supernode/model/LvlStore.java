@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -635,7 +636,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void checkBIP30Compliance (List<String> txs) throws ValidationException
+	protected void checkBIP30Compliance (Set<String> txs) throws ValidationException
 	{
 		for ( String hash : txs )
 		{
