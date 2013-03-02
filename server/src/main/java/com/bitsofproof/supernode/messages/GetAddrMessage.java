@@ -17,11 +17,10 @@ package com.bitsofproof.supernode.messages;
 
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
-public class MempoolMessage extends BitcoinPeer.Message
+public class GetAddrMessage extends BitcoinPeer.Message
 {
-
-	public MempoolMessage (BitcoinPeer bitcoinPeer)
+	public GetAddrMessage (BitcoinPeer bitcoinPeer)
 	{
-		bitcoinPeer.super ("mempool");
+		bitcoinPeer.super ("getaddr");
 	}
 }

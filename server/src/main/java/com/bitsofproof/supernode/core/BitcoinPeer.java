@@ -39,6 +39,7 @@ import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.AlertMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
+import com.bitsofproof.supernode.messages.GetAddrMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.GetHeadersMessage;
@@ -189,7 +190,7 @@ public class BitcoinPeer extends P2P.Peer
 		}
 		else if ( command.equals ("getaddr") )
 		{
-			return new Message (command);
+			return new GetAddrMessage (this);
 		}
 		log.trace ("Peer sent unknown message: " + command + " " + getAddress ());
 		return new Message (command);
@@ -272,9 +273,11 @@ public class BitcoinPeer extends P2P.Peer
 				log.info ("Connection to '" + getAgent () + "' [" + peerVersion + "] at " + getAddress () + " Open connections: "
 						+ getNetwork ().getNumberOfConnections ());
 				network.addPeer (peer);
+				peer.send (peer.createMessage ("getaddr"));
 				if ( peer.getVersion () > 60001 )
 				{
 					MempoolMessage mp = (MempoolMessage) peer.createMessage ("mempool");
+
 					peer.send (mp);
 				}
 			}
