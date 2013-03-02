@@ -113,5 +113,5 @@ public interface BCSAPI
 	 * @param hashes
 	 * @param listener
 	 */
-	public void registerCofirmationListener (List<String> hashes, TransactionListener listener);
+	public void registerConfirmationListener (List<String> hashes, TransactionListener listener);
 }

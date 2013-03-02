@@ -519,7 +519,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerCofirmationListener (List<String> hashes, TransactionListener listener)
+	public void registerConfirmationListener (List<String> hashes, TransactionListener listener)
 	{
 		// TODO Auto-generated method stub
 
