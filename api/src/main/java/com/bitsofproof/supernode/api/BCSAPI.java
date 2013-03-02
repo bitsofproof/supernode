@@ -97,7 +97,7 @@ public interface BCSAPI
 	 * @param addresses
 	 * @param listener
 	 */
-	public void registerAddressListener (List<String> addresses, TransactionListener listener);
+	public void registerAddressListener (List<String> addresses, TransactionListener newTransactions);
 
 	/**
 	 * register listener for spend of given set of transactions listener.spent will be called if an output of the transactions is spent
@@ -105,7 +105,7 @@ public interface BCSAPI
 	 * @param hashes
 	 * @param listener
 	 */
-	public void registerTransactionListener (List<String> hashes, TransactionListener listener);
+	public void registerTransactionListener (List<String> hashes, TransactionListener spentTransactions);
 
 	/**
 	 * register listener for confirmations listener.confirmation will be called if the transaction is confirmed upto depth 10
@@ -113,5 +113,5 @@ public interface BCSAPI
 	 * @param hashes
 	 * @param listener
 	 */
-	public void registerConfirmationListener (List<String> hashes, TransactionListener listener);
+	public void registerConfirmationListener (List<String> hashes, TransactionListener confirmedTransaction);
 }

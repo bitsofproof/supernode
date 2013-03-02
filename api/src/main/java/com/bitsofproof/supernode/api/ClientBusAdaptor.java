@@ -65,6 +65,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private final Map<String, MessageConsumer> filterConsumer = new HashMap<String, MessageConsumer> ();
 	private final Set<String> listenAddresses = new HashSet<String> ();
 	private final Set<String> listenTransactions = new HashSet<String> ();
+	private final Map<String, Integer> monitorConfirmations = new HashMap<String, Integer> ();
 
 	public void setClientId (String clientId)
 	{
@@ -521,8 +522,15 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public void registerConfirmationListener (List<String> hashes, TransactionListener listener)
 	{
-		// TODO Auto-generated method stub
+		for ( String hash : hashes )
+		{
+			Integer conf = monitorConfirmations.get (hash);
+			if ( conf == null )
+			{
 
+				monitorConfirmations.put (hash, new Integer (0));
+			}
+		}
 	}
 
 }

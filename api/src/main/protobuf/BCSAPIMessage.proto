@@ -92,9 +92,5 @@ message AccountStatement {
 	required uint32 timestamp = 3;
 	repeated TransactionOutput opening = 4;
 	repeated Posting posting = 5;
+	repeated Transaction unconfirmed = 6;
 }
-
-message Address {
-	required uint32 bcsapiversion = 1;
-	repeated string address = 2;
-};

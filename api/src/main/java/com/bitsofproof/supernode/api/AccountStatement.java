@@ -29,6 +29,7 @@ public class AccountStatement implements Serializable
 	private long timestamp;
 	private List<TransactionOutput> opening;
 	private List<Posting> posting;
+	private List<Transaction> unconfirmed;
 
 	public String getLastBlock ()
 	{
@@ -70,6 +71,16 @@ public class AccountStatement implements Serializable
 		this.posting = posting;
 	}
 
+	public List<Transaction> getUnconfirmed ()
+	{
+		return unconfirmed;
+	}
+
+	public void setUnconfirmed (List<Transaction> unconfirmed)
+	{
+		this.unconfirmed = unconfirmed;
+	}
+
 	public BCSAPIMessage.AccountStatement toProtobuf ()
 	{
 		BCSAPIMessage.AccountStatement.Builder builder = BCSAPIMessage.AccountStatement.newBuilder ();
@@ -89,6 +100,13 @@ public class AccountStatement implements Serializable
 			for ( Posting p : posting )
 			{
 				builder.addPosting (p.toProtobuf ());
+			}
+		}
+		if ( unconfirmed != null )
+		{
+			for ( Transaction t : unconfirmed )
+			{
+				builder.addUnconfirmed (t.toProtobuf ());
 			}
 		}
 
@@ -114,6 +132,14 @@ public class AccountStatement implements Serializable
 			for ( BCSAPIMessage.AccountStatement.Posting o : pa.getPostingList () )
 			{
 				a.getPosting ().add (Posting.fromProtobuf (o));
+			}
+		}
+		if ( pa.getUnconfirmedCount () > 0 )
+		{
+			a.setUnconfirmed (new ArrayList<Transaction> ());
+			for ( BCSAPIMessage.Transaction o : pa.getUnconfirmedList () )
+			{
+				a.getUnconfirmed ().add (Transaction.fromProtobuf (o));
 			}
 		}
 		return a;

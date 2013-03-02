@@ -5359,6 +5359,16 @@ public final class BCSAPIMessage {
         getPostingOrBuilderList();
     com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.PostingOrBuilder getPostingOrBuilder(
         int index);
+    
+    // repeated .com.bitsofproof.supernode.api.Transaction unconfirmed = 6;
+    java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> 
+        getUnconfirmedList();
+    com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getUnconfirmed(int index);
+    int getUnconfirmedCount();
+    java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+        getUnconfirmedOrBuilderList();
+    com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getUnconfirmedOrBuilder(
+        int index);
   }
   public static final class AccountStatement extends
       com.google.protobuf.GeneratedMessage
@@ -6159,12 +6169,34 @@ public final class BCSAPIMessage {
       return posting_.get(index);
     }
     
+    // repeated .com.bitsofproof.supernode.api.Transaction unconfirmed = 6;
+    public static final int UNCONFIRMED_FIELD_NUMBER = 6;
+    private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> unconfirmed_;
+    public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getUnconfirmedList() {
+      return unconfirmed_;
+    }
+    public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+        getUnconfirmedOrBuilderList() {
+      return unconfirmed_;
+    }
+    public int getUnconfirmedCount() {
+      return unconfirmed_.size();
+    }
+    public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getUnconfirmed(int index) {
+      return unconfirmed_.get(index);
+    }
+    public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getUnconfirmedOrBuilder(
+        int index) {
+      return unconfirmed_.get(index);
+    }
+    
     private void initFields() {
       bcsapiversion_ = 0;
       lastBlock_ = com.google.protobuf.ByteString.EMPTY;
       timestamp_ = 0;
       opening_ = java.util.Collections.emptyList();
       posting_ = java.util.Collections.emptyList();
+      unconfirmed_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6195,6 +6227,12 @@ public final class BCSAPIMessage {
           return false;
         }
       }
+      for (int i = 0; i < getUnconfirmedCount(); i++) {
+        if (!getUnconfirmed(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -6216,6 +6254,9 @@ public final class BCSAPIMessage {
       }
       for (int i = 0; i < posting_.size(); i++) {
         output.writeMessage(5, posting_.get(i));
+      }
+      for (int i = 0; i < unconfirmed_.size(); i++) {
+        output.writeMessage(6, unconfirmed_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -6245,6 +6286,10 @@ public final class BCSAPIMessage {
       for (int i = 0; i < posting_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, posting_.get(i));
+      }
+      for (int i = 0; i < unconfirmed_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, unconfirmed_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6364,6 +6409,7 @@ public final class BCSAPIMessage {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getOpeningFieldBuilder();
           getPostingFieldBuilder();
+          getUnconfirmedFieldBuilder();
         }
       }
       private static Builder create() {
@@ -6389,6 +6435,12 @@ public final class BCSAPIMessage {
           bitField0_ = (bitField0_ & ~0x00000010);
         } else {
           postingBuilder_.clear();
+        }
+        if (unconfirmedBuilder_ == null) {
+          unconfirmed_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+        } else {
+          unconfirmedBuilder_.clear();
         }
         return this;
       }
@@ -6457,6 +6509,15 @@ public final class BCSAPIMessage {
           result.posting_ = posting_;
         } else {
           result.posting_ = postingBuilder_.build();
+        }
+        if (unconfirmedBuilder_ == null) {
+          if (((bitField0_ & 0x00000020) == 0x00000020)) {
+            unconfirmed_ = java.util.Collections.unmodifiableList(unconfirmed_);
+            bitField0_ = (bitField0_ & ~0x00000020);
+          }
+          result.unconfirmed_ = unconfirmed_;
+        } else {
+          result.unconfirmed_ = unconfirmedBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -6535,6 +6596,32 @@ public final class BCSAPIMessage {
             }
           }
         }
+        if (unconfirmedBuilder_ == null) {
+          if (!other.unconfirmed_.isEmpty()) {
+            if (unconfirmed_.isEmpty()) {
+              unconfirmed_ = other.unconfirmed_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+            } else {
+              ensureUnconfirmedIsMutable();
+              unconfirmed_.addAll(other.unconfirmed_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.unconfirmed_.isEmpty()) {
+            if (unconfirmedBuilder_.isEmpty()) {
+              unconfirmedBuilder_.dispose();
+              unconfirmedBuilder_ = null;
+              unconfirmed_ = other.unconfirmed_;
+              bitField0_ = (bitField0_ & ~0x00000020);
+              unconfirmedBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getUnconfirmedFieldBuilder() : null;
+            } else {
+              unconfirmedBuilder_.addAllMessages(other.unconfirmed_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -6560,6 +6647,12 @@ public final class BCSAPIMessage {
         }
         for (int i = 0; i < getPostingCount(); i++) {
           if (!getPosting(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getUnconfirmedCount(); i++) {
+          if (!getUnconfirmed(i).isInitialized()) {
             
             return false;
           }
@@ -6615,6 +6708,12 @@ public final class BCSAPIMessage {
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addPosting(subBuilder.buildPartial());
+              break;
+            }
+            case 50: {
+              com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addUnconfirmed(subBuilder.buildPartial());
               break;
             }
           }
@@ -7061,6 +7160,192 @@ public final class BCSAPIMessage {
         return postingBuilder_;
       }
       
+      // repeated .com.bitsofproof.supernode.api.Transaction unconfirmed = 6;
+      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> unconfirmed_ =
+        java.util.Collections.emptyList();
+      private void ensureUnconfirmedIsMutable() {
+        if (!((bitField0_ & 0x00000020) == 0x00000020)) {
+          unconfirmed_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction>(unconfirmed_);
+          bitField0_ |= 0x00000020;
+         }
+      }
+      
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> unconfirmedBuilder_;
+      
+      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getUnconfirmedList() {
+        if (unconfirmedBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(unconfirmed_);
+        } else {
+          return unconfirmedBuilder_.getMessageList();
+        }
+      }
+      public int getUnconfirmedCount() {
+        if (unconfirmedBuilder_ == null) {
+          return unconfirmed_.size();
+        } else {
+          return unconfirmedBuilder_.getCount();
+        }
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getUnconfirmed(int index) {
+        if (unconfirmedBuilder_ == null) {
+          return unconfirmed_.get(index);
+        } else {
+          return unconfirmedBuilder_.getMessage(index);
+        }
+      }
+      public Builder setUnconfirmed(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+        if (unconfirmedBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.set(index, value);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      public Builder setUnconfirmed(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+        if (unconfirmedBuilder_ == null) {
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          unconfirmedBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addUnconfirmed(com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+        if (unconfirmedBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.add(value);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      public Builder addUnconfirmed(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+        if (unconfirmedBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.add(index, value);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      public Builder addUnconfirmed(
+          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+        if (unconfirmedBuilder_ == null) {
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.add(builderForValue.build());
+          onChanged();
+        } else {
+          unconfirmedBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addUnconfirmed(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+        if (unconfirmedBuilder_ == null) {
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          unconfirmedBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      public Builder addAllUnconfirmed(
+          java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> values) {
+        if (unconfirmedBuilder_ == null) {
+          ensureUnconfirmedIsMutable();
+          super.addAll(values, unconfirmed_);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      public Builder clearUnconfirmed() {
+        if (unconfirmedBuilder_ == null) {
+          unconfirmed_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000020);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.clear();
+        }
+        return this;
+      }
+      public Builder removeUnconfirmed(int index) {
+        if (unconfirmedBuilder_ == null) {
+          ensureUnconfirmedIsMutable();
+          unconfirmed_.remove(index);
+          onChanged();
+        } else {
+          unconfirmedBuilder_.remove(index);
+        }
+        return this;
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder getUnconfirmedBuilder(
+          int index) {
+        return getUnconfirmedFieldBuilder().getBuilder(index);
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getUnconfirmedOrBuilder(
+          int index) {
+        if (unconfirmedBuilder_ == null) {
+          return unconfirmed_.get(index);  } else {
+          return unconfirmedBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+           getUnconfirmedOrBuilderList() {
+        if (unconfirmedBuilder_ != null) {
+          return unconfirmedBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(unconfirmed_);
+        }
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addUnconfirmedBuilder() {
+        return getUnconfirmedFieldBuilder().addBuilder(
+            com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addUnconfirmedBuilder(
+          int index) {
+        return getUnconfirmedFieldBuilder().addBuilder(
+            index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+      }
+      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder> 
+           getUnconfirmedBuilderList() {
+        return getUnconfirmedFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+          getUnconfirmedFieldBuilder() {
+        if (unconfirmedBuilder_ == null) {
+          unconfirmedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder>(
+                  unconfirmed_,
+                  ((bitField0_ & 0x00000020) == 0x00000020),
+                  getParentForChildren(),
+                  isClean());
+          unconfirmed_ = null;
+        }
+        return unconfirmedBuilder_;
+      }
+      
       // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.AccountStatement)
     }
     
@@ -7070,463 +7355,6 @@ public final class BCSAPIMessage {
     }
     
     // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.AccountStatement)
-  }
-  
-  public interface AddressOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-    
-    // required uint32 bcsapiversion = 1;
-    boolean hasBcsapiversion();
-    int getBcsapiversion();
-    
-    // repeated string address = 2;
-    java.util.List<String> getAddressList();
-    int getAddressCount();
-    String getAddress(int index);
-  }
-  public static final class Address extends
-      com.google.protobuf.GeneratedMessage
-      implements AddressOrBuilder {
-    // Use Address.newBuilder() to construct.
-    private Address(Builder builder) {
-      super(builder);
-    }
-    private Address(boolean noInit) {}
-    
-    private static final Address defaultInstance;
-    public static Address getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public Address getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Address_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Address_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // required uint32 bcsapiversion = 1;
-    public static final int BCSAPIVERSION_FIELD_NUMBER = 1;
-    private int bcsapiversion_;
-    public boolean hasBcsapiversion() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public int getBcsapiversion() {
-      return bcsapiversion_;
-    }
-    
-    // repeated string address = 2;
-    public static final int ADDRESS_FIELD_NUMBER = 2;
-    private com.google.protobuf.LazyStringList address_;
-    public java.util.List<String>
-        getAddressList() {
-      return address_;
-    }
-    public int getAddressCount() {
-      return address_.size();
-    }
-    public String getAddress(int index) {
-      return address_.get(index);
-    }
-    
-    private void initFields() {
-      bcsapiversion_ = 0;
-      address_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasBcsapiversion()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt32(1, bcsapiversion_);
-      }
-      for (int i = 0; i < address_.size(); i++) {
-        output.writeBytes(2, address_.getByteString(i));
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(1, bcsapiversion_);
-      }
-      {
-        int dataSize = 0;
-        for (int i = 0; i < address_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeBytesSizeNoTag(address_.getByteString(i));
-        }
-        size += dataSize;
-        size += 1 * getAddressList().size();
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-    
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static com.bitsofproof.supernode.api.BCSAPIMessage.Address parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.Address prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements com.bitsofproof.supernode.api.BCSAPIMessage.AddressOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Address_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Address_fieldAccessorTable;
-      }
-      
-      // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.Address.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        bcsapiversion_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        address_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.Address.getDescriptor();
-      }
-      
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Address getDefaultInstanceForType() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.Address.getDefaultInstance();
-      }
-      
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Address build() {
-        com.bitsofproof.supernode.api.BCSAPIMessage.Address result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private com.bitsofproof.supernode.api.BCSAPIMessage.Address buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        com.bitsofproof.supernode.api.BCSAPIMessage.Address result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Address buildPartial() {
-        com.bitsofproof.supernode.api.BCSAPIMessage.Address result = new com.bitsofproof.supernode.api.BCSAPIMessage.Address(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.bcsapiversion_ = bcsapiversion_;
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          address_ = new com.google.protobuf.UnmodifiableLazyStringList(
-              address_);
-          bitField0_ = (bitField0_ & ~0x00000002);
-        }
-        result.address_ = address_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.Address) {
-          return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.Address)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.Address other) {
-        if (other == com.bitsofproof.supernode.api.BCSAPIMessage.Address.getDefaultInstance()) return this;
-        if (other.hasBcsapiversion()) {
-          setBcsapiversion(other.getBcsapiversion());
-        }
-        if (!other.address_.isEmpty()) {
-          if (address_.isEmpty()) {
-            address_ = other.address_;
-            bitField0_ = (bitField0_ & ~0x00000002);
-          } else {
-            ensureAddressIsMutable();
-            address_.addAll(other.address_);
-          }
-          onChanged();
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasBcsapiversion()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              bcsapiversion_ = input.readUInt32();
-              break;
-            }
-            case 18: {
-              ensureAddressIsMutable();
-              address_.add(input.readBytes());
-              break;
-            }
-          }
-        }
-      }
-      
-      private int bitField0_;
-      
-      // required uint32 bcsapiversion = 1;
-      private int bcsapiversion_ ;
-      public boolean hasBcsapiversion() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public int getBcsapiversion() {
-        return bcsapiversion_;
-      }
-      public Builder setBcsapiversion(int value) {
-        bitField0_ |= 0x00000001;
-        bcsapiversion_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearBcsapiversion() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        bcsapiversion_ = 0;
-        onChanged();
-        return this;
-      }
-      
-      // repeated string address = 2;
-      private com.google.protobuf.LazyStringList address_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      private void ensureAddressIsMutable() {
-        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
-          address_ = new com.google.protobuf.LazyStringArrayList(address_);
-          bitField0_ |= 0x00000002;
-         }
-      }
-      public java.util.List<String>
-          getAddressList() {
-        return java.util.Collections.unmodifiableList(address_);
-      }
-      public int getAddressCount() {
-        return address_.size();
-      }
-      public String getAddress(int index) {
-        return address_.get(index);
-      }
-      public Builder setAddress(
-          int index, String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureAddressIsMutable();
-        address_.set(index, value);
-        onChanged();
-        return this;
-      }
-      public Builder addAddress(String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureAddressIsMutable();
-        address_.add(value);
-        onChanged();
-        return this;
-      }
-      public Builder addAllAddress(
-          java.lang.Iterable<String> values) {
-        ensureAddressIsMutable();
-        super.addAll(values, address_);
-        onChanged();
-        return this;
-      }
-      public Builder clearAddress() {
-        address_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      void addAddress(com.google.protobuf.ByteString value) {
-        ensureAddressIsMutable();
-        address_.add(value);
-        onChanged();
-      }
-      
-      // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Address)
-    }
-    
-    static {
-      defaultInstance = new Address(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.Address)
   }
   
   private static com.google.protobuf.Descriptors.Descriptor
@@ -7574,11 +7402,6 @@ public final class BCSAPIMessage {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_com_bitsofproof_supernode_api_AccountStatement_Posting_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_bitsofproof_supernode_api_Address_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_com_bitsofproof_supernode_api_Address_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -7612,18 +7435,18 @@ public final class BCSAPIMessage {
       "2$.com.bitsofproof.supernode.api.Block\"+" +
       "\n\004Hash\022\025\n\rbcsapiversion\030\001 \002(\r\022\014\n\004hash\030\002 " +
       "\003(\014\"F\n\016AccountRequest\022\025\n\rbcsapiversion\030\001" +
-      " \002(\r\022\017\n\007address\030\002 \003(\t\022\014\n\004from\030\003 \001(\r\"\353\002\n\020" +
+      " \002(\r\022\017\n\007address\030\002 \003(\t\022\014\n\004from\030\003 \001(\r\"\254\003\n\020" +
       "AccountStatement\022\025\n\rbcsapiversion\030\001 \002(\r\022" +
       "\021\n\tlastBlock\030\002 \002(\014\022\021\n\ttimestamp\030\003 \002(\r\022A\n" +
       "\007opening\030\004 \003(\01320.com.bitsofproof.superno" +
       "de.api.TransactionOutput\022H\n\007posting\030\005 \003(" +
       "\01327.com.bitsofproof.supernode.api.Accoun",
-      "tStatement.Posting\032\214\001\n\007Posting\022@\n\006output" +
-      "\030\001 \002(\01320.com.bitsofproof.supernode.api.T" +
-      "ransactionOutput\022\r\n\005block\030\002 \002(\014\022\021\n\ttimes" +
-      "tamp\030\003 \002(\r\022\016\n\006height\030\004 \002(\r\022\r\n\005spent\030\005 \001(" +
-      "\014\"1\n\007Address\022\025\n\rbcsapiversion\030\001 \002(\r\022\017\n\007a" +
-      "ddress\030\002 \003(\t"
+      "tStatement.Posting\022?\n\013unconfirmed\030\006 \003(\0132" +
+      "*.com.bitsofproof.supernode.api.Transact" +
+      "ion\032\214\001\n\007Posting\022@\n\006output\030\001 \002(\01320.com.bi" +
+      "tsofproof.supernode.api.TransactionOutpu" +
+      "t\022\r\n\005block\030\002 \002(\014\022\021\n\ttimestamp\030\003 \002(\r\022\016\n\006h" +
+      "eight\030\004 \002(\r\022\r\n\005spent\030\005 \001(\014"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7691,7 +7514,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_AccountStatement_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_AccountStatement_descriptor,
-              new java.lang.String[] { "Bcsapiversion", "LastBlock", "Timestamp", "Opening", "Posting", },
+              new java.lang.String[] { "Bcsapiversion", "LastBlock", "Timestamp", "Opening", "Posting", "Unconfirmed", },
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Builder.class);
           internal_static_com_bitsofproof_supernode_api_AccountStatement_Posting_descriptor =
@@ -7702,14 +7525,6 @@ public final class BCSAPIMessage {
               new java.lang.String[] { "Output", "Block", "Timestamp", "Height", "Spent", },
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.Builder.class);
-          internal_static_com_bitsofproof_supernode_api_Address_descriptor =
-            getDescriptor().getMessageTypes().get(8);
-          internal_static_com_bitsofproof_supernode_api_Address_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_com_bitsofproof_supernode_api_Address_descriptor,
-              new java.lang.String[] { "Bcsapiversion", "Address", },
-              com.bitsofproof.supernode.api.BCSAPIMessage.Address.class,
-              com.bitsofproof.supernode.api.BCSAPIMessage.Address.Builder.class);
           return null;
         }
       };
