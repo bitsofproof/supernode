@@ -636,7 +636,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected void checkBIP30Compliance (Set<String> txs) throws ValidationException
+	protected void checkBIP30Compliance (Set<String> txs, int untilHeight) throws ValidationException
 	{
 		for ( String hash : txs )
 		{
@@ -647,7 +647,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					if ( out.isAvailable () )
 					{
-						throw new ValidationException ("BIP30 violation block contains unspent tx " + hash);
+						Blk b = readBlk (t.getBlockHash (), false);
+						if ( b.getHeight () > untilHeight )
+						{
+							throw new ValidationException ("BIP30 violation block contains unspent tx " + hash);
+						}
 					}
 				}
 			}
