@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.security.SecureRandom;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -907,7 +908,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public TemporaryQueue createTemporaryQueue () throws JMSException
 		{
-			return new MockTemporaryQueue (this.toString ());
+			return new MockTemporaryQueue ("temp" + String.valueOf (new SecureRandom ().nextLong ()));
 		}
 
 		@Override
