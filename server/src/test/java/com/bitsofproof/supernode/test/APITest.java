@@ -21,6 +21,7 @@ import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 @RunWith (SpringJUnit4ClassRunner.class)
 @ContextConfiguration (locations = { "/context/storeonly.xml", "/context/EmbeddedBCSAPI.xml" })
@@ -45,7 +46,7 @@ public class APITest
 	}
 
 	@Test
-	public void checkGenesis ()
+	public void checkGenesis () throws InvalidProtocolBufferException, JMSException
 	{
 		String genesisHash = chain.getGenesis ().getHash ();
 		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
@@ -84,7 +85,7 @@ public class APITest
 	}
 
 	@Test
-	public void testInventory ()
+	public void testInventory () throws InvalidProtocolBufferException, JMSException
 	{
 		List<String> blocks = api.getBlocks ();
 		assertTrue (blocks.size () == 1);
