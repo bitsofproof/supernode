@@ -55,8 +55,9 @@ import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
+import com.google.protobuf.ByteString;
 
-public class ImplementBCSAPI implements TrunkListener, TransactionListener, TemplateListener
+public class ImplementBCSAPI implements TrunkListener, TransactionListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
@@ -73,12 +74,9 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
-	private MessageProducer templateProducer;
-	private final Map<String, MessageProducer> addressFilterProducer = new HashMap<String, MessageProducer> ();
-	private final Map<String, MessageProducer> transactionFilterProducer = new HashMap<String, MessageProducer> ();
 	private final Map<String, MessageProducer> filterProducer = new HashMap<String, MessageProducer> ();
 
-	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler, BlockTemplater blockTemplater)
+	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler)
 	{
 		this.network = network;
 		this.txhandler = txHandler;
@@ -86,7 +84,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 
 		store.addTrunkListener (this);
 		txHandler.addTransactionListener (this);
-		blockTemplater.addTemplateListener (this);
 	}
 
 	public void setTransactionManager (PlatformTransactionManager transactionManager)
@@ -116,7 +113,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			templateProducer = session.createProducer (session.createTopic ("template"));
 			addMessageListener ("newTransaction", new MessageListener ()
 			{
 				@Override
@@ -235,6 +231,36 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 					}
 				}
 			});
+			addMessageListener ("inventory", new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					BytesMessage o = (BytesMessage) arg0;
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						BCSAPIMessage.Hash ar = BCSAPIMessage.Hash.parseFrom (body);
+						List<String> locator = new ArrayList<String> ();
+						for ( ByteString s : ar.getHashList () )
+						{
+							locator.add (new Hash (s.toByteArray ()).toString ());
+						}
+						List<String> inventory = store.getInventory (locator, Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
+						BCSAPIMessage.Hash.Builder ab = BCSAPIMessage.Hash.newBuilder ();
+						for ( String s : inventory )
+						{
+							ab.addHash (ByteString.copyFrom (new Hash (s).toByteArray ()));
+						}
+						reply (o.getJMSReplyTo (), ab.build ().toByteArray ());
+					}
+					catch ( Exception e )
+					{
+						log.trace ("Rejected invalid inventory request ", e);
+					}
+				}
+			});
 		}
 		catch ( JMSException e )
 		{
@@ -327,7 +353,12 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
-					Blk b = store.getBlock (hash);
+					String h = hash;
+					if ( h.equals (Hash.ZERO_HASH_STRING) )
+					{
+						h = store.getHeadHash ();
+					}
+					Blk b = store.getBlock (h);
 					if ( b != null )
 					{
 						b.toWire (writer);
@@ -432,21 +463,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener, Temp
 			}
 		}
 		catch ( Exception e )
-		{
-			log.error ("Can not send JMS message ", e);
-		}
-	}
-
-	@Override
-	public void workOn (Block template)
-	{
-		try
-		{
-			BytesMessage m = session.createBytesMessage ();
-			m.writeBytes (template.toProtobuf ().toByteArray ());
-			templateProducer.send (m);
-		}
-		catch ( JMSException e )
 		{
 			log.error ("Can not send JMS message ", e);
 		}

@@ -25,6 +25,13 @@ import javax.jms.JMSException;
 public interface BCSAPI
 {
 	/**
+	 * get the chain hash list from genesis to most recent
+	 * 
+	 * @return block hashes
+	 */
+	List<String> getBlocks ();
+
+	/**
 	 * get block for the hash
 	 * 
 	 * @param hash
@@ -73,15 +80,6 @@ public interface BCSAPI
 	public void registerTrunkListener (TrunkListener listener) throws JMSException;
 
 	/**
-	 * Register a block template listener
-	 * 
-	 * @param listener
-	 *            will be called with work suggestions
-	 * @throws JMSException
-	 */
-	public void registerBlockTemplateListener (TemplateListener listener) throws JMSException;
-
-	/**
 	 * Get account statement
 	 * 
 	 * @param addresses
@@ -112,6 +110,7 @@ public interface BCSAPI
 	 * 
 	 * @param hashes
 	 * @param listener
+	 * @throws JMSException
 	 */
-	public void registerConfirmationListener (List<String> hashes, TransactionListener confirmedTransaction);
+	public void registerConfirmationListener (List<String> hashes, TransactionListener confirmedTransaction) throws JMSException;
 }

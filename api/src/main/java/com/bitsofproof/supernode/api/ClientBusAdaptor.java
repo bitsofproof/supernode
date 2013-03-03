@@ -56,6 +56,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private final List<TrunkListener> trunkListener = Collections.synchronizedList (new ArrayList<TrunkListener> ());
 	private final List<TemplateListener> blockTemplateListener = Collections.synchronizedList (new ArrayList<TemplateListener> ());
 
+	private MessageProducer inventoryProducer;
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
 	private MessageProducer blockRequestProducer;
@@ -66,6 +67,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private final Set<String> listenAddresses = new HashSet<String> ();
 	private final Set<String> listenTransactions = new HashSet<String> ();
 	private final Map<String, Integer> monitorConfirmations = new HashMap<String, Integer> ();
+	private Map<String, Integer> blocks = null;
 
 	public void setClientId (String clientId)
 	{
@@ -93,6 +95,7 @@ public class ClientBusAdaptor implements BCSAPI
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 
+			inventoryProducer = session.createProducer (session.createTopic ("inventory"));
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
@@ -171,34 +174,6 @@ public class ClientBusAdaptor implements BCSAPI
 			}
 		});
 		trunkListener.add (listener);
-	}
-
-	@Override
-	public void registerBlockTemplateListener (TemplateListener listener) throws JMSException
-	{
-		addTopicListener ("template", new MessageListener ()
-		{
-			@Override
-			public void onMessage (Message arg0)
-			{
-				BytesMessage o = (BytesMessage) arg0;
-				for ( TemplateListener l : blockTemplateListener )
-				{
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						l.workOn (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
-					}
-					catch ( Exception e )
-					{
-						log.error ("Block message error", e);
-					}
-				}
-			}
-		});
-
-		blockTemplateListener.add (listener);
 	}
 
 	private byte[] synchronousRequest (MessageProducer producer, Message m)
@@ -519,18 +494,128 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
-	@Override
-	public void registerConfirmationListener (List<String> hashes, TransactionListener listener)
+	private Set<String> confirmationUpdate (List<Block> removed, List<Block> added)
 	{
+		Set<String> confirmed = new HashSet<String> ();
+		for ( Map.Entry<String, Integer> entry : monitorConfirmations.entrySet () )
+		{
+			if ( entry.getValue () > 0 )
+			{
+				entry.setValue (Math.max (entry.getValue () - removed.size (), 0));
+				confirmed.add (entry.getKey ());
+			}
+		}
+		for ( Block b : added )
+		{
+			b.computeHash ();
+			Set<String> hashes = new HashSet<String> ();
+			for ( Transaction t : b.getTransactions () )
+			{
+				hashes.add (t.getHash ());
+			}
+			for ( Map.Entry<String, Integer> entry : monitorConfirmations.entrySet () )
+			{
+				if ( hashes.contains (entry.getKey ()) )
+				{
+					entry.setValue (1);
+					confirmed.add (entry.getKey ());
+				}
+				else
+				{
+					if ( entry.getValue () != 0 )
+					{
+						entry.setValue (entry.getValue () + 1);
+						confirmed.add (entry.getKey ());
+					}
+				}
+			}
+		}
+		return confirmed;
+	}
+
+	@Override
+	public void registerConfirmationListener (List<String> hashes, final TransactionListener listener) throws JMSException
+	{
+		if ( monitorConfirmations.size () == 0 )
+		{
+			int i = 0;
+			blocks = new HashMap<String, Integer> ();
+			for ( String h : getBlocks () )
+			{
+				blocks.put (h, i);
+				++i;
+			}
+			registerTrunkListener (new TrunkListener ()
+			{
+				@Override
+				public void trunkUpdate (List<Block> removed, List<Block> added)
+				{
+					for ( Block b : removed )
+					{
+						b.computeHash ();
+						blocks.remove (b.getHash ());
+					}
+					for ( Block b : added )
+					{
+						b.computeHash ();
+						blocks.put (b.getHash (), blocks.size ());
+					}
+					Set<String> confirmed = confirmationUpdate (removed, added);
+					for ( String hash : monitorConfirmations.keySet () )
+					{
+						if ( confirmed.contains (hash) )
+						{
+							listener.confirmed (hash, monitorConfirmations.get (hash));
+						}
+					}
+				}
+			});
+		}
 		for ( String hash : hashes )
 		{
-			Integer conf = monitorConfirmations.get (hash);
-			if ( conf == null )
+			Transaction t = getTransaction (hash);
+			if ( t != null )
 			{
-
-				monitorConfirmations.put (hash, new Integer (0));
+				if ( t.getBlockHash () != null )
+				{
+					listener.confirmed (hash, blocks.size () - blocks.get (t.getBlockHash ()));
+				}
+				Integer conf = monitorConfirmations.get (hash);
+				if ( conf == null )
+				{
+					monitorConfirmations.put (hash, new Integer (0));
+				}
 			}
 		}
 	}
 
+	@Override
+	public List<String> getBlocks ()
+	{
+		try
+		{
+			log.trace ("get blocks ");
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (Hash.ZERO_HASH.toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (inventoryProducer, m);
+			if ( response != null )
+			{
+				List<String> chain = new ArrayList<String> ();
+				BCSAPIMessage.Hash b = BCSAPIMessage.Hash.parseFrom (response);
+				for ( ByteString bs : b.getHashList () )
+				{
+					chain.add (new Hash (bs.toByteArray ()).toString ());
+				}
+				return chain;
+			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Can not get block", e);
+		}
+		return null;
+	}
 }

@@ -17,16 +17,6 @@
 
 	<bean id="chain" class="com.bitsofproof.supernode.core.BlocktesterChain"/>
 	
-	<bean id="blocktemplater" class="com.bitsofproof.supernode.core.BlockTemplater">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-		<constructor-arg>
-			<ref bean="tx" />
-		</constructor-arg>
-		<property name="coinbaseAddress" value="13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk" />
-	</bean>
-	
 	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
@@ -55,9 +45,6 @@
 		</constructor-arg>
 		<constructor-arg>
 			<ref bean="tx" />
-		</constructor-arg>
-		<constructor-arg>
-			<ref bean="blocktemplater" />
 		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
 		<property name="connectionFactory" ref="embeddedBus" />
