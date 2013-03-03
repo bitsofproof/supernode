@@ -249,6 +249,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						}
 						List<String> inventory = store.getInventory (locator, Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
 						BCSAPIMessage.Hash.Builder ab = BCSAPIMessage.Hash.newBuilder ();
+						ab.setBcsapiversion (1);
 						for ( String s : inventory )
 						{
 							ab.addHash (ByteString.copyFrom (new Hash (s).toByteArray ()));

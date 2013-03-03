@@ -83,6 +83,14 @@ public class APITest
 		}
 	}
 
+	@Test
+	public void testInventory ()
+	{
+		List<String> blocks = api.getBlocks ();
+		assertTrue (blocks.size () == 1);
+		assertTrue (blocks.get (0).equals ("45e8a11619062f46f46bcb796b8fdac13520a9a0c3d1a465732233e5ea23c31d"));
+	}
+
 	@AfterClass
 	public static void someDelayToFinishDeamonThreads ()
 	{
