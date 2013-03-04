@@ -29,7 +29,8 @@ public class AccountStatement implements Serializable
 	private long timestamp;
 	private List<TransactionOutput> opening;
 	private List<Posting> posting;
-	private List<Transaction> unconfirmed;
+	private List<Transaction> unconfirmedSpend;
+	private List<Transaction> unconfirmedReceive;
 
 	public String getLastBlock ()
 	{
@@ -71,14 +72,24 @@ public class AccountStatement implements Serializable
 		this.posting = posting;
 	}
 
-	public List<Transaction> getUnconfirmed ()
+	public List<Transaction> getUnconfirmedSpend ()
 	{
-		return unconfirmed;
+		return unconfirmedSpend;
 	}
 
-	public void setUnconfirmed (List<Transaction> unconfirmed)
+	public void setUnconfirmedSpend (List<Transaction> unconfirmedSpend)
 	{
-		this.unconfirmed = unconfirmed;
+		this.unconfirmedSpend = unconfirmedSpend;
+	}
+
+	public List<Transaction> getUnconfirmedReceive ()
+	{
+		return unconfirmedReceive;
+	}
+
+	public void setUnconfirmedReceive (List<Transaction> unconfirmedReceive)
+	{
+		this.unconfirmedReceive = unconfirmedReceive;
 	}
 
 	public BCSAPIMessage.AccountStatement toProtobuf ()
@@ -102,11 +113,18 @@ public class AccountStatement implements Serializable
 				builder.addPosting (p.toProtobuf ());
 			}
 		}
-		if ( unconfirmed != null )
+		if ( unconfirmedSpend != null )
 		{
-			for ( Transaction t : unconfirmed )
+			for ( Transaction t : unconfirmedSpend )
 			{
-				builder.addUnconfirmed (t.toProtobuf ());
+				builder.addUnconfirmedSpend (t.toProtobuf ());
+			}
+		}
+		if ( unconfirmedReceive != null )
+		{
+			for ( Transaction t : unconfirmedReceive )
+			{
+				builder.addUnconfirmedReceive (t.toProtobuf ());
 			}
 		}
 
@@ -134,12 +152,20 @@ public class AccountStatement implements Serializable
 				a.getPosting ().add (Posting.fromProtobuf (o));
 			}
 		}
-		if ( pa.getUnconfirmedCount () > 0 )
+		if ( pa.getUnconfirmedSpendCount () > 0 )
 		{
-			a.setUnconfirmed (new ArrayList<Transaction> ());
-			for ( BCSAPIMessage.Transaction o : pa.getUnconfirmedList () )
+			a.setUnconfirmedSpend (new ArrayList<Transaction> ());
+			for ( BCSAPIMessage.Transaction o : pa.getUnconfirmedSpendList () )
 			{
-				a.getUnconfirmed ().add (Transaction.fromProtobuf (o));
+				a.getUnconfirmedSpend ().add (Transaction.fromProtobuf (o));
+			}
+		}
+		if ( pa.getUnconfirmedReceiveCount () > 0 )
+		{
+			a.setUnconfirmedReceive (new ArrayList<Transaction> ());
+			for ( BCSAPIMessage.Transaction o : pa.getUnconfirmedReceiveList () )
+			{
+				a.getUnconfirmedReceive ().add (Transaction.fromProtobuf (o));
 			}
 		}
 		return a;

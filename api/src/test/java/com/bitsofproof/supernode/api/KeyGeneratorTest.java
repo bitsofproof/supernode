@@ -47,7 +47,7 @@ public class KeyGeneratorTest
 		{
 			ExtendedKey k1 = KeyGenerator.generateKey (ekprivate, i);
 			ExtendedKey k2 = KeyGenerator.generateKey (ekpublic, i);
-			assertTrue (Arrays.equals (k1.getMaster ().getPublic (), k2.getMaster ().getPublic ()));
+			assertTrue (Arrays.equals (k1.getKey ().getPublic (), k2.getKey ().getPublic ()));
 		}
 	}
 }

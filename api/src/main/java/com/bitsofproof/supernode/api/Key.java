@@ -21,6 +21,8 @@ public interface Key extends Cloneable
 
 	public byte[] getPublic ();
 
+	public byte[] getAddress ();
+
 	public int getAddressFlag ();
 
 	public Key clone () throws CloneNotSupportedException;

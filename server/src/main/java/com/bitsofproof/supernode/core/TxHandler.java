@@ -184,6 +184,52 @@ public class TxHandler implements TrunkListener
 		return unconfirmed.get (hash);
 	}
 
+	public List<Tx> getUnconfirmedForAddresses (Set<String> addresses)
+	{
+		List<Tx> result = new ArrayList<Tx> ();
+		synchronized ( unconfirmed )
+		{
+			for ( Tx t : unconfirmed.values () )
+			{
+				for ( TxOut o : t.getOutputs () )
+				{
+					if ( o.getOwner1 () != null && addresses.contains (o.getOwner1 ()) )
+					{
+						result.add (t);
+					}
+					if ( o.getOwner2 () != null && addresses.contains (o.getOwner2 ()) )
+					{
+						result.add (t);
+					}
+					if ( o.getOwner3 () != null && addresses.contains (o.getOwner3 ()) )
+					{
+						result.add (t);
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	public List<Tx> getUnconfirmedForHashes (Set<String> hashes)
+	{
+		List<Tx> result = new ArrayList<Tx> ();
+		synchronized ( unconfirmed )
+		{
+			for ( Tx t : unconfirmed.values () )
+			{
+				for ( TxIn i : t.getInputs () )
+				{
+					if ( hashes.contains (i.getSourceHash ()) )
+					{
+						result.add (t);
+					}
+				}
+			}
+		}
+		return result;
+	}
+
 	private void cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());

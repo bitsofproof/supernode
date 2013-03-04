@@ -92,5 +92,6 @@ message AccountStatement {
 	required uint32 timestamp = 3;
 	repeated TransactionOutput opening = 4;
 	repeated Posting posting = 5;
-	repeated Transaction unconfirmed = 6;
+	repeated Transaction unconfirmedSpend = 6;
+	repeated Transaction unconfirmedReceive = 7;
 }

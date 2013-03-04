@@ -54,11 +54,11 @@ public class WalletTest
 		ExtendedKey address212 = account21.generateNextKey ();
 		assertTrue (account21.getNextKeySequence () == 3);
 
-		assertTrue (account21.getAddresses (0x0).size () == 3);
-		assertTrue (account2.getAddresses (0x0).size () == 6);
-		assertTrue (wallet.getAddresses (0x0).size () == 11);
+		assertTrue (account21.getAddresses ().size () == 3);
+		assertTrue (account2.getAddresses ().size () == 6);
+		assertTrue (wallet.getAddresses ().size () == 11);
 
-		assertTrue (Arrays.equals (account21.getMaster ().getMaster ().getPublic (), account2.getKey (1).getMaster ().getPublic ()));
+		assertTrue (Arrays.equals (account21.getMaster ().getKey ().getPublic (), account2.getKey (1).getKey ().getPublic ()));
 	}
 
 	@SuppressWarnings ("unused")
@@ -68,7 +68,7 @@ public class WalletTest
 		Wallet fullControlWallet = Wallet.createWallet (0x0);
 
 		ECPublicKey pub =
-				new ECPublicKey (fullControlWallet.getMaster ().getMaster ().getPublic (), fullControlWallet.getMaster ().getMaster ().getAddressFlag ());
+				new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().getAddressFlag ());
 		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
 		Wallet readOnlyWallet = new Wallet (new ExtendedKey (pub, chainCode), 0);
@@ -78,7 +78,7 @@ public class WalletTest
 		ExtendedKey address10 = account1.generateNextKey ();
 		ExtendedKey fullAddress10 = fullAccount1.generateNextKey ();
 
-		assertTrue (Arrays.equals (address10.getMaster ().getPublic (), fullAddress10.getMaster ().getPublic ()));
+		assertTrue (Arrays.equals (address10.getKey ().getPublic (), fullAddress10.getKey ().getPublic ()));
 
 		Wallet account2 = readOnlyWallet.createSubWallet (1);
 		Wallet fullAccount2 = fullControlWallet.createSubWallet (1);
@@ -95,7 +95,7 @@ public class WalletTest
 		ExtendedKey a1 = subWallet.generateNextKey ();
 		ExtendedKey fa1 = subFullWallet.generateNextKey ();
 
-		assertTrue (Arrays.equals (a1.getMaster ().getPublic (), fa1.getMaster ().getPublic ()));
+		assertTrue (Arrays.equals (a1.getKey ().getPublic (), fa1.getKey ().getPublic ()));
 
 	}
 }

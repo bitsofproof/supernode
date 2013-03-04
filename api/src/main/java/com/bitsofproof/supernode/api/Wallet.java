@@ -37,7 +37,7 @@ public class Wallet
 		for ( int i = 0; i < nextKey; ++i )
 		{
 			ExtendedKey k = getKey (i);
-			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getMaster ().getPublic (), k.getMaster ().getAddressFlag ()), k.getMaster ());
+			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), k.getKey ().getAddressFlag ()), k.getKey ());
 		}
 	}
 
@@ -95,8 +95,8 @@ public class Wallet
 	public ExtendedKey generateNextKey () throws ValidationException
 	{
 		ExtendedKey k = KeyGenerator.generateKey (master, nextKey++);
-		String address = AddressConverter.toSatoshiStyle (k.getMaster ().getPublic (), k.getMaster ().getAddressFlag ());
-		Key key = k.getMaster ();
+		String address = AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), k.getKey ().getAddressFlag ());
+		Key key = k.getKey ();
 		keyForAddress.put (address, key);
 		notifyNewKey (key, address);
 		return k;
@@ -130,14 +130,14 @@ public class Wallet
 		return keyForAddress.get (address);
 	}
 
-	public List<String> getAddresses (int addressFlag) throws ValidationException
+	public List<String> getAddresses () throws ValidationException
 	{
 		List<String> addresses = new ArrayList<String> (keyForAddress.keySet ());
 		if ( subs != null )
 		{
 			for ( Wallet sub : subs )
 			{
-				addresses.addAll (sub.getAddresses (addressFlag));
+				addresses.addAll (sub.getAddresses ());
 			}
 		}
 		return addresses;

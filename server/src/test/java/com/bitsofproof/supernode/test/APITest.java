@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import javax.jms.JMSException;
-
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -16,12 +14,12 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.bitsofproof.supernode.api.BCSAPI;
+import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 @RunWith (SpringJUnit4ClassRunner.class)
 @ContextConfiguration (locations = { "/context/storeonly.xml", "/context/EmbeddedBCSAPI.xml" })
@@ -46,14 +44,14 @@ public class APITest
 	}
 
 	@Test
-	public void checkGenesis () throws InvalidProtocolBufferException, JMSException
+	public void checkGenesis () throws BCSAPIException
 	{
 		String genesisHash = chain.getGenesis ().getHash ();
 		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
 	}
 
 	@Test
-	public void sendBlock () throws JMSException
+	public void sendBlock () throws BCSAPIException
 	{
 		Block block =
 				Block.fromWireDump ("0100000006226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f9898befce8d1310a0f2c470f5b924fda4106715859ef0bfe157fd67abd3cacf1072d2a51ffff7f20000000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff020001ffffffff0100f2052a010000002321031cd2dfbdbd6d50991a022619dba47aac054c1b3b9cf5cf0186093e5c3010ded9ac00000000");
@@ -85,7 +83,7 @@ public class APITest
 	}
 
 	@Test
-	public void testInventory () throws InvalidProtocolBufferException, JMSException
+	public void testInventory () throws BCSAPIException
 	{
 		List<String> blocks = api.getBlocks ();
 		assertTrue (blocks.size () == 1);

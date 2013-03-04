@@ -29,7 +29,7 @@ public class ExtendedKey
 		this.chainCode = chainCode;
 	}
 
-	public Key getMaster ()
+	public Key getKey ()
 	{
 		return master;
 	}

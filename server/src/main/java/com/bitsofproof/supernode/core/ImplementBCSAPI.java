@@ -19,8 +19,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -618,6 +620,28 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					});
 				}
 			});
+			Set<String> as = new HashSet<String> ();
+			as.addAll (addresses);
+			List<Tx> unconfirmed = txhandler.getUnconfirmedForAddresses (as);
+			Set<String> ah = new HashSet<String> ();
+			for ( TransactionOutput o : statement.getOpening () )
+			{
+				ah.add (o.getTransactionHash ());
+			}
+			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
+			for ( Tx t : txhandler.getUnconfirmedForHashes (ah) )
+			{
+				WireFormat.Writer writer = new WireFormat.Writer ();
+				t.toWire (writer);
+				statement.getUnconfirmedReceive ().add (Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+			}
+			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
+			for ( Tx t : unconfirmed )
+			{
+				WireFormat.Writer writer = new WireFormat.Writer ();
+				t.toWire (writer);
+				statement.getUnconfirmedSpend ().add (Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+			}
 			return statement;
 		}
 		finally

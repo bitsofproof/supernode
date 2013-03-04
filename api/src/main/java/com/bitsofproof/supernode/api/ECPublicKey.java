@@ -40,6 +40,12 @@ public class ECPublicKey implements Key
 	}
 
 	@Override
+	public byte[] getAddress ()
+	{
+		return Hash.keyHash (pub);
+	}
+
+	@Override
 	public ECPublicKey clone () throws CloneNotSupportedException
 	{
 		ECPublicKey c = (ECPublicKey) super.clone ();
