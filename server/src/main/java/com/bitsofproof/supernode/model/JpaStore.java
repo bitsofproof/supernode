@@ -199,7 +199,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		JPAQuery q = new JPAQuery (entityManager);
 		for ( TxOut o : q.from (txout).where (txout.txHash.in (txs)).list (txout) )
 		{
-			if ( o.isAvailable () && o.getTransaction ().getBlock ().getHeight () > untilHeight )
+			if ( o.isAvailable () && o.getTransaction ().getBlock ().getHeight () <= untilHeight )
 			{
 				throw new ValidationException ("BIP30 violation block contains unspent tx " + o.getTxHash ());
 			}

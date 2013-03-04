@@ -648,7 +648,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 					if ( out.isAvailable () )
 					{
 						Blk b = readBlk (t.getBlockHash (), false);
-						if ( b.getHeight () > untilHeight )
+						if ( b.getHeight () <= untilHeight )
 						{
 							throw new ValidationException ("BIP30 violation block contains unspent tx " + hash);
 						}
