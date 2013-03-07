@@ -46,7 +46,7 @@ public class KeyFormatter
 		this.addressFlag = addressFlag;
 	}
 
-	public String serializeKey (ECKeyPair key)
+	public String serializeKey (Key key)
 	{
 		if ( passphrase == null )
 		{
@@ -74,7 +74,7 @@ public class KeyFormatter
 		throw new ValidationException ("invalid key");
 	}
 
-	public static String serializeWIF (ECKeyPair key)
+	public static String serializeWIF (Key key)
 	{
 		byte[] k = key.getPrivate ();
 		if ( key.isCompressed () )
@@ -407,7 +407,7 @@ public class KeyFormatter
 		}
 	}
 
-	private String serializeBIP38 (ECKeyPair key)
+	private String serializeBIP38 (Key key)
 	{
 		byte[] store = new byte[43];
 		store[0] = 0x01;

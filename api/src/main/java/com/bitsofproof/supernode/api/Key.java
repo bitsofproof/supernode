@@ -25,5 +25,7 @@ public interface Key extends Cloneable
 
 	public int getAddressFlag ();
 
+	public boolean isCompressed ();
+
 	public Key clone () throws CloneNotSupportedException;
 }

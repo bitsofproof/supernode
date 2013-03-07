@@ -66,7 +66,7 @@ public class KeyGenerator
 				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
 
-				return new ExtendedKey (new ECPublicKey (pub, parent.getKey ().getAddressFlag ()), r);
+				return new ExtendedKey (new ECPublicKey (pub, parent.getKey ().isCompressed (), parent.getKey ().getAddressFlag ()), r);
 			}
 		}
 		catch ( NoSuchAlgorithmException e )

@@ -21,17 +21,30 @@ public class ECPublicKey implements Key
 {
 	private byte[] pub;
 	private int addressFlag;
+	private boolean compressed;
 
-	public ECPublicKey (byte[] pub, int addressFlag)
+	public ECPublicKey (byte[] pub, boolean compressed, int addressFlag)
 	{
 		this.pub = pub;
 		this.addressFlag = addressFlag;
+		this.compressed = compressed;
 	}
 
 	@Override
 	public int getAddressFlag ()
 	{
 		return addressFlag;
+	}
+
+	@Override
+	public boolean isCompressed ()
+	{
+		return compressed;
+	}
+
+	public void setCompressed (boolean compressed)
+	{
+		this.compressed = compressed;
 	}
 
 	public void setAddressFlag (int addressFlag)

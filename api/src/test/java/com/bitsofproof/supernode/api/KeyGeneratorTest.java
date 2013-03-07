@@ -42,7 +42,7 @@ public class KeyGeneratorTest
 		byte[] chainCode = new byte[32];
 		random.nextBytes (chainCode);
 		ExtendedKey ekprivate = new ExtendedKey (master, chainCode);
-		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic (), master.getAddressFlag ()), chainCode);
+		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic (), master.isCompressed (), master.getAddressFlag ()), chainCode);
 		for ( int i = 0; i < 10; ++i )
 		{
 			ExtendedKey k1 = KeyGenerator.generateKey (ekprivate, i);

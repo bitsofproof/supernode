@@ -68,7 +68,8 @@ public class WalletTest
 		Wallet fullControlWallet = Wallet.createWallet (0x0);
 
 		ECPublicKey pub =
-				new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().getAddressFlag ());
+				new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().isCompressed (),
+						fullControlWallet.getMaster ().getKey ().getAddressFlag ());
 		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
 		Wallet readOnlyWallet = new Wallet (new ExtendedKey (pub, chainCode), 0);
