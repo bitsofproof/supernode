@@ -64,7 +64,7 @@ public class Head implements Serializable
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (id);
-		writer.writeUint64 (Double.doubleToLongBits (chainWork));
+		writer.writeUint64 (chainWork);
 		writer.writeUint32 (height);
 		writer.writeHash (new Hash (leaf));
 		if ( previousId != null )

@@ -110,7 +110,7 @@ public class Blk implements Serializable
 		writer.writeUint32 (createTime);
 		writer.writeUint32 (difficultyTarget);
 		writer.writeUint32 (nonce);
-		writer.writeUint64 (Double.doubleToLongBits (chainWork));
+		writer.writeUint64 (chainWork);
 		writer.writeUint64 (headId);
 		writer.writeVarInt (transactions.size ());
 		for ( long i = 0; i < transactions.size (); ++i )
