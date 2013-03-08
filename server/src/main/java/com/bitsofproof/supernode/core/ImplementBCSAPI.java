@@ -128,10 +128,21 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						Transaction transaction = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 						transaction.computeHash ();
 						sendTransaction (transaction);
+						reply (o.getJMSReplyTo (), null);
 					}
 					catch ( Exception e )
 					{
-						log.trace ("Rejected invalid transaction ", e);
+						BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
+						builder.setBcsapiversion (1);
+						builder.addMessage (e.getMessage ());
+						try
+						{
+							reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+						}
+						catch ( JMSException e1 )
+						{
+							log.error ("Can not send reply ", e1);
+						}
 					}
 				}
 			});
@@ -148,10 +159,21 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						Block block = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body));
 						block.computeHash ();
 						sendBlock (block);
+						reply (o.getJMSReplyTo (), null);
 					}
 					catch ( Exception e )
 					{
-						log.trace ("Rejected invalid block ", e);
+						BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
+						builder.setBcsapiversion (1);
+						builder.addMessage (e.getMessage ());
+						try
+						{
+							reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+						}
+						catch ( JMSException e1 )
+						{
+							log.error ("Can not send reply ", e1);
+						}
 					}
 				}
 			});
@@ -402,19 +424,12 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		block.toWire (writer);
 		Blk b = new Blk ();
 		b.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		try
+		store.storeBlock (b);
+		for ( BitcoinPeer p : network.getConnectPeers () )
 		{
-			store.storeBlock (b);
-			for ( BitcoinPeer p : network.getConnectPeers () )
-			{
-				BlockMessage bm = (BlockMessage) p.createMessage ("block");
-				bm.setBlock (b);
-				p.send (bm);
-			}
-		}
-		catch ( ValidationException e )
-		{
-			log.debug ("Attempt to send invalid block " + b.getHash (), e);
+			BlockMessage bm = (BlockMessage) p.createMessage ("block");
+			bm.setBlock (b);
+			p.send (bm);
 		}
 	}
 

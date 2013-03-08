@@ -311,6 +311,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public long getBodyLength () throws JMSException
 		{
+			if ( bytes == null )
+			{
+				return 0;
+			}
 			return bytes.length;
 		}
 

@@ -95,3 +95,8 @@ message AccountStatement {
 	repeated Transaction unconfirmedSpend = 6;
 	repeated Transaction unconfirmedReceive = 7;
 }
+
+message ExceptionMessage {
+	required uint32 bcsapiversion = 1;
+	repeated string message = 2;
+}

@@ -105,13 +105,18 @@ public abstract class CachedBlockStore implements BlockStore
 	private final ExecutorService transactionsProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors () * 2);
 
 	@Override
-	public void runInCacheContext (CacheContextRunnable runnable)
+	public ValidationException runInCacheContext (CacheContextRunnable runnable)
 	{
 		try
 		{
 			lock.readLock ().lock ();
 
 			runnable.run (cachedUTXO);
+			return null;
+		}
+		catch ( ValidationException e )
+		{
+			return e;
 		}
 		finally
 		{

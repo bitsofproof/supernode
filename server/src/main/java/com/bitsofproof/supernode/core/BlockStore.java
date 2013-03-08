@@ -27,12 +27,12 @@ public interface BlockStore
 {
 	public interface CacheContextRunnable
 	{
-		public void run (TxOutCache cache);
+		public void run (TxOutCache cache) throws ValidationException;
 	}
 
 	public void cache (Chain chain, int cacheSize) throws ValidationException;
 
-	public void runInCacheContext (CacheContextRunnable runnable);
+	public ValidationException runInCacheContext (CacheContextRunnable runnable);
 
 	public void addTrunkListener (TrunkListener l);
 

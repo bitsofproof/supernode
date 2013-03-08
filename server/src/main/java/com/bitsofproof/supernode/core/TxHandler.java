@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
@@ -111,7 +111,13 @@ public class TxHandler implements TrunkListener
 			public void process (final TxMessage txm, final BitcoinPeer peer)
 			{
 				log.trace ("received transaction details for " + txm.getTx ().getHash () + " from " + peer.getAddress ());
-				validateCacheAndSend (txm.getTx (), peer);
+				try
+				{
+					validateCacheAndSend (txm.getTx (), peer);
+				}
+				catch ( ValidationException e )
+				{
+				}
 			}
 		});
 		network.addListener ("mempool", new BitcoinMessageListener<MempoolMessage> ()
@@ -135,27 +141,28 @@ public class TxHandler implements TrunkListener
 
 	}
 
-	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer)
+	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer) throws ValidationException
 	{
-		network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
+		ValidationException exception = network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
 		{
 			@Override
-			public void run (TxOutCache cache)
+			public void run (TxOutCache cache) throws ValidationException
 			{
 				synchronized ( unconfirmed )
 				{
 					if ( !unconfirmed.containsKey (t.getHash ()) )
 					{
-						new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+						ValidationException exception = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
 						{
 							@Override
-							protected void doInTransactionWithoutResult (TransactionStatus status)
+							public ValidationException doInTransaction (TransactionStatus status)
 							{
 								status.setRollbackOnly ();
 
+								boolean relay;
 								try
 								{
-									boolean relay = network.getStore ().validateTransaction (t, availableOutput);
+									relay = network.getStore ().validateTransaction (t, availableOutput);
 									if ( relay )
 									{
 										cacheTransaction (t);
@@ -166,17 +173,27 @@ public class TxHandler implements TrunkListener
 										log.debug ("NOT relaying transaction " + t.getHash ());
 									}
 									notifyListener (t);
+									return null;
 								}
 								catch ( ValidationException e )
 								{
-									log.debug ("REJECTING transaction " + t.getHash ());
+									return e;
 								}
 							}
 						});
+						if ( exception != null )
+						{
+							throw exception;
+						}
 					}
 				}
 			}
 		});
+		if ( exception != null )
+		{
+			log.debug ("REJECTING transaction " + t.getHash ());
+			throw exception;
+		}
 	}
 
 	public Tx getTransaction (String hash)

@@ -7642,6 +7642,463 @@ public final class BCSAPIMessage {
     // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.AccountStatement)
   }
   
+  public interface ExceptionMessageOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required uint32 bcsapiversion = 1;
+    boolean hasBcsapiversion();
+    int getBcsapiversion();
+    
+    // repeated string message = 2;
+    java.util.List<String> getMessageList();
+    int getMessageCount();
+    String getMessage(int index);
+  }
+  public static final class ExceptionMessage extends
+      com.google.protobuf.GeneratedMessage
+      implements ExceptionMessageOrBuilder {
+    // Use ExceptionMessage.newBuilder() to construct.
+    private ExceptionMessage(Builder builder) {
+      super(builder);
+    }
+    private ExceptionMessage(boolean noInit) {}
+    
+    private static final ExceptionMessage defaultInstance;
+    public static ExceptionMessage getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public ExceptionMessage getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_ExceptionMessage_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_ExceptionMessage_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required uint32 bcsapiversion = 1;
+    public static final int BCSAPIVERSION_FIELD_NUMBER = 1;
+    private int bcsapiversion_;
+    public boolean hasBcsapiversion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getBcsapiversion() {
+      return bcsapiversion_;
+    }
+    
+    // repeated string message = 2;
+    public static final int MESSAGE_FIELD_NUMBER = 2;
+    private com.google.protobuf.LazyStringList message_;
+    public java.util.List<String>
+        getMessageList() {
+      return message_;
+    }
+    public int getMessageCount() {
+      return message_.size();
+    }
+    public String getMessage(int index) {
+      return message_.get(index);
+    }
+    
+    private void initFields() {
+      bcsapiversion_ = 0;
+      message_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasBcsapiversion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, bcsapiversion_);
+      }
+      for (int i = 0; i < message_.size(); i++) {
+        output.writeBytes(2, message_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, bcsapiversion_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < message_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(message_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getMessageList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_ExceptionMessage_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_ExceptionMessage_fieldAccessorTable;
+      }
+      
+      // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        bcsapiversion_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        message_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.getDescriptor();
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage getDefaultInstanceForType() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.getDefaultInstance();
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage build() {
+        com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage buildPartial() {
+        com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage result = new com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.bcsapiversion_ = bcsapiversion_;
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          message_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              message_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.message_ = message_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage) {
+          return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage other) {
+        if (other == com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.getDefaultInstance()) return this;
+        if (other.hasBcsapiversion()) {
+          setBcsapiversion(other.getBcsapiversion());
+        }
+        if (!other.message_.isEmpty()) {
+          if (message_.isEmpty()) {
+            message_ = other.message_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureMessageIsMutable();
+            message_.addAll(other.message_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasBcsapiversion()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              bcsapiversion_ = input.readUInt32();
+              break;
+            }
+            case 18: {
+              ensureMessageIsMutable();
+              message_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required uint32 bcsapiversion = 1;
+      private int bcsapiversion_ ;
+      public boolean hasBcsapiversion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public int getBcsapiversion() {
+        return bcsapiversion_;
+      }
+      public Builder setBcsapiversion(int value) {
+        bitField0_ |= 0x00000001;
+        bcsapiversion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearBcsapiversion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        bcsapiversion_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // repeated string message = 2;
+      private com.google.protobuf.LazyStringList message_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureMessageIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          message_ = new com.google.protobuf.LazyStringArrayList(message_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+      public java.util.List<String>
+          getMessageList() {
+        return java.util.Collections.unmodifiableList(message_);
+      }
+      public int getMessageCount() {
+        return message_.size();
+      }
+      public String getMessage(int index) {
+        return message_.get(index);
+      }
+      public Builder setMessage(
+          int index, String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureMessageIsMutable();
+        message_.set(index, value);
+        onChanged();
+        return this;
+      }
+      public Builder addMessage(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureMessageIsMutable();
+        message_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllMessage(
+          java.lang.Iterable<String> values) {
+        ensureMessageIsMutable();
+        super.addAll(values, message_);
+        onChanged();
+        return this;
+      }
+      public Builder clearMessage() {
+        message_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      void addMessage(com.google.protobuf.ByteString value) {
+        ensureMessageIsMutable();
+        message_.add(value);
+        onChanged();
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.ExceptionMessage)
+    }
+    
+    static {
+      defaultInstance = new ExceptionMessage(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.ExceptionMessage)
+  }
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_com_bitsofproof_supernode_api_TransactionInput_descriptor;
   private static
@@ -7687,6 +8144,11 @@ public final class BCSAPIMessage {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_com_bitsofproof_supernode_api_AccountStatement_Posting_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_com_bitsofproof_supernode_api_ExceptionMessage_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_com_bitsofproof_supernode_api_ExceptionMessage_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -7733,7 +8195,9 @@ public final class BCSAPIMessage {
       "\032\214\001\n\007Posting\022@\n\006output\030\001 \002(\01320.com.bitso" +
       "fproof.supernode.api.TransactionOutput\022\r" +
       "\n\005block\030\002 \002(\014\022\021\n\ttimestamp\030\003 \002(\r\022\016\n\006heig" +
-      "ht\030\004 \002(\r\022\r\n\005spent\030\005 \001(\014"
+      "ht\030\004 \002(\r\022\r\n\005spent\030\005 \001(\014\":\n\020ExceptionMess" +
+      "age\022\025\n\rbcsapiversion\030\001 \002(\r\022\017\n\007message\030\002 " +
+      "\003(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7812,6 +8276,14 @@ public final class BCSAPIMessage {
               new java.lang.String[] { "Output", "Block", "Timestamp", "Height", "Spent", },
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountStatement.Posting.Builder.class);
+          internal_static_com_bitsofproof_supernode_api_ExceptionMessage_descriptor =
+            getDescriptor().getMessageTypes().get(8);
+          internal_static_com_bitsofproof_supernode_api_ExceptionMessage_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_com_bitsofproof_supernode_api_ExceptionMessage_descriptor,
+              new java.lang.String[] { "Bcsapiversion", "Message", },
+              com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.class,
+              com.bitsofproof.supernode.api.BCSAPIMessage.ExceptionMessage.Builder.class);
           return null;
         }
       };

@@ -446,7 +446,19 @@ public class ClientBusAdaptor implements BCSAPI
 			log.trace ("send transaction " + transaction.getHash ());
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
-			transactionProducer.send (m);
+			byte[] reply = synchronousRequest (transactionProducer, m);
+			if ( reply != null )
+			{
+				try
+				{
+					BCSAPIMessage.ExceptionMessage em = BCSAPIMessage.ExceptionMessage.parseFrom (reply);
+					throw new BCSAPIException (em.getMessage (0));
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					throw new BCSAPIException ("Invalid response", e);
+				}
+			}
 		}
 		catch ( JMSException e )
 		{
@@ -463,7 +475,19 @@ public class ClientBusAdaptor implements BCSAPI
 			log.trace ("send block " + block.getHash ());
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (block.toProtobuf ().toByteArray ());
-			blockProducer.send (m);
+			byte[] reply = synchronousRequest (blockProducer, m);
+			if ( reply != null )
+			{
+				try
+				{
+					BCSAPIMessage.ExceptionMessage em = BCSAPIMessage.ExceptionMessage.parseFrom (reply);
+					throw new BCSAPIException (em.getMessage (0));
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					throw new BCSAPIException ("Invalid response", e);
+				}
+			}
 		}
 		catch ( JMSException e )
 		{
