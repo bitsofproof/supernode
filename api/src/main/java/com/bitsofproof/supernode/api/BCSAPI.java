@@ -83,6 +83,13 @@ public interface BCSAPI
 	public void registerTrunkListener (TrunkListener listener) throws BCSAPIException;
 
 	/**
+	 * remove a trunk listener previously registered
+	 * 
+	 * @param listener
+	 */
+	public void removeTrunkListener (TrunkListener listener);
+
+	/**
 	 * Get account statement
 	 * 
 	 * @param addresses

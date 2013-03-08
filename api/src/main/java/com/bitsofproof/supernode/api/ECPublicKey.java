@@ -79,4 +79,10 @@ public class ECPublicKey implements Key
 		return Arrays.clone (pub);
 	}
 
+	@Override
+	public byte[] sign (byte[] data) throws ValidationException
+	{
+		throw new ValidationException ("Can not sign with public key");
+	}
+
 }

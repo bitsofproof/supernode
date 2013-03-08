@@ -187,9 +187,12 @@ public class ClientBusAdaptor implements BCSAPI
 								b.computeHash ();
 							}
 						}
-						for ( TrunkListener l : trunkListener )
+						synchronized ( trunkListener )
 						{
-							l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
+							for ( TrunkListener l : trunkListener )
+							{
+								l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
+							}
 						}
 					}
 					catch ( Exception e )
@@ -203,7 +206,19 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
-		trunkListener.add (listener);
+		synchronized ( trunkListener )
+		{
+			trunkListener.add (listener);
+		}
+	}
+
+	@Override
+	public void removeTrunkListener (TrunkListener listener)
+	{
+		synchronized ( trunkListener )
+		{
+			trunkListener.remove (listener);
+		}
 	}
 
 	private byte[] synchronousRequest (MessageProducer producer, Message m) throws BCSAPIException

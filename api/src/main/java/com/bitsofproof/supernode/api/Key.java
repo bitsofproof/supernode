@@ -28,4 +28,6 @@ public interface Key extends Cloneable
 	public boolean isCompressed ();
 
 	public Key clone () throws CloneNotSupportedException;
+
+	public byte[] sign (byte[] data) throws ValidationException;
 }

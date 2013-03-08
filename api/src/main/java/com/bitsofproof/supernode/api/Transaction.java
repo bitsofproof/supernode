@@ -16,8 +16,12 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.bitsofproof.supernode.api.ScriptFormat.Opcode;
 
 public class Transaction implements Serializable, Cloneable
 {
@@ -31,6 +35,236 @@ public class Transaction implements Serializable, Cloneable
 
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
+
+	public static Transaction createCoinbase (Key receiver, long value, int blockHeight)
+	{
+		Transaction cb = new Transaction ();
+
+		cb.setInputs (new ArrayList<TransactionInput> ());
+		cb.setOutputs (new ArrayList<TransactionOutput> ());
+
+		TransactionOutput out = new TransactionOutput ();
+		out.setValue (value);
+		cb.getOutputs ().add (out);
+
+		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
+		writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
+		writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+		writer.writeData (receiver.getAddress ());
+		writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
+		writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
+		out.setScript (writer.toByteArray ());
+
+		TransactionInput in = new TransactionInput ();
+		in.setSourceHash (Hash.ZERO_HASH_STRING);
+		in.setIx (0);
+		cb.getInputs ().add (in);
+
+		writer = new ScriptFormat.Writer ();
+		writer.writeInt32 (blockHeight);
+		in.setScript (writer.toByteArray ());
+
+		cb.computeHash ();
+		return cb;
+	}
+
+	public static class TransactionSource
+	{
+		private final TransactionOutput output;
+		private final Key key;
+
+		public TransactionSource (TransactionOutput output, Key key)
+		{
+			super ();
+			this.output = output;
+			this.key = key;
+		}
+
+		public TransactionOutput getOutput ()
+		{
+			return output;
+		}
+
+		public Key getKey ()
+		{
+			return key;
+		}
+	}
+
+	public static class TransactionSink
+	{
+		private final Key key;
+		private final long value;
+
+		public TransactionSink (Key key, long value)
+		{
+			super ();
+			this.key = key;
+			this.value = value;
+		}
+
+		public Key getKey ()
+		{
+			return key;
+		}
+
+		public long getValue ()
+		{
+			return value;
+		}
+	}
+
+	public static Transaction createSpend (List<TransactionSource> sources, List<TransactionSink> sinks, long fee) throws ValidationException
+	{
+		Transaction transaction = new Transaction ();
+		transaction.setInputs (new ArrayList<TransactionInput> ());
+		transaction.setOutputs (new ArrayList<TransactionOutput> ());
+
+		long sumOut = 0;
+		for ( TransactionSink s : sinks )
+		{
+			TransactionOutput o = new TransactionOutput ();
+			o.setValue (s.getValue ());
+			sumOut += s.getValue ();
+
+			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			writer.writeData (s.getKey ().getAddress ());
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
+			o.setScript (writer.toByteArray ());
+
+			transaction.getOutputs ().add (o);
+		}
+
+		long sumInput = 0;
+		for ( TransactionSource s : sources )
+		{
+			TransactionOutput o = s.getOutput ();
+			TransactionInput i = new TransactionInput ();
+			i.setIx (o.getSelfIx ());
+			i.setSourceHash (o.getTransactionHash ());
+			sumInput += o.getValue ();
+
+			transaction.getInputs ().add (i);
+		}
+		if ( sumInput != (sumOut + fee) )
+		{
+			throw new ValidationException ("Sum of sinks (+fee) does not match sum of sources");
+		}
+
+		int j = 0;
+		for ( TransactionSource s : sources )
+		{
+			TransactionInput i = transaction.getInputs ().get (j);
+			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
+			byte[] sig = s.getKey ().sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, s.getOutput ().getScript ()));
+			byte[] sigPlusType = new byte[sig.length + 1];
+			System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
+			sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
+			sw.writeData (sigPlusType);
+			sw.writeData (s.getKey ().getPublic ());
+			i.setScript (sw.toByteArray ());
+			++j;
+		}
+
+		transaction.computeHash ();
+		return transaction;
+	}
+
+	private static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
+	{
+		Transaction copy = null;
+		try
+		{
+			copy = transaction.clone ();
+		}
+		catch ( CloneNotSupportedException e1 )
+		{
+			return null;
+		}
+
+		// implicit SIGHASH_ALL
+		int i = 0;
+		for ( TransactionInput in : copy.getInputs () )
+		{
+			if ( i == inr )
+			{
+				in.setScript (script);
+			}
+			else
+			{
+				in.setScript (new byte[0]);
+			}
+			++i;
+		}
+
+		if ( (hashType & 0x1f) == ScriptFormat.SIGHASH_NONE )
+		{
+			copy.getOutputs ().clear ();
+			i = 0;
+			for ( TransactionInput in : copy.getInputs () )
+			{
+				if ( i != inr )
+				{
+					in.setSequence (0);
+				}
+				++i;
+			}
+		}
+		else if ( (hashType & 0x1f) == ScriptFormat.SIGHASH_SINGLE )
+		{
+			int onr = inr;
+			if ( onr >= copy.getOutputs ().size () )
+			{
+				// this is a Satoshi client bug.
+				// This case should throw an error but it instead retuns 1 that is not checked and interpreted as below
+				return ByteUtils.fromHex ("0100000000000000000000000000000000000000000000000000000000000000");
+			}
+			for ( i = copy.getOutputs ().size () - 1; i > onr; --i )
+			{
+				copy.getOutputs ().remove (i);
+			}
+			for ( i = 0; i < onr; ++i )
+			{
+				copy.getOutputs ().get (i).setScript (new byte[0]);
+				copy.getOutputs ().get (i).setValue (-1L);
+			}
+			i = 0;
+			for ( TransactionInput in : copy.getInputs () )
+			{
+				if ( i != inr )
+				{
+					in.setSequence (0);
+				}
+				++i;
+			}
+		}
+		if ( (hashType & ScriptFormat.SIGHASH_ANYONECANPAY) != 0 )
+		{
+			List<TransactionInput> oneIn = new ArrayList<TransactionInput> ();
+			oneIn.add (copy.getInputs ().get (inr));
+			copy.setInputs (oneIn);
+		}
+
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		copy.toWire (writer);
+
+		byte[] txwire = writer.toByteArray ();
+		byte[] hash = null;
+		try
+		{
+			MessageDigest a = MessageDigest.getInstance ("SHA-256");
+			a.update (txwire);
+			a.update (new byte[] { (byte) (hashType & 0xff), 0, 0, 0 });
+			hash = a.digest (a.digest ());
+		}
+		catch ( NoSuchAlgorithmException e )
+		{
+		}
+		return hash;
+	}
 
 	public long getVersion ()
 	{

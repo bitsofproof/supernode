@@ -125,7 +125,9 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					{
 						byte[] body = new byte[(int) o.getBodyLength ()];
 						o.readBytes (body);
-						sendTransaction (Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body)));
+						Transaction transaction = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+						transaction.computeHash ();
+						sendTransaction (transaction);
 					}
 					catch ( Exception e )
 					{
@@ -143,7 +145,9 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					{
 						byte[] body = new byte[(int) o.getBodyLength ()];
 						o.readBytes (body);
-						sendBlock (Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body)));
+						Block block = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body));
+						block.computeHash ();
+						sendBlock (block);
 					}
 					catch ( Exception e )
 					{
@@ -393,7 +397,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 
 	private void sendBlock (Block block) throws ValidationException
 	{
-		block.computeHash ();
 		log.trace ("send block " + block.getHash ());
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		block.toWire (writer);
@@ -411,7 +414,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		}
 		catch ( ValidationException e )
 		{
-			log.debug ("Attempt to send invalid block " + b.getHash ());
+			log.debug ("Attempt to send invalid block " + b.getHash (), e);
 		}
 	}
 

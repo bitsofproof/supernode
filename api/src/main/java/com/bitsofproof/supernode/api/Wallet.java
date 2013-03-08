@@ -21,6 +21,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
+import com.bitsofproof.supernode.api.Transaction.TransactionSink;
+
 public class Wallet
 {
 	private final ExtendedKey master;
@@ -95,7 +98,7 @@ public class Wallet
 	public ExtendedKey generateNextKey () throws ValidationException
 	{
 		ExtendedKey k = KeyGenerator.generateKey (master, nextKey++);
-		String address = AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), k.getKey ().getAddressFlag ());
+		String address = AddressConverter.toSatoshiStyle (k.getKey ().getAddress (), k.getKey ().getAddressFlag ());
 		Key key = k.getKey ();
 		keyForAddress.put (address, key);
 		notifyNewKey (key, address);
@@ -141,6 +144,29 @@ public class Wallet
 			}
 		}
 		return addresses;
+	}
+
+	public Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks, long fee) throws ValidationException
+	{
+		List<Transaction.TransactionSource> s = new ArrayList<Transaction.TransactionSource> ();
+		for ( TransactionOutput output : sources )
+		{
+			if ( !ScriptFormat.isPayToAddress (output.getScript ()) )
+			{
+				throw new ValidationException ("Only support pay to address sources here");
+			}
+			Key key = null;
+			for ( Token t : ScriptFormat.parse (output.getScript ()) )
+			{
+				if ( t.data != null )
+				{
+					key = keyForAddress.get (AddressConverter.toSatoshiStyle (t.data, master.getKey ().getAddressFlag ()));
+					break;
+				}
+			}
+			s.add (new Transaction.TransactionSource (output, key));
+		}
+		return Transaction.createSpend (s, sinks, fee);
 	}
 
 	public ExtendedKey getMaster ()

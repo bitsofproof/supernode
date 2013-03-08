@@ -38,12 +38,14 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<bouncycastle.version>1.48</bouncycastle.version>
 		<springframework.version>3.1.2.RELEASE</springframework.version>
 		<spring-data.version>1.1.2.RELEASE</spring-data.version>
 		<querydsl.version>2.9.0</querydsl.version>
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<postgresql.version>9.1-901.jdbc4</postgresql.version>
+		<leveldbjni.version>1.6</leveldbjni.version>
 		<activemq.version>5.7.0</activemq.version>
 	</properties>
 	<build>
@@ -151,12 +153,12 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk15on</artifactId>
-			<version>1.47</version>
+			<version>${bouncycastle.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.fusesource.leveldbjni</groupId>
 			<artifactId>leveldbjni-all</artifactId>
-			<version>1.6</version>
+			<version>${leveldbjni.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.derby</groupId>
