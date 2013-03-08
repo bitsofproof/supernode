@@ -147,7 +147,7 @@ public class ScriptFormat
 										// executed afterward.
 		OP_NOP1 (176), OP_NOP2 (177), OP_NOP3 (178), OP_NOP4 (179), OP_NOP5 (180), OP_NOP6 (181), OP_NOP7 (182), OP_NOP8 (183), OP_NOP9 (184), OP_NOP10 (185);
 
-		final int o;
+		private final int o;
 
 		Opcode (int n)
 		{
@@ -190,9 +190,9 @@ public class ScriptFormat
 
 		public byte[] readBytes (int n)
 		{
-			if ( n < 0 || (cursor + n) >= bytes.length )
+			if ( n < 0 || (cursor + n) > bytes.length )
 			{
-				throw new ArrayIndexOutOfBoundsException (n);
+				throw new ArrayIndexOutOfBoundsException (cursor + n);
 			}
 			byte[] b = new byte[n];
 			System.arraycopy (bytes, cursor, b, 0, n);
@@ -740,17 +740,6 @@ public class ScriptFormat
 	public static boolean isStandard (byte[] script)
 	{
 		return isPayToAddress (script) || isPayToKey (script) || isPayToScriptHash (script) || isMultiSig (script);
-	}
-
-	public static byte[] getPayToAddressScript (byte[] keyHash)
-	{
-		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-		writer.writeToken (new ScriptFormat.Token (ScriptFormat.Opcode.OP_DUP));
-		writer.writeToken (new ScriptFormat.Token (ScriptFormat.Opcode.OP_HASH160));
-		writer.writeData (keyHash);
-		writer.writeToken (new ScriptFormat.Token (ScriptFormat.Opcode.OP_EQUALVERIFY));
-		writer.writeToken (new ScriptFormat.Token (ScriptFormat.Opcode.OP_CHECKSIG));
-		return writer.toByteArray ();
 	}
 
 	public static byte[] deleteSignatureFromScript (byte[] script, byte[] sig) throws ValidationException
