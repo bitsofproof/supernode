@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -829,10 +830,13 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 					try
 					{
-						if ( checkV2BlockCoinBase
-								&& ScriptFormat.intValue (ScriptFormat.parse (t.getInputs ().get (0).getScript ()).get (0).data) != b.getHeight () )
+						if ( checkV2BlockCoinBase )
 						{
-							throw new ValidationException ("Block height mismatch in coinbase");
+							byte[] height = Arrays.copyOf (t.getInputs ().get (0).getScript (), 4);
+							if ( ScriptFormat.intValue (height) != b.getHeight () )
+							{
+								throw new ValidationException ("Block height mismatch in coinbase");
+							}
 						}
 						validateTransaction (tcontext, t);
 					}
