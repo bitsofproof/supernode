@@ -190,6 +190,10 @@ public class ScriptFormat
 
 		public byte[] readBytes (int n)
 		{
+			if ( n < 0 || (cursor + n) >= bytes.length )
+			{
+				throw new ArrayIndexOutOfBoundsException (n);
+			}
 			byte[] b = new byte[n];
 			System.arraycopy (bytes, cursor, b, 0, n);
 			cursor += n;
