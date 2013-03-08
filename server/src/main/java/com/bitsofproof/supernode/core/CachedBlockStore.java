@@ -832,7 +832,9 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						if ( checkV2BlockCoinBase )
 						{
-							byte[] height = Arrays.copyOf (t.getInputs ().get (0).getScript (), 4);
+							ScriptFormat.Reader reader = new ScriptFormat.Reader (t.getInputs ().get (0).getScript ());
+							int len = reader.readByte ();
+							byte[] height = Arrays.copyOfRange (t.getInputs ().get (0).getScript (), 1, len + 1);
 							if ( ScriptFormat.intValue (height) != b.getHeight () )
 							{
 								throw new ValidationException ("Block height mismatch in coinbase");
