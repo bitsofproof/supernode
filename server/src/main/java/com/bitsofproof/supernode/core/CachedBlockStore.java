@@ -32,7 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -834,8 +833,7 @@ public abstract class CachedBlockStore implements BlockStore
 						{
 							ScriptFormat.Reader reader = new ScriptFormat.Reader (t.getInputs ().get (0).getScript ());
 							int len = reader.readByte ();
-							byte[] height = Arrays.copyOfRange (t.getInputs ().get (0).getScript (), 1, len + 1);
-							if ( ScriptFormat.intValue (height) != b.getHeight () )
+							if ( ScriptFormat.intValue (reader.readBytes (len)) != b.getHeight () )
 							{
 								throw new ValidationException ("Block height mismatch in coinbase");
 							}
