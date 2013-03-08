@@ -169,7 +169,7 @@ public class TxHandler implements TrunkListener
 								}
 								catch ( ValidationException e )
 								{
-									log.debug ("REJECTING transaction " + t.getHash (), e);
+									log.debug ("REJECTING transaction " + t.getHash ());
 								}
 							}
 						});
