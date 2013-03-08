@@ -93,7 +93,6 @@ public abstract class CachedBlockStore implements BlockStore
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private boolean enforceV2Block = false;
-	private boolean checkV2BlockCoinBase = false;
 
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
@@ -641,6 +640,8 @@ public abstract class CachedBlockStore implements BlockStore
 			throw new ValidationException ("Block timestamp out of bounds " + b.getHash ());
 		}
 
+		boolean checkV2BlockCoinBase = false;
+
 		if ( chain.isProduction () )
 		{
 			if ( enforceV2Block || isSuperMajority (2, cachedPrevious, 950, 1000) )
@@ -650,16 +651,12 @@ public abstract class CachedBlockStore implements BlockStore
 					log.trace ("Majority for V2 blocks reached, enforcing");
 				}
 				enforceV2Block = true;
-				checkV2BlockCoinBase = true;
 				if ( b.getVersion () < 2 )
 				{
 					throw new ValidationException ("Rejecting version 1 block " + b.getHash ());
 				}
 			}
-			if ( checkV2BlockCoinBase || isSuperMajority (2, cachedPrevious, 750, 1000) )
-			{
-				checkV2BlockCoinBase = true;
-			}
+			checkV2BlockCoinBase = b.getVersion () >= 2 && isSuperMajority (2, cachedPrevious, 750, 1000);
 		}
 
 		Head head;
