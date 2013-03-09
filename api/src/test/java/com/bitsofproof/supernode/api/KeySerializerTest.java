@@ -120,7 +120,7 @@ public class KeySerializerTest
 			String passphrase = p.toString ();
 
 			KeyFormatter formatter = new KeyFormatter (passphrase, 0x0);
-			ECKeyPair kp = ECKeyPair.createNew (i % 2 == 0, 0x0);
+			ECKeyPair kp = ECKeyPair.createNew (i % 2 == 0);
 			String serialized = formatter.serializeKey (kp);
 			ECKeyPair kp2 = formatter.parseSerializedKey (serialized);
 			assertTrue (Arrays.equals (kp.getPublic (), kp2.getPublic ()));

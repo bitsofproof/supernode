@@ -88,7 +88,7 @@ public class APITest
 		new SecureRandom ().nextBytes (chainCode);
 		try
 		{
-			wallet = new Wallet (new ExtendedKey (ECKeyPair.createNew (true, chain.getAddressFlag ()), chainCode), 0);
+			wallet = new Wallet (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
 		}
 		catch ( ValidationException e )
 		{
@@ -189,11 +189,13 @@ public class APITest
 		final Semaphore ready2 = new Semaphore (0);
 		final Semaphore ready3 = new Semaphore (0);
 
+		List<String> sourceAddresses = new ArrayList<String> ();
 		List<TransactionOutput> sources = new ArrayList<TransactionOutput> ();
 		for ( int i = 0; i < 10; ++i )
 		{
 			TransactionOutput o = blocks.get (i + 1).getTransactions ().get (0).getOutputs ().get (0);
 			sources.add (o);
+			o.parseOwners (wallet.getAddressFlag (), wallet.getMultiAddressFlag ());
 		}
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
 		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey (), 10 * 50 * COIN);
@@ -247,7 +249,7 @@ public class APITest
 		api.registerTransactionListener (listener);
 
 		List<String> receiverAddresses = new ArrayList<String> ();
-		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), sink.getKey ().getAddressFlag ()));
+		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), wallet.getAddressFlag ()));
 		api.registerReceiveListener (receiverAddresses, listener);
 
 		for ( TransactionOutput o : sources )

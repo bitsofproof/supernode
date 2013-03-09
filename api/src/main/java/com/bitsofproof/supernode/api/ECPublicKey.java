@@ -20,20 +20,12 @@ import org.bouncycastle.util.Arrays;
 public class ECPublicKey implements Key
 {
 	private byte[] pub;
-	private int addressFlag;
 	private boolean compressed;
 
-	public ECPublicKey (byte[] pub, boolean compressed, int addressFlag)
+	public ECPublicKey (byte[] pub, boolean compressed)
 	{
 		this.pub = pub;
-		this.addressFlag = addressFlag;
 		this.compressed = compressed;
-	}
-
-	@Override
-	public int getAddressFlag ()
-	{
-		return addressFlag;
 	}
 
 	@Override
@@ -47,11 +39,6 @@ public class ECPublicKey implements Key
 		this.compressed = compressed;
 	}
 
-	public void setAddressFlag (int addressFlag)
-	{
-		this.addressFlag = addressFlag;
-	}
-
 	@Override
 	public byte[] getAddress ()
 	{
@@ -63,7 +50,6 @@ public class ECPublicKey implements Key
 	{
 		ECPublicKey c = (ECPublicKey) super.clone ();
 		c.pub = Arrays.clone (pub);
-		c.addressFlag = addressFlag;
 		return c;
 	}
 

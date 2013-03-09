@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.protobuf.ByteString;
@@ -30,6 +31,65 @@ public class TransactionOutput implements Serializable, Cloneable
 	private long selfIx;
 	private long votes;
 	private List<String> addresses;
+
+	public void parseOwners (int addressFlag, int multiAddressFlag) throws ValidationException
+	{
+		addresses = new ArrayList<String> ();
+		List<ScriptFormat.Token> parsed;
+		parsed = ScriptFormat.parse (script);
+		if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG )
+		{
+			// pay to key
+			addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), addressFlag));
+			setVotes (1L);
+		}
+		else if ( parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
+				&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
+				&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG )
+		{
+			// pay to address
+			addresses.add (AddressConverter.toSatoshiStyle (parsed.get (2).data, addressFlag));
+			setVotes (1L);
+		}
+		else if ( parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && parsed.get (1).data != null && parsed.get (1).data.length == 20
+				&& parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL )
+		{
+			byte[] hash = parsed.get (1).data;
+			if ( hash.length == 20 )
+			{
+				// BIP 0013
+				addresses.add (AddressConverter.toSatoshiStyle (hash, multiAddressFlag));
+				setVotes (1L);
+			}
+		}
+		else
+		{
+			for ( int i = 0; i < parsed.size (); ++i )
+			{
+				if ( parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIG || parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIGVERIFY )
+				{
+					int nkeys = parsed.get (i - 1).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
+					for ( int j = 0; j < nkeys; ++j )
+					{
+						if ( j == 0 )
+						{
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+						}
+						if ( j == 1 )
+						{
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+						}
+						if ( j == 2 )
+						{
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+						}
+					}
+					setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);
+					return;
+				}
+			}
+		}
+	}
 
 	public String getTransactionHash ()
 	{

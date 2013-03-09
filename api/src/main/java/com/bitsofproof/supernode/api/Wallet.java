@@ -32,26 +32,40 @@ public class Wallet
 	private final List<Key> importedKeys = new ArrayList<Key> ();
 	private final Map<String, Key> keyForAddress = new HashMap<String, Key> ();
 	private final List<WalletListener> walletListener = new ArrayList<WalletListener> ();
+	private final int addressFlag;
+	private final int multiAddressFlag;
 
-	public Wallet (ExtendedKey master, int nextKey) throws ValidationException
+	public Wallet (ExtendedKey master, int nextKey, int addressFlag, int multiAddressFlag) throws ValidationException
 	{
 		this.master = master;
 		this.nextKey = nextKey;
+		this.addressFlag = addressFlag;
+		this.multiAddressFlag = multiAddressFlag;
 		for ( int i = 0; i < nextKey; ++i )
 		{
 			ExtendedKey k = getKey (i);
-			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), k.getKey ().getAddressFlag ()), k.getKey ());
+			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getKey ().getPublic (), addressFlag), k.getKey ());
 		}
 	}
 
-	public static Wallet createWallet (int addressFlag) throws ValidationException
+	public int getAddressFlag ()
+	{
+		return addressFlag;
+	}
+
+	public int getMultiAddressFlag ()
+	{
+		return multiAddressFlag;
+	}
+
+	public static Wallet createWallet (int addressFlag, int multiAddressFlag) throws ValidationException
 	{
 		SecureRandom random = new SecureRandom ();
-		ECKeyPair master = ECKeyPair.createNew (true, addressFlag);
+		ECKeyPair master = ECKeyPair.createNew (true);
 		byte[] chainCode = new byte[32];
 		random.nextBytes (chainCode);
 		ExtendedKey parent = new ExtendedKey (master, chainCode);
-		return new Wallet (parent, 0);
+		return new Wallet (parent, 0, addressFlag, multiAddressFlag);
 	}
 
 	public Wallet createSubWallet (int sequence) throws ValidationException
@@ -68,7 +82,7 @@ public class Wallet
 		{
 			subs = new ArrayList<Wallet> ();
 		}
-		Wallet sub = new Wallet (getKey (sequence), 0);
+		Wallet sub = new Wallet (getKey (sequence), 0, addressFlag, multiAddressFlag);
 		subs.add (sub);
 		for ( WalletListener l : walletListener )
 		{
@@ -98,7 +112,7 @@ public class Wallet
 	public ExtendedKey generateNextKey () throws ValidationException
 	{
 		ExtendedKey k = KeyGenerator.generateKey (master, nextKey++);
-		String address = AddressConverter.toSatoshiStyle (k.getKey ().getAddress (), k.getKey ().getAddressFlag ());
+		String address = AddressConverter.toSatoshiStyle (k.getKey ().getAddress (), addressFlag);
 		Key key = k.getKey ();
 		keyForAddress.put (address, key);
 		notifyNewKey (key, address);
@@ -119,7 +133,7 @@ public class Wallet
 		{
 			importedKeys.add (k.clone ());
 
-			String address = AddressConverter.toSatoshiStyle (k.getPublic (), k.getAddressFlag ());
+			String address = AddressConverter.toSatoshiStyle (k.getPublic (), addressFlag);
 			keyForAddress.put (address, k);
 			notifyNewKey (k, address);
 		}
@@ -160,7 +174,7 @@ public class Wallet
 			{
 				if ( t.data != null )
 				{
-					key = keyForAddress.get (AddressConverter.toSatoshiStyle (t.data, master.getKey ().getAddressFlag ()));
+					key = keyForAddress.get (AddressConverter.toSatoshiStyle (t.data, addressFlag));
 					break;
 				}
 			}

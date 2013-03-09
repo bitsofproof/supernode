@@ -45,26 +45,15 @@ public class ECKeyPair implements Key
 	private BigInteger priv;
 	private byte[] pub;
 	private boolean compressed;
-	private int addressFlag = 0x0;
 
 	private ECKeyPair ()
 	{
 	}
 
+	@Override
 	public boolean isCompressed ()
 	{
 		return compressed;
-	}
-
-	@Override
-	public int getAddressFlag ()
-	{
-		return addressFlag;
-	}
-
-	public void setAddressFlag (int addressFlag)
-	{
-		this.addressFlag = addressFlag;
 	}
 
 	@Override
@@ -74,11 +63,10 @@ public class ECKeyPair implements Key
 		c.priv = new BigInteger (c.priv.toByteArray ());
 		c.pub = Arrays.clone (pub);
 		c.compressed = compressed;
-		c.addressFlag = addressFlag;
 		return c;
 	}
 
-	public static ECKeyPair createNew (boolean compressed, int addressFlag)
+	public static ECKeyPair createNew (boolean compressed)
 	{
 		ECKeyPairGenerator generator = new ECKeyPairGenerator ();
 		ECKeyGenerationParameters keygenParams = new ECKeyGenerationParameters (domain, secureRandom);
@@ -89,7 +77,6 @@ public class ECKeyPair implements Key
 		ECKeyPair k = new ECKeyPair ();
 		k.priv = privParams.getD ();
 		k.compressed = compressed;
-		k.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = pubParams.getQ ();
@@ -128,12 +115,13 @@ public class ECKeyPair implements Key
 		return Arrays.clone (pub);
 	}
 
+	@Override
 	public byte[] getAddress ()
 	{
 		return Hash.keyHash (pub);
 	}
 
-	public ECKeyPair (byte[] p, boolean compressed, int addressFlag) throws ValidationException
+	public ECKeyPair (byte[] p, boolean compressed) throws ValidationException
 	{
 		if ( p.length != 32 )
 		{
@@ -141,7 +129,6 @@ public class ECKeyPair implements Key
 		}
 		this.priv = new BigInteger (1, p);
 		this.compressed = compressed;
-		this.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = curve.getG ().multiply (priv);
@@ -153,11 +140,10 @@ public class ECKeyPair implements Key
 		}
 	}
 
-	public ECKeyPair (BigInteger priv, boolean compressed, int addressFlag)
+	public ECKeyPair (BigInteger priv, boolean compressed)
 	{
 		this.priv = priv;
 		this.compressed = compressed;
-		this.addressFlag = addressFlag;
 		if ( compressed )
 		{
 			ECPoint q = curve.getG ().multiply (priv);
@@ -169,6 +155,7 @@ public class ECKeyPair implements Key
 		}
 	}
 
+	@Override
 	public byte[] sign (byte[] hash) throws ValidationException
 	{
 		if ( priv == null )

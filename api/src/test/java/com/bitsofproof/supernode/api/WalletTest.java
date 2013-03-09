@@ -36,7 +36,7 @@ public class WalletTest
 	@Test
 	public void testPrivateWallet () throws ValidationException
 	{
-		Wallet wallet = Wallet.createWallet (0x0);
+		Wallet wallet = Wallet.createWallet (0x0, 0x05);
 		ExtendedKey master = wallet.getMaster ();
 		Wallet account1 = wallet.createSubWallet (0);
 		Wallet account2 = wallet.createSubWallet (1);
@@ -64,14 +64,12 @@ public class WalletTest
 	@Test
 	public void testReadOnlyWallet () throws ValidationException
 	{
-		Wallet fullControlWallet = Wallet.createWallet (0x0);
+		Wallet fullControlWallet = Wallet.createWallet (0x0, 0x05);
 
-		ECPublicKey pub =
-				new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().isCompressed (),
-						fullControlWallet.getMaster ().getKey ().getAddressFlag ());
+		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().isCompressed ());
 		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
-		Wallet readOnlyWallet = new Wallet (new ExtendedKey (pub, chainCode), 0);
+		Wallet readOnlyWallet = new Wallet (new ExtendedKey (pub, chainCode), 0, 0x0, 0x05);
 
 		Wallet account1 = readOnlyWallet.createSubWallet (0);
 		Wallet fullAccount1 = fullControlWallet.createSubWallet (0);

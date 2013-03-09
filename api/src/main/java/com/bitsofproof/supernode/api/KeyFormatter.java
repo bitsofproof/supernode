@@ -110,14 +110,14 @@ public class KeyFormatter
 			checkChecksum (store);
 			byte[] key = new byte[store.length - 5];
 			System.arraycopy (store, 1, key, 0, store.length - 5);
-			return new ECKeyPair (key, false, store[0]);
+			return new ECKeyPair (key, false);
 		}
 		else if ( store.length == 38 )
 		{
 			checkChecksum (store);
 			byte[] key = new byte[store.length - 6];
 			System.arraycopy (store, 1, key, 0, store.length - 6);
-			return new ECKeyPair (key, true, store[0]);
+			return new ECKeyPair (key, true);
 		}
 		throw new ValidationException ("Invalid key length");
 	}
@@ -170,7 +170,7 @@ public class KeyFormatter
 				System.arraycopy (ownentropy, 0, tmp, 32, 8);
 				passfactor = Hash.hash (tmp);
 			}
-			ECKeyPair kp = new ECKeyPair (passfactor, true, addressFlag);
+			ECKeyPair kp = new ECKeyPair (passfactor, true);
 			byte[] passpoint = kp.getPublic ();
 			result[0] = (byte) 0x2C;
 			result[1] = (byte) 0xE9;
@@ -268,7 +268,7 @@ public class KeyFormatter
 			{
 				decrypted[i] ^= derived[i];
 			}
-			ECKeyPair kp = new ECKeyPair (decrypted, compressed, addressFlag);
+			ECKeyPair kp = new ECKeyPair (decrypted, compressed);
 
 			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
@@ -333,7 +333,7 @@ public class KeyFormatter
 				System.arraycopy (ownentropy, 0, tmp, 32, 8);
 				passfactor = Hash.hash (tmp);
 			}
-			ECKeyPair kp = new ECKeyPair (passfactor, true, addressFlag);
+			ECKeyPair kp = new ECKeyPair (passfactor, true);
 
 			byte[] salt = new byte[12];
 			System.arraycopy (store, 3, salt, 0, 12);
@@ -367,7 +367,7 @@ public class KeyFormatter
 			BigInteger priv =
 					new BigInteger (1, passfactor).multiply (new BigInteger (1, Hash.hash (seed))).remainder (SECNamedCurves.getByName ("secp256k1").getN ());
 
-			kp = new ECKeyPair (priv, compressed, addressFlag);
+			kp = new ECKeyPair (priv, compressed);
 			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);

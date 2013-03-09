@@ -59,14 +59,14 @@ public class KeyGenerator
 			if ( parent.getKey ().getPrivate () != null )
 			{
 				BigInteger k = m.multiply (new BigInteger (1, parent.getKey ().getPrivate ())).mod (curve.getN ());
-				return new ExtendedKey (new ECKeyPair (k, true, parent.getKey ().getAddressFlag ()), r);
+				return new ExtendedKey (new ECKeyPair (k, true), r);
 			}
 			else
 			{
 				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
 
-				return new ExtendedKey (new ECPublicKey (pub, parent.getKey ().isCompressed (), parent.getKey ().getAddressFlag ()), r);
+				return new ExtendedKey (new ECPublicKey (pub, parent.getKey ().isCompressed ()), r);
 			}
 		}
 		catch ( NoSuchAlgorithmException e )

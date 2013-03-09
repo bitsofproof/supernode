@@ -23,8 +23,6 @@ public interface Key extends Cloneable
 
 	public byte[] getAddress ();
 
-	public int getAddressFlag ();
-
 	public boolean isCompressed ();
 
 	public Key clone () throws CloneNotSupportedException;
