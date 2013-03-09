@@ -640,7 +640,7 @@ public abstract class CachedBlockStore implements BlockStore
 		Blk prev = null;
 		prev = retrieveBlockHeader (cachedPrevious);
 
-		if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 || b.getCreateTime () < getMedianTimePast (cachedPrevious) )
+		if ( b.getCreateTime () > (System.currentTimeMillis () / 1000) * 2 * 60 * 60 || b.getCreateTime () <= getMedianTimePast (cachedPrevious) )
 		{
 			throw new ValidationException ("Block timestamp out of bounds " + b.getHash ());
 		}

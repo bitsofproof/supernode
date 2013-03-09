@@ -166,6 +166,7 @@ public class APITest
 		for ( int i = 0; i < 110; ++i )
 		{
 			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
+			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
 			hash = block.getHash ();
@@ -298,6 +299,7 @@ public class APITest
 		});
 
 		Block block = createBlock (blocks.get (111).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 112));
+		block.setCreateTime (block.getCreateTime () + 112 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);
 		api.sendBlock (block);
