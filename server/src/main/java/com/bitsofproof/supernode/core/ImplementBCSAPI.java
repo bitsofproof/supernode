@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -344,33 +345,27 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		{
 			log.trace ("get transaction " + hash);
 			Tx tx = txhandler.getTransaction (hash);
-			final WireFormat.Writer writer = new WireFormat.Writer ();
 			if ( tx == null )
 			{
-				new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+				return new TransactionTemplate (transactionManager).execute (new TransactionCallback<Transaction> ()
 				{
 					@Override
-					protected void doInTransactionWithoutResult (TransactionStatus status)
+					public Transaction doInTransaction (TransactionStatus status)
 					{
 						status.setRollbackOnly ();
 						Tx t = store.getTransaction (hash);
 						if ( t != null )
 						{
-							t.toWire (writer);
+							return toBCSAPITransaction (t);
 						}
+						return null;
 					}
 				});
 			}
 			else
 			{
-				tx.toWire (writer);
+				return toBCSAPITransaction (tx);
 			}
-			byte[] read = writer.toByteArray ();
-			if ( read.length > 0 )
-			{
-				return Transaction.fromWire (new WireFormat.Reader (read));
-			}
-			return null;
 		}
 		finally
 		{
@@ -473,9 +468,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 	{
 		try
 		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			tx.toWire (writer);
-			Transaction transaction = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			Transaction transaction = toBCSAPITransaction (tx);
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
@@ -495,6 +488,34 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		{
 			log.error ("Can not send JMS message ", e);
 		}
+	}
+
+	private Transaction toBCSAPITransaction (Tx tx)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		tx.toWire (writer);
+		Transaction transaction = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		for ( int i = 0; i < tx.getOutputs ().size (); ++i )
+		{
+			TxOut xo = tx.getOutputs ().get (i);
+			TransactionOutput o = transaction.getOutputs ().get (i);
+			o.setVotes (xo.getVotes ());
+			o.setAddresses (new ArrayList<String> ());
+			if ( xo.getOwner1 () != null )
+			{
+				o.getAddresses ().add (xo.getOwner1 ());
+			}
+			if ( xo.getOwner2 () != null )
+			{
+				o.getAddresses ().add (xo.getOwner2 ());
+			}
+			if ( xo.getOwner3 () != null )
+			{
+				o.getAddresses ().add (xo.getOwner3 ());
+			}
+		}
+
+		return transaction;
 	}
 
 	@Override
@@ -579,10 +600,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						}
 						outs.put (o.getIx (), o);
 
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						o.toWire (writer);
-						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-						out.setTransactionHash (o.getTxHash ());
+						TransactionOutput out = toBCSAPITransactionOutput (o);
 						p.setOutput (out);
 						p.setSpent (spent.getTransaction ().getHash ());
 					}
@@ -604,20 +622,14 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 							}
 						}
 
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						o.toWire (writer);
-						TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-						out.setTransactionHash (o.getTxHash ());
+						TransactionOutput out = toBCSAPITransactionOutput (o);
 						p.setOutput (out);
 					}
 					for ( HashMap<Long, TxOut> outs : utxo.values () )
 					{
 						for ( TxOut o : outs.values () )
 						{
-							WireFormat.Writer writer = new WireFormat.Writer ();
-							o.toWire (writer);
-							TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-							out.setTransactionHash (o.getTxHash ());
+							TransactionOutput out = toBCSAPITransactionOutput (o);
 							balances.add (out);
 						}
 					}
@@ -657,16 +669,12 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
 			for ( Tx t : txhandler.getUnconfirmedForHashes (ah) )
 			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				t.toWire (writer);
-				statement.getUnconfirmedReceive ().add (Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+				statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
 			}
 			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
 			for ( Tx t : unconfirmed )
 			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				t.toWire (writer);
-				statement.getUnconfirmedSpend ().add (Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+				statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
 			}
 			return statement;
 		}
@@ -674,5 +682,29 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		{
 			log.trace ("get account statement returned");
 		}
+	}
+
+	private TransactionOutput toBCSAPITransactionOutput (TxOut o)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		o.toWire (writer);
+		TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		out.setTransactionHash (o.getTxHash ());
+		List<String> addresses = new ArrayList<String> ();
+		if ( o.getOwner1 () != null )
+		{
+			addresses.add (o.getOwner1 ());
+		}
+		if ( o.getOwner2 () != null )
+		{
+			addresses.add (o.getOwner2 ());
+		}
+		if ( o.getOwner3 () != null )
+		{
+			addresses.add (o.getOwner3 ());
+		}
+		out.setAddresses (addresses);
+		out.setVotes (o.getVotes ());
+		return out;
 	}
 }

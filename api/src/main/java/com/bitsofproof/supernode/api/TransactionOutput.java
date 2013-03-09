@@ -148,7 +148,7 @@ public class TransactionOutput implements Serializable, Cloneable
 		{
 			for ( int i = 0; i < addresses.size (); ++i )
 			{
-				builder.setAddress (i, addresses.get (i));
+				builder.addAddress (addresses.get (i));
 			}
 			builder.setVotes ((int) votes);
 		}

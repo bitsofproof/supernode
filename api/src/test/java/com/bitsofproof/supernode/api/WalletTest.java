@@ -61,7 +61,6 @@ public class WalletTest
 		assertTrue (Arrays.equals (account21.getMaster ().getKey ().getPublic (), account2.getKey (1).getKey ().getPublic ()));
 	}
 
-	@SuppressWarnings ("unused")
 	@Test
 	public void testReadOnlyWallet () throws ValidationException
 	{

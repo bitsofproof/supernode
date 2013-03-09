@@ -35,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
@@ -184,6 +185,7 @@ public class APITest
 	public void spendSome () throws ValidationException, BCSAPIException
 	{
 		final Semaphore ready = new Semaphore (0);
+		final Semaphore ready2 = new Semaphore (0);
 
 		List<TransactionOutput> sources = new ArrayList<TransactionOutput> ();
 		for ( int i = 0; i < 10; ++i )
@@ -197,7 +199,8 @@ public class APITest
 
 		Transaction transaction = wallet.createSpend (sources, sinks, 0);
 		final String hash = transaction.getHash ();
-		api.registerTransactionListener (new TransactionListener ()
+
+		TransactionListener listener = new TransactionListener ()
 		{
 
 			@Override
@@ -216,17 +219,28 @@ public class APITest
 			@Override
 			public void received (Transaction t)
 			{
+				t.computeHash ();
+				assertTrue (t.getHash ().equals (hash));
+				ready2.release ();
 			}
 
 			@Override
 			public void confirmed (String h, int n)
 			{
 			}
-		});
+		};
+
+		api.registerTransactionListener (listener);
+
+		List<String> receiverAddresses = new ArrayList<String> ();
+		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), sink.getKey ().getAddressFlag ()));
+		api.registerAddressListener (receiverAddresses, listener);
+
 		api.sendTransaction (transaction);
 		try
 		{
 			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
