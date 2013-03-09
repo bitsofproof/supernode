@@ -660,21 +660,20 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			});
 			Set<String> as = new HashSet<String> ();
 			as.addAll (addresses);
-			List<Tx> unconfirmed = txhandler.getUnconfirmedForAddresses (as);
 			Set<String> ah = new HashSet<String> ();
 			for ( TransactionOutput o : statement.getOpening () )
 			{
 				ah.add (o.getTransactionHash ());
 			}
-			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
+			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
 			for ( Tx t : txhandler.getUnconfirmedForHashes (ah) )
 			{
-				statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
-			}
-			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
-			for ( Tx t : unconfirmed )
-			{
 				statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
+			}
+			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
+			for ( Tx t : txhandler.getUnconfirmedForAddresses (as) )
+			{
+				statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
 			}
 			return statement;
 		}
