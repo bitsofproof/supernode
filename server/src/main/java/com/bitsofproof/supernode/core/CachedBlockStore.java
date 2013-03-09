@@ -1509,6 +1509,10 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean relay = !chain.isProduction () || checkForRelay (t, resolvedInputs);
 
 			validateTransaction (tcontext, t);
+			for ( TxOut o : t.getOutputs () )
+			{
+				parseOwners (o, chain);
+			}
 
 			return relay;
 		}
