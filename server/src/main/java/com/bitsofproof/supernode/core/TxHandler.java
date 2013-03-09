@@ -204,9 +204,12 @@ public class TxHandler implements TrunkListener
 									cacheTransaction (t);
 									sendTransaction (t, peer);
 									notifyListener (t);
-									synchronized ( own )
+									if ( peer == null )
 									{
-										own.add (t);
+										synchronized ( own )
+										{
+											own.add (t);
+										}
 									}
 									return null;
 								}
