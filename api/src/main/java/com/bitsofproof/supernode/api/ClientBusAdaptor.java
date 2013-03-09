@@ -496,7 +496,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerAddressListener (List<String> addresses, final TransactionListener listener) throws BCSAPIException
+	public void registerReceiveListener (List<String> addresses, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -508,7 +508,7 @@ public class ClientBusAdaptor implements BCSAPI
 				MessageConsumer consumer = filterConsumer.get (hash);
 				if ( consumer == null )
 				{
-					consumer = session.createConsumer (session.createTopic ("filter" + hash));
+					consumer = session.createConsumer (session.createTopic ("address" + hash));
 					consumer.setMessageListener (new MessageListener ()
 					{
 						@Override
@@ -548,7 +548,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerTransactionListener (List<String> hashes, final TransactionListener listener) throws BCSAPIException
+	public void registerSpendListener (List<String> hashes, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -560,7 +560,7 @@ public class ClientBusAdaptor implements BCSAPI
 				MessageConsumer consumer = filterConsumer.get (hash);
 				if ( consumer == null )
 				{
-					consumer = session.createConsumer (session.createTopic ("filter" + hash));
+					consumer = session.createConsumer (session.createTopic ("tx" + hash));
 					consumer.setMessageListener (new MessageListener ()
 					{
 						@Override
@@ -573,9 +573,12 @@ public class ClientBusAdaptor implements BCSAPI
 								m.readBytes (body);
 								Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 								t.computeHash ();
-								if ( listenTransactions.contains (t.getHash ()) )
+								for ( TransactionInput i : t.getInputs () )
 								{
-									listener.spent (t);
+									if ( listenTransactions.contains (i.getSourceHash ()) )
+									{
+										listener.spent (t);
+									}
 								}
 							}
 							catch ( Exception e )

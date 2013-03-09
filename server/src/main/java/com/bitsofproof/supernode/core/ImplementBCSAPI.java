@@ -442,7 +442,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		MessageProducer p = filterProducer.get (key);
 		if ( p == null )
 		{
-			p = session.createProducer (session.createTopic ("filter" + key));
+			p = session.createProducer (session.createTopic ("tx" + key));
 			filterProducer.put (key, p);
 		}
 		p.send (m);
@@ -456,7 +456,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			MessageProducer p = filterProducer.get (key);
 			if ( p == null )
 			{
-				p = session.createProducer (session.createTopic ("filter" + key));
+				p = session.createProducer (session.createTopic ("address" + key));
 				filterProducer.put (key, p);
 			}
 			p.send (m);

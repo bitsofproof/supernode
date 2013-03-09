@@ -44,6 +44,7 @@ import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
+import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkListener;
@@ -186,6 +187,7 @@ public class APITest
 	{
 		final Semaphore ready = new Semaphore (0);
 		final Semaphore ready2 = new Semaphore (0);
+		final Semaphore ready3 = new Semaphore (0);
 
 		List<TransactionOutput> sources = new ArrayList<TransactionOutput> ();
 		for ( int i = 0; i < 10; ++i )
@@ -199,6 +201,7 @@ public class APITest
 
 		Transaction transaction = wallet.createSpend (sources, sinks, 0);
 		final String hash = transaction.getHash ();
+		final List<String> spendingTxs = new ArrayList<String> ();
 
 		TransactionListener listener = new TransactionListener ()
 		{
@@ -214,6 +217,17 @@ public class APITest
 			@Override
 			public void spent (Transaction t)
 			{
+				t.computeHash ();
+				boolean spent = false;
+				for ( TransactionInput i : t.getInputs () )
+				{
+					if ( spendingTxs.contains (i.getSourceHash ()) )
+					{
+						spent = true;
+					}
+				}
+				assertTrue (spent);
+				ready2.release ();
 			}
 
 			@Override
@@ -221,7 +235,7 @@ public class APITest
 			{
 				t.computeHash ();
 				assertTrue (t.getHash ().equals (hash));
-				ready2.release ();
+				ready3.release ();
 			}
 
 			@Override
@@ -234,13 +248,20 @@ public class APITest
 
 		List<String> receiverAddresses = new ArrayList<String> ();
 		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), sink.getKey ().getAddressFlag ()));
-		api.registerAddressListener (receiverAddresses, listener);
+		api.registerReceiveListener (receiverAddresses, listener);
+
+		for ( TransactionOutput o : sources )
+		{
+			spendingTxs.add (o.getTransactionHash ());
+		}
+		api.registerSpendListener (spendingTxs, listener);
 
 		api.sendTransaction (transaction);
 		try
 		{
-			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
-			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
+			assertTrue (ready2.tryAcquire (200, TimeUnit.SECONDS));
+			assertTrue (ready3.tryAcquire (200, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
