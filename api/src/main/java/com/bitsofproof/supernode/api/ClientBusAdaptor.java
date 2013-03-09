@@ -644,46 +644,54 @@ public class ClientBusAdaptor implements BCSAPI
 				blocks.put (h, i);
 				++i;
 			}
-			registerTrunkListener (new TrunkListener ()
-			{
-				@Override
-				public void trunkUpdate (List<Block> removed, List<Block> added)
-				{
-					for ( Block b : removed )
-					{
-						blocks.remove (b.getHash ());
-					}
-					for ( Block b : added )
-					{
-						blocks.put (b.getHash (), blocks.size ());
-					}
-					Set<String> confirmed = confirmationUpdate (removed, added);
-					for ( String hash : monitorConfirmations.keySet () )
-					{
-						if ( confirmed.contains (hash) )
-						{
-							listener.confirmed (hash, monitorConfirmations.get (hash));
-						}
-					}
-				}
-			});
 		}
 		for ( String hash : hashes )
 		{
 			Transaction t = getTransaction (hash);
 			if ( t != null )
 			{
-				if ( t.getBlockHash () != null )
-				{
-					listener.confirmed (hash, blocks.size () - blocks.get (t.getBlockHash ()));
-				}
 				Integer conf = monitorConfirmations.get (hash);
 				if ( conf == null )
 				{
 					monitorConfirmations.put (hash, new Integer (0));
 				}
+				if ( t.getBlockHash () != null )
+				{
+					int c = blocks.size () - blocks.get (t.getBlockHash ());
+					monitorConfirmations.put (hash, new Integer (c));
+					listener.confirmed (hash, c);
+				}
 			}
 		}
+		registerTrunkListener (new TrunkListener ()
+		{
+			@Override
+			public void trunkUpdate (List<Block> removed, List<Block> added)
+			{
+				if ( removed != null )
+				{
+					for ( Block b : removed )
+					{
+						blocks.remove (b.getHash ());
+					}
+				}
+				if ( added != null )
+				{
+					for ( Block b : added )
+					{
+						blocks.put (b.getHash (), blocks.size ());
+					}
+				}
+				Set<String> confirmed = confirmationUpdate (removed, added);
+				for ( String hash : monitorConfirmations.keySet () )
+				{
+					if ( confirmed.contains (hash) )
+					{
+						listener.confirmed (hash, monitorConfirmations.get (hash));
+					}
+				}
+			}
+		});
 	}
 
 	@Override

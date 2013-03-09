@@ -327,32 +327,14 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 		JPAQuery q = new JPAQuery (entityManager);
 		QTx tx = QTx.tx;
 
-		List<Tx> transactions = q.from (tx).where (tx.hash.eq (hash)).list (tx);
-		for ( Tx t : transactions )
+		Tx t = q.from (tx).where (tx.hash.eq (hash)).uniqueResult (tx);
+		if ( t != null )
 		{
 			// trigger lazy loading
 			t.getInputs ().size ();
 			t.getOutputs ().size ();
 			entityManager.detach (t);
-		}
-		if ( transactions.size () == 1 )
-		{
-			return transactions.get (0);
-		}
-		boolean allAvailable = true;
-		for ( Tx t : transactions )
-		{
-			for ( TxOut o : t.getOutputs () )
-			{
-				if ( !o.isAvailable () )
-				{
-					allAvailable = false;
-				}
-			}
-		}
-		if ( allAvailable )
-		{
-			return transactions.get (0);
+			return t;
 		}
 		return null;
 	}

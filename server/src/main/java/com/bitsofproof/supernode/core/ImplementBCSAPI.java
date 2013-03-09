@@ -354,7 +354,10 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					{
 						status.setRollbackOnly ();
 						Tx t = store.getTransaction (hash);
-						t.toWire (writer);
+						if ( t != null )
+						{
+							t.toWire (writer);
+						}
 					}
 				});
 			}
@@ -362,7 +365,12 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			{
 				tx.toWire (writer);
 			}
-			return Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+			byte[] read = writer.toByteArray ();
+			if ( read.length > 0 )
+			{
+				return Transaction.fromWire (new WireFormat.Reader (read));
+			}
+			return null;
 		}
 		finally
 		{

@@ -159,19 +159,11 @@ public class TxHandler implements TrunkListener
 							{
 								status.setRollbackOnly ();
 
-								boolean relay;
 								try
 								{
-									relay = network.getStore ().validateTransaction (t, availableOutput);
-									if ( relay )
-									{
-										cacheTransaction (t);
-										sendTransaction (t, peer);
-									}
-									else
-									{
-										log.debug ("NOT relaying transaction " + t.getHash ());
-									}
+									network.getStore ().validateTransaction (t, availableOutput);
+									cacheTransaction (t);
+									sendTransaction (t, peer);
 									notifyListener (t);
 									return null;
 								}

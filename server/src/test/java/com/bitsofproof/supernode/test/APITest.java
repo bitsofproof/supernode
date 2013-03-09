@@ -145,7 +145,7 @@ public class APITest
 	}
 
 	@Test
-	public void send120Blocks () throws ValidationException, BCSAPIException
+	public void send110Blocks () throws ValidationException, BCSAPIException
 	{
 		final Semaphore ready = new Semaphore (0);
 
@@ -161,7 +161,7 @@ public class APITest
 		api.registerTrunkListener (listener);
 
 		String hash = blocks.get (1).getHash ();
-		for ( int i = 0; i < 120; ++i )
+		for ( int i = 0; i < 110; ++i )
 		{
 			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
 			mineBlock (block);
@@ -172,7 +172,7 @@ public class APITest
 
 		try
 		{
-			assertTrue (ready.tryAcquire (120, 20, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (110, 20, TimeUnit.SECONDS));
 			api.removeTrunkListener (listener);
 		}
 		catch ( InterruptedException e )
@@ -219,11 +219,51 @@ public class APITest
 			}
 
 			@Override
-			public void confirmed (String hash, int n)
+			public void confirmed (String h, int n)
 			{
 			}
 		});
 		api.sendTransaction (transaction);
+		try
+		{
+			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+		}
+		catch ( InterruptedException e )
+		{
+		}
+
+		List<String> hashes = new ArrayList<String> ();
+		hashes.add (transaction.getHash ());
+		api.registerConfirmationListener (hashes, new TransactionListener ()
+		{
+
+			@Override
+			public void validated (Transaction t)
+			{
+			}
+
+			@Override
+			public void spent (Transaction t)
+			{
+			}
+
+			@Override
+			public void received (Transaction t)
+			{
+			}
+
+			@Override
+			public void confirmed (String h, int n)
+			{
+				assertTrue (h.equals (hash));
+				ready.release ();
+			}
+		});
+
+		Block block = createBlock (blocks.get (111).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 112));
+		block.getTransactions ().add (transaction);
+		mineBlock (block);
+		api.sendBlock (block);
 		try
 		{
 			assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
