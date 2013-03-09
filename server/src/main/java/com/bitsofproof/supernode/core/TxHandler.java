@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +70,20 @@ public class TxHandler implements TrunkListener
 	{
 		this.network = network;
 		final BlockStore store = network.getStore ();
+
+		network.scheduleJobWithFixedDelay (new Runnable ()
+		{
+			@Override
+			public void run ()
+			{
+				// give retransmits of previously failed tx a chance
+				synchronized ( heard )
+				{
+					heard.clear ();
+				}
+			}
+		}, 1, 1, TimeUnit.MINUTES);
+
 		store.addTrunkListener (this);
 		network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
 		{
