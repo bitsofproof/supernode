@@ -51,6 +51,7 @@ public class TxHandler implements TrunkListener
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
+	private final Set<Tx> own = Collections.synchronizedSet (new HashSet<Tx> ());
 	private TxOutCache availableOutput = null;
 	private PlatformTransactionManager transactionManager;
 
@@ -81,8 +82,25 @@ public class TxHandler implements TrunkListener
 				{
 					heard.clear ();
 				}
+				// re-transmit own until not in a block
+				synchronized ( own )
+				{
+					if ( !own.isEmpty () )
+					{
+						for ( BitcoinPeer peer : network.getConnectPeers () )
+						{
+							InvMessage tm = (InvMessage) peer.createMessage ("inv");
+							for ( Tx t : own )
+							{
+								log.debug ("Re-broadcast " + t.getHash ());
+								tm.getTransactionHashes ().add (new Hash (t.getHash ()).toByteArray ());
+							}
+							peer.send (tm);
+						}
+					}
+				}
 			}
-		}, 1, 1, TimeUnit.MINUTES);
+		}, 10, 10, TimeUnit.MINUTES);
 
 		store.addTrunkListener (this);
 		network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
@@ -103,13 +121,19 @@ public class TxHandler implements TrunkListener
 				for ( byte[] h : im.getTransactionHashes () )
 				{
 					String hash = new Hash (h).toString ();
-					synchronized ( heard )
+					synchronized ( unconfirmed )
 					{
-						if ( !heard.contains (hash) )
+						synchronized ( heard )
 						{
-							heard.add (hash);
-							log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
-							get.getTransactions ().add (h);
+							if ( !heard.contains (hash) )
+							{
+								heard.add (hash);
+								if ( !unconfirmed.containsKey (hash) )
+								{
+									log.trace ("heard about new transaction " + hash + " from " + peer.getAddress ());
+									get.getTransactions ().add (h);
+								}
+							}
 						}
 					}
 				}
@@ -180,6 +204,10 @@ public class TxHandler implements TrunkListener
 									cacheTransaction (t);
 									sendTransaction (t, peer);
 									notifyListener (t);
+									synchronized ( own )
+									{
+										own.add (t);
+									}
 									return null;
 								}
 								catch ( ValidationException e )
@@ -319,6 +347,10 @@ public class TxHandler implements TrunkListener
 					if ( unconfirmed.containsKey (tx.getHash ()) )
 					{
 						unconfirmed.remove (tx.getHash ());
+						synchronized ( own )
+						{
+							own.remove (tx.getHash ());
+						}
 						for ( TxOut o : tx.getOutputs () )
 						{
 							availableOutput.remove (o.getTxHash (), o.getIx ());
