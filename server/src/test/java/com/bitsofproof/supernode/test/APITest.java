@@ -216,6 +216,8 @@ public class APITest
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
 		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey (), 10 * 50 * COIN);
 		sinks.add (sink);
+		List<String> sinkAddresses = new ArrayList<String> ();
+		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), 0x0));
 
 		Transaction transaction = wallet.createSpend (sources, sinks, 0);
 		final String hash = transaction.getHash ();
@@ -277,9 +279,9 @@ public class APITest
 		api.sendTransaction (transaction);
 		try
 		{
-			assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
-			assertTrue (ready2.tryAcquire (200, TimeUnit.SECONDS));
-			assertTrue (ready3.tryAcquire (200, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
+			assertTrue (ready3.tryAcquire (2, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
@@ -289,6 +291,11 @@ public class APITest
 		assertTrue (as.getOpening () == null);
 		assertTrue (as.getPosting ().size () == 10);
 		assertTrue (as.getUnconfirmedSpend ().size () == 1);
+
+		as = api.getAccountStatement (sinkAddresses, 0);
+		assertTrue (as.getOpening () == null);
+		assertTrue (as.getPosting () == null);
+		assertTrue (as.getUnconfirmedReceive ().size () == 1);
 
 		List<String> hashes = new ArrayList<String> ();
 		hashes.add (transaction.getHash ());
@@ -330,6 +337,21 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+
+		as = api.getAccountStatement (sourceAddresses, blocks.get (111).getCreateTime ());
+		assertTrue (as.getOpening ().size () == 10);
+		assertTrue (as.getPosting ().size () == 10);
+		assertTrue (as.getUnconfirmedSpend () == null);
+
+		as = api.getAccountStatement (sourceAddresses, block.getCreateTime ());
+		assertTrue (as.getOpening () == null);
+		assertTrue (as.getPosting () == null);
+		assertTrue (as.getUnconfirmedSpend () == null);
+
+		as = api.getAccountStatement (sinkAddresses, block.getCreateTime ());
+		assertTrue (as.getOpening ().size () == 1);
+		assertTrue (as.getPosting () == null);
+		assertTrue (as.getUnconfirmedSpend () == null);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

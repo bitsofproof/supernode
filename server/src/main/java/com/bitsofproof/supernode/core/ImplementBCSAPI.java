@@ -569,7 +569,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					statement.setTimestamp (trunk.getCreateTime ());
 					statement.setLastBlock (store.getHeadHash ());
 
-					log.trace ("retrieve balance");
 					HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
 					for ( TxOut o : store.getUnspentOutput (addresses) )
 					{
@@ -586,7 +585,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					List<Posting> postings = new ArrayList<Posting> ();
 					statement.setPosting (postings);
 
-					log.trace ("retrieve spent");
 					for ( TxIn spent : store.getSpent (addresses, from) )
 					{
 						Posting p = new Posting ();
@@ -617,7 +615,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						p.setSpent (spent.getTransaction ().getHash ());
 					}
 
-					log.trace ("retrieve received");
 					for ( TxOut o : store.getReceived (addresses, from) )
 					{
 						Posting p = new Posting ();
