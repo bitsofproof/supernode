@@ -98,7 +98,7 @@ public class SatoshiChain implements Chain
 	}
 
 	@Override
-	public int getMultisigAddressFlag ()
+	public int getP2SHAddressFlag ()
 	{
 		return 0x05;
 	}

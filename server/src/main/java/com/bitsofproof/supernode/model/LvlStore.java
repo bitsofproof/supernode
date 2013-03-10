@@ -747,7 +747,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<TxIn> getSpendList (List<String> addresses, long from)
+	protected List<TxIn> getSpendList (List<String> addresses, long after)
 	{
 		List<TxIn> result = new ArrayList<TxIn> ();
 		List<Tx> related = readRelatedTx (addresses);
@@ -759,7 +759,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 				{
 					Tx s = readTx (i.getSourceHash ());
 					Blk b = readBlk (s.getBlockHash (), false);
-					if ( b.getCreateTime () >= from )
+					if ( b.getCreateTime () > after )
 					{
 						TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
 						i.setSource (spend);
@@ -778,14 +778,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<TxOut> getReceivedList (final List<String> addresses, long from)
+	protected List<TxOut> getReceivedList (final List<String> addresses, long after)
 	{
 		List<TxOut> result = new ArrayList<TxOut> ();
 		List<Tx> related = readRelatedTx (addresses);
 		for ( Tx t : related )
 		{
 			Blk b = readBlk (t.getBlockHash (), false);
-			if ( b.getCreateTime () >= from )
+			if ( b.getCreateTime () > after )
 			{
 				t.setBlock (b);
 				for ( TxOut o : t.getOutputs () )

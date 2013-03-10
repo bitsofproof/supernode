@@ -92,7 +92,7 @@ public class Testnet3Chain implements Chain
 	}
 
 	@Override
-	public int getMultisigAddressFlag ()
+	public int getP2SHAddressFlag ()
 	{
 		return 0xc4;
 	}

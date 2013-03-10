@@ -207,7 +207,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 	}
 
 	@Override
-	protected List<TxIn> getSpendList (List<String> addresses, long from)
+	protected List<TxIn> getSpendList (List<String> addresses, long after)
 	{
 		List<TxIn> spent = new ArrayList<TxIn> ();
 
@@ -216,32 +216,32 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 
 		JPAQuery q = new JPAQuery (entityManager);
 
-		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner1.in (addresses).and (txin.blockTime.goe (from))).list (txin));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner1.in (addresses).and (txin.blockTime.gt (after))).list (txin));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner2.in (addresses).and (txin.blockTime.goe (from))).list (txin));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner2.in (addresses).and (txin.blockTime.gt (after))).list (txin));
 
 		q = new JPAQuery (entityManager);
-		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner3.in (addresses).and (txin.blockTime.goe (from))).list (txin));
+		spent.addAll (q.from (txin).join (txin.source, txout).where (txout.owner3.in (addresses).and (txin.blockTime.gt (after))).list (txin));
 
 		return spent;
 	}
 
 	@Override
-	protected List<TxOut> getReceivedList (List<String> addresses, long from)
+	protected List<TxOut> getReceivedList (List<String> addresses, long after)
 	{
 		List<TxOut> received = new ArrayList<TxOut> ();
 		QTxOut txout = QTxOut.txOut;
 
 		JPAQuery q = new JPAQuery (entityManager);
 
-		received.addAll (q.from (txout).where (txout.owner1.in (addresses).and (txout.blockTime.goe (from))).list (txout));
+		received.addAll (q.from (txout).where (txout.owner1.in (addresses).and (txout.blockTime.gt (after))).list (txout));
 
 		q = new JPAQuery (entityManager);
-		received.addAll (q.from (txout).where (txout.owner2.in (addresses).and (txout.blockTime.goe (from))).list (txout));
+		received.addAll (q.from (txout).where (txout.owner2.in (addresses).and (txout.blockTime.gt (after))).list (txout));
 
 		q = new JPAQuery (entityManager);
-		received.addAll (q.from (txout).where (txout.owner3.in (addresses).and (txout.blockTime.goe (from))).list (txout));
+		received.addAll (q.from (txout).where (txout.owner3.in (addresses).and (txout.blockTime.gt (after))).list (txout));
 
 		return received;
 	}

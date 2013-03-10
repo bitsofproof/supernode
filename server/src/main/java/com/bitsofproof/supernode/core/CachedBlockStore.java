@@ -150,7 +150,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify);
 
-	protected abstract List<TxOut> getReceivedList (List<String> addresses, long from);
+	protected abstract List<TxOut> getReceivedList (List<String> addresses, long after);
 
 	protected abstract TxOut getSourceReference (TxOut source);
 
@@ -166,7 +166,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
 
-	protected abstract List<TxIn> getSpendList (List<String> addresses, long from);
+	protected abstract List<TxIn> getSpendList (List<String> addresses, long after);
 
 	@Override
 	public void addTrunkListener (TrunkListener listener)
@@ -1372,7 +1372,7 @@ public abstract class CachedBlockStore implements BlockStore
 				if ( hash.length == 20 )
 				{
 					// BIP 0013
-					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, chain.getMultisigAddressFlag ()));
+					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, chain.getP2SHAddressFlag ()));
 					out.setVotes (1L);
 				}
 			}
@@ -1389,15 +1389,15 @@ public abstract class CachedBlockStore implements BlockStore
 							{
 								if ( j == 0 )
 								{
-									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
+									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
 								}
 								if ( j == 1 )
 								{
-									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
+									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
 								}
 								if ( j == 2 )
 								{
-									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getMultisigAddressFlag ()));
+									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
 								}
 							}
 							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);

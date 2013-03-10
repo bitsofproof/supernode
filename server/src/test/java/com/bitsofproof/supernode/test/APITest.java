@@ -35,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
@@ -197,7 +198,21 @@ public class APITest
 			TransactionOutput o = blocks.get (i + 1).getTransactions ().get (0).getOutputs ().get (0);
 			sources.add (o);
 			o.parseOwners (wallet.getAddressFlag (), wallet.getMultiAddressFlag ());
+			sourceAddresses.addAll (o.getAddresses ());
 		}
+
+		AccountStatement as = api.getAccountStatement (sourceAddresses, 0);
+		assertTrue (as.getOpening () == null);
+		assertTrue (as.getPosting ().size () == 10);
+
+		as = api.getAccountStatement (sourceAddresses, blocks.get (9).getCreateTime ());
+		assertTrue (as.getOpening ().size () == 9);
+		assertTrue (as.getPosting ().size () == 1);
+
+		as = api.getAccountStatement (sourceAddresses, blocks.get (10).getCreateTime ());
+		assertTrue (as.getOpening ().size () == 10);
+		assertTrue (as.getPosting () == null);
+
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
 		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey (), 10 * 50 * COIN);
 		sinks.add (sink);
@@ -269,6 +284,11 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+
+		as = api.getAccountStatement (sourceAddresses, 0);
+		assertTrue (as.getOpening () == null);
+		assertTrue (as.getPosting ().size () == 10);
+		assertTrue (as.getUnconfirmedSpend ().size () == 1);
 
 		List<String> hashes = new ArrayList<String> ();
 		hashes.add (transaction.getHash ());

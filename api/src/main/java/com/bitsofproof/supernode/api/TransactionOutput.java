@@ -32,7 +32,7 @@ public class TransactionOutput implements Serializable, Cloneable
 	private long votes;
 	private List<String> addresses;
 
-	public void parseOwners (int addressFlag, int multiAddressFlag) throws ValidationException
+	public void parseOwners (int addressFlag, int p2sAddressFlag) throws ValidationException
 	{
 		addresses = new ArrayList<String> ();
 		List<ScriptFormat.Token> parsed;
@@ -58,7 +58,7 @@ public class TransactionOutput implements Serializable, Cloneable
 			if ( hash.length == 20 )
 			{
 				// BIP 0013
-				addresses.add (AddressConverter.toSatoshiStyle (hash, multiAddressFlag));
+				addresses.add (AddressConverter.toSatoshiStyle (hash, p2sAddressFlag));
 				setVotes (1L);
 			}
 		}
@@ -73,15 +73,15 @@ public class TransactionOutput implements Serializable, Cloneable
 					{
 						if ( j == 0 )
 						{
-							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), addressFlag));
 						}
 						if ( j == 1 )
 						{
-							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), addressFlag));
 						}
 						if ( j == 2 )
 						{
-							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), multiAddressFlag));
+							addresses.add (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), addressFlag));
 						}
 					}
 					setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);

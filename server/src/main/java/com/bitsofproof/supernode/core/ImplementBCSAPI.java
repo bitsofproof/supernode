@@ -554,6 +554,8 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		try
 		{
 			final AccountStatement statement = new AccountStatement ();
+			final Set<String> openTX = new HashSet<String> ();
+
 			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 			{
 				@Override
@@ -576,6 +578,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						{
 							outs = new HashMap<Long, TxOut> ();
 							utxo.put (o.getTxHash (), outs);
+							openTX.add (o.getTxHash ());
 						}
 						outs.put (o.getIx (), o);
 					}
@@ -590,6 +593,14 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						postings.add (p);
 
 						p.setTimestamp (spent.getBlockTime ());
+						if ( spent.getTransaction ().getBlockHash () != null )
+						{
+							p.setBlock (spent.getTransaction ().getBlockHash ());
+						}
+						else
+						{
+							p.setBlock (spent.getTransaction ().getBlock ().getHash ());
+						}
 
 						TxOut o = spent.getSource ();
 						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
@@ -597,6 +608,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						{
 							outs = new HashMap<Long, TxOut> ();
 							utxo.put (o.getTxHash (), outs);
+							openTX.remove (o.getTxHash ());
 						}
 						outs.put (o.getIx (), o);
 
@@ -612,6 +624,14 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 						postings.add (p);
 
 						p.setTimestamp (o.getBlockTime ());
+						if ( o.getTransaction ().getBlockHash () != null )
+						{
+							p.setBlock (o.getTransaction ().getBlockHash ());
+						}
+						else
+						{
+							p.setBlock (o.getTransaction ().getBlock ().getHash ());
+						}
 						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
 						if ( outs != null )
 						{
@@ -619,6 +639,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 							if ( outs.size () == 0 )
 							{
 								utxo.remove (o.getTxHash ());
+								openTX.add (o.getTxHash ());
 							}
 						}
 
@@ -658,22 +679,28 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					});
 				}
 			});
+			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
+			Set<String> alreadyIn = new HashSet<String> ();
+			for ( Tx t : txhandler.getUnconfirmedForHashes (openTX) )
+			{
+				if ( !alreadyIn.contains (t.getHash ()) )
+				{
+					statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
+					alreadyIn.add (t.getHash ());
+				}
+			}
+
 			Set<String> as = new HashSet<String> ();
 			as.addAll (addresses);
-			Set<String> ah = new HashSet<String> ();
-			for ( TransactionOutput o : statement.getOpening () )
-			{
-				ah.add (o.getTransactionHash ());
-			}
-			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
-			for ( Tx t : txhandler.getUnconfirmedForHashes (ah) )
-			{
-				statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
-			}
 			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
+			alreadyIn = new HashSet<String> ();
 			for ( Tx t : txhandler.getUnconfirmedForAddresses (as) )
 			{
-				statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
+				if ( !alreadyIn.contains (t.getHash ()) )
+				{
+					statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
+					alreadyIn.add (t.getHash ());
+				}
 			}
 			return statement;
 		}
