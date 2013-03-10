@@ -14,7 +14,7 @@
 
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.api.ClientBusAdaptor" init-method="init">
 	    <property name="clientId" value="explorer" />
-		<property name="connectionFactory" ref="activeMQ" />
+		<property name="connectionFactory" ref="stomp" />
 	</bean>
 
 	<bean id="explorer" class="com.bitsofproof.client.demo.Explorer">

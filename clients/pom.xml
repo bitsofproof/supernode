@@ -36,7 +36,7 @@
 		<querydsl.version>2.9.0</querydsl.version>
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
-		<activemq.version>5.7.0</activemq.version>
+		<stomp.version>1.13</stomp.version>
 		<bouncycastle.version>1.48</bouncycastle.version>
 	</properties>
 	<build>
@@ -247,10 +247,10 @@
 			<artifactId>geronimo-jms_1.1_spec</artifactId>
 			<version>1.1</version>
 		</dependency>
-		<dependency>
-			<groupId>org.apache.activemq</groupId>
-			<artifactId>activemq-core</artifactId>
-			<version>${activemq.version}</version>
+				<dependency>
+			<groupId>org.fusesource.stompjms</groupId>
+			<artifactId>stompjms-client</artifactId>
+			<version>${stomp.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.json</groupId>

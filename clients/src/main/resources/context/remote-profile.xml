@@ -12,16 +12,10 @@
 	<description>supernode spring assembly (c) 2013 Tamas Blummer
 		tamas@bitsofproof.com</description>
 
-	<bean id="activeMQ" class="org.apache.activemq.ActiveMQConnectionFactory">
-	    <constructor-arg>
-			<value>demo</value>
-		</constructor-arg>
-		<constructor-arg>
-			<value>password</value>
-		</constructor-arg>
-		<constructor-arg>
-			<value>tcp://bitsofproof.com:61615</value>
-		</constructor-arg>
+	<bean id="stomp" class="org.fusesource.stomp.jms.StompJmsConnectionFactory">
+	    <property name="username" value="demo"/>
+	    <property name="password" value="password"/>
+	    <property name="brokerURI" value="tcp://bitsofproof.com:61615"/>
 	</bean>
 		
 </beans>
