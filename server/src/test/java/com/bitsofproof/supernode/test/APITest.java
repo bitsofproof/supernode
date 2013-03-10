@@ -332,7 +332,7 @@ public class APITest
 		api.sendBlock (block);
 		try
 		{
-			assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
