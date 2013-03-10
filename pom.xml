@@ -41,6 +41,7 @@
 	<modules>
 		<module>api</module>
 		<module>server</module>
+		<module>clients</module>
 	</modules>
 
 	<scm>

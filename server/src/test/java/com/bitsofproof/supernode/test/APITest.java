@@ -197,7 +197,7 @@ public class APITest
 		{
 			TransactionOutput o = blocks.get (i + 1).getTransactions ().get (0).getOutputs ().get (0);
 			sources.add (o);
-			o.parseOwners (wallet.getAddressFlag (), wallet.getMultiAddressFlag ());
+			o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
 			sourceAddresses.addAll (o.getAddresses ());
 		}
 

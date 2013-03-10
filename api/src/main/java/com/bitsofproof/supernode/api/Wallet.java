@@ -33,14 +33,14 @@ public class Wallet
 	private final Map<String, Key> keyForAddress = new HashMap<String, Key> ();
 	private final List<WalletListener> walletListener = new ArrayList<WalletListener> ();
 	private final int addressFlag;
-	private final int multiAddressFlag;
+	private final int p2shAddressFlag;
 
-	public Wallet (ExtendedKey master, int nextKey, int addressFlag, int multiAddressFlag) throws ValidationException
+	public Wallet (ExtendedKey master, int nextKey, int addressFlag, int p2shAddressFlag) throws ValidationException
 	{
 		this.master = master;
 		this.nextKey = nextKey;
 		this.addressFlag = addressFlag;
-		this.multiAddressFlag = multiAddressFlag;
+		this.p2shAddressFlag = p2shAddressFlag;
 		for ( int i = 0; i < nextKey; ++i )
 		{
 			ExtendedKey k = getKey (i);
@@ -53,9 +53,9 @@ public class Wallet
 		return addressFlag;
 	}
 
-	public int getMultiAddressFlag ()
+	public int getP2SHAddressFlag ()
 	{
-		return multiAddressFlag;
+		return p2shAddressFlag;
 	}
 
 	public static Wallet createWallet (int addressFlag, int multiAddressFlag) throws ValidationException
@@ -82,7 +82,7 @@ public class Wallet
 		{
 			subs = new ArrayList<Wallet> ();
 		}
-		Wallet sub = new Wallet (getKey (sequence), 0, addressFlag, multiAddressFlag);
+		Wallet sub = new Wallet (getKey (sequence), 0, addressFlag, p2shAddressFlag);
 		subs.add (sub);
 		for ( WalletListener l : walletListener )
 		{
