@@ -23,6 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -79,6 +81,8 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 	private MessageProducer trunkProducer;
 	private final Map<String, MessageProducer> filterProducer = new HashMap<String, MessageProducer> ();
 
+	private final ExecutorService requestProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
+
 	public ImplementBCSAPI (BitcoinNetwork network, TxHandler txHandler)
 	{
 		this.network = network;
@@ -99,14 +103,11 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addMessageListener (String topic, int instances, MessageListener listener) throws JMSException
+	private void addMessageListener (String topic, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
-		for ( int i = 0; i < instances; ++i )
-		{
-			MessageConsumer consumer = session.createConsumer (destination);
-			consumer.setMessageListener (listener);
-		}
+		MessageConsumer consumer = session.createConsumer (destination);
+		consumer.setMessageListener (listener);
 	}
 
 	public void init ()
@@ -119,7 +120,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			addMessageListener ("newTransaction", 1, new MessageListener ()
+			addMessageListener ("newTransaction", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -150,7 +151,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("newBlock", 1, new MessageListener ()
+			addMessageListener ("newBlock", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -181,7 +182,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("blockRequest", 1, new MessageListener ()
+			addMessageListener ("blockRequest", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -208,7 +209,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("transactionRequest", 1, new MessageListener ()
+			addMessageListener ("transactionRequest", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -235,27 +236,41 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("accountRequest", 4, new MessageListener ()
+			addMessageListener ("accountRequest", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
 				{
-					BytesMessage o = (BytesMessage) arg0;
+					final BytesMessage o = (BytesMessage) arg0;
 					try
 					{
 						byte[] body = new byte[(int) o.getBodyLength ()];
 						o.readBytes (body);
-						BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
+						final BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
 
-						AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
-						if ( as != null )
+						requestProcessor.execute (new Runnable ()
 						{
-							reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
-						}
-						else
-						{
-							reply (o.getJMSReplyTo (), null);
-						}
+							@Override
+							public void run ()
+							{
+								AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
+								try
+								{
+									if ( as != null )
+									{
+										reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
+									}
+									else
+									{
+										reply (o.getJMSReplyTo (), null);
+									}
+								}
+								catch ( JMSException e )
+								{
+									log.trace ("Exception while processing account request ", e);
+								}
+							}
+						});
 					}
 					catch ( Exception e )
 					{
@@ -263,7 +278,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("inventory", 1, new MessageListener ()
+			addMessageListener ("inventory", new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
