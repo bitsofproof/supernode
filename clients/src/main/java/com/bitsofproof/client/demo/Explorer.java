@@ -15,7 +15,10 @@
  */
 package com.bitsofproof.client.demo;
 
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -27,9 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
 
+import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.Posting;
+import com.bitsofproof.supernode.api.Transaction;
+import com.bitsofproof.supernode.api.TransactionOutput;
 
 public class Explorer
 {
@@ -87,15 +94,27 @@ public class Explorer
 		final Options gnuOptions = new Options ();
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
 		gnuOptions.addOption ("b", "block", true, "Get raw block");
+		gnuOptions.addOption ("t", "transaction", true, "Get raw transaction");
+		gnuOptions.addOption ("a", "address", true, "Get addres traffic for last 5 days");
 
 		CommandLine cl = null;
 		String block = null;
+		String transaction = null;
+		String address = null;
 		try
 		{
 			cl = parser.parse (gnuOptions, args);
 			if ( cl.hasOption ('b') )
 			{
 				block = cl.getOptionValue ('b');
+			}
+			if ( cl.hasOption ('t') )
+			{
+				transaction = cl.getOptionValue ('t');
+			}
+			if ( cl.hasOption ('a') )
+			{
+				address = cl.getOptionValue ('a');
 			}
 		}
 		catch ( ParseException e )
@@ -108,12 +127,76 @@ public class Explorer
 			try
 			{
 				Block b = api.getBlock (block);
-				System.out.println (b.toWireDump ());
+				if ( b != null )
+				{
+					System.out.println (b.toWireDump ());
+				}
 			}
 			catch ( BCSAPIException e )
 			{
 				log.error ("Can not retrieve block " + block, e);
 			}
 		}
+		if ( transaction != null )
+		{
+			try
+			{
+				Transaction t = api.getTransaction (transaction);
+				if ( t != null )
+				{
+					System.out.println (t.toWireDump ());
+				}
+			}
+			catch ( BCSAPIException e )
+			{
+				log.error ("Can not retrieve block " + block, e);
+			}
+		}
+		if ( address != null )
+		{
+			try
+			{
+				SimpleDateFormat dateFormat = new SimpleDateFormat ();
+				DecimalFormat decimalFormat = new DecimalFormat ("0.00000000 BTC");
+				List<String> addresses = new ArrayList<String> ();
+				addresses.add (address);
+				AccountStatement s = api.getAccountStatement (addresses, System.currentTimeMillis () / 1000 - 5 * 24 * 60 * 60);
+				if ( s != null )
+				{
+					System.out.println ("Activity of " + address + " as of " + dateFormat.format (new Date (s.getTimestamp () * 1000)));
+					System.out.println ("Last block evaluated " + s.getLastBlock ());
+					if ( s.getOpening () != null )
+					{
+						long sum = 0;
+						for ( TransactionOutput o : s.getOpening () )
+						{
+							sum += o.getValue ();
+						}
+						System.out.println ("Opening balance: " + decimalFormat.format (sum / 100000000.0));
+					}
+					if ( s.getPosting () != null )
+					{
+						for ( Posting p : s.getPosting () )
+						{
+							String amount;
+							if ( p.getSpent () == null )
+							{
+								amount = decimalFormat.format (p.getOutput ().getValue () / 100000000.0);
+							}
+							else
+							{
+								amount = decimalFormat.format (p.getOutput ().getValue () / -100000000.0);
+							}
+							System.out.println (dateFormat.format (new Date (p.getTimestamp () * 1000)) + " " + amount);
+						}
+					}
+				}
+			}
+			catch ( BCSAPIException e )
+			{
+				log.error ("Can not retrieve block " + block, e);
+			}
+		}
+		System.exit (0);
 	}
 }

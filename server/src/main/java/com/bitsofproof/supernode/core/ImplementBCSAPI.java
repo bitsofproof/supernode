@@ -99,11 +99,14 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addMessageListener (String topic, MessageListener listener) throws JMSException
+	private void addMessageListener (String topic, int instances, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
-		MessageConsumer consumer = session.createConsumer (destination);
-		consumer.setMessageListener (listener);
+		for ( int i = 0; i < instances; ++i )
+		{
+			MessageConsumer consumer = session.createConsumer (destination);
+			consumer.setMessageListener (listener);
+		}
 	}
 
 	public void init ()
@@ -116,7 +119,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			addMessageListener ("newTransaction", new MessageListener ()
+			addMessageListener ("newTransaction", 1, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -147,7 +150,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("newBlock", new MessageListener ()
+			addMessageListener ("newBlock", 1, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -178,7 +181,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("blockRequest", new MessageListener ()
+			addMessageListener ("blockRequest", 1, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -205,7 +208,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("transactionRequest", new MessageListener ()
+			addMessageListener ("transactionRequest", 1, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -232,7 +235,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("accountRequest", new MessageListener ()
+			addMessageListener ("accountRequest", 4, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
@@ -260,7 +263,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					}
 				}
 			});
-			addMessageListener ("inventory", new MessageListener ()
+			addMessageListener ("inventory", 1, new MessageListener ()
 			{
 				@Override
 				public void onMessage (Message arg0)
