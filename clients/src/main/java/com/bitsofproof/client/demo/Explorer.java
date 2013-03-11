@@ -19,7 +19,9 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -36,6 +38,7 @@ import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Posting;
 import com.bitsofproof.supernode.api.Transaction;
+import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.TransactionOutput;
 
 public class Explorer
@@ -95,7 +98,7 @@ public class Explorer
 		gnuOptions.addOption ("h", "help", false, "I can't help you yet");
 		gnuOptions.addOption ("b", "block", true, "Get raw block");
 		gnuOptions.addOption ("t", "transaction", true, "Get raw transaction");
-		gnuOptions.addOption ("a", "address", true, "Get addres traffic for last 5 days");
+		gnuOptions.addOption ("a", "address", true, "Get addres traffic for last 30 days");
 
 		CommandLine cl = null;
 		String block = null;
@@ -160,7 +163,8 @@ public class Explorer
 				DecimalFormat decimalFormat = new DecimalFormat ("0.00000000 BTC");
 				List<String> addresses = new ArrayList<String> ();
 				addresses.add (address);
-				AccountStatement s = api.getAccountStatement (addresses, System.currentTimeMillis () / 1000 - 5 * 24 * 60 * 60);
+				AccountStatement s = api.getAccountStatement (addresses, System.currentTimeMillis () / 1000 - 30 * 24 * 60 * 60);
+				Map<String, HashMap<Long, TransactionOutput>> spendable = new HashMap<String, HashMap<Long, TransactionOutput>> ();
 				if ( s != null )
 				{
 					System.out.println ("Activity of " + address + " as of " + dateFormat.format (new Date (s.getTimestamp () * 1000)));
@@ -171,6 +175,13 @@ public class Explorer
 						for ( TransactionOutput o : s.getOpening () )
 						{
 							sum += o.getValue ();
+							HashMap<Long, TransactionOutput> outs = spendable.get (o.getTransactionHash ());
+							if ( outs == null )
+							{
+								outs = new HashMap<Long, TransactionOutput> ();
+								spendable.put (o.getTransactionHash (), outs);
+							}
+							outs.put (o.getSelfIx (), o);
 						}
 						System.out.println ("Opening balance: " + decimalFormat.format (sum / 100000000.0));
 					}
@@ -182,12 +193,63 @@ public class Explorer
 							if ( p.getSpent () == null )
 							{
 								amount = decimalFormat.format (p.getOutput ().getValue () / 100000000.0);
+								HashMap<Long, TransactionOutput> outs = spendable.get (p.getOutput ().getTransactionHash ());
+								if ( outs == null )
+								{
+									outs = new HashMap<Long, TransactionOutput> ();
+									spendable.put (p.getOutput ().getTransactionHash (), outs);
+								}
+								outs.put (p.getOutput ().getSelfIx (), p.getOutput ());
 							}
 							else
 							{
 								amount = decimalFormat.format (p.getOutput ().getValue () / -100000000.0);
+								HashMap<Long, TransactionOutput> outs = spendable.get (p.getOutput ().getTransactionHash ());
+								if ( outs != null )
+								{
+									outs.remove (p.getOutput ().getSelfIx ());
+									if ( outs.size () == 0 )
+									{
+										spendable.remove (p.getOutput ().getTransactionHash ());
+									}
+								}
 							}
 							System.out.println (dateFormat.format (new Date (p.getTimestamp () * 1000)) + " " + amount);
+						}
+					}
+					if ( s.getUnconfirmedReceive () != null )
+					{
+						for ( Transaction t : s.getUnconfirmedReceive () )
+						{
+							for ( TransactionOutput output : t.getOutputs () )
+							{
+								if ( output.getAddresses ().contains (address) )
+								{
+									HashMap<Long, TransactionOutput> outs = spendable.get (output.getTransactionHash ());
+									if ( outs == null )
+									{
+										outs = new HashMap<Long, TransactionOutput> ();
+										spendable.put (output.getTransactionHash (), outs);
+									}
+									outs.put (output.getSelfIx (), output);
+									System.out.println ("Unconfirmed receive " + decimalFormat.format (output.getValue () / 100000000.0));
+								}
+							}
+						}
+					}
+					if ( s.getUnconfirmedSpend () != null )
+					{
+						for ( Transaction t : s.getUnconfirmedReceive () )
+						{
+							for ( TransactionInput input : t.getInputs () )
+							{
+								if ( spendable.containsKey (input.getSourceHash ()) )
+								{
+									TransactionOutput output = spendable.get (input.getSourceHash ()).get (input.getIx ());
+
+									System.out.println ("Unconfirmed spend " + decimalFormat.format (output.getValue () / 100000000.0));
+								}
+							}
 						}
 					}
 				}
