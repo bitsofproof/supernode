@@ -110,7 +110,7 @@ public interface BCSAPI
 	public void registerReceiveListener (List<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
 
 	/**
-	 * register listener for spend of given set of transactions listener.spent will be called if an output of the transactions is spent
+	 * register listener for spend of given set of transactions. listener.spent will be called if an output of the transactions is spent
 	 * 
 	 * @param hashes
 	 * @param listener
@@ -119,7 +119,7 @@ public interface BCSAPI
 	public void registerSpendListener (List<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
 
 	/**
-	 * register listener for confirmations listener.confirmation will be called if the transaction is confirmed upto depth 10
+	 * register listener for confirmations. listener.confirmation will be called if the transaction is confirmed
 	 * 
 	 * @param hashes
 	 * @param listener
