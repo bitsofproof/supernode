@@ -327,49 +327,56 @@ public class TxHandler implements TrunkListener
 	@Override
 	public void trunkUpdate (final List<Blk> removedBlocks, final List<Blk> addedBlocks)
 	{
-		// this is already running in cache and transaction context
-		List<String> dropped = new ArrayList<String> ();
-
-		synchronized ( unconfirmed )
+		try
 		{
-			for ( Blk blk : removedBlocks )
+			// this is already running in cache and transaction context
+			List<String> dropped = new ArrayList<String> ();
+
+			synchronized ( unconfirmed )
 			{
-				for ( Tx tx : blk.getTransactions () )
+				for ( Blk blk : removedBlocks )
 				{
-					if ( !unconfirmed.containsKey (tx.getHash ()) )
+					for ( Tx tx : blk.getTransactions () )
 					{
-						cacheTransaction (tx.flatCopy ());
-						dropped.add (tx.getHash ());
-					}
-				}
-			}
-			for ( Blk blk : addedBlocks )
-			{
-				for ( Tx tx : blk.getTransactions () )
-				{
-					if ( unconfirmed.containsKey (tx.getHash ()) )
-					{
-						unconfirmed.remove (tx.getHash ());
-						synchronized ( own )
+						if ( !unconfirmed.containsKey (tx.getHash ()) )
 						{
-							own.remove (tx.getHash ());
-						}
-						for ( TxOut o : tx.getOutputs () )
-						{
-							availableOutput.remove (o.getTxHash (), o.getIx ());
+							cacheTransaction (tx.flatCopy ());
+							dropped.add (tx.getHash ());
 						}
 					}
 				}
-			}
-			for ( String o : dropped )
-			{
-				Tx tx = unconfirmed.get (o);
-				if ( tx != null )
+				for ( Blk blk : addedBlocks )
 				{
-					sendTransaction (tx, null);
-					notifyListener (tx);
+					for ( Tx tx : blk.getTransactions () )
+					{
+						if ( unconfirmed.containsKey (tx.getHash ()) )
+						{
+							unconfirmed.remove (tx.getHash ());
+							synchronized ( own )
+							{
+								own.remove (tx.getHash ());
+							}
+							for ( TxOut o : tx.getOutputs () )
+							{
+								availableOutput.remove (o.getTxHash (), o.getIx ());
+							}
+						}
+					}
+				}
+				for ( String o : dropped )
+				{
+					Tx tx = unconfirmed.get (o);
+					if ( tx != null )
+					{
+						sendTransaction (tx, null);
+						notifyListener (tx);
+					}
 				}
 			}
+		}
+		catch ( Exception e )
+		{
+			log.error ("Error broadcasting trunk update");
 		}
 	}
 }

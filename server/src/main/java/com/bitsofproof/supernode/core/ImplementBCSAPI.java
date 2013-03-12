@@ -517,19 +517,26 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		{
 			TxOut xo = tx.getOutputs ().get (i);
 			TransactionOutput o = transaction.getOutputs ().get (i);
-			o.setVotes (xo.getVotes ());
-			o.setAddresses (new ArrayList<String> ());
-			if ( xo.getOwner1 () != null )
+			if ( xo.getVotes () == null )
 			{
-				o.getAddresses ().add (xo.getOwner1 ());
+				o.parseOwners (network.getChain ().getAddressFlag (), network.getChain ().getP2SHAddressFlag ());
 			}
-			if ( xo.getOwner2 () != null )
+			if ( xo.getVotes () != null )
 			{
-				o.getAddresses ().add (xo.getOwner2 ());
-			}
-			if ( xo.getOwner3 () != null )
-			{
-				o.getAddresses ().add (xo.getOwner3 ());
+				o.setVotes (xo.getVotes ());
+				o.setAddresses (new ArrayList<String> ());
+				if ( xo.getOwner1 () != null )
+				{
+					o.getAddresses ().add (xo.getOwner1 ());
+				}
+				if ( xo.getOwner2 () != null )
+				{
+					o.getAddresses ().add (xo.getOwner2 ());
+				}
+				if ( xo.getOwner3 () != null )
+				{
+					o.getAddresses ().add (xo.getOwner3 ());
+				}
 			}
 		}
 
@@ -539,22 +546,22 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 	@Override
 	public void trunkUpdate (final List<Blk> removed, final List<Blk> extended)
 	{
-		List<Block> r = new ArrayList<Block> ();
-		List<Block> a = new ArrayList<Block> ();
-		for ( Blk blk : removed )
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-		}
-		for ( Blk blk : extended )
-		{
-			WireFormat.Writer writer = new WireFormat.Writer ();
-			blk.toWire (writer);
-			a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
-		}
 		try
 		{
+			List<Block> r = new ArrayList<Block> ();
+			List<Block> a = new ArrayList<Block> ();
+			for ( Blk blk : removed )
+			{
+				WireFormat.Writer writer = new WireFormat.Writer ();
+				blk.toWire (writer);
+				r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+			}
+			for ( Blk blk : extended )
+			{
+				WireFormat.Writer writer = new WireFormat.Writer ();
+				blk.toWire (writer);
+				a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+			}
 			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (tu.toProtobuf ().toByteArray ());
@@ -745,7 +752,10 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 			addresses.add (o.getOwner3 ());
 		}
 		out.setAddresses (addresses);
-		out.setVotes (o.getVotes ());
+		if ( o.getVotes () != null )
+		{
+			out.setVotes (o.getVotes ());
+		}
 		return out;
 	}
 }

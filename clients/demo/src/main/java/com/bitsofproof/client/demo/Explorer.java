@@ -247,7 +247,7 @@ public class Explorer
 								{
 									TransactionOutput output = spendable.get (input.getSourceHash ()).get (input.getIx ());
 
-									System.out.println ("Unconfirmed spend " + decimalFormat.format (output.getValue () / 100000000.0));
+									System.out.println ("Unconfirmed spend " + decimalFormat.format (output.getValue () / -100000000.0));
 								}
 							}
 						}
