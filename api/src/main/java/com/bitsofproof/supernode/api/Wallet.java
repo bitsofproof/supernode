@@ -21,11 +21,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
-import com.bitsofproof.supernode.api.Transaction.TransactionSink;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Wallet
 {
+	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
+
 	private final ExtendedKey master;
 	private int nextKey;
 	private List<Wallet> subs;
@@ -65,6 +67,7 @@ public class Wallet
 		byte[] chainCode = new byte[32];
 		random.nextBytes (chainCode);
 		ExtendedKey parent = new ExtendedKey (master, chainCode);
+		log.debug ("Created new wallet");
 		return new Wallet (parent, 0, addressFlag, multiAddressFlag);
 	}
 
@@ -88,6 +91,7 @@ public class Wallet
 		{
 			sub.addListener (l);
 		}
+		log.debug ("Created new sub-wallet " + sequence);
 		return sub;
 	}
 
@@ -113,6 +117,7 @@ public class Wallet
 	{
 		ExtendedKey k = KeyGenerator.generateKey (master, nextKey++);
 		String address = AddressConverter.toSatoshiStyle (k.getKey ().getAddress (), addressFlag);
+		log.debug ("Created new key [" + (nextKey - 1) + "] for address " + address);
 		Key key = k.getKey ();
 		keyForAddress.put (address, key);
 		notifyNewKey (key, address);
@@ -134,6 +139,7 @@ public class Wallet
 			importedKeys.add (k.clone ());
 
 			String address = AddressConverter.toSatoshiStyle (k.getPublic (), addressFlag);
+			log.debug ("Imported key for address " + address);
 			keyForAddress.put (address, k);
 			notifyNewKey (k, address);
 		}
@@ -158,29 +164,6 @@ public class Wallet
 			}
 		}
 		return addresses;
-	}
-
-	public Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks, long fee) throws ValidationException
-	{
-		List<Transaction.TransactionSource> s = new ArrayList<Transaction.TransactionSource> ();
-		for ( TransactionOutput output : sources )
-		{
-			if ( !ScriptFormat.isPayToAddress (output.getScript ()) )
-			{
-				throw new ValidationException ("Only support pay to address sources here");
-			}
-			Key key = null;
-			for ( Token t : ScriptFormat.parse (output.getScript ()) )
-			{
-				if ( t.data != null )
-				{
-					key = keyForAddress.get (AddressConverter.toSatoshiStyle (t.data, addressFlag));
-					break;
-				}
-			}
-			s.add (new Transaction.TransactionSource (output, key));
-		}
-		return Transaction.createSpend (s, sinks, fee);
 	}
 
 	public ExtendedKey getMaster ()

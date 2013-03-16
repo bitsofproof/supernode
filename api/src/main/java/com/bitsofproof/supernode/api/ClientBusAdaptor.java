@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -389,7 +390,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement getAccountStatement (List<String> addresses, long from) throws BCSAPIException
+	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException
 	{
 		try
 		{
@@ -496,7 +497,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerReceiveListener (List<String> addresses, final TransactionListener listener) throws BCSAPIException
+	public void registerReceiveListener (Collection<String> addresses, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -548,7 +549,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerSpendListener (List<String> hashes, final TransactionListener listener) throws BCSAPIException
+	public void registerSpendListener (Collection<String> hashes, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -636,7 +637,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerConfirmationListener (List<String> hashes, final TransactionListener listener) throws BCSAPIException
+	public void registerConfirmationListener (Collection<String> hashes, final TransactionListener listener) throws BCSAPIException
 	{
 		if ( monitorConfirmations.size () == 0 )
 		{

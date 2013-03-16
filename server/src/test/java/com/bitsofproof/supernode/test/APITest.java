@@ -43,8 +43,11 @@ import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
+import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TransactionOutput;
@@ -192,11 +195,12 @@ public class APITest
 		final Semaphore ready3 = new Semaphore (0);
 
 		List<String> sourceAddresses = new ArrayList<String> ();
-		List<TransactionOutput> sources = new ArrayList<TransactionOutput> ();
+		List<Transaction.TransactionSource> sources = new ArrayList<Transaction.TransactionSource> ();
 		for ( int i = 0; i < 10; ++i )
 		{
 			TransactionOutput o = blocks.get (i + 1).getTransactions ().get (0).getOutputs ().get (0);
-			sources.add (o);
+			List<Token> tokens = ScriptFormat.parse (o.getScript ());
+			sources.add (new TransactionSource (o, wallet.getKeyForAddress (AddressConverter.toSatoshiStyle (tokens.get (2).data, wallet.getAddressFlag ()))));
 			o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
 			sourceAddresses.addAll (o.getAddresses ());
 		}
@@ -214,12 +218,12 @@ public class APITest
 		assertTrue (as.getPosting () == null);
 
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
-		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey (), 10 * 50 * COIN);
+		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), 10 * 50 * COIN);
 		sinks.add (sink);
 		List<String> sinkAddresses = new ArrayList<String> ();
-		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), 0x0));
+		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), 0x0));
 
-		Transaction transaction = wallet.createSpend (sources, sinks, 0);
+		Transaction transaction = Transaction.createSpend (sources, sinks, 0);
 		final String hash = transaction.getHash ();
 		final List<String> spendingTxs = new ArrayList<String> ();
 
@@ -267,12 +271,12 @@ public class APITest
 		api.registerTransactionListener (listener);
 
 		List<String> receiverAddresses = new ArrayList<String> ();
-		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getKey ().getAddress (), wallet.getAddressFlag ()));
+		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), wallet.getAddressFlag ()));
 		api.registerReceiveListener (receiverAddresses, listener);
 
-		for ( TransactionOutput o : sources )
+		for ( Transaction.TransactionSource s : sources )
 		{
-			spendingTxs.add (o.getTransactionHash ());
+			spendingTxs.add (s.getOutput ().getTransactionHash ());
 		}
 		api.registerSpendListener (spendingTxs, listener);
 

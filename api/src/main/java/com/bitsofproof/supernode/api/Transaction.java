@@ -21,6 +21,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bouncycastle.util.Arrays;
+
 import com.bitsofproof.supernode.api.ScriptFormat.Opcode;
 
 public class Transaction implements Serializable, Cloneable
@@ -93,19 +95,19 @@ public class Transaction implements Serializable, Cloneable
 
 	public static class TransactionSink
 	{
-		private final Key key;
+		private final byte[] address;
 		private final long value;
 
-		public TransactionSink (Key key, long value)
+		public TransactionSink (byte[] address, long value)
 		{
 			super ();
-			this.key = key;
+			this.address = Arrays.clone (address);
 			this.value = value;
 		}
 
-		public Key getKey ()
+		public byte[] getAddress ()
 		{
-			return key;
+			return Arrays.clone (address);
 		}
 
 		public long getValue ()
@@ -116,6 +118,10 @@ public class Transaction implements Serializable, Cloneable
 
 	public static Transaction createSpend (List<TransactionSource> sources, List<TransactionSink> sinks, long fee) throws ValidationException
 	{
+		if ( fee < 0 || fee > 1000000 )
+		{
+			throw new ValidationException ("You unlikely want to do that");
+		}
 		Transaction transaction = new Transaction ();
 		transaction.setInputs (new ArrayList<TransactionInput> ());
 		transaction.setOutputs (new ArrayList<TransactionOutput> ());
@@ -130,7 +136,7 @@ public class Transaction implements Serializable, Cloneable
 			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-			writer.writeData (s.getKey ().getAddress ());
+			writer.writeData (s.getAddress ());
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
 			o.setScript (writer.toByteArray ());

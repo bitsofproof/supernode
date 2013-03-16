@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -98,7 +99,7 @@ public interface BCSAPI
 	 * @return
 	 * @throws BCSAPIException
 	 */
-	public AccountStatement getAccountStatement (List<String> addresses, long from) throws BCSAPIException;
+	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException;
 
 	/**
 	 * Register listener for new transactions for the given addresses. listener.received will be called for new transactions
@@ -107,7 +108,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void registerReceiveListener (List<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
+	public void registerReceiveListener (Collection<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
 
 	/**
 	 * register listener for spend of given set of transactions. listener.spent will be called if an output of the transactions is spent
@@ -116,7 +117,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void registerSpendListener (List<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
+	public void registerSpendListener (Collection<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
 
 	/**
 	 * register listener for confirmations. listener.confirmation will be called if the transaction is confirmed
@@ -125,5 +126,5 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void registerConfirmationListener (List<String> hashes, TransactionListener confirmedTransactions) throws BCSAPIException;
+	public void registerConfirmationListener (Collection<String> hashes, TransactionListener confirmedTransactions) throws BCSAPIException;
 }
