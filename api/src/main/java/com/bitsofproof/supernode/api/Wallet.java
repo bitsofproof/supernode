@@ -98,9 +98,12 @@ public class Wallet
 	public void addListener (WalletListener listener)
 	{
 		walletListener.add (listener);
-		for ( Wallet sub : subs )
+		if ( subs != null )
 		{
-			sub.addListener (listener);
+			for ( Wallet sub : subs )
+			{
+				sub.addListener (listener);
+			}
 		}
 	}
 

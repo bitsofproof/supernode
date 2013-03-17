@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 
-public class AccountManager implements WalletListener, TransactionListener
+public class AccountManager implements WalletListener, TransactionListener, TrunkListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 
@@ -113,10 +113,9 @@ public class AccountManager implements WalletListener, TransactionListener
 	}
 
 	private BCSAPI api;
-	private UTXO utxo;
+	private final UTXO utxo = new UTXO ();
 	private long balance = 0;
 	private Wallet wallet;
-	private int days;
 	private final List<Posting> postings = new ArrayList<Posting> ();
 	private final Set<String> walletAddresses = new HashSet<String> ();
 	private final HashMap<String, Integer> confirmations = new HashMap<String, Integer> ();
@@ -128,15 +127,15 @@ public class AccountManager implements WalletListener, TransactionListener
 		this.api = api;
 	}
 
-	public AccountManager (Wallet wallet, int days)
+	public void track (Wallet wallet)
 	{
 		try
 		{
 			this.wallet = wallet;
-			this.days = days;
 			walletAddresses.addAll (wallet.getAddresses ());
 			trackAddresses (walletAddresses);
 			wallet.addListener (this);
+			api.registerTrunkListener (this);
 
 			Thread notifier = new Thread (new Runnable ()
 			{
@@ -146,7 +145,6 @@ public class AccountManager implements WalletListener, TransactionListener
 					while ( true )
 					{
 						hasUpdates.acquireUninterruptibly ();
-						hasUpdates.drainPermits ();
 						notifyListener ();
 					}
 				}
@@ -168,7 +166,7 @@ public class AccountManager implements WalletListener, TransactionListener
 
 	private void trackAddresses (Collection<String> addresses) throws BCSAPIException
 	{
-		AccountStatement s = api.getAccountStatement (addresses, System.currentTimeMillis () / 1000 - 24 * 60 * 60 * days);
+		AccountStatement s = api.getAccountStatement (addresses, 0);
 		if ( s != null )
 		{
 			if ( s.getOpening () != null )
@@ -383,6 +381,109 @@ public class AccountManager implements WalletListener, TransactionListener
 			catch ( Exception e )
 			{
 			}
+		}
+	}
+
+	@Override
+	public synchronized void trunkUpdate (List<Block> removed, List<Block> added)
+	{
+		try
+		{
+			if ( removed != null )
+			{
+				for ( Block b : removed )
+				{
+					for ( Posting p : postings )
+					{
+						if ( p.getBlock ().equals (b.getHash ()) )
+						{
+							if ( p.getSpent () != null )
+							{
+								utxo.add (p.getOutput ());
+							}
+							else
+							{
+								utxo.remove (p.getOutput ());
+							}
+							p.setBlock (null);
+						}
+					}
+				}
+			}
+			if ( added != null )
+			{
+				for ( Block b : added )
+				{
+					for ( Transaction t : b.getTransactions () )
+					{
+						for ( TransactionOutput o : t.getOutputs () )
+						{
+							o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
+							if ( o.getVotes () == 1 && walletAddresses.contains (o.getAddresses ().get (0)) )
+							{
+								if ( utxo.get (t.getHash (), o.getSelfIx ()) == null )
+								{
+									boolean found = false;
+									for ( Posting p : postings )
+									{
+										if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) && p.getOutput ().getSelfIx () == o.getSelfIx () )
+										{
+											found = true;
+											p.setBlock (b.getHash ());
+											p.setTimestamp (b.getCreateTime ());
+											break;
+										}
+									}
+									if ( !found )
+									{
+										Posting p = new Posting ();
+										p.setBlock (b.getHash ());
+										p.setOutput (o);
+										p.setTimestamp (b.getCreateTime ());
+										postings.add (p);
+									}
+									utxo.add (o);
+									balance += o.getValue ();
+								}
+							}
+						}
+						for ( TransactionInput i : t.getInputs () )
+						{
+							if ( utxo.get (i.getSourceHash (), i.getIx ()) != null )
+							{
+								Transaction source = api.getTransaction (i.getSourceHash ());
+								TransactionOutput o = source.getOutputs ().get ((int) i.getSelfIx ());
+								boolean found = false;
+								for ( Posting p : postings )
+								{
+									if ( p.getOutput ().getTransactionHash ().equals (i.getSourceHash ()) && p.getOutput ().getSelfIx () == i.getIx () )
+									{
+										found = true;
+										p.setBlock (b.getHash ());
+										p.setTimestamp (b.getCreateTime ());
+										break;
+									}
+								}
+								if ( !found )
+								{
+									Posting p = new Posting ();
+									p.setBlock (b.getHash ());
+									p.setOutput (o);
+									p.setTimestamp (b.getCreateTime ());
+									postings.add (p);
+								}
+								utxo.remove (o);
+								balance -= o.getValue ();
+							}
+						}
+					}
+				}
+			}
+			hasUpdates.release ();
+		}
+		catch ( BCSAPIException e )
+		{
+			log.error ("Error processing trunk update ", e);
 		}
 	}
 }
