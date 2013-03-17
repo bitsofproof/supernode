@@ -370,6 +370,11 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		accountListener.add (listener);
 	}
 
+	public synchronized void removeAccountListener (AccountListener listener)
+	{
+		accountListener.remove (listener);
+	}
+
 	private void notifyListener ()
 	{
 		for ( AccountListener l : accountListener )

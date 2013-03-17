@@ -52,7 +52,7 @@ import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 
 @RunWith (SpringJUnit4ClassRunner.class)
-@ContextConfiguration (locations = { "/context/storeonly.xml", "/context/EmbeddedBCSAPI.xml" })
+@ContextConfiguration (locations = { "/context/store2.xml", "/context/EmbeddedBCSAPI.xml" })
 public class AccountManagerTest
 {
 	@Autowired
@@ -125,7 +125,7 @@ public class AccountManagerTest
 	}
 
 	@Test
-	public void testAccountManager () throws ValidationException, BCSAPIException, InterruptedException
+	public void testAccountManager1 () throws ValidationException, BCSAPIException, InterruptedException
 	{
 		AccountManager am = new AccountManager ();
 		am.setApi (api);
@@ -139,7 +139,7 @@ public class AccountManagerTest
 		blocks.put (112, block);
 
 		final Semaphore ready = new Semaphore (0);
-		am.addAccountListener (new AccountListener ()
+		AccountListener listener = new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account)
@@ -147,11 +147,23 @@ public class AccountManagerTest
 				assertTrue (account.getBalance () == 50 * COIN * 112);
 				ready.release ();
 			}
-		});
+		};
+
+		am.addAccountListener (listener);
 
 		api.sendBlock (block);
 
 		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+		am.removeAccountListener (listener);
+	}
+
+	@Test
+	public void testAccountManager2 () throws ValidationException, BCSAPIException, InterruptedException
+	{
+		AccountManager am = new AccountManager ();
+		am.setApi (api);
+		am.track (wallet);
+		assertTrue (am.getBalance () == 50 * COIN * 112);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

@@ -59,7 +59,7 @@ import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 
 @RunWith (SpringJUnit4ClassRunner.class)
-@ContextConfiguration (locations = { "/context/storeonly.xml", "/context/EmbeddedBCSAPI.xml" })
+@ContextConfiguration (locations = { "/context/store1.xml", "/context/EmbeddedBCSAPI.xml" })
 public class APITest
 {
 	@Autowired
