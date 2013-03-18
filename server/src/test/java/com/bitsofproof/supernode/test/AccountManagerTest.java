@@ -176,7 +176,7 @@ public class AccountManagerTest
 			{
 				long newBalance = account.getBalance ();
 				// the first update is because change address is created
-				if ( newBalance == balance - 10 * COIN - COIN / 100 )
+				if ( newBalance == balance - 10 * COIN - COIN / 1000 )
 				{
 					ready.release ();
 				}
@@ -185,7 +185,7 @@ public class AccountManagerTest
 		am.addAccountListener (listener);
 
 		Key someoneElse = ECKeyPair.createNew (true);
-		am.pay (AddressConverter.toSatoshiStyle (someoneElse.getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 100);
+		am.pay (AddressConverter.toSatoshiStyle (someoneElse.getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 1000);
 
 		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
 		am.removeAccountListener (listener);
