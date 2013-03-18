@@ -19,10 +19,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Exchanger;
 
 import javax.jms.BytesMessage;
@@ -56,7 +54,7 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private final List<TransactionListener> transactionListener = Collections.synchronizedList (new ArrayList<TransactionListener> ());
 	private final List<TrunkListener> trunkListener = Collections.synchronizedList (new ArrayList<TrunkListener> ());
-	private final Map<String, TransactionListener> filterListener = Collections.synchronizedMap (new HashMap<String, TransactionListener> ());
+	private final Map<String, ArrayList<TransactionListener>> filterListener = new HashMap<String, ArrayList<TransactionListener>> ();
 
 	private MessageProducer inventoryProducer;
 	private MessageProducer transactionProducer;
@@ -66,8 +64,6 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer accountRequestProducer;
 
 	private final Map<String, MessageConsumer> filterConsumer = new HashMap<String, MessageConsumer> ();
-	private final Map<String, Integer> monitorConfirmations = new HashMap<String, Integer> ();
-	private Map<String, Integer> blocks = null;
 
 	public void setClientId (String clientId)
 	{
@@ -101,11 +97,70 @@ public class ClientBusAdaptor implements BCSAPI
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
 			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
 			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
+
+			monitorConfirmations ();
 		}
 		catch ( JMSException e )
 		{
 			log.error ("Can not create JMS connection", e);
 		}
+		catch ( BCSAPIException e )
+		{
+			log.error ("Can not register trunk listener", e);
+		}
+	}
+
+	private void monitorConfirmations () throws BCSAPIException
+	{
+		registerTrunkListener (new TrunkListener ()
+		{
+			@Override
+			public void trunkUpdate (List<Block> removed, List<Block> added)
+			{
+				if ( removed != null )
+				{
+					for ( Block b : removed )
+					{
+						b.computeHash ();
+						for ( Transaction t : b.getTransactions () )
+						{
+							synchronized ( filterListener )
+							{
+								List<TransactionListener> listener = filterListener.get (t.getHash ());
+								if ( listener != null )
+								{
+									for ( TransactionListener l : listener )
+									{
+										l.orphaned (t.getHash ());
+									}
+								}
+							}
+						}
+					}
+				}
+				if ( added != null )
+				{
+					for ( Block b : added )
+					{
+						b.computeHash ();
+						for ( Transaction t : b.getTransactions () )
+						{
+							synchronized ( filterListener )
+							{
+								List<TransactionListener> listener = filterListener.get (t.getHash ());
+								if ( listener != null )
+								{
+									for ( TransactionListener l : listener )
+									{
+										l.confirmed (t.getHash ());
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		});
 	}
 
 	public void destroy ()
@@ -520,10 +575,16 @@ public class ClientBusAdaptor implements BCSAPI
 				{
 					for ( String a : o.getAddresses () )
 					{
-						TransactionListener listener = filterListener.get (a);
-						if ( listener != null )
+						synchronized ( filterListener )
 						{
-							listener.received (t);
+							List<TransactionListener> listener = filterListener.get (a);
+							if ( listener != null )
+							{
+								for ( TransactionListener l : listener )
+								{
+									l.received (t);
+								}
+							}
 						}
 					}
 				}
@@ -544,7 +605,16 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			for ( String a : addresses )
 			{
-				filterListener.put (a, listener);
+				synchronized ( filterListener )
+				{
+					ArrayList<TransactionListener> ll = filterListener.get (a);
+					if ( ll == null )
+					{
+						ll = new ArrayList<TransactionListener> ();
+						filterListener.put (a, ll);
+					}
+					ll.add (listener);
+				}
 				String hash = a.substring (a.length () - 2, a.length ());
 
 				MessageConsumer consumer = filterConsumer.get (hash);
@@ -577,10 +647,16 @@ public class ClientBusAdaptor implements BCSAPI
 				{
 					for ( String a : o.getAddresses () )
 					{
-						TransactionListener listener = filterListener.get (a);
-						if ( listener != null )
+						synchronized ( filterListener )
 						{
-							listener.spent (t);
+							ArrayList<TransactionListener> listener = filterListener.get (a);
+							if ( listener != null )
+							{
+								for ( TransactionListener l : listener )
+								{
+									l.spent (t);
+								}
+							}
 						}
 					}
 				}
@@ -601,29 +677,23 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			for ( String h : hashes )
 			{
-				Transaction t = getTransaction (h);
-				if ( t != null )
+				synchronized ( filterListener )
 				{
-					Integer conf = monitorConfirmations.get (h);
-					if ( conf == null )
+					ArrayList<TransactionListener> ll = filterListener.get (h);
+					if ( ll == null )
 					{
-						monitorConfirmations.put (h, new Integer (0));
+						ll = new ArrayList<TransactionListener> ();
+						filterListener.put (h, ll);
 					}
-					if ( t.getBlockHash () != null )
-					{
-						int c = blocks.size () - blocks.get (t.getBlockHash ());
-						monitorConfirmations.put (h, new Integer (c));
-						listener.confirmed (h, c);
-					}
-					filterListener.put (h, listener);
-					String hash = h.substring (h.length () - 3, h.length ());
+					ll.add (listener);
+				}
+				String hash = h.substring (h.length () - 3, h.length ());
 
-					MessageConsumer consumer = filterConsumer.get (hash);
-					if ( consumer == null )
-					{
-						consumer = session.createConsumer (session.createTopic ("tx" + hash));
-						consumer.setMessageListener (spendListener);
-					}
+				MessageConsumer consumer = filterConsumer.get (hash);
+				if ( consumer == null )
+				{
+					consumer = session.createConsumer (session.createTopic ("tx" + hash));
+					consumer.setMessageListener (spendListener);
 				}
 			}
 		}
@@ -633,116 +703,15 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
-	private void confirmationUpdate (List<Block> removed, List<Block> added)
-	{
-		if ( removed != null )
-		{
-			for ( Block b : removed )
-			{
-				blocks.remove (b.getHash ());
-			}
-		}
-		if ( added != null )
-		{
-			for ( Block b : added )
-			{
-				blocks.put (b.getHash (), blocks.size ());
-			}
-		}
-		Set<String> confirmed = new HashSet<String> ();
-		for ( Map.Entry<String, Integer> entry : monitorConfirmations.entrySet () )
-		{
-			if ( entry.getValue () > 0 )
-			{
-				entry.setValue (Math.max (entry.getValue () - removed.size (), 0));
-				confirmed.add (entry.getKey ());
-			}
-		}
-		for ( Block b : added )
-		{
-			b.computeHash ();
-			Set<String> hashes = new HashSet<String> ();
-			for ( Transaction t : b.getTransactions () )
-			{
-				hashes.add (t.getHash ());
-			}
-			for ( Map.Entry<String, Integer> entry : monitorConfirmations.entrySet () )
-			{
-				if ( hashes.contains (entry.getKey ()) )
-				{
-					entry.setValue (1);
-					confirmed.add (entry.getKey ());
-				}
-				else
-				{
-					if ( entry.getValue () != 0 )
-					{
-						entry.setValue (entry.getValue () + 1);
-						confirmed.add (entry.getKey ());
-					}
-				}
-			}
-		}
-		synchronized ( filterListener )
-		{
-			for ( String hash : filterListener.keySet () )
-			{
-				if ( confirmed.contains (hash) )
-				{
-					filterListener.get (hash).confirmed (hash, monitorConfirmations.get (hash));
-				}
-			}
-		}
-	}
-
-	@Override
-	public void registerConfirmationListener (Collection<String> hashes, final TransactionListener listener) throws BCSAPIException
-	{
-		if ( blocks == null )
-		{
-			blocks = new HashMap<String, Integer> ();
-			int i = 0;
-			for ( String h : getBlocks () )
-			{
-				blocks.put (h, i);
-				++i;
-			}
-			registerTrunkListener (new TrunkListener ()
-			{
-				@Override
-				public void trunkUpdate (List<Block> removed, List<Block> added)
-				{
-					confirmationUpdate (removed, added);
-				}
-			});
-		}
-		for ( String hash : hashes )
-		{
-			Transaction t = getTransaction (hash);
-			if ( t != null )
-			{
-				filterListener.put (hash, listener);
-				Integer conf = monitorConfirmations.get (hash);
-				if ( conf == null )
-				{
-					monitorConfirmations.put (hash, new Integer (0));
-				}
-				if ( t.getBlockHash () != null )
-				{
-					int c = blocks.size () - blocks.get (t.getBlockHash ());
-					monitorConfirmations.put (hash, new Integer (c));
-					listener.confirmed (hash, c);
-				}
-			}
-		}
-	}
-
 	@Override
 	public void removeFilteredTransactionListener (Collection<String> filter)
 	{
-		for ( String s : filter )
+		synchronized ( filterListener )
 		{
-			filterListener.remove (s);
+			for ( String s : filter )
+			{
+				filterListener.remove (s);
+			}
 		}
 	}
 

@@ -23,5 +23,7 @@ public interface TransactionListener
 
 	public void received (Transaction t);
 
-	public void confirmed (String hash, int n);
+	public void confirmed (String hash);
+
+	public void orphaned (String hash);
 }

@@ -20,6 +20,8 @@ import java.security.SecureRandom;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +53,7 @@ import javax.jms.TopicSubscriber;
 public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
 	private final MockSession singleSession = new MockSession ();
+	private static final ExecutorService consumerThreads = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
 	private static class MockBytesMessage implements BytesMessage
 	{
@@ -626,10 +629,11 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		private final LinkedBlockingQueue<Message> queue;
 		private MessageListener listener = null;
 
-		public MockConsumer (LinkedBlockingQueue<Message> queue)
+		public MockConsumer (LinkedBlockingQueue<Message> queue, final boolean temp)
 		{
 			this.queue = queue;
-			Thread lt = new Thread (new Runnable ()
+
+			consumerThreads.execute (new Runnable ()
 			{
 				@Override
 				public void run ()
@@ -637,12 +641,16 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					Message m = null;
 					try
 					{
-						while ( (m = receive ()) != null )
+						if ( (m = receive (10)) != null )
 						{
 							if ( listener != null )
 							{
 								listener.onMessage (m);
 							}
+						}
+						if ( !temp || (temp && m == null) )
+						{
+							consumerThreads.execute (this);
 						}
 					}
 					catch ( JMSException e )
@@ -650,8 +658,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					}
 				}
 			});
-			lt.setDaemon (true);
-			lt.start ();
 		}
 
 		@Override
@@ -840,6 +846,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		public MessageConsumer createConsumer (Destination destination) throws JMSException
 		{
 			String name = null;
+			boolean temp = false;
 			if ( destination instanceof MockTopic )
 			{
 				name = ((MockTopic) destination).getTopicName ();
@@ -851,6 +858,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			if ( destination instanceof MockTemporaryQueue )
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
+				temp = true;
 			}
 			LinkedBlockingQueue<Message> list = queue.get (name);
 			if ( list == null )
@@ -858,7 +866,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				list = new LinkedBlockingQueue<Message> ();
 				queue.put (name, list);
 			}
-			return new MockConsumer (list);
+			return new MockConsumer (list, temp);
 		}
 
 		@Override

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
@@ -170,16 +169,15 @@ public class AccountManagerTest
 		assertTrue (balance == 50 * COIN * 112);
 
 		final Semaphore ready = new Semaphore (0);
-		final AtomicInteger counter = new AtomicInteger (0);
 		AccountListener listener = new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account)
 			{
+				long newBalance = account.getBalance ();
 				// the first update is because change address is created
-				if ( counter.incrementAndGet () == 2 )
+				if ( newBalance == balance - 10 * COIN - COIN / 100 )
 				{
-					assertTrue (account.getBalance () == balance - 10 * COIN - COIN / 100);
 					ready.release ();
 				}
 			}

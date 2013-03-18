@@ -127,15 +127,6 @@ public interface BCSAPI
 	public void registerTransactionListener (Collection<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
 
 	/**
-	 * register listener for confirmations. listener.confirmation will be called if the transaction is confirmed
-	 * 
-	 * @param hashes
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void registerConfirmationListener (Collection<String> hashes, TransactionListener confirmedTransactions) throws BCSAPIException;
-
-	/**
 	 * remove a listener previously registered for spend, receive or confirmations
 	 * 
 	 * @param filter

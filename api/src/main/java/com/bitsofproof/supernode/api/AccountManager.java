@@ -349,16 +349,6 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		notifyListener ();
 	}
 
-	@Override
-	public void confirmed (String hash, int n)
-	{
-		synchronized ( utxo )
-		{
-			confirmations.put (hash, n);
-		}
-		notifyListener ();
-	}
-
 	public long getBalance ()
 	{
 		synchronized ( utxo )
@@ -506,5 +496,19 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		{
 			log.error ("Error processing trunk update ", e);
 		}
+	}
+
+	@Override
+	public void confirmed (String hash)
+	{
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void orphaned (String hash)
+	{
+		// TODO Auto-generated method stub
+
 	}
 }

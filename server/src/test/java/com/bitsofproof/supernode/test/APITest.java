@@ -263,9 +263,15 @@ public class APITest
 			}
 
 			@Override
-			public void confirmed (String h, int n)
+			public void confirmed (String hash)
 			{
 			}
+
+			@Override
+			public void orphaned (String hash)
+			{
+			}
+
 		};
 
 		api.registerTransactionListener (listener);
@@ -303,7 +309,7 @@ public class APITest
 
 		List<String> hashes = new ArrayList<String> ();
 		hashes.add (transaction.getHash ());
-		api.registerConfirmationListener (hashes, new TransactionListener ()
+		api.registerTransactionListener (hashes, new TransactionListener ()
 		{
 
 			@Override
@@ -322,10 +328,15 @@ public class APITest
 			}
 
 			@Override
-			public void confirmed (String h, int n)
+			public void confirmed (String h)
 			{
 				assertTrue (h.equals (hash));
 				ready.release ();
+			}
+
+			@Override
+			public void orphaned (String hash)
+			{
 			}
 		});
 
