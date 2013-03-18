@@ -75,6 +75,13 @@ public interface BCSAPI
 	public void registerTransactionListener (TransactionListener listener) throws BCSAPIException;
 
 	/**
+	 * remove a listener for validated transactions
+	 * 
+	 * @param listener
+	 */
+	public void removeTransactionListener (TransactionListener listener);
+
+	/**
 	 * Register a block listener
 	 * 
 	 * @param listener
@@ -108,7 +115,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void registerReceiveListener (Collection<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
+	public void registerAddressListener (Collection<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
 
 	/**
 	 * register listener for spend of given set of transactions. listener.spent will be called if an output of the transactions is spent
@@ -117,7 +124,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void registerSpendListener (Collection<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
+	public void registerTransactionListener (Collection<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
 
 	/**
 	 * register listener for confirmations. listener.confirmation will be called if the transaction is confirmed
@@ -127,4 +134,11 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void registerConfirmationListener (Collection<String> hashes, TransactionListener confirmedTransactions) throws BCSAPIException;
+
+	/**
+	 * remove a listener previously registered for spend, receive or confirmations
+	 * 
+	 * @param filter
+	 */
+	public void removeFilteredTransactionListener (Collection<String> filter);
 }

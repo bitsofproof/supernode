@@ -3,12 +3,12 @@ package com.bitsofproof.supernode.api;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,8 +119,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	private final List<Posting> postings = new ArrayList<Posting> ();
 	private final Set<String> walletAddresses = new HashSet<String> ();
 	private final HashMap<String, Integer> confirmations = new HashMap<String, Integer> ();
-	private final List<AccountListener> accountListener = new ArrayList<AccountListener> ();
-	private final Semaphore hasUpdates = new Semaphore (0);
+	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 
 	public void setApi (BCSAPI api)
 	{
@@ -136,22 +135,6 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			trackAddresses (walletAddresses);
 			wallet.addListener (this);
 			api.registerTrunkListener (this);
-
-			Thread notifier = new Thread (new Runnable ()
-			{
-				@Override
-				public void run ()
-				{
-					while ( true )
-					{
-						hasUpdates.acquireUninterruptibly ();
-						notifyListener ();
-					}
-				}
-			});
-			notifier.setDaemon (true);
-			notifier.setName ("AccountTrackerThread");
-			notifier.start ();
 		}
 		catch ( ValidationException e )
 		{
@@ -208,90 +191,102 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 					spent (t);
 				}
 			}
-			api.registerReceiveListener (addresses, this);
-			api.registerSpendListener (utxo.getTransactionHashes (), this);
+			api.registerAddressListener (addresses, this);
+			api.registerTransactionListener (utxo.getTransactionHashes (), this);
 		}
 	}
 
-	public synchronized void pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
+	public void pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
 	{
-		List<TransactionSource> sources = new ArrayList<TransactionSource> ();
-		List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-
-		List<TransactionOutput> sufficient = utxo.getSufficientSources (amount + fee);
-		if ( sufficient == null )
+		synchronized ( utxo )
 		{
-			throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
-		}
-		long in = 0;
-		for ( TransactionOutput o : sufficient )
-		{
-			sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
-			in += o.getValue ();
-		}
-		TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
-		TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
-		if ( new SecureRandom ().nextBoolean () )
-		{
-			sinks.add (target);
-			sinks.add (change);
-		}
-		else
-		{
-			sinks.add (change);
-			sinks.add (target);
-		}
-		log.debug ("Paying " + in + "(+" + fee + ") to " + receiver);
-		Transaction transaction = Transaction.createSpend (sources, sinks, fee);
-		api.sendTransaction (transaction);
-	}
-
-	public synchronized void importKey (String serialized, String passpharse) throws ValidationException
-	{
-		KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
-		Key key = formatter.parseSerializedKey (serialized);
-		wallet.importKey (key);
-	}
-
-	public synchronized void cashIn (String serialized, String passpharse, long fee) throws ValidationException, BCSAPIException
-	{
-		KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
-		Key key = formatter.parseSerializedKey (serialized);
-		wallet.importKey (key);
-		String inAddress = AddressConverter.toSatoshiStyle (key.getAddress (), wallet.getAddressFlag ());
-		List<TransactionOutput> available = utxo.getAddressSources (inAddress);
-		if ( available.size () > 0 )
-		{
-			long sum = 0;
 			List<TransactionSource> sources = new ArrayList<TransactionSource> ();
-			for ( TransactionOutput o : available )
-			{
-				sources.add (new TransactionSource (o, key));
-				sum += o.getValue ();
-			}
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-			sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), sum - fee));
-			log.debug ("Caching in " + sum + "(-" + fee + ") from " + inAddress);
+
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount + fee);
+			if ( sufficient == null )
+			{
+				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
+			}
+			long in = 0;
+			for ( TransactionOutput o : sufficient )
+			{
+				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
+				in += o.getValue ();
+			}
+			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
+			TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
+			if ( new SecureRandom ().nextBoolean () )
+			{
+				sinks.add (target);
+				sinks.add (change);
+			}
+			else
+			{
+				sinks.add (change);
+				sinks.add (target);
+			}
 			Transaction transaction = Transaction.createSpend (sources, sinks, fee);
+			log.debug ("Paying " + in + "(+" + fee + ") to " + receiver);
 			api.sendTransaction (transaction);
 		}
 	}
 
-	@Override
-	public synchronized void notifyNewKey (String address, Key key)
+	public void importKey (String serialized, String passpharse) throws ValidationException
 	{
-		walletAddresses.add (address);
-		ArrayList<String> a = new ArrayList<String> ();
-		a.add (address);
-		try
+		synchronized ( utxo )
 		{
-			trackAddresses (a);
+			KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
+			Key key = formatter.parseSerializedKey (serialized);
+			wallet.importKey (key);
 		}
-		catch ( BCSAPIException e )
+	}
+
+	public void cashIn (String serialized, String passpharse, long fee) throws ValidationException, BCSAPIException
+	{
+		synchronized ( utxo )
 		{
-			log.error ("Can not track new key " + address, e);
+			KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
+			Key key = formatter.parseSerializedKey (serialized);
+			wallet.importKey (key);
+			String inAddress = AddressConverter.toSatoshiStyle (key.getAddress (), wallet.getAddressFlag ());
+			List<TransactionOutput> available = utxo.getAddressSources (inAddress);
+			if ( available.size () > 0 )
+			{
+				long sum = 0;
+				List<TransactionSource> sources = new ArrayList<TransactionSource> ();
+				for ( TransactionOutput o : available )
+				{
+					sources.add (new TransactionSource (o, key));
+					sum += o.getValue ();
+				}
+				List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
+				sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), sum - fee));
+				log.debug ("Caching in " + sum + "(-" + fee + ") from " + inAddress);
+				Transaction transaction = Transaction.createSpend (sources, sinks, fee);
+				api.sendTransaction (transaction);
+			}
 		}
-		hasUpdates.release ();
+	}
+
+	@Override
+	public void notifyNewKey (String address, Key key)
+	{
+		synchronized ( utxo )
+		{
+			walletAddresses.add (address);
+			ArrayList<String> a = new ArrayList<String> ();
+			a.add (address);
+			try
+			{
+				trackAddresses (a);
+			}
+			catch ( BCSAPIException e )
+			{
+				log.error ("Can not track new key " + address, e);
+			}
+		}
+		notifyListener ();
 	}
 
 	@Override
@@ -300,138 +295,188 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	}
 
 	@Override
-	public synchronized void spent (Transaction t)
+	public void spent (Transaction t)
 	{
-		confirmations.put (t.getHash (), 0);
-		for ( TransactionInput input : t.getInputs () )
+		synchronized ( utxo )
 		{
-			TransactionOutput output = utxo.get (input.getSourceHash (), input.getIx ());
-			balance -= output.getValue ();
-			Posting p = new Posting ();
-			p.setOutput (output);
-			p.setTimestamp (System.currentTimeMillis () / 1000);
-			p.setSpent (t.getHash ());
-			postings.add (p);
-			utxo.remove (input.getSourceHash (), input.getIx ());
-		}
-		hasUpdates.release ();
-	}
-
-	@Override
-	public synchronized void received (Transaction t)
-	{
-		confirmations.put (t.getHash (), 0);
-		for ( TransactionOutput output : t.getOutputs () )
-		{
-			for ( String address : output.getAddresses () )
+			confirmations.put (t.getHash (), 0);
+			for ( TransactionInput input : t.getInputs () )
 			{
-				if ( walletAddresses.contains (address) )
-				{
-					Posting p = new Posting ();
-					p.setOutput (output);
-					p.setTimestamp (System.currentTimeMillis () / 1000);
-					postings.add (p);
-					utxo.add (output);
-					balance += output.getValue ();
-				}
+				TransactionOutput output = utxo.get (input.getSourceHash (), input.getIx ());
+				balance -= output.getValue ();
+				Posting p = new Posting ();
+				p.setOutput (output);
+				p.setTimestamp (System.currentTimeMillis () / 1000);
+				p.setSpent (t.getHash ());
+				postings.add (p);
+				utxo.remove (input.getSourceHash (), input.getIx ());
 			}
 		}
-		ArrayList<String> txs = new ArrayList<String> ();
-		txs.add (t.getHash ());
-		try
-		{
-			api.registerSpendListener (txs, this);
-		}
-		catch ( BCSAPIException e )
-		{
-		}
-		hasUpdates.release ();
+		notifyListener ();
 	}
 
 	@Override
-	public synchronized void confirmed (String hash, int n)
+	public void received (Transaction t)
 	{
-		confirmations.put (hash, n);
-		hasUpdates.release ();
+		synchronized ( utxo )
+		{
+			confirmations.put (t.getHash (), 0);
+			for ( TransactionOutput output : t.getOutputs () )
+			{
+				for ( String address : output.getAddresses () )
+				{
+					if ( walletAddresses.contains (address) )
+					{
+						Posting p = new Posting ();
+						p.setOutput (output);
+						p.setTimestamp (System.currentTimeMillis () / 1000);
+						postings.add (p);
+						utxo.add (output);
+						balance += output.getValue ();
+					}
+				}
+			}
+			ArrayList<String> txs = new ArrayList<String> ();
+			txs.add (t.getHash ());
+			try
+			{
+				api.registerTransactionListener (txs, this);
+			}
+			catch ( BCSAPIException e )
+			{
+			}
+		}
+		notifyListener ();
 	}
 
-	public synchronized long getBalance ()
+	@Override
+	public void confirmed (String hash, int n)
 	{
-		return balance;
+		synchronized ( utxo )
+		{
+			confirmations.put (hash, n);
+		}
+		notifyListener ();
 	}
 
-	public synchronized List<Posting> getPostings ()
+	public long getBalance ()
 	{
-		return postings;
+		synchronized ( utxo )
+		{
+			return balance;
+		}
 	}
 
-	public synchronized void addAccountListener (AccountListener listener)
+	public List<Posting> getPostings ()
+	{
+		synchronized ( utxo )
+		{
+			return postings;
+		}
+	}
+
+	public void addAccountListener (AccountListener listener)
 	{
 		accountListener.add (listener);
 	}
 
-	public synchronized void removeAccountListener (AccountListener listener)
+	public void removeAccountListener (AccountListener listener)
 	{
 		accountListener.remove (listener);
 	}
 
 	private void notifyListener ()
 	{
-		for ( AccountListener l : accountListener )
+		synchronized ( accountListener )
 		{
-			try
+			for ( AccountListener l : accountListener )
 			{
-				l.accountChanged (this);
-			}
-			catch ( Exception e )
-			{
+				try
+				{
+					l.accountChanged (this);
+				}
+				catch ( Exception e )
+				{
+				}
 			}
 		}
 	}
 
 	@Override
-	public synchronized void trunkUpdate (List<Block> removed, List<Block> added)
+	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
 		try
 		{
-			if ( removed != null )
+			synchronized ( utxo )
 			{
-				for ( Block b : removed )
+				if ( removed != null )
 				{
-					for ( Posting p : postings )
+					for ( Block b : removed )
 					{
-						if ( p.getBlock ().equals (b.getHash ()) )
+						for ( Posting p : postings )
 						{
-							if ( p.getSpent () != null )
+							if ( p.getBlock ().equals (b.getHash ()) )
 							{
-								utxo.add (p.getOutput ());
+								if ( p.getSpent () != null )
+								{
+									utxo.add (p.getOutput ());
+								}
+								else
+								{
+									utxo.remove (p.getOutput ());
+								}
+								p.setBlock (null);
 							}
-							else
-							{
-								utxo.remove (p.getOutput ());
-							}
-							p.setBlock (null);
 						}
 					}
 				}
-			}
-			if ( added != null )
-			{
-				for ( Block b : added )
+				if ( added != null )
 				{
-					for ( Transaction t : b.getTransactions () )
+					for ( Block b : added )
 					{
-						for ( TransactionOutput o : t.getOutputs () )
+						for ( Transaction t : b.getTransactions () )
 						{
-							o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
-							if ( o.getVotes () == 1 && walletAddresses.contains (o.getAddresses ().get (0)) )
+							for ( TransactionOutput o : t.getOutputs () )
 							{
-								if ( utxo.get (t.getHash (), o.getSelfIx ()) == null )
+								o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
+								if ( o.getVotes () == 1 && walletAddresses.contains (o.getAddresses ().get (0)) )
 								{
+									if ( utxo.get (t.getHash (), o.getSelfIx ()) == null )
+									{
+										boolean found = false;
+										for ( Posting p : postings )
+										{
+											if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) && p.getOutput ().getSelfIx () == o.getSelfIx () )
+											{
+												found = true;
+												p.setBlock (b.getHash ());
+												p.setTimestamp (b.getCreateTime ());
+												break;
+											}
+										}
+										if ( !found )
+										{
+											Posting p = new Posting ();
+											p.setBlock (b.getHash ());
+											p.setOutput (o);
+											p.setTimestamp (b.getCreateTime ());
+											postings.add (p);
+										}
+										utxo.add (o);
+										balance += o.getValue ();
+									}
+								}
+							}
+							for ( TransactionInput i : t.getInputs () )
+							{
+								if ( utxo.get (i.getSourceHash (), i.getIx ()) != null )
+								{
+									Transaction source = api.getTransaction (i.getSourceHash ());
+									TransactionOutput o = source.getOutputs ().get ((int) i.getSelfIx ());
 									boolean found = false;
 									for ( Posting p : postings )
 									{
-										if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) && p.getOutput ().getSelfIx () == o.getSelfIx () )
+										if ( p.getOutput ().getTransactionHash ().equals (i.getSourceHash ()) && p.getOutput ().getSelfIx () == i.getIx () )
 										{
 											found = true;
 											p.setBlock (b.getHash ());
@@ -447,44 +492,15 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 										p.setTimestamp (b.getCreateTime ());
 										postings.add (p);
 									}
-									utxo.add (o);
-									balance += o.getValue ();
+									utxo.remove (o);
+									balance -= o.getValue ();
 								}
-							}
-						}
-						for ( TransactionInput i : t.getInputs () )
-						{
-							if ( utxo.get (i.getSourceHash (), i.getIx ()) != null )
-							{
-								Transaction source = api.getTransaction (i.getSourceHash ());
-								TransactionOutput o = source.getOutputs ().get ((int) i.getSelfIx ());
-								boolean found = false;
-								for ( Posting p : postings )
-								{
-									if ( p.getOutput ().getTransactionHash ().equals (i.getSourceHash ()) && p.getOutput ().getSelfIx () == i.getIx () )
-									{
-										found = true;
-										p.setBlock (b.getHash ());
-										p.setTimestamp (b.getCreateTime ());
-										break;
-									}
-								}
-								if ( !found )
-								{
-									Posting p = new Posting ();
-									p.setBlock (b.getHash ());
-									p.setOutput (o);
-									p.setTimestamp (b.getCreateTime ());
-									postings.add (p);
-								}
-								utxo.remove (o);
-								balance -= o.getValue ();
 							}
 						}
 					}
 				}
 			}
-			hasUpdates.release ();
+			notifyListener ();
 		}
 		catch ( BCSAPIException e )
 		{

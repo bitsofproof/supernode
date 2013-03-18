@@ -272,13 +272,13 @@ public class APITest
 
 		List<String> receiverAddresses = new ArrayList<String> ();
 		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), wallet.getAddressFlag ()));
-		api.registerReceiveListener (receiverAddresses, listener);
+		api.registerAddressListener (receiverAddresses, listener);
 
 		for ( Transaction.TransactionSource s : sources )
 		{
 			spendingTxs.add (s.getOutput ().getTransactionHash ());
 		}
-		api.registerSpendListener (spendingTxs, listener);
+		api.registerTransactionListener (spendingTxs, listener);
 
 		api.sendTransaction (transaction);
 		try

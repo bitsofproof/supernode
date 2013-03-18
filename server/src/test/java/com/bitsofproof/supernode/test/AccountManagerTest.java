@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
@@ -37,12 +38,14 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.bitsofproof.supernode.api.AccountListener;
 import com.bitsofproof.supernode.api.AccountManager;
+import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.Key;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -163,7 +166,31 @@ public class AccountManagerTest
 		AccountManager am = new AccountManager ();
 		am.setApi (api);
 		am.track (wallet);
-		assertTrue (am.getBalance () == 50 * COIN * 112);
+		final long balance = am.getBalance ();
+		assertTrue (balance == 50 * COIN * 112);
+
+		final Semaphore ready = new Semaphore (0);
+		final AtomicInteger counter = new AtomicInteger (0);
+		AccountListener listener = new AccountListener ()
+		{
+			@Override
+			public void accountChanged (AccountManager account)
+			{
+				// the first update is because change address is created
+				if ( counter.incrementAndGet () == 2 )
+				{
+					assertTrue (account.getBalance () == balance - 10 * COIN - COIN / 100);
+					ready.release ();
+				}
+			}
+		};
+		am.addAccountListener (listener);
+
+		Key someoneElse = ECKeyPair.createNew (true);
+		am.pay (AddressConverter.toSatoshiStyle (someoneElse.getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 100);
+
+		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+		am.removeAccountListener (listener);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)
