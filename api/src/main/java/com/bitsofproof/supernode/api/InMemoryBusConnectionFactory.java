@@ -20,6 +20,8 @@ import java.security.SecureRandom;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -621,6 +623,8 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
+	private static Executor consumerExecutor = Executors.newCachedThreadPool ();
+
 	private static class MockConsumer implements MessageConsumer
 	{
 		private final LinkedBlockingQueue<Message> queue;
@@ -630,7 +634,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		{
 			this.queue = queue;
 
-			Thread t = new Thread (new Runnable ()
+			consumerExecutor.execute (new Runnable ()
 			{
 				@Override
 				public void run ()
@@ -654,8 +658,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					}
 				}
 			});
-			t.setDaemon (true);
-			t.start ();
 		}
 
 		@Override

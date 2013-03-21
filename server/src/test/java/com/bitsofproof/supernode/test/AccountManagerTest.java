@@ -167,7 +167,6 @@ public class AccountManagerTest
 		final long balance = alice.getBalance ();
 		assertTrue (balance == 50 * COIN * 112);
 
-		System.out.println ("balance " + balance / 100000000.0);
 		final Semaphore ready = new Semaphore (0);
 		AccountListener listener1 = new AccountListener ()
 		{
@@ -175,11 +174,8 @@ public class AccountManagerTest
 			public void accountChanged (AccountManager account)
 			{
 				long newBalance = account.getBalance ();
-				System.out.println ("A1 " + newBalance / 100000000.0);
-				if ( newBalance == balance - 10 * COIN - COIN / 1000 )
-				{
-					ready.release ();
-				}
+				assertTrue (newBalance == balance - 10 * COIN - COIN / 1000);
+				ready.release ();
 			}
 		};
 		alice.addAccountListener (listener1);
@@ -194,11 +190,8 @@ public class AccountManagerTest
 			public void accountChanged (AccountManager account)
 			{
 				long newBalance = account.getBalance ();
-				System.out.println ("B1 " + newBalance / 100000000.0);
-				if ( newBalance == 10 * COIN )
-				{
-					ready.release ();
-				}
+				assertTrue (newBalance == 10 * COIN);
+				ready.release ();
 			}
 		};
 		bob.addAccountListener (listener2);

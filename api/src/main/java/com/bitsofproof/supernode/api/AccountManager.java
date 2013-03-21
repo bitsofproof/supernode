@@ -152,7 +152,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 
 	}
 
-	private void trackAddresses (Collection<String> addresses) throws BCSAPIException
+	private AccountStatement trackAddresses (Collection<String> addresses) throws BCSAPIException
 	{
 		balance = 0;
 		postings.clear ();
@@ -203,6 +203,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			api.registerOutputListener (utxo.getTransactionHashes (), this);
 		}
 		api.registerAddressListener (addresses, this);
+		return s;
 	}
 
 	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
@@ -278,8 +279,10 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void notifyNewKey (String address, Key key)
 	{
+		boolean notify = false;
 		synchronized ( utxo )
 		{
+			long oldBalance = balance;
 			ArrayList<String> a = new ArrayList<String> ();
 			a.add (address);
 			try
@@ -288,13 +291,17 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				api.removeFilteredListener (utxo.getTransactionHashes (), this);
 				walletAddresses.add (address);
 				trackAddresses (walletAddresses);
+				notify = oldBalance != balance;
 			}
 			catch ( BCSAPIException e )
 			{
 				log.error ("Can not track new key " + address, e);
 			}
 		}
-		notifyListener ();
+		if ( notify )
+		{
+			notifyListener ();
+		}
 	}
 
 	@Override
