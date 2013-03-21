@@ -205,11 +205,7 @@ public class APITest
 			sourceAddresses.addAll (o.getAddresses ());
 		}
 
-		AccountStatement as = api.getAccountStatement (sourceAddresses, 0);
-		assertTrue (as.getOpening () == null);
-		assertTrue (as.getPosting ().size () == 10);
-
-		as = api.getAccountStatement (sourceAddresses, blocks.get (9).getCreateTime ());
+		AccountStatement as = api.getAccountStatement (sourceAddresses, blocks.get (9).getCreateTime ());
 		assertTrue (as.getOpening ().size () == 9);
 		assertTrue (as.getPosting ().size () == 1);
 
@@ -324,8 +320,8 @@ public class APITest
 		}
 
 		as = api.getAccountStatement (sourceAddresses, 0);
-		assertTrue (as.getOpening () == null);
-		assertTrue (as.getPosting ().size () == 10);
+		assertTrue (as.getOpening ().size () == 10);
+		assertTrue (as.getPosting () == null);
 		assertTrue (as.getUnconfirmedSpend ().size () == 1);
 
 		as = api.getAccountStatement (sinkAddresses, 0);

@@ -99,28 +99,28 @@ public class AccountStatement implements Serializable
 		builder.setLastBlock (ByteString.copyFrom (new Hash (lastBlock).toByteArray ()));
 		builder.setBcsapiversion (1);
 		builder.setTimestamp ((int) timestamp);
-		if ( opening != null )
+		if ( opening != null && opening.size () > 0 )
 		{
 			for ( TransactionOutput o : opening )
 			{
 				builder.addOpening (o.toProtobuf ());
 			}
 		}
-		if ( posting != null )
+		if ( posting != null && posting.size () > 0 )
 		{
 			for ( Posting p : posting )
 			{
 				builder.addPosting (p.toProtobuf ());
 			}
 		}
-		if ( unconfirmedSpend != null )
+		if ( unconfirmedSpend != null && unconfirmedSpend.size () > 0 )
 		{
 			for ( Transaction t : unconfirmedSpend )
 			{
 				builder.addUnconfirmedSpend (t.toProtobuf ());
 			}
 		}
-		if ( unconfirmedReceive != null )
+		if ( unconfirmedReceive != null && unconfirmedReceive.size () > 0 )
 		{
 			for ( Transaction t : unconfirmedReceive )
 			{

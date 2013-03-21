@@ -621,64 +621,66 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 
 						List<Posting> postings = new ArrayList<Posting> ();
 						statement.setPosting (postings);
-
-						for ( TxIn spent : store.getSpent (addresses, from) )
+						if ( from > 0 )
 						{
-							Posting p = new Posting ();
-							postings.add (p);
+							for ( TxIn spent : store.getSpent (addresses, from) )
+							{
+								Posting p = new Posting ();
+								postings.add (p);
 
-							p.setTimestamp (spent.getBlockTime ());
-							if ( spent.getTransaction ().getBlockHash () != null )
-							{
-								p.setBlock (spent.getTransaction ().getBlockHash ());
-							}
-							else
-							{
-								p.setBlock (spent.getTransaction ().getBlock ().getHash ());
-							}
-
-							TxOut o = spent.getSource ();
-							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-							if ( outs == null )
-							{
-								outs = new HashMap<Long, TxOut> ();
-								utxo.put (o.getTxHash (), outs);
-								openTX.remove (o.getTxHash ());
-							}
-							outs.put (o.getIx (), o);
-
-							TransactionOutput out = toBCSAPITransactionOutput (o);
-							p.setOutput (out);
-							p.setSpent (spent.getTransaction ().getHash ());
-						}
-
-						for ( TxOut o : store.getReceived (addresses, from) )
-						{
-							Posting p = new Posting ();
-							postings.add (p);
-
-							p.setTimestamp (o.getBlockTime ());
-							if ( o.getTransaction ().getBlockHash () != null )
-							{
-								p.setBlock (o.getTransaction ().getBlockHash ());
-							}
-							else
-							{
-								p.setBlock (o.getTransaction ().getBlock ().getHash ());
-							}
-							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-							if ( outs != null )
-							{
-								outs.remove (o.getIx ());
-								if ( outs.size () == 0 )
+								p.setTimestamp (spent.getBlockTime ());
+								if ( spent.getTransaction ().getBlockHash () != null )
 								{
-									utxo.remove (o.getTxHash ());
-									openTX.add (o.getTxHash ());
+									p.setBlock (spent.getTransaction ().getBlockHash ());
 								}
+								else
+								{
+									p.setBlock (spent.getTransaction ().getBlock ().getHash ());
+								}
+
+								TxOut o = spent.getSource ();
+								HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+								if ( outs == null )
+								{
+									outs = new HashMap<Long, TxOut> ();
+									utxo.put (o.getTxHash (), outs);
+									openTX.remove (o.getTxHash ());
+								}
+								outs.put (o.getIx (), o);
+
+								TransactionOutput out = toBCSAPITransactionOutput (o);
+								p.setOutput (out);
+								p.setSpent (spent.getTransaction ().getHash ());
 							}
 
-							TransactionOutput out = toBCSAPITransactionOutput (o);
-							p.setOutput (out);
+							for ( TxOut o : store.getReceived (addresses, from) )
+							{
+								Posting p = new Posting ();
+								postings.add (p);
+
+								p.setTimestamp (o.getBlockTime ());
+								if ( o.getTransaction ().getBlockHash () != null )
+								{
+									p.setBlock (o.getTransaction ().getBlockHash ());
+								}
+								else
+								{
+									p.setBlock (o.getTransaction ().getBlock ().getHash ());
+								}
+								HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+								if ( outs != null )
+								{
+									outs.remove (o.getIx ());
+									if ( outs.size () == 0 )
+									{
+										utxo.remove (o.getTxHash ());
+										openTX.add (o.getTxHash ());
+									}
+								}
+
+								TransactionOutput out = toBCSAPITransactionOutput (o);
+								p.setOutput (out);
+							}
 						}
 						for ( HashMap<Long, TxOut> outs : utxo.values () )
 						{
