@@ -24,6 +24,11 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	{
 		private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
 
+		public void clear ()
+		{
+			utxo.clear ();
+		}
+
 		public void add (TransactionOutput out)
 		{
 			HashMap<Long, TransactionOutput> outs = utxo.get (out.getTransactionHash ());
@@ -118,8 +123,8 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	private Wallet wallet;
 	private final List<Posting> postings = new ArrayList<Posting> ();
 	private final Set<String> walletAddresses = new HashSet<String> ();
-	private final HashMap<String, Integer> confirmations = new HashMap<String, Integer> ();
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
+	private final Set<String> received = Collections.synchronizedSet (new HashSet<String> ());
 
 	public void setApi (BCSAPI api)
 	{
@@ -149,6 +154,10 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 
 	private void trackAddresses (Collection<String> addresses) throws BCSAPIException
 	{
+		balance = 0;
+		postings.clear ();
+		utxo.clear ();
+		received.clear ();
 		AccountStatement s = api.getAccountStatement (addresses, 0);
 		if ( s != null )
 		{
@@ -181,22 +190,22 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					received (t);
+					process (t);
 				}
 			}
 			if ( s.getUnconfirmedSpend () != null )
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					spent (t);
+					process (t);
 				}
 			}
-			api.registerAddressListener (addresses, this);
-			api.registerTransactionListener (utxo.getTransactionHashes (), this);
+			api.registerOutputListener (utxo.getTransactionHashes (), this);
 		}
+		api.registerAddressListener (addresses, this);
 	}
 
-	public void pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
+	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
 	{
 		synchronized ( utxo )
 		{
@@ -226,9 +235,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				sinks.add (change);
 				sinks.add (target);
 			}
-			Transaction transaction = Transaction.createSpend (sources, sinks, fee);
-			log.debug ("Paying " + in + "(+" + fee + ") to " + receiver);
-			api.sendTransaction (transaction);
+			return Transaction.createSpend (sources, sinks, fee);
 		}
 	}
 
@@ -242,7 +249,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		}
 	}
 
-	public void cashIn (String serialized, String passpharse, long fee) throws ValidationException, BCSAPIException
+	public Transaction cashIn (String serialized, String passpharse, long fee) throws ValidationException, BCSAPIException
 	{
 		synchronized ( utxo )
 		{
@@ -262,10 +269,9 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				}
 				List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 				sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), sum - fee));
-				log.debug ("Caching in " + sum + "(-" + fee + ") from " + inAddress);
-				Transaction transaction = Transaction.createSpend (sources, sinks, fee);
-				api.sendTransaction (transaction);
+				return Transaction.createSpend (sources, sinks, fee);
 			}
+			throw new ValidationException ("No input available on this key");
 		}
 	}
 
@@ -274,12 +280,14 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	{
 		synchronized ( utxo )
 		{
-			walletAddresses.add (address);
 			ArrayList<String> a = new ArrayList<String> ();
 			a.add (address);
 			try
 			{
-				trackAddresses (a);
+				api.removeFilteredListener (walletAddresses, this);
+				api.removeFilteredListener (utxo.getTransactionHashes (), this);
+				walletAddresses.add (address);
+				trackAddresses (walletAddresses);
 			}
 			catch ( BCSAPIException e )
 			{
@@ -290,63 +298,62 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	}
 
 	@Override
-	public void validated (Transaction t)
+	public void process (Transaction t)
 	{
-	}
+		boolean isSpend = false;
+		boolean isReceived = false;
 
-	@Override
-	public void spent (Transaction t)
-	{
 		synchronized ( utxo )
 		{
-			confirmations.put (t.getHash (), 0);
 			for ( TransactionInput input : t.getInputs () )
 			{
 				TransactionOutput output = utxo.get (input.getSourceHash (), input.getIx ());
-				balance -= output.getValue ();
-				Posting p = new Posting ();
-				p.setOutput (output);
-				p.setTimestamp (System.currentTimeMillis () / 1000);
-				p.setSpent (t.getHash ());
-				postings.add (p);
-				utxo.remove (input.getSourceHash (), input.getIx ());
-			}
-		}
-		notifyListener ();
-	}
-
-	@Override
-	public void received (Transaction t)
-	{
-		synchronized ( utxo )
-		{
-			confirmations.put (t.getHash (), 0);
-			for ( TransactionOutput output : t.getOutputs () )
-			{
-				for ( String address : output.getAddresses () )
+				if ( output != null )
 				{
-					if ( walletAddresses.contains (address) )
-					{
-						Posting p = new Posting ();
-						p.setOutput (output);
-						p.setTimestamp (System.currentTimeMillis () / 1000);
-						postings.add (p);
-						utxo.add (output);
-						balance += output.getValue ();
-					}
+					balance -= output.getValue ();
+					Posting p = new Posting ();
+					p.setOutput (output);
+					p.setTimestamp (System.currentTimeMillis () / 1000);
+					p.setSpent (t.getHash ());
+					postings.add (p);
+					utxo.remove (input.getSourceHash (), input.getIx ());
+					isSpend = true;
 				}
 			}
-			ArrayList<String> txs = new ArrayList<String> ();
-			txs.add (t.getHash ());
-			try
+			if ( !received.contains (t.getHash ()) )
 			{
-				api.registerTransactionListener (txs, this);
-			}
-			catch ( BCSAPIException e )
-			{
+				for ( TransactionOutput output : t.getOutputs () )
+				{
+					for ( String address : output.getAddresses () )
+					{
+						if ( walletAddresses.contains (address) )
+						{
+							Posting p = new Posting ();
+							p.setOutput (output);
+							p.setTimestamp (System.currentTimeMillis () / 1000);
+							postings.add (p);
+							utxo.add (output);
+							balance += output.getValue ();
+							isReceived = true;
+						}
+					}
+				}
+				ArrayList<String> txs = new ArrayList<String> ();
+				txs.add (t.getHash ());
+				try
+				{
+					api.registerOutputListener (txs, this);
+				}
+				catch ( BCSAPIException e )
+				{
+				}
+				received.add (t.getHash ());
 			}
 		}
-		notifyListener ();
+		if ( isSpend || isReceived )
+		{
+			notifyListener ();
+		}
 	}
 
 	public long getBalance ()

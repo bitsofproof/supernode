@@ -20,8 +20,6 @@ import java.security.SecureRandom;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -53,7 +51,6 @@ import javax.jms.TopicSubscriber;
 public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
 	private final MockSession singleSession = new MockSession ();
-	private static final ExecutorService consumerThreads = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
 	private static class MockBytesMessage implements BytesMessage
 	{
@@ -633,7 +630,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		{
 			this.queue = queue;
 
-			consumerThreads.execute (new Runnable ()
+			Thread t = new Thread (new Runnable ()
 			{
 				@Override
 				public void run ()
@@ -641,23 +638,24 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					Message m = null;
 					try
 					{
-						if ( (m = receive (10)) != null )
+						do
 						{
-							if ( listener != null )
+							if ( (m = receive ()) != null )
 							{
-								listener.onMessage (m);
+								if ( listener != null )
+								{
+									listener.onMessage (m);
+								}
 							}
-						}
-						if ( !temp || (temp && m == null) )
-						{
-							consumerThreads.execute (this);
-						}
+						} while ( !temp );
 					}
 					catch ( JMSException e )
 					{
 					}
 				}
 			});
+			t.setDaemon (true);
+			t.start ();
 		}
 
 		@Override

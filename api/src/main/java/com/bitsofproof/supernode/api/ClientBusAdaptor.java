@@ -196,7 +196,7 @@ public class ClientBusAdaptor implements BCSAPI
 						{
 							for ( TransactionListener l : transactionListener )
 							{
-								l.validated (t);
+								l.process (t);
 							}
 						}
 					}
@@ -221,50 +221,52 @@ public class ClientBusAdaptor implements BCSAPI
 		transactionListener.remove (listener);
 	}
 
+	private class TrunkListenerDispatcher implements MessageListener
+	{
+		@Override
+		public void onMessage (Message message)
+		{
+			try
+			{
+				BytesMessage m = (BytesMessage) message;
+				byte[] body = new byte[(int) m.getBodyLength ()];
+				m.readBytes (body);
+				TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
+				if ( tu.getRemoved () != null )
+				{
+					for ( Block b : tu.getRemoved () )
+					{
+						b.computeHash ();
+					}
+				}
+				if ( tu.getAdded () != null )
+				{
+					for ( Block b : tu.getAdded () )
+					{
+						b.computeHash ();
+					}
+				}
+				synchronized ( trunkListener )
+				{
+					for ( TrunkListener l : trunkListener )
+					{
+						l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
+					}
+				}
+			}
+			catch ( Exception e )
+			{
+				log.error ("Block message error", e);
+			}
+		}
+	}
+
 	@Override
 	public void registerTrunkListener (TrunkListener listener) throws BCSAPIException
 	{
 		try
 		{
-			addTopicListener ("trunk", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					try
-					{
-						BytesMessage m = (BytesMessage) arg0;
-						byte[] body = new byte[(int) m.getBodyLength ()];
-						m.readBytes (body);
-						TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
-						if ( tu.getRemoved () != null )
-						{
-							for ( Block b : tu.getRemoved () )
-							{
-								b.computeHash ();
-							}
-						}
-						if ( tu.getAdded () != null )
-						{
-							for ( Block b : tu.getAdded () )
-							{
-								b.computeHash ();
-							}
-						}
-						synchronized ( trunkListener )
-						{
-							for ( TrunkListener l : trunkListener )
-							{
-								l.trunkUpdate (tu.getRemoved (), tu.getAdded ());
-							}
-						}
-					}
-					catch ( Exception e )
-					{
-						log.error ("Block message error", e);
-					}
-				}
-			});
+			addTopicListener ("trunk", new TrunkListenerDispatcher ());
 		}
 		catch ( JMSException e )
 		{
@@ -272,7 +274,10 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 		synchronized ( trunkListener )
 		{
-			trunkListener.add (listener);
+			if ( !trunkListener.contains (listener) )
+			{
+				trunkListener.add (listener);
+			}
 		}
 	}
 
@@ -582,7 +587,7 @@ public class ClientBusAdaptor implements BCSAPI
 							{
 								for ( TransactionListener l : listener )
 								{
-									l.received (t);
+									l.process (t);
 								}
 							}
 						}
@@ -613,7 +618,10 @@ public class ClientBusAdaptor implements BCSAPI
 						ll = new ArrayList<TransactionListener> ();
 						filterListener.put (a, ll);
 					}
-					ll.add (listener);
+					if ( !ll.contains (listener) )
+					{
+						ll.add (listener);
+					}
 				}
 				String hash = a.substring (a.length () - 2, a.length ());
 
@@ -643,19 +651,16 @@ public class ClientBusAdaptor implements BCSAPI
 				m.readBytes (body);
 				Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 				t.computeHash ();
-				for ( TransactionOutput o : t.getOutputs () )
+				for ( TransactionInput i : t.getInputs () )
 				{
-					for ( String a : o.getAddresses () )
+					synchronized ( filterListener )
 					{
-						synchronized ( filterListener )
+						ArrayList<TransactionListener> listener = filterListener.get (i.getSourceHash ());
+						if ( listener != null )
 						{
-							ArrayList<TransactionListener> listener = filterListener.get (a);
-							if ( listener != null )
+							for ( TransactionListener l : listener )
 							{
-								for ( TransactionListener l : listener )
-								{
-									l.spent (t);
-								}
+								l.process (t);
 							}
 						}
 					}
@@ -671,7 +676,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private final SpendListener spendListener = new SpendListener ();
 
 	@Override
-	public void registerTransactionListener (Collection<String> hashes, final TransactionListener listener) throws BCSAPIException
+	public void registerOutputListener (Collection<String> hashes, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -685,14 +690,17 @@ public class ClientBusAdaptor implements BCSAPI
 						ll = new ArrayList<TransactionListener> ();
 						filterListener.put (h, ll);
 					}
-					ll.add (listener);
+					if ( !ll.contains (listener) )
+					{
+						ll.add (listener);
+					}
 				}
 				String hash = h.substring (h.length () - 3, h.length ());
 
 				MessageConsumer consumer = filterConsumer.get (hash);
 				if ( consumer == null )
 				{
-					consumer = session.createConsumer (session.createTopic ("tx" + hash));
+					consumer = session.createConsumer (session.createTopic ("output" + hash));
 					consumer.setMessageListener (spendListener);
 				}
 			}
@@ -704,13 +712,21 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void removeFilteredTransactionListener (Collection<String> filter)
+	public void removeFilteredListener (Collection<String> filter, TransactionListener listener)
 	{
 		synchronized ( filterListener )
 		{
 			for ( String s : filter )
 			{
-				filterListener.remove (s);
+				ArrayList<TransactionListener> ll = filterListener.get (s);
+				if ( ll != null )
+				{
+					ll.remove (listener);
+					if ( ll.size () == 0 )
+					{
+						filterListener.remove (s);
+					}
+				}
 			}
 		}
 	}

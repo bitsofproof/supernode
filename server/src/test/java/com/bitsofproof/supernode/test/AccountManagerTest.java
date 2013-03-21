@@ -44,7 +44,6 @@ import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.Key;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -162,33 +161,96 @@ public class AccountManagerTest
 	@Test
 	public void testAccountManager2 () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		AccountManager am = new AccountManager ();
-		am.setApi (api);
-		am.track (wallet);
-		final long balance = am.getBalance ();
+		AccountManager alice = new AccountManager ();
+		alice.setApi (api);
+		alice.track (wallet);
+		final long balance = alice.getBalance ();
 		assertTrue (balance == 50 * COIN * 112);
 
+		System.out.println ("balance " + balance / 100000000.0);
 		final Semaphore ready = new Semaphore (0);
-		AccountListener listener = new AccountListener ()
+		AccountListener listener1 = new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account)
 			{
 				long newBalance = account.getBalance ();
-				// the first update is because change address is created
+				System.out.println ("A1 " + newBalance / 100000000.0);
 				if ( newBalance == balance - 10 * COIN - COIN / 1000 )
 				{
 					ready.release ();
 				}
 			}
 		};
-		am.addAccountListener (listener);
+		alice.addAccountListener (listener1);
 
-		Key someoneElse = ECKeyPair.createNew (true);
-		am.pay (AddressConverter.toSatoshiStyle (someoneElse.getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 1000);
+		AccountManager bob = new AccountManager ();
+		Wallet bobWallet = Wallet.createWallet (0x00, 0x05);
+		bob.setApi (api);
+		bob.track (bobWallet);
+		AccountListener listener2 = new AccountListener ()
+		{
+			@Override
+			public void accountChanged (AccountManager account)
+			{
+				long newBalance = account.getBalance ();
+				System.out.println ("B1 " + newBalance / 100000000.0);
+				if ( newBalance == 10 * COIN )
+				{
+					ready.release ();
+				}
+			}
+		};
+		bob.addAccountListener (listener2);
 
-		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
-		am.removeAccountListener (listener);
+		Transaction t1 =
+				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN,
+						COIN / 1000);
+		api.sendTransaction (t1);
+
+		assertTrue (ready.tryAcquire (2, 200, TimeUnit.SECONDS));
+
+		alice.removeAccountListener (listener1);
+		bob.removeAccountListener (listener2);
+
+		final long balance1 = alice.getBalance ();
+		System.out.println ("balance " + balance1 / 100000000.0);
+		AccountListener listener3 = new AccountListener ()
+		{
+			@Override
+			public void accountChanged (AccountManager account)
+			{
+				long newBalance = account.getBalance ();
+				System.out.println ("A2 " + newBalance / 100000000.0);
+				if ( newBalance == balance1 + 5 * COIN )
+				{
+					ready.release ();
+				}
+			}
+		};
+		alice.addAccountListener (listener3);
+		AccountListener listener4 = new AccountListener ()
+		{
+			@Override
+			public void accountChanged (AccountManager account)
+			{
+				long newBalance = account.getBalance ();
+				System.out.println ("B2 " + newBalance / 100000000.0);
+				if ( newBalance == 5 * COIN - COIN / 1000 )
+				{
+					ready.release ();
+				}
+			}
+		};
+		bob.addAccountListener (listener4);
+
+		Transaction t2 =
+				bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
+		api.sendTransaction (t2);
+
+		assertTrue (ready.tryAcquire (2, 2, TimeUnit.SECONDS));
+		alice.removeAccountListener (listener3);
+		bob.removeAccountListener (listener4);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

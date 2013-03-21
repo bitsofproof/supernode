@@ -461,7 +461,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		MessageProducer p = filterProducer.get (key);
 		if ( p == null )
 		{
-			p = session.createProducer (session.createTopic ("tx" + key));
+			p = session.createProducer (session.createTopic ("output" + key));
 			filterProducer.put (key, p);
 		}
 		p.send (m);
@@ -579,6 +579,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 		log.trace ("get account statement ");
 		try
 		{
+			final AccountStatement statement = new AccountStatement ();
 			Iterator<String> i = addresses.iterator ();
 			while ( i.hasNext () )
 			{
@@ -589,7 +590,6 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 				}
 			}
 
-			final AccountStatement statement = new AccountStatement ();
 			final Set<String> openTX = new HashSet<String> ();
 
 			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
@@ -604,135 +604,140 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 					Blk trunk = store.getBlock (store.getHeadHash ());
 					statement.setTimestamp (trunk.getCreateTime ());
 					statement.setLastBlock (store.getHeadHash ());
-
-					HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
-					for ( TxOut o : store.getUnspentOutput (addresses) )
+					if ( !addresses.isEmpty () )
 					{
-						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-						if ( outs == null )
+						HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
+						for ( TxOut o : store.getUnspentOutput (addresses) )
 						{
-							outs = new HashMap<Long, TxOut> ();
-							utxo.put (o.getTxHash (), outs);
-							openTX.add (o.getTxHash ());
-						}
-						outs.put (o.getIx (), o);
-					}
-
-					List<Posting> postings = new ArrayList<Posting> ();
-					statement.setPosting (postings);
-
-					for ( TxIn spent : store.getSpent (addresses, from) )
-					{
-						Posting p = new Posting ();
-						postings.add (p);
-
-						p.setTimestamp (spent.getBlockTime ());
-						if ( spent.getTransaction ().getBlockHash () != null )
-						{
-							p.setBlock (spent.getTransaction ().getBlockHash ());
-						}
-						else
-						{
-							p.setBlock (spent.getTransaction ().getBlock ().getHash ());
-						}
-
-						TxOut o = spent.getSource ();
-						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-						if ( outs == null )
-						{
-							outs = new HashMap<Long, TxOut> ();
-							utxo.put (o.getTxHash (), outs);
-							openTX.remove (o.getTxHash ());
-						}
-						outs.put (o.getIx (), o);
-
-						TransactionOutput out = toBCSAPITransactionOutput (o);
-						p.setOutput (out);
-						p.setSpent (spent.getTransaction ().getHash ());
-					}
-
-					for ( TxOut o : store.getReceived (addresses, from) )
-					{
-						Posting p = new Posting ();
-						postings.add (p);
-
-						p.setTimestamp (o.getBlockTime ());
-						if ( o.getTransaction ().getBlockHash () != null )
-						{
-							p.setBlock (o.getTransaction ().getBlockHash ());
-						}
-						else
-						{
-							p.setBlock (o.getTransaction ().getBlock ().getHash ());
-						}
-						HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-						if ( outs != null )
-						{
-							outs.remove (o.getIx ());
-							if ( outs.size () == 0 )
+							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+							if ( outs == null )
 							{
-								utxo.remove (o.getTxHash ());
+								outs = new HashMap<Long, TxOut> ();
+								utxo.put (o.getTxHash (), outs);
 								openTX.add (o.getTxHash ());
 							}
+							outs.put (o.getIx (), o);
 						}
 
-						TransactionOutput out = toBCSAPITransactionOutput (o);
-						p.setOutput (out);
-					}
-					for ( HashMap<Long, TxOut> outs : utxo.values () )
-					{
-						for ( TxOut o : outs.values () )
+						List<Posting> postings = new ArrayList<Posting> ();
+						statement.setPosting (postings);
+
+						for ( TxIn spent : store.getSpent (addresses, from) )
 						{
-							TransactionOutput out = toBCSAPITransactionOutput (o);
-							balances.add (out);
-						}
-					}
-					Collections.sort (postings, new Comparator<Posting> ()
-					{
-						@Override
-						public int compare (Posting arg0, Posting arg1)
-						{
-							if ( arg0.getTimestamp () != arg1.getTimestamp () )
+							Posting p = new Posting ();
+							postings.add (p);
+
+							p.setTimestamp (spent.getBlockTime ());
+							if ( spent.getTransaction ().getBlockHash () != null )
 							{
-								return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
+								p.setBlock (spent.getTransaction ().getBlockHash ());
 							}
 							else
 							{
-								if ( arg0.getSpent () == null && arg1.getSpent () != null )
+								p.setBlock (spent.getTransaction ().getBlock ().getHash ());
+							}
+
+							TxOut o = spent.getSource ();
+							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+							if ( outs == null )
+							{
+								outs = new HashMap<Long, TxOut> ();
+								utxo.put (o.getTxHash (), outs);
+								openTX.remove (o.getTxHash ());
+							}
+							outs.put (o.getIx (), o);
+
+							TransactionOutput out = toBCSAPITransactionOutput (o);
+							p.setOutput (out);
+							p.setSpent (spent.getTransaction ().getHash ());
+						}
+
+						for ( TxOut o : store.getReceived (addresses, from) )
+						{
+							Posting p = new Posting ();
+							postings.add (p);
+
+							p.setTimestamp (o.getBlockTime ());
+							if ( o.getTransaction ().getBlockHash () != null )
+							{
+								p.setBlock (o.getTransaction ().getBlockHash ());
+							}
+							else
+							{
+								p.setBlock (o.getTransaction ().getBlock ().getHash ());
+							}
+							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+							if ( outs != null )
+							{
+								outs.remove (o.getIx ());
+								if ( outs.size () == 0 )
 								{
-									return -1;
+									utxo.remove (o.getTxHash ());
+									openTX.add (o.getTxHash ());
 								}
-								if ( arg0.getSpent () != null && arg1.getSpent () == null )
-								{
-									return 1;
-								}
-								return 0;
+							}
+
+							TransactionOutput out = toBCSAPITransactionOutput (o);
+							p.setOutput (out);
+						}
+						for ( HashMap<Long, TxOut> outs : utxo.values () )
+						{
+							for ( TxOut o : outs.values () )
+							{
+								TransactionOutput out = toBCSAPITransactionOutput (o);
+								balances.add (out);
 							}
 						}
-					});
+						Collections.sort (postings, new Comparator<Posting> ()
+						{
+							@Override
+							public int compare (Posting arg0, Posting arg1)
+							{
+								if ( arg0.getTimestamp () != arg1.getTimestamp () )
+								{
+									return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
+								}
+								else
+								{
+									if ( arg0.getSpent () == null && arg1.getSpent () != null )
+									{
+										return -1;
+									}
+									if ( arg0.getSpent () != null && arg1.getSpent () == null )
+									{
+										return 1;
+									}
+									return 0;
+								}
+							}
+						});
+					}
 				}
 			});
-			statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
-			Set<String> alreadyIn = new HashSet<String> ();
-			for ( Tx t : txhandler.getUnconfirmedForHashes (openTX) )
+			if ( !addresses.isEmpty () )
 			{
-				if ( !alreadyIn.contains (t.getHash ()) )
+				statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
+				Set<String> alreadyIn = new HashSet<String> ();
+				for ( Tx t : txhandler.getUnconfirmedForHashes (openTX) )
 				{
-					statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
-					alreadyIn.add (t.getHash ());
+					if ( !alreadyIn.contains (t.getHash ()) )
+					{
+						statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
+						alreadyIn.add (t.getHash ());
+					}
 				}
-			}
 
-			Set<String> as = new HashSet<String> ();
-			as.addAll (addresses);
-			statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
-			alreadyIn = new HashSet<String> ();
-			for ( Tx t : txhandler.getUnconfirmedForAddresses (as) )
-			{
-				if ( !alreadyIn.contains (t.getHash ()) )
+				Set<String> as = new HashSet<String> ();
+				as.addAll (addresses);
+				statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
+				alreadyIn = new HashSet<String> ();
+				for ( Tx t : txhandler.getUnconfirmedForAddresses (as) )
 				{
-					statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
-					alreadyIn.add (t.getHash ());
+					if ( !alreadyIn.contains (t.getHash ()) )
+					{
+						statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
+						alreadyIn.add (t.getHash ());
+					}
 				}
 			}
 			return statement;

@@ -179,7 +179,7 @@ public class APITest
 
 		try
 		{
-			assertTrue (ready.tryAcquire (110, 20, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (110, 2, TimeUnit.SECONDS));
 			api.removeTrunkListener (listener);
 		}
 		catch ( InterruptedException e )
@@ -227,11 +227,11 @@ public class APITest
 		final String hash = transaction.getHash ();
 		final List<String> spendingTxs = new ArrayList<String> ();
 
-		TransactionListener listener = new TransactionListener ()
+		TransactionListener validationListener = new TransactionListener ()
 		{
 
 			@Override
-			public void validated (Transaction t)
+			public void process (Transaction t)
 			{
 				t.computeHash ();
 				assertTrue (t.getHash ().equals (hash));
@@ -239,7 +239,20 @@ public class APITest
 			}
 
 			@Override
-			public void spent (Transaction t)
+			public void orphaned (String hash)
+			{
+			}
+
+			@Override
+			public void confirmed (String hash)
+			{
+			}
+		};
+		TransactionListener outputListener = new TransactionListener ()
+		{
+
+			@Override
+			public void process (Transaction t)
 			{
 				t.computeHash ();
 				boolean spent = false;
@@ -255,7 +268,23 @@ public class APITest
 			}
 
 			@Override
-			public void received (Transaction t)
+			public void orphaned (String hash)
+			{
+			}
+
+			@Override
+			public void confirmed (String hash)
+			{
+			}
+		};
+
+		api.registerTransactionListener (validationListener);
+
+		TransactionListener addressListener = new TransactionListener ()
+		{
+
+			@Override
+			public void process (Transaction t)
 			{
 				t.computeHash ();
 				assertTrue (t.getHash ().equals (hash));
@@ -263,35 +292,32 @@ public class APITest
 			}
 
 			@Override
-			public void confirmed (String hash)
-			{
-			}
-
-			@Override
 			public void orphaned (String hash)
 			{
 			}
 
+			@Override
+			public void confirmed (String hash)
+			{
+			}
 		};
-
-		api.registerTransactionListener (listener);
 
 		List<String> receiverAddresses = new ArrayList<String> ();
 		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), wallet.getAddressFlag ()));
-		api.registerAddressListener (receiverAddresses, listener);
+		api.registerAddressListener (receiverAddresses, addressListener);
 
 		for ( Transaction.TransactionSource s : sources )
 		{
 			spendingTxs.add (s.getOutput ().getTransactionHash ());
 		}
-		api.registerTransactionListener (spendingTxs, listener);
+		api.registerOutputListener (spendingTxs, outputListener);
 
 		api.sendTransaction (transaction);
 		try
 		{
 			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
-			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
 			assertTrue (ready3.tryAcquire (2, TimeUnit.SECONDS));
+			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
@@ -309,21 +335,11 @@ public class APITest
 
 		List<String> hashes = new ArrayList<String> ();
 		hashes.add (transaction.getHash ());
-		api.registerTransactionListener (hashes, new TransactionListener ()
+		api.registerOutputListener (hashes, new TransactionListener ()
 		{
 
 			@Override
-			public void validated (Transaction t)
-			{
-			}
-
-			@Override
-			public void spent (Transaction t)
-			{
-			}
-
-			@Override
-			public void received (Transaction t)
+			public void process (Transaction t)
 			{
 			}
 
