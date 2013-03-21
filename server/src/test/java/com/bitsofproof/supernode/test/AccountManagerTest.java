@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.test;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
@@ -122,6 +123,8 @@ public class AccountManagerTest
 			api.sendBlock (block);
 		}
 		assertTrue (hasBlock.tryAcquire (111, 2, TimeUnit.SECONDS));
+		assertFalse (hasBlock.tryAcquire ());
+
 		api.removeTrunkListener (listener);
 	}
 
@@ -155,6 +158,8 @@ public class AccountManagerTest
 		api.sendBlock (block);
 
 		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+		assertFalse (ready.tryAcquire ());
+
 		am.removeAccountListener (listener);
 	}
 
@@ -167,7 +172,8 @@ public class AccountManagerTest
 		final long balance = alice.getBalance ();
 		assertTrue (balance == 50 * COIN * 112);
 
-		final Semaphore ready = new Semaphore (0);
+		final Semaphore ready1 = new Semaphore (0);
+		final Semaphore ready2 = new Semaphore (0);
 		AccountListener listener1 = new AccountListener ()
 		{
 			@Override
@@ -175,7 +181,7 @@ public class AccountManagerTest
 			{
 				long newBalance = account.getBalance ();
 				assertTrue (newBalance == balance - 10 * COIN - COIN / 1000);
-				ready.release ();
+				ready1.release ();
 			}
 		};
 		alice.addAccountListener (listener1);
@@ -191,7 +197,7 @@ public class AccountManagerTest
 			{
 				long newBalance = account.getBalance ();
 				assertTrue (newBalance == 10 * COIN);
-				ready.release ();
+				ready2.release ();
 			}
 		};
 		bob.addAccountListener (listener2);
@@ -201,24 +207,23 @@ public class AccountManagerTest
 						COIN / 1000);
 		api.sendTransaction (t1);
 
-		assertTrue (ready.tryAcquire (2, 200, TimeUnit.SECONDS));
+		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
+		assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
+		assertFalse (ready1.tryAcquire ());
+		assertFalse (ready2.tryAcquire ());
 
 		alice.removeAccountListener (listener1);
 		bob.removeAccountListener (listener2);
 
 		final long balance1 = alice.getBalance ();
-		System.out.println ("balance " + balance1 / 100000000.0);
 		AccountListener listener3 = new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account)
 			{
 				long newBalance = account.getBalance ();
-				System.out.println ("A2 " + newBalance / 100000000.0);
-				if ( newBalance == balance1 + 5 * COIN )
-				{
-					ready.release ();
-				}
+				assertTrue (newBalance == balance1 + 5 * COIN);
+				ready1.release ();
 			}
 		};
 		alice.addAccountListener (listener3);
@@ -228,11 +233,8 @@ public class AccountManagerTest
 			public void accountChanged (AccountManager account)
 			{
 				long newBalance = account.getBalance ();
-				System.out.println ("B2 " + newBalance / 100000000.0);
-				if ( newBalance == 5 * COIN - COIN / 1000 )
-				{
-					ready.release ();
-				}
+				assertTrue (newBalance == 5 * COIN - COIN / 1000);
+				ready2.release ();
 			}
 		};
 		bob.addAccountListener (listener4);
@@ -241,7 +243,10 @@ public class AccountManagerTest
 				bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
 		api.sendTransaction (t2);
 
-		assertTrue (ready.tryAcquire (2, 2, TimeUnit.SECONDS));
+		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
+		assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
+		assertFalse (ready1.tryAcquire ());
+		assertFalse (ready2.tryAcquire ());
 		alice.removeAccountListener (listener3);
 		bob.removeAccountListener (listener4);
 	}

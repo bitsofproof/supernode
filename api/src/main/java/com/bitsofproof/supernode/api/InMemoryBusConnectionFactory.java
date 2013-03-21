@@ -623,7 +623,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
-	private static Executor consumerExecutor = Executors.newCachedThreadPool ();
+	private static Executor consumerExecutor = Executors.newFixedThreadPool (10);
 
 	private static class MockConsumer implements MessageConsumer
 	{
@@ -642,16 +642,17 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					Message m = null;
 					try
 					{
-						do
+						if ( (m = receive (1)) != null )
 						{
-							if ( (m = receive ()) != null )
+							if ( listener != null )
 							{
-								if ( listener != null )
-								{
-									listener.onMessage (m);
-								}
+								listener.onMessage (m);
 							}
-						} while ( !temp );
+						}
+						if ( !temp || (temp && m == null) )
+						{
+							consumerExecutor.execute (this);
+						}
 					}
 					catch ( JMSException e )
 					{

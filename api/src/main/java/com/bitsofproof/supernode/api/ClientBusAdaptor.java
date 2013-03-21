@@ -370,6 +370,7 @@ public class ClientBusAdaptor implements BCSAPI
 			try
 			{
 				result = exchanger.exchange (null);
+				consumer.close ();
 			}
 			catch ( InterruptedException e )
 			{

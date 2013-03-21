@@ -154,6 +154,8 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 
 	private AccountStatement trackAddresses (Collection<String> addresses) throws BCSAPIException
 	{
+		api.removeFilteredListener (walletAddresses, this);
+		api.removeFilteredListener (utxo.getTransactionHashes (), this);
 		balance = 0;
 		postings.clear ();
 		utxo.clear ();
@@ -190,14 +192,14 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					process (t);
+					updateWithTransaction (t);
 				}
 			}
 			if ( s.getUnconfirmedSpend () != null )
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					process (t);
+					updateWithTransaction (t);
 				}
 			}
 			api.registerOutputListener (utxo.getTransactionHashes (), this);
@@ -307,8 +309,15 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void process (Transaction t)
 	{
-		boolean isSpend = false;
-		boolean isReceived = false;
+		if ( updateWithTransaction (t) )
+		{
+			notifyListener ();
+		}
+	}
+
+	private boolean updateWithTransaction (Transaction t)
+	{
+		boolean notify = false;
 
 		synchronized ( utxo )
 		{
@@ -324,7 +333,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 					p.setSpent (t.getHash ());
 					postings.add (p);
 					utxo.remove (input.getSourceHash (), input.getIx ());
-					isSpend = true;
+					notify = true;
 				}
 			}
 			if ( !received.contains (t.getHash ()) )
@@ -341,7 +350,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 							postings.add (p);
 							utxo.add (output);
 							balance += output.getValue ();
-							isReceived = true;
+							notify = true;
 						}
 					}
 				}
@@ -357,10 +366,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				received.add (t.getHash ());
 			}
 		}
-		if ( isSpend || isReceived )
-		{
-			notifyListener ();
-		}
+		return notify;
 	}
 
 	public long getBalance ()
