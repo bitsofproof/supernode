@@ -459,21 +459,16 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		{
 			if ( removed != null )
 			{
-				for ( Block block : removed )
+				try
 				{
-					for ( Transaction t : block.getTransactions () )
-					{
-						for ( Posting p : postings )
-						{
-							if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) )
-							{
-								p.setBlock (null);
-							}
-						}
-					}
+					trackAddresses (walletAddresses);
+				}
+				catch ( BCSAPIException e )
+				{
+					log.error ("Error reloading account after reorg", e);
 				}
 			}
-			if ( added != null )
+			else if ( added != null )
 			{
 				for ( Block block : added )
 				{
@@ -485,5 +480,4 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			}
 		}
 	}
-
 }
