@@ -623,7 +623,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
-	private static Executor consumerExecutor = Executors.newFixedThreadPool (10);
+	private static Executor consumerExecutor = Executors.newFixedThreadPool (2);
 
 	private static class MockConsumer implements MessageConsumer
 	{
