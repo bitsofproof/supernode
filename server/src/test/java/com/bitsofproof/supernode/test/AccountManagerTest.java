@@ -157,7 +157,7 @@ public class AccountManagerTest
 
 		api.sendBlock (block);
 
-		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
+		assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
 		assertFalse (ready.tryAcquire ());
 
 		am.removeAccountListener (listener);

@@ -97,70 +97,11 @@ public class ClientBusAdaptor implements BCSAPI
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
 			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
 			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
-
-			monitorConfirmations ();
 		}
 		catch ( JMSException e )
 		{
 			log.error ("Can not create JMS connection", e);
 		}
-		catch ( BCSAPIException e )
-		{
-			log.error ("Can not register trunk listener", e);
-		}
-	}
-
-	private void monitorConfirmations () throws BCSAPIException
-	{
-		registerTrunkListener (new TrunkListener ()
-		{
-			@Override
-			public void trunkUpdate (List<Block> removed, List<Block> added)
-			{
-				if ( removed != null )
-				{
-					for ( Block b : removed )
-					{
-						b.computeHash ();
-						for ( Transaction t : b.getTransactions () )
-						{
-							synchronized ( filterListener )
-							{
-								List<TransactionListener> listener = filterListener.get (t.getHash ());
-								if ( listener != null )
-								{
-									for ( TransactionListener l : listener )
-									{
-										l.orphaned (t.getHash ());
-									}
-								}
-							}
-						}
-					}
-				}
-				if ( added != null )
-				{
-					for ( Block b : added )
-					{
-						b.computeHash ();
-						for ( Transaction t : b.getTransactions () )
-						{
-							synchronized ( filterListener )
-							{
-								List<TransactionListener> listener = filterListener.get (t.getHash ());
-								if ( listener != null )
-								{
-									for ( TransactionListener l : listener )
-									{
-										l.confirmed (t.getHash ());
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		});
 	}
 
 	public void destroy ()

@@ -234,15 +234,6 @@ public class APITest
 				ready.release ();
 			}
 
-			@Override
-			public void orphaned (String hash)
-			{
-			}
-
-			@Override
-			public void confirmed (String hash)
-			{
-			}
 		};
 		TransactionListener outputListener = new TransactionListener ()
 		{
@@ -263,15 +254,6 @@ public class APITest
 				ready2.release ();
 			}
 
-			@Override
-			public void orphaned (String hash)
-			{
-			}
-
-			@Override
-			public void confirmed (String hash)
-			{
-			}
 		};
 
 		api.registerTransactionListener (validationListener);
@@ -287,15 +269,6 @@ public class APITest
 				ready3.release ();
 			}
 
-			@Override
-			public void orphaned (String hash)
-			{
-			}
-
-			@Override
-			public void confirmed (String hash)
-			{
-			}
 		};
 
 		List<String> receiverAddresses = new ArrayList<String> ();
@@ -331,31 +304,25 @@ public class APITest
 
 		List<String> hashes = new ArrayList<String> ();
 		hashes.add (transaction.getHash ());
-		api.registerOutputListener (hashes, new TransactionListener ()
+		TrunkListener tl = new TrunkListener ()
 		{
 
 			@Override
-			public void process (Transaction t)
+			public void trunkUpdate (List<Block> removed, List<Block> added)
 			{
+				if ( added != null && added.get (0).getHash ().equals (blocks.get (112).getHash ()) )
+				{
+					ready.release ();
+				}
 			}
-
-			@Override
-			public void confirmed (String h)
-			{
-				assertTrue (h.equals (hash));
-				ready.release ();
-			}
-
-			@Override
-			public void orphaned (String hash)
-			{
-			}
-		});
+		};
+		api.registerTrunkListener (tl);
 
 		Block block = createBlock (blocks.get (111).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 112));
 		block.setCreateTime (block.getCreateTime () + 112 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);
+		blocks.put (112, block);
 		api.sendBlock (block);
 		try
 		{
@@ -364,6 +331,7 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+		api.removeTrunkListener (tl);
 
 		as = api.getAccountStatement (sourceAddresses, blocks.get (111).getCreateTime ());
 		assertTrue (as.getOpening ().size () == 10);

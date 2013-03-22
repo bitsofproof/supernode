@@ -192,14 +192,14 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					updateWithTransaction (t);
+					updateWithTransaction (t, null);
 				}
 			}
 			if ( s.getUnconfirmedSpend () != null )
 			{
 				for ( Transaction t : s.getUnconfirmedReceive () )
 				{
-					updateWithTransaction (t);
+					updateWithTransaction (t, null);
 				}
 			}
 			api.registerOutputListener (utxo.getTransactionHashes (), this);
@@ -309,13 +309,21 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void process (Transaction t)
 	{
-		if ( updateWithTransaction (t) )
+		if ( updateWithTransaction (t, null) )
 		{
 			notifyListener ();
 		}
 	}
 
-	private boolean updateWithTransaction (Transaction t)
+	public void process (Transaction t, Block b)
+	{
+		if ( updateWithTransaction (t, b) )
+		{
+			notifyListener ();
+		}
+	}
+
+	private boolean updateWithTransaction (Transaction t, Block b)
 	{
 		boolean notify = false;
 
@@ -329,7 +337,15 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 					balance -= output.getValue ();
 					Posting p = new Posting ();
 					p.setOutput (output);
-					p.setTimestamp (System.currentTimeMillis () / 1000);
+					if ( b != null )
+					{
+						p.setBlock (b.getHash ());
+						p.setTimestamp (b.getCreateTime ());
+					}
+					else
+					{
+						p.setTimestamp (System.currentTimeMillis () / 1000);
+					}
 					p.setSpent (t.getHash ());
 					postings.add (p);
 					utxo.remove (input.getSourceHash (), input.getIx ());
@@ -340,13 +356,22 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				for ( TransactionOutput output : t.getOutputs () )
 				{
+					output.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
 					for ( String address : output.getAddresses () )
 					{
 						if ( walletAddresses.contains (address) )
 						{
 							Posting p = new Posting ();
 							p.setOutput (output);
-							p.setTimestamp (System.currentTimeMillis () / 1000);
+							if ( b != null )
+							{
+								p.setBlock (b.getHash ());
+								p.setTimestamp (b.getCreateTime ());
+							}
+							else
+							{
+								p.setTimestamp (System.currentTimeMillis () / 1000);
+							}
 							postings.add (p);
 							utxo.add (output);
 							balance += output.getValue ();
@@ -415,120 +440,16 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
-		try
+		if ( added != null )
 		{
-			synchronized ( utxo )
+			for ( Block block : added )
 			{
-				if ( removed != null )
+				for ( Transaction t : block.getTransactions () )
 				{
-					for ( Block b : removed )
-					{
-						for ( Posting p : postings )
-						{
-							if ( p.getBlock ().equals (b.getHash ()) )
-							{
-								if ( p.getSpent () != null )
-								{
-									utxo.add (p.getOutput ());
-								}
-								else
-								{
-									utxo.remove (p.getOutput ());
-								}
-								p.setBlock (null);
-							}
-						}
-					}
-				}
-				if ( added != null )
-				{
-					for ( Block b : added )
-					{
-						for ( Transaction t : b.getTransactions () )
-						{
-							for ( TransactionOutput o : t.getOutputs () )
-							{
-								o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
-								if ( o.getVotes () == 1 && walletAddresses.contains (o.getAddresses ().get (0)) )
-								{
-									if ( utxo.get (t.getHash (), o.getSelfIx ()) == null )
-									{
-										boolean found = false;
-										for ( Posting p : postings )
-										{
-											if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) && p.getOutput ().getSelfIx () == o.getSelfIx () )
-											{
-												found = true;
-												p.setBlock (b.getHash ());
-												p.setTimestamp (b.getCreateTime ());
-												break;
-											}
-										}
-										if ( !found )
-										{
-											Posting p = new Posting ();
-											p.setBlock (b.getHash ());
-											p.setOutput (o);
-											p.setTimestamp (b.getCreateTime ());
-											postings.add (p);
-										}
-										utxo.add (o);
-										balance += o.getValue ();
-									}
-								}
-							}
-							for ( TransactionInput i : t.getInputs () )
-							{
-								if ( utxo.get (i.getSourceHash (), i.getIx ()) != null )
-								{
-									Transaction source = api.getTransaction (i.getSourceHash ());
-									TransactionOutput o = source.getOutputs ().get ((int) i.getSelfIx ());
-									boolean found = false;
-									for ( Posting p : postings )
-									{
-										if ( p.getOutput ().getTransactionHash ().equals (i.getSourceHash ()) && p.getOutput ().getSelfIx () == i.getIx () )
-										{
-											found = true;
-											p.setBlock (b.getHash ());
-											p.setTimestamp (b.getCreateTime ());
-											break;
-										}
-									}
-									if ( !found )
-									{
-										Posting p = new Posting ();
-										p.setBlock (b.getHash ());
-										p.setOutput (o);
-										p.setTimestamp (b.getCreateTime ());
-										postings.add (p);
-									}
-									utxo.remove (o);
-									balance -= o.getValue ();
-								}
-							}
-						}
-					}
+					process (t, block);
 				}
 			}
-			notifyListener ();
-		}
-		catch ( BCSAPIException e )
-		{
-			log.error ("Error processing trunk update ", e);
 		}
 	}
 
-	@Override
-	public void confirmed (String hash)
-	{
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void orphaned (String hash)
-	{
-		// TODO Auto-generated method stub
-
-	}
 }
