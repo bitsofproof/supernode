@@ -123,15 +123,15 @@ public class Wallet
 		log.debug ("Created new key [" + (nextKey - 1) + "] for address " + address);
 		Key key = k.getKey ();
 		keyForAddress.put (address, key);
-		notifyNewKey (key, address);
+		notifyNewKey (key, address, true);
 		return k;
 	}
 
-	private void notifyNewKey (Key k, String address)
+	private void notifyNewKey (Key k, String address, boolean pristine)
 	{
 		for ( WalletListener l : walletListener )
 		{
-			l.notifyNewKey (address, k);
+			l.notifyNewKey (address, k, pristine);
 		}
 	}
 
@@ -144,7 +144,7 @@ public class Wallet
 			String address = AddressConverter.toSatoshiStyle (k.getPublic (), addressFlag);
 			log.debug ("Imported key for address " + address);
 			keyForAddress.put (address, k);
-			notifyNewKey (k, address);
+			notifyNewKey (k, address, false);
 		}
 		catch ( CloneNotSupportedException e )
 		{

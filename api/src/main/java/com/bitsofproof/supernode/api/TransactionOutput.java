@@ -17,7 +17,9 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.google.protobuf.ByteString;
 
@@ -31,6 +33,7 @@ public class TransactionOutput implements Serializable, Cloneable
 	private long selfIx;
 	private long votes;
 	private List<String> addresses;
+	private Set<String> colors;
 
 	public void parseOwners (int addressFlag, int p2sAddressFlag)
 	{
@@ -197,8 +200,30 @@ public class TransactionOutput implements Serializable, Cloneable
 			System.arraycopy (script, 0, o.script, 0, script.length);
 		}
 		o.transactionHash = transactionHash;
+		o.selfIx = selfIx;
+		o.votes = votes;
+		if ( addresses != null )
+		{
+			o.addresses = new ArrayList<String> ();
+			o.addresses.addAll (addresses);
+		}
+		if ( colors != null )
+		{
+			o.colors = new HashSet<String> ();
+			o.colors.addAll (colors);
+		}
 		return o;
 
+	}
+
+	public Set<String> getColors ()
+	{
+		return colors;
+	}
+
+	public void setColors (Set<String> colors)
+	{
+		this.colors = colors;
 	}
 
 	public BCSAPIMessage.TransactionOutput toProtobuf ()
@@ -219,6 +244,13 @@ public class TransactionOutput implements Serializable, Cloneable
 			}
 			builder.setVotes ((int) votes);
 		}
+		if ( colors != null )
+		{
+			for ( String c : colors )
+			{
+				builder.addAddress (ByteString.copyFrom (new Hash (c).toByteArray ()));
+			}
+		}
 		return builder.build ();
 	}
 
@@ -236,6 +268,14 @@ public class TransactionOutput implements Serializable, Cloneable
 		{
 			output.setAddresses (po.getAddressList ());
 			output.setVotes (po.getVotes ());
+		}
+		if ( po.getColorsCount () > 0 )
+		{
+			output.colors = new HashSet<String> ();
+			for ( ByteString c : po.getColorsList () )
+			{
+				output.colors.add (new Hash (c.toByteArray ()).toString ());
+			}
 		}
 		return output;
 	}

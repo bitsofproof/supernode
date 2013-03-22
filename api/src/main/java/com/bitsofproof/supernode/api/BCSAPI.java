@@ -132,4 +132,11 @@ public interface BCSAPI
 	 * @param filter
 	 */
 	public void removeFilteredListener (Collection<String> filter, TransactionListener listener);
+
+	/**
+	 * Issue a color
+	 * 
+	 * @param color
+	 */
+	public void issueColor (Color color) throws BCSAPIException;
 }

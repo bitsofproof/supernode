@@ -88,7 +88,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			return utxo.keySet ();
 		}
 
-		private List<TransactionOutput> getSufficientSources (long value)
+		private List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
 		{
 			List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
 			long sum = 0;
@@ -96,18 +96,36 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				for ( TransactionOutput o : outs.values () )
 				{
-					if ( ScriptFormat.isPayToAddress (o.getScript ()) && o.getVotes () == 1 && o.getAddresses ().size () == 1 )
+					if ( o.getVotes () == 1 && o.getAddresses ().size () == 1 )
 					{
-						if ( wallet.getKeyForAddress (o.getAddresses ().get (0)) != null
-								&& wallet.getKeyForAddress (o.getAddresses ().get (0)).getPrivate () != null )
+						if ( color == null )
 						{
-							sum += o.getValue ();
-							result.add (o);
+							if ( o.getColors () == null )
+							{
+								sum += o.getValue ();
+								result.add (o);
+								if ( sum >= (amount + fee) )
+								{
+									return result;
+								}
+							}
 						}
-					}
-					if ( sum >= value )
-					{
-						return result;
+						else
+						{
+							if ( o.getColors ().contains (color) )
+							{
+								sum += o.getValue ();
+								result.add (o);
+								if ( sum >= amount )
+								{
+									if ( fee > 0 )
+									{
+										result.addAll (getSufficientSources (0, fee, null));
+									}
+									return result;
+								}
+							}
+						}
 					}
 				}
 			}
@@ -223,35 +241,66 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		return s;
 	}
 
-	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
+	public Transaction pay (String receiver, long amount, long fee, String color) throws ValidationException, BCSAPIException
 	{
 		synchronized ( utxo )
 		{
 			List<TransactionSource> sources = new ArrayList<TransactionSource> ();
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 
-			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount + fee);
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, color);
 			if ( sufficient == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
 			}
 			long in = 0;
+			long colorIn = 0;
 			for ( TransactionOutput o : sufficient )
 			{
 				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
 				in += o.getValue ();
+				if ( color != null && o.getColors ().contains (color) )
+				{
+					colorIn += o.getValue ();
+				}
 			}
-			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
-			TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
-			if ( new SecureRandom ().nextBoolean () )
+			if ( color == null )
 			{
-				sinks.add (target);
-				sinks.add (change);
+				TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
+				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
+				if ( new SecureRandom ().nextBoolean () )
+				{
+					sinks.add (target);
+					sinks.add (change);
+				}
+				else
+				{
+					sinks.add (change);
+					sinks.add (target);
+				}
 			}
 			else
 			{
-				sinks.add (change);
-				sinks.add (target);
+				TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
+				if ( colorIn > amount )
+				{
+					TransactionSink colorChange = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), colorIn - amount);
+					if ( new SecureRandom ().nextBoolean () )
+					{
+						sinks.add (target);
+						sinks.add (colorChange);
+					}
+					else
+					{
+						sinks.add (colorChange);
+						sinks.add (target);
+					}
+				}
+				else
+				{
+					sinks.add (target);
+				}
+				sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee));
 			}
 			return Transaction.createSpend (sources, sinks, fee);
 		}
@@ -294,30 +343,47 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	}
 
 	@Override
-	public void notifyNewKey (String address, Key key)
+	public void notifyNewKey (String address, Key key, boolean pristine)
 	{
-		boolean notify = false;
-		synchronized ( utxo )
+		if ( pristine )
 		{
-			long oldBalance = balance;
-			ArrayList<String> a = new ArrayList<String> ();
-			a.add (address);
+			walletAddresses.add (address);
+			List<String> addresses = new ArrayList<String> ();
+			addresses.add (address);
 			try
 			{
-				api.removeFilteredListener (walletAddresses, this);
-				api.removeFilteredListener (utxo.getTransactionHashes (), this);
-				walletAddresses.add (address);
-				trackAddresses (walletAddresses);
-				notify = oldBalance != balance;
+				api.registerAddressListener (addresses, this);
 			}
 			catch ( BCSAPIException e )
 			{
-				log.error ("Can not track new key " + address, e);
+				log.error ("Can not register listener for new key", e);
 			}
 		}
-		if ( notify )
+		else
 		{
-			notifyListener ();
+			boolean notify = false;
+			synchronized ( utxo )
+			{
+				long oldBalance = balance;
+				ArrayList<String> a = new ArrayList<String> ();
+				a.add (address);
+				try
+				{
+					api.removeFilteredListener (walletAddresses, this);
+					api.removeFilteredListener (utxo.getTransactionHashes (), this);
+					walletAddresses.add (address);
+					trackAddresses (walletAddresses);
+					notify = oldBalance != balance;
+				}
+				catch ( BCSAPIException e )
+				{
+					log.error ("Can not track new key " + address, e);
+				}
+			}
+			if ( notify )
+			{
+				notifyListener ();
+			}
 		}
 	}
 
@@ -455,6 +521,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
+		boolean notify = false;
 		synchronized ( utxo )
 		{
 			if ( removed != null )
@@ -462,6 +529,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				try
 				{
 					trackAddresses (walletAddresses);
+					notify = true;
 				}
 				catch ( BCSAPIException e )
 				{
@@ -474,10 +542,14 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 				{
 					for ( Transaction t : block.getTransactions () )
 					{
-						process (t, block);
+						notify |= updateWithTransaction (t, block);
 					}
 				}
 			}
+		}
+		if ( notify )
+		{
+			notifyListener ();
 		}
 	}
 }

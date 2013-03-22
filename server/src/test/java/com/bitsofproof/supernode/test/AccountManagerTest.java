@@ -157,7 +157,7 @@ public class AccountManagerTest
 
 		api.sendBlock (block);
 
-		assertTrue (ready.tryAcquire (200, TimeUnit.SECONDS));
+		assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
 		assertFalse (ready.tryAcquire ());
 
 		am.removeAccountListener (listener);
@@ -204,7 +204,7 @@ public class AccountManagerTest
 
 		Transaction t1 =
 				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN,
-						COIN / 1000);
+						COIN / 1000, null);
 		api.sendTransaction (t1);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
@@ -240,7 +240,8 @@ public class AccountManagerTest
 		bob.addAccountListener (listener4);
 
 		Transaction t2 =
-				bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
+				bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000,
+						null);
 		api.sendTransaction (t2);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));

@@ -30,10 +30,11 @@ message TransactionInput {
 message TransactionOutput {
 	required uint64 value = 1; 				// value that can be claimed ...
 	required bytes script = 2; 				// ... if satisfying this output script
-	repeated string address = 3;			// address(es) output was sent (if standard tx)
-	optional uint32 votes = 4;				// number of signatures from owner(s) needed to redeem
-	optional bytes transaction = 5;			// the transaction this input is part of
-	optional uint32 selfix = 6;				// self index within the transaction this input is part of
+	required uint32 selfix = 3;				// self index within the transaction this input is part of
+	required bytes transaction = 4;			// the transaction this input is part of
+	repeated string address = 5;			// address(es) output was sent (if standard tx)
+	optional uint32 votes = 6;				// number of signatures from owner(s) needed to redeem
+	repeated bytes colors = 7;				// colors of this output (terms)
 }
 
 // a transaction. 
@@ -99,4 +100,9 @@ message AccountStatement {
 message ExceptionMessage {
 	required uint32 bcsapiversion = 1;
 	repeated string message = 2;
+}
+
+message Color {
+	required TransactionOutput root = 1;
+	required bytes terms = 2;
 }
