@@ -63,7 +63,7 @@ import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 import com.google.protobuf.ByteString;
 
-public class ImplementBCSAPI implements TrunkListener, TransactionListener
+public class ImplementBCSAPI implements TrunkListener, TxListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ImplementBCSAPI.class);
 
@@ -483,7 +483,7 @@ public class ImplementBCSAPI implements TrunkListener, TransactionListener
 	}
 
 	@Override
-	public void onTransaction (Tx tx)
+	public void process (Tx tx)
 	{
 		try
 		{

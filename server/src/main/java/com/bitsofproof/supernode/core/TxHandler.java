@@ -55,9 +55,9 @@ public class TxHandler implements TrunkListener
 	private TxOutCache availableOutput = null;
 	private PlatformTransactionManager transactionManager;
 
-	private final List<TransactionListener> transactionListener = new ArrayList<TransactionListener> ();
+	private final List<TxListener> transactionListener = new ArrayList<TxListener> ();
 
-	public void addTransactionListener (TransactionListener listener)
+	public void addTransactionListener (TxListener listener)
 	{
 		transactionListener.add (listener);
 	}
@@ -317,10 +317,10 @@ public class TxHandler implements TrunkListener
 
 	private void notifyListener (Tx tx)
 	{
-		for ( TransactionListener l : transactionListener )
+		for ( TxListener l : transactionListener )
 		{
 			// This further extends transaction and cache context
-			l.onTransaction (tx);
+			l.process (tx);
 		}
 	}
 

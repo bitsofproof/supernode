@@ -17,7 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import com.bitsofproof.supernode.model.Tx;
 
-public interface TransactionListener
+public interface TxListener
 {
-	public void onTransaction (Tx transaction);
+	public void process (Tx transaction);
 }

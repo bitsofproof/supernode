@@ -1,3 +1,18 @@
+/*
+ * Copyright 2013 Tamas Blummer tamas@bitsofproof.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.bitsofproof.supernode.api;
 
 import java.security.SecureRandom;
@@ -440,13 +455,32 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 	@Override
 	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
-		if ( added != null )
+		synchronized ( utxo )
 		{
-			for ( Block block : added )
+			if ( removed != null )
 			{
-				for ( Transaction t : block.getTransactions () )
+				for ( Block block : removed )
 				{
-					process (t, block);
+					for ( Transaction t : block.getTransactions () )
+					{
+						for ( Posting p : postings )
+						{
+							if ( p.getOutput ().getTransactionHash ().equals (t.getHash ()) )
+							{
+								p.setBlock (null);
+							}
+						}
+					}
+				}
+			}
+			if ( added != null )
+			{
+				for ( Block block : added )
+				{
+					for ( Transaction t : block.getTransactions () )
+					{
+						process (t, block);
+					}
 				}
 			}
 		}
