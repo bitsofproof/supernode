@@ -15,11 +15,14 @@
  */
 package com.bitsofproof.supernode.core;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.StoredColor;
 
 public interface ColorStore
 {
-	public void store (StoredColor color);
+	public void issueColor (StoredColor color) throws ValidationException;
+
+	public void storeColor (StoredColor color) throws ValidationException;
 
 	public StoredColor findColor (String hash);
 }

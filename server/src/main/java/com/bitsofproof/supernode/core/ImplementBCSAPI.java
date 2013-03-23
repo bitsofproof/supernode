@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -53,8 +52,6 @@ import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Posting;
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
@@ -154,22 +151,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
 					Color color = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (body));
-					Tx tx = store.getTransaction (color.getTransaction ());
-					if ( tx == null )
-					{
-						throw new ValidationException ("Unknown transaction for new color");
-					}
-					TxOut out = tx.getOutputs ().get (0);
-					if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
-					{
-						throw new ValidationException ("Color output should pay to address");
-					}
-					List<Token> tokens = ScriptFormat.parse (out.getScript ());
-					if ( !Arrays.equals (tokens.get (2).data, color.getPubkey ()) )
-					{
-						throw new ValidationException ("Color key does not match output address");
-					}
-					color.verify ();
 					StoredColor sc = new StoredColor ();
 					sc.setExpiryHeight (color.getExpiryHeight ());
 					sc.setPubkey (color.getPubkey ());
@@ -177,7 +158,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					sc.setTerms (color.getTerms ());
 					sc.setUnit (color.getUnit ());
 					sc.setTxHash (color.getTransaction ());
-					store.store (sc);
+					store.issueColor (sc);
 					reply (o.getJMSReplyTo (), null);
 				}
 				catch ( Exception e )

@@ -896,7 +896,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public void store (StoredColor color)
+	public void storeColor (StoredColor color)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeHash (new Hash (color.getTxHash ()));

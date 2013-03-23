@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,10 +47,12 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
+import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -606,7 +609,8 @@ public abstract class CachedBlockStore implements BlockStore
 					catch ( Exception e )
 					{
 						cancelBatch ();
-						return new ValidationException ("OTHER exception " + b.toWireDump (), e);
+						status.setRollbackOnly ();
+						return new ValidationException (e);
 					}
 					return null;
 				}
@@ -930,6 +934,7 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 					if ( source.getColor () != null )
 					{
+						// TODO: check color expiry
 						colors.add (source.getColor ());
 						colorQuantities.add (source.getValue ());
 					}
@@ -1565,6 +1570,78 @@ public abstract class CachedBlockStore implements BlockStore
 		finally
 		{
 			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
+	public void issueColor (final StoredColor color) throws ValidationException
+	{
+		try
+		{
+			// have to lock before transaction starts and unlock after finished.
+			// otherwise updates to transient vs. persistent structures are out of sync for a
+			// concurrent tx. This does not apply to methods using MANDATORY transaction annotation
+			// context since they must have been invoked within a transaction.
+			lock.writeLock ().lock ();
+
+			ValidationException e = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
+			{
+				@Override
+				public ValidationException doInTransaction (TransactionStatus status)
+				{
+					try
+					{
+						startBatch ();
+
+						Tx tx = getTransaction (color.getTxHash ());
+						if ( tx == null )
+						{
+							throw new ValidationException ("Unknown transaction for new color");
+						}
+						TxOut out = tx.getOutputs ().get (0);
+						if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
+						{
+							throw new ValidationException ("Color output should pay to address");
+						}
+						List<Token> tokens = ScriptFormat.parse (out.getScript ());
+						if ( !Arrays.equals (tokens.get (2).data, color.getPubkey ()) )
+						{
+							throw new ValidationException ("Color key does not match output address");
+						}
+						if ( !color.verify () )
+						{
+							storeColor (color);
+						}
+						else
+						{
+							throw new ValidationException ("Color is not valid");
+						}
+
+						endBatch ();
+					}
+					catch ( ValidationException e )
+					{
+						cancelBatch ();
+						status.setRollbackOnly ();
+						return e;
+					}
+					catch ( Exception e )
+					{
+						cancelBatch ();
+						status.setRollbackOnly ();
+						return new ValidationException (e);
+					}
+					return null;
+				}
+			});
+			if ( e != null )
+			{
+				throw e;
+			}
+		}
+		finally
+		{
+			lock.writeLock ().unlock ();
 		}
 	}
 }

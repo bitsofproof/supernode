@@ -418,8 +418,8 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.REQUIRED)
-	public void store (StoredColor color)
+	@Transactional (propagation = Propagation.MANDATORY)
+	public void storeColor (StoredColor color)
 	{
 		entityManager.persist (color);
 	}
