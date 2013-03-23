@@ -118,6 +118,18 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
+	protected void cacheColors ()
+	{
+		JPAQuery q = new JPAQuery (entityManager);
+		QStoredColor color = QStoredColor.storedColor;
+		for ( StoredColor c : q.from (color).list (color) )
+		{
+			entityManager.detach (c);
+			cachedColors.put (c.getTxHash (), c);
+		}
+	}
+
+	@Override
 	protected void backwardCache (Blk b, TxOutCache cache, boolean modify)
 	{
 		List<Tx> txs = new ArrayList<Tx> ();

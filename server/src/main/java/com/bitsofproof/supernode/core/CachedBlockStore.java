@@ -100,6 +100,7 @@ public abstract class CachedBlockStore implements BlockStore
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
+	protected final Map<String, StoredColor> cachedColors = new HashMap<String, StoredColor> ();
 
 	private final ImplementTxOutCache cachedUTXO = new ImplementTxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
@@ -142,6 +143,8 @@ public abstract class CachedBlockStore implements BlockStore
 	protected abstract void cacheChain ();
 
 	protected abstract void cacheHeads ();
+
+	protected abstract void cacheColors ();
 
 	protected abstract void cacheUTXO (int lookback, TxOutCache cache);
 
@@ -344,6 +347,9 @@ public abstract class CachedBlockStore implements BlockStore
 
 			log.trace ("Cache heads...");
 			cacheHeads ();
+
+			log.trace ("Cache colors...");
+			cacheColors ();
 
 			log.trace ("Cache chain...");
 			cacheChain ();
@@ -934,9 +940,12 @@ public abstract class CachedBlockStore implements BlockStore
 					}
 					if ( source.getColor () != null )
 					{
-						// TODO: check color expiry
-						colors.add (source.getColor ());
-						colorQuantities.add (source.getValue ());
+						StoredColor sc = cachedColors.get (source.getColor ());
+						if ( sc != null && sc.getExpiryHeight () < b.getHeight () )
+						{
+							colors.add (source.getColor ());
+							colorQuantities.add (source.getValue ());
+						}
 					}
 				}
 				i.setBlockTime (b.getCreateTime ());

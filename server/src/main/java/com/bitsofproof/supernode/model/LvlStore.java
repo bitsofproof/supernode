@@ -532,6 +532,28 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
+	protected void cacheColors ()
+	{
+		forAll (KeyType.COLOR, new DataProcessor ()
+		{
+			@Override
+			public boolean process (byte[] key, byte[] data)
+			{
+				WireFormat.Reader reader = new WireFormat.Reader (data);
+				StoredColor sc = new StoredColor ();
+				sc.setTxHash (reader.readHash ().toString ());
+				sc.setTerms (reader.readString ());
+				sc.setUnit (reader.readUint64 ());
+				sc.setExpiryHeight ((int) reader.readUint32 ());
+				sc.setSignature (reader.readVarBytes ());
+				sc.setPubkey (reader.readVarBytes ());
+				cachedColors.put (sc.getTxHash (), sc);
+				return true;
+			}
+		});
+	}
+
+	@Override
 	protected void cacheUTXO (final int after, final TxOutCache cache)
 	{
 		// not implemented for leveldb
