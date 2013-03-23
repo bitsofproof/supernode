@@ -59,6 +59,7 @@ public class Color
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		try
 		{
+			root.toWire (writer);
 			writer.writeBytes (terms.getBytes ("UTF-8"));
 		}
 		catch ( UnsupportedEncodingException e )
