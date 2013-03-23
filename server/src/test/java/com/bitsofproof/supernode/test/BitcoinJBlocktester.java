@@ -49,7 +49,7 @@ import com.bitsofproof.supernode.model.TxOut;
  * for thousands of signatures.
  */
 @RunWith (SpringJUnit4ClassRunner.class)
-@ContextConfiguration (locations = { "/context/storeonly.xml" })
+@ContextConfiguration (locations = { "/context/store1.xml" })
 public class BitcoinJBlocktester
 {
 	private static final Logger log = LoggerFactory.getLogger (BitcoinJBlocktester.class);
