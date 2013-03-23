@@ -908,6 +908,10 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 		}
 		// this is last loop before persist since modifying the entities.
+
+		List<String> colors = new ArrayList<String> ();
+		List<Long> colorQuantities = new ArrayList<Long> ();
+
 		for ( Tx t : b.getTransactions () )
 		{
 			t.setBlock (b);
@@ -924,15 +928,57 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						i.setSource (getSourceReference (source));
 					}
+					if ( source.getColor () != null )
+					{
+						colors.add (source.getColor ());
+						colorQuantities.add (source.getValue ());
+					}
 				}
 				i.setBlockTime (b.getCreateTime ());
 			}
+
+			Iterator<String> ci = colors.iterator ();
+			Iterator<Long> qi = colorQuantities.iterator ();
+			long residual = 0;
+			String color = null;
+			if ( ci.hasNext () )
+			{
+				color = ci.next ();
+				residual = qi.next ();
+			}
+			boolean colorPreserving = true;
 			for ( TxOut o : t.getOutputs () )
 			{
 				parseOwners (o, chain);
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
 				o.setBlockTime (b.getCreateTime ());
+
+				if ( color != null )
+				{
+					if ( o.getValue () > residual )
+					{
+						colorPreserving = false;
+					}
+					if ( colorPreserving )
+					{
+						o.setColor (color);
+
+						residual -= Math.min (o.getValue (), residual);
+						if ( residual == 0 )
+						{
+							if ( ci.hasNext () )
+							{
+								color = ci.next ();
+								residual = qi.next ();
+							}
+							else
+							{
+								color = null;
+							}
+						}
+					}
+				}
 			}
 		}
 
