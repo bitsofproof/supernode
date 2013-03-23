@@ -241,17 +241,52 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		return s;
 	}
 
-	public Transaction pay (String receiver, long amount, long fee, String color) throws ValidationException, BCSAPIException
+	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException
 	{
 		synchronized ( utxo )
 		{
 			List<TransactionSource> sources = new ArrayList<TransactionSource> ();
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 
-			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, color);
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, null);
 			if ( sufficient == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
+			}
+			long in = 0;
+			for ( TransactionOutput o : sufficient )
+			{
+				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
+				in += o.getValue ();
+			}
+			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
+			TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
+			if ( new SecureRandom ().nextBoolean () )
+			{
+				sinks.add (target);
+				sinks.add (change);
+			}
+			else
+			{
+				sinks.add (change);
+				sinks.add (target);
+			}
+			return Transaction.createSpend (sources, sinks, fee);
+		}
+	}
+
+	public Transaction transfer (String receiver, long units, long fee, Color color) throws ValidationException, BCSAPIException
+	{
+		synchronized ( utxo )
+		{
+			List<TransactionSource> sources = new ArrayList<TransactionSource> ();
+			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
+
+			long amount = units * color.getUnit ();
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, color.getHash ());
+			if ( sufficient == null )
+			{
+				throw new ValidationException ("Insufficient holdings to transfer " + units + " of " + color.getHash ());
 			}
 			long in = 0;
 			long colorIn = 0;
@@ -264,46 +299,45 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 					colorIn += o.getValue ();
 				}
 			}
-			if ( color == null )
+			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
+			if ( colorIn > amount )
 			{
-				TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
-				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee);
+				TransactionSink colorChange = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), colorIn - amount);
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
-					sinks.add (change);
+					sinks.add (colorChange);
 				}
 				else
 				{
-					sinks.add (change);
+					sinks.add (colorChange);
 					sinks.add (target);
 				}
 			}
 			else
 			{
-				TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
-				if ( colorIn > amount )
-				{
-					TransactionSink colorChange = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), colorIn - amount);
-					if ( new SecureRandom ().nextBoolean () )
-					{
-						sinks.add (target);
-						sinks.add (colorChange);
-					}
-					else
-					{
-						sinks.add (colorChange);
-						sinks.add (target);
-					}
-				}
-				else
-				{
-					sinks.add (target);
-				}
-				sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee));
+				sinks.add (target);
 			}
+			sinks.add (new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), in - amount - fee));
 			return Transaction.createSpend (sources, sinks, fee);
 		}
+	}
+
+	public void issueColor (Color color) throws ValidationException, BCSAPIException
+	{
+		TransactionOutput o = color.getRoot ();
+		o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
+		if ( o.getVotes () != 1 )
+		{
+			throw new ValidationException ("Can not use this output to issue color");
+		}
+		Key key = wallet.getKeyForAddress (o.getAddresses ().get (0));
+		if ( key == null )
+		{
+			throw new ValidationException ("Do not have key to issue color " + color.getHash ());
+		}
+		color.sign (key);
+		api.issueColor (color);
 	}
 
 	public void importKey (String serialized, String passpharse) throws ValidationException

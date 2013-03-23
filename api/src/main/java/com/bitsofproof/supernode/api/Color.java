@@ -15,6 +15,8 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.io.UnsupportedEncodingException;
+
 import com.google.protobuf.ByteString;
 
 public class Color
@@ -45,6 +47,37 @@ public class Color
 		color.setExpiryHeight (po.getExpiryHeight ());
 		color.setSignature (po.getSignature ().toByteArray ());
 		return color;
+	}
+
+	public String getHash ()
+	{
+		return new Hash (hashContent ()).toString ();
+	}
+
+	private byte[] hashContent ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		try
+		{
+			writer.writeBytes (terms.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+		}
+		writer.writeUint64 (unit);
+		writer.writeUint32 (expiryHeight);
+		byte[] content = writer.toByteArray ();
+		return Hash.hash (content);
+	}
+
+	public void sign (Key key) throws ValidationException
+	{
+		signature = key.sign (hashContent ());
+	}
+
+	public boolean verify (Key key)
+	{
+		return ECKeyPair.verify (hashContent (), signature, key.getPublic ());
 	}
 
 	public int getExpiryHeight ()
