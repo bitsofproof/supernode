@@ -8228,9 +8228,21 @@ public final class BCSAPIMessage {
     com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOutput getRoot();
     com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOutputOrBuilder getRootOrBuilder();
     
-    // required bytes terms = 2;
+    // required string terms = 2;
     boolean hasTerms();
-    com.google.protobuf.ByteString getTerms();
+    String getTerms();
+    
+    // required uint64 unit = 3;
+    boolean hasUnit();
+    long getUnit();
+    
+    // required uint32 expiryHeight = 4;
+    boolean hasExpiryHeight();
+    int getExpiryHeight();
+    
+    // required bytes signature = 5;
+    boolean hasSignature();
+    com.google.protobuf.ByteString getSignature();
   }
   public static final class Color extends
       com.google.protobuf.GeneratedMessage
@@ -8274,19 +8286,74 @@ public final class BCSAPIMessage {
       return root_;
     }
     
-    // required bytes terms = 2;
+    // required string terms = 2;
     public static final int TERMS_FIELD_NUMBER = 2;
-    private com.google.protobuf.ByteString terms_;
+    private java.lang.Object terms_;
     public boolean hasTerms() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public com.google.protobuf.ByteString getTerms() {
-      return terms_;
+    public String getTerms() {
+      java.lang.Object ref = terms_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          terms_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getTermsBytes() {
+      java.lang.Object ref = terms_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        terms_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // required uint64 unit = 3;
+    public static final int UNIT_FIELD_NUMBER = 3;
+    private long unit_;
+    public boolean hasUnit() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public long getUnit() {
+      return unit_;
+    }
+    
+    // required uint32 expiryHeight = 4;
+    public static final int EXPIRYHEIGHT_FIELD_NUMBER = 4;
+    private int expiryHeight_;
+    public boolean hasExpiryHeight() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public int getExpiryHeight() {
+      return expiryHeight_;
+    }
+    
+    // required bytes signature = 5;
+    public static final int SIGNATURE_FIELD_NUMBER = 5;
+    private com.google.protobuf.ByteString signature_;
+    public boolean hasSignature() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public com.google.protobuf.ByteString getSignature() {
+      return signature_;
     }
     
     private void initFields() {
       root_ = com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOutput.getDefaultInstance();
-      terms_ = com.google.protobuf.ByteString.EMPTY;
+      terms_ = "";
+      unit_ = 0L;
+      expiryHeight_ = 0;
+      signature_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8298,6 +8365,18 @@ public final class BCSAPIMessage {
         return false;
       }
       if (!hasTerms()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasUnit()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasExpiryHeight()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSignature()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -8316,7 +8395,16 @@ public final class BCSAPIMessage {
         output.writeMessage(1, root_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, terms_);
+        output.writeBytes(2, getTermsBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt64(3, unit_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt32(4, expiryHeight_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, signature_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -8333,7 +8421,19 @@ public final class BCSAPIMessage {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, terms_);
+          .computeBytesSize(2, getTermsBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(3, unit_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, expiryHeight_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, signature_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8466,8 +8566,14 @@ public final class BCSAPIMessage {
           rootBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        terms_ = com.google.protobuf.ByteString.EMPTY;
+        terms_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
+        unit_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        expiryHeight_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        signature_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
       
@@ -8518,6 +8624,18 @@ public final class BCSAPIMessage {
           to_bitField0_ |= 0x00000002;
         }
         result.terms_ = terms_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.unit_ = unit_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.expiryHeight_ = expiryHeight_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.signature_ = signature_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8540,6 +8658,15 @@ public final class BCSAPIMessage {
         if (other.hasTerms()) {
           setTerms(other.getTerms());
         }
+        if (other.hasUnit()) {
+          setUnit(other.getUnit());
+        }
+        if (other.hasExpiryHeight()) {
+          setExpiryHeight(other.getExpiryHeight());
+        }
+        if (other.hasSignature()) {
+          setSignature(other.getSignature());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -8550,6 +8677,18 @@ public final class BCSAPIMessage {
           return false;
         }
         if (!hasTerms()) {
+          
+          return false;
+        }
+        if (!hasUnit()) {
+          
+          return false;
+        }
+        if (!hasExpiryHeight()) {
+          
+          return false;
+        }
+        if (!hasSignature()) {
           
           return false;
         }
@@ -8595,6 +8734,21 @@ public final class BCSAPIMessage {
             case 18: {
               bitField0_ |= 0x00000002;
               terms_ = input.readBytes();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              unit_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              expiryHeight_ = input.readUInt32();
+              break;
+            }
+            case 42: {
+              bitField0_ |= 0x00000010;
+              signature_ = input.readBytes();
               break;
             }
           }
@@ -8693,15 +8847,22 @@ public final class BCSAPIMessage {
         return rootBuilder_;
       }
       
-      // required bytes terms = 2;
-      private com.google.protobuf.ByteString terms_ = com.google.protobuf.ByteString.EMPTY;
+      // required string terms = 2;
+      private java.lang.Object terms_ = "";
       public boolean hasTerms() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public com.google.protobuf.ByteString getTerms() {
-        return terms_;
+      public String getTerms() {
+        java.lang.Object ref = terms_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          terms_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
       }
-      public Builder setTerms(com.google.protobuf.ByteString value) {
+      public Builder setTerms(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -8713,6 +8874,77 @@ public final class BCSAPIMessage {
       public Builder clearTerms() {
         bitField0_ = (bitField0_ & ~0x00000002);
         terms_ = getDefaultInstance().getTerms();
+        onChanged();
+        return this;
+      }
+      void setTerms(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
+        terms_ = value;
+        onChanged();
+      }
+      
+      // required uint64 unit = 3;
+      private long unit_ ;
+      public boolean hasUnit() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public long getUnit() {
+        return unit_;
+      }
+      public Builder setUnit(long value) {
+        bitField0_ |= 0x00000004;
+        unit_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearUnit() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        unit_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // required uint32 expiryHeight = 4;
+      private int expiryHeight_ ;
+      public boolean hasExpiryHeight() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public int getExpiryHeight() {
+        return expiryHeight_;
+      }
+      public Builder setExpiryHeight(int value) {
+        bitField0_ |= 0x00000008;
+        expiryHeight_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearExpiryHeight() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        expiryHeight_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // required bytes signature = 5;
+      private com.google.protobuf.ByteString signature_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasSignature() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      public com.google.protobuf.ByteString getSignature() {
+        return signature_;
+      }
+      public Builder setSignature(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        signature_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearSignature() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        signature_ = getDefaultInstance().getSignature();
         onChanged();
         return this;
       }
@@ -8831,9 +9063,11 @@ public final class BCSAPIMessage {
       "ansactionOutput\022\r\n\005block\030\002 \002(\014\022\021\n\ttimest" +
       "amp\030\003 \002(\r\022\016\n\006height\030\004 \002(\r\022\r\n\005spent\030\005 \001(\014" +
       "\":\n\020ExceptionMessage\022\025\n\rbcsapiversion\030\001 " +
-      "\002(\r\022\017\n\007message\030\002 \003(\t\"V\n\005Color\022>\n\004root\030\001 ",
-      "\002(\01320.com.bitsofproof.supernode.api.Tran" +
-      "sactionOutput\022\r\n\005terms\030\002 \002(\014"
+      "\002(\r\022\017\n\007message\030\002 \003(\t\"\215\001\n\005Color\022>\n\004root\030\001",
+      " \002(\01320.com.bitsofproof.supernode.api.Tra" +
+      "nsactionOutput\022\r\n\005terms\030\002 \002(\t\022\014\n\004unit\030\003 " +
+      "\002(\004\022\024\n\014expiryHeight\030\004 \002(\r\022\021\n\tsignature\030\005" +
+      " \002(\014"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -8925,7 +9159,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_Color_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_Color_descriptor,
-              new java.lang.String[] { "Root", "Terms", },
+              new java.lang.String[] { "Root", "Terms", "Unit", "ExpiryHeight", "Signature", },
               com.bitsofproof.supernode.api.BCSAPIMessage.Color.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.Color.Builder.class);
           return null;

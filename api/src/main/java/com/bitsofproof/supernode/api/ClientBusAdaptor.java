@@ -63,6 +63,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer transactionRequestProducer;
 	private MessageProducer accountRequestProducer;
 	private MessageProducer colorProducer;
+	private MessageProducer colorRequestProducer;
 
 	private final Map<String, MessageConsumer> filterConsumer = new HashMap<String, MessageConsumer> ();
 
@@ -99,6 +100,7 @@ public class ClientBusAdaptor implements BCSAPI
 			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
 			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
 			colorProducer = session.createProducer (session.createTopic ("newColor"));
+			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -735,6 +737,37 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
+	}
+
+	@Override
+	public Color getColor (String digest) throws BCSAPIException
+	{
+		log.trace ("get color " + digest);
+		BytesMessage m;
+		try
+		{
+			m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (new Hash (digest).toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (colorRequestProducer, m);
+			if ( response != null )
+			{
+				Color c;
+				c = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (response));
+				return c;
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		return null;
 	}
 
 }

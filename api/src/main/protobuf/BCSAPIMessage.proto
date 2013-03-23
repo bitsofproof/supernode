@@ -104,5 +104,8 @@ message ExceptionMessage {
 
 message Color {
 	required TransactionOutput root = 1;
-	required bytes terms = 2;
+	required string terms = 2;
+	required uint64 unit = 3;
+	required uint32 expiryHeight = 4;
+	required bytes signature = 5;
 }

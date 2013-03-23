@@ -139,4 +139,13 @@ public interface BCSAPI
 	 * @param color
 	 */
 	public void issueColor (Color color) throws BCSAPIException;
+
+	/**
+	 * retrieve color definition
+	 * 
+	 * @param digest
+	 * @return
+	 * @throws BCSAPIException
+	 */
+	public Color getColor (String digest) throws BCSAPIException;
 }

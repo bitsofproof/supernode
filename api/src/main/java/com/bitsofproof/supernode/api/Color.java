@@ -21,12 +21,18 @@ public class Color
 {
 	private TransactionOutput root;
 	private String terms;
+	private long unit;
+	private int expiryHeight;
+	private byte[] signature;
 
 	public BCSAPIMessage.Color toProtobuf ()
 	{
 		BCSAPIMessage.Color.Builder builder = BCSAPIMessage.Color.newBuilder ();
 		builder.setRoot (root.toProtobuf ());
-		builder.setTerms (ByteString.copyFrom (new Hash (terms).toByteArray ()));
+		builder.setTerms (terms);
+		builder.setUnit (unit);
+		builder.setExpiryHeight (expiryHeight);
+		builder.setSignature (ByteString.copyFrom (signature));
 		return builder.build ();
 	}
 
@@ -34,8 +40,41 @@ public class Color
 	{
 		Color color = new Color ();
 		color.setRoot (TransactionOutput.fromProtobuf (po.getRoot ()));
-		color.setTerms (new Hash (po.getTerms ().toByteArray ()).toString ());
+		color.setTerms (po.getTerms ());
+		color.setUnit (po.getUnit ());
+		color.setExpiryHeight (po.getExpiryHeight ());
+		color.setSignature (po.getSignature ().toByteArray ());
 		return color;
+	}
+
+	public int getExpiryHeight ()
+	{
+		return expiryHeight;
+	}
+
+	public void setExpiryHeight (int expiryHeight)
+	{
+		this.expiryHeight = expiryHeight;
+	}
+
+	public long getUnit ()
+	{
+		return unit;
+	}
+
+	public void setUnit (long unit)
+	{
+		this.unit = unit;
+	}
+
+	public byte[] getSignature ()
+	{
+		return signature;
+	}
+
+	public void setSignature (byte[] signature)
+	{
+		this.signature = signature;
 	}
 
 	public TransactionOutput getRoot ()
