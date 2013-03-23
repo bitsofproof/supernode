@@ -38,12 +38,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.CachedBlockStore;
+import com.bitsofproof.supernode.core.ColorStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.PeerStore;
 import com.bitsofproof.supernode.core.TxOutCache;
 import com.mysema.query.jpa.impl.JPAQuery;
 
-public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
+public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, ColorStore
 {
 	private static final Logger log = LoggerFactory.getLogger (JpaStore.class);
 
@@ -414,5 +415,21 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore
 			}
 		}
 		return peers;
+	}
+
+	@Override
+	@Transactional (propagation = Propagation.REQUIRED)
+	public void store (StoredColor color)
+	{
+		entityManager.persist (color);
+	}
+
+	@Override
+	@Transactional (propagation = Propagation.REQUIRED)
+	public StoredColor findColor (String hash)
+	{
+		QStoredColor sc = QStoredColor.storedColor;
+		JPAQuery q = new JPAQuery (entityManager);
+		return q.from (sc).where (sc.hash.eq (hash)).uniqueResult (sc);
 	}
 }

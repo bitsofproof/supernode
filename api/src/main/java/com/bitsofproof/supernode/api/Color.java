@@ -57,9 +57,9 @@ public class Color
 	private byte[] hashContent ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
+		root.toWire (writer);
 		try
 		{
-			root.toWire (writer);
 			writer.writeBytes (terms.getBytes ("UTF-8"));
 		}
 		catch ( UnsupportedEncodingException e )

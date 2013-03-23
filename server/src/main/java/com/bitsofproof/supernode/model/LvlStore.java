@@ -43,11 +43,12 @@ import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
+import com.bitsofproof.supernode.core.ColorStore;
 import com.bitsofproof.supernode.core.Discovery;
 import com.bitsofproof.supernode.core.PeerStore;
 import com.bitsofproof.supernode.core.TxOutCache;
 
-public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
+public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, ColorStore
 {
 	private static final Logger log = LoggerFactory.getLogger (LvlStore.class);
 
@@ -127,7 +128,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 
 	private static enum KeyType
 	{
-		TX, BLOCK, HEAD, PEER, ATX;
+		TX, BLOCK, HEAD, PEER, ATX, COLOR;
 	}
 
 	public static class Key
@@ -892,5 +893,42 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore
 			}
 		}
 		return peers;
+	}
+
+	@Override
+	public void store (StoredColor color)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		Hash hash = new Hash (color.getHash ());
+		writer.writeHash (new Hash (color.getHash ()));
+		writer.writeString (color.getTerms ());
+		writer.writeUint64 (color.getUnit ());
+		writer.writeUint32 (color.getExpiryHeight ());
+		writer.writeVarBytes (color.getSignature ());
+		writer.writeHash (new Hash (color.getRoot ().getTxHash ()));
+		writer.writeUint32 (color.getRoot ().getIx ());
+		put (Key.createKey (KeyType.COLOR, hash.toByteArray ()), writer.toByteArray ());
+	}
+
+	@Override
+	public StoredColor findColor (String hash)
+	{
+		byte[] data = get (Key.createKey (KeyType.COLOR, new Hash (hash).toByteArray ()));
+		if ( data == null )
+		{
+			return null;
+		}
+		WireFormat.Reader reader = new WireFormat.Reader (data);
+		StoredColor sc = new StoredColor ();
+		sc.setHash (reader.readHash ().toString ());
+		sc.setTerms (reader.readString ());
+		sc.setUnit (reader.readUint64 ());
+		sc.setExpiryHeight ((int) reader.readUint32 ());
+		sc.setSignature (reader.readVarBytes ());
+		String txhash = reader.readHash ().toString ();
+		long ix = reader.readUint32 ();
+		Tx transaction = readTx (txhash);
+		sc.setRoot (transaction.getOutputs ().get ((int) ix));
+		return sc;
 	}
 }
