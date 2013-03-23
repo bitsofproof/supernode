@@ -181,7 +181,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					sc.setTerms (color.getTerms ());
 					sc.setUnit (color.getUnit ());
 					sc.setRoot (out);
-					((ColorStore) store).store (sc);
+					sc.computeHash ();
+					store.store (sc);
 					reply (o.getJMSReplyTo (), null);
 				}
 				catch ( Exception e )

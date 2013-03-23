@@ -23,7 +23,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public interface BlockStore
+public interface BlockStore extends ColorStore
 {
 	public interface CacheContextRunnable
 	{

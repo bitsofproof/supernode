@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 
 import javax.persistence.Basic;
 import javax.persistence.Column;
@@ -26,6 +27,9 @@ import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+
+import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.WireFormat;
 
 @Entity
 @Table (name = "color")
@@ -71,6 +75,37 @@ public class StoredColor implements Serializable
 	public String getHash ()
 	{
 		return hash;
+	}
+
+	public void computeHash ()
+	{
+		hash = new Hash (hashContent ()).toString ();
+	}
+
+	private byte[] hashContent ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		if ( root.getTxHash () != null )
+		{
+			writer.writeHash (new Hash (root.getTxHash ()));
+		}
+		else
+		{
+			writer.writeHash (new Hash (root.getTransaction ().getHash ()));
+		}
+		writer.writeUint32 (root.getIx ());
+		try
+		{
+			writer.writeBytes (terms.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+		}
+		writer.writeUint64 (unit);
+		writer.writeUint32 (expiryHeight);
+		writer.writeVarBytes (pubkey);
+		byte[] content = writer.toByteArray ();
+		return Hash.hash (content);
 	}
 
 	public void setHash (String hash)
