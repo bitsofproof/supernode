@@ -53,11 +53,6 @@ public class Color
 		return color;
 	}
 
-	public String getHash ()
-	{
-		return new Hash (hashContent ()).toString ();
-	}
-
 	private byte[] hashContent ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();

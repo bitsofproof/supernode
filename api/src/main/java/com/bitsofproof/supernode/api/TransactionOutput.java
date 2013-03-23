@@ -17,9 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.google.protobuf.ByteString;
 
@@ -33,7 +31,7 @@ public class TransactionOutput implements Serializable, Cloneable
 	private long selfIx;
 	private long votes;
 	private List<String> addresses;
-	private Set<String> colors;
+	private String color;
 
 	public void parseOwners (int addressFlag, int p2sAddressFlag)
 	{
@@ -207,23 +205,22 @@ public class TransactionOutput implements Serializable, Cloneable
 			o.addresses = new ArrayList<String> ();
 			o.addresses.addAll (addresses);
 		}
-		if ( colors != null )
+		if ( color != null )
 		{
-			o.colors = new HashSet<String> ();
-			o.colors.addAll (colors);
+			o.color = color;
 		}
 		return o;
 
 	}
 
-	public Set<String> getColors ()
+	public String getColor ()
 	{
-		return colors;
+		return color;
 	}
 
-	public void setColors (Set<String> colors)
+	public void setColor (String color)
 	{
-		this.colors = colors;
+		this.color = color;
 	}
 
 	public BCSAPIMessage.TransactionOutput toProtobuf ()
@@ -244,12 +241,9 @@ public class TransactionOutput implements Serializable, Cloneable
 			}
 			builder.setVotes ((int) votes);
 		}
-		if ( colors != null )
+		if ( color != null )
 		{
-			for ( String c : colors )
-			{
-				builder.addAddress (ByteString.copyFrom (new Hash (c).toByteArray ()));
-			}
+			builder.setColor (ByteString.copyFrom (new Hash (color).toByteArray ()));
 		}
 		return builder.build ();
 	}
@@ -269,13 +263,9 @@ public class TransactionOutput implements Serializable, Cloneable
 			output.setAddresses (po.getAddressList ());
 			output.setVotes (po.getVotes ());
 		}
-		if ( po.getColorsCount () > 0 )
+		if ( po.hasColor () )
 		{
-			output.colors = new HashSet<String> ();
-			for ( ByteString c : po.getColorsList () )
-			{
-				output.colors.add (new Hash (c.toByteArray ()).toString ());
-			}
+			output.color = new Hash (po.getColor ().toByteArray ()).toString ();
 		}
 		return output;
 	}

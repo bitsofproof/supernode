@@ -34,7 +34,7 @@ message TransactionOutput {
 	required bytes transaction = 4;			// the transaction this input is part of
 	repeated string address = 5;			// address(es) output was sent (if standard tx)
 	optional uint32 votes = 6;				// number of signatures from owner(s) needed to redeem
-	repeated bytes colors = 7;				// colors of this output (terms)
+	optional bytes color = 7;				// color of this output (root transaction hash)
 }
 
 // a transaction. 

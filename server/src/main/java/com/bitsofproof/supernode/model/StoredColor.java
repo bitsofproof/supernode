@@ -25,7 +25,6 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Lob;
-import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.api.Hash;
@@ -42,7 +41,7 @@ public class StoredColor implements Serializable
 	private Long id;
 
 	@Column (length = 64, nullable = false, unique = true)
-	private String hash;
+	private String txHash;
 
 	@Lob
 	@Basic (fetch = FetchType.EAGER)
@@ -59,9 +58,6 @@ public class StoredColor implements Serializable
 	@Basic (fetch = FetchType.EAGER)
 	private byte[] pubkey;
 
-	@ManyToOne (fetch = FetchType.LAZY, optional = false)
-	TxOut root;
-
 	public Long getId ()
 	{
 		return id;
@@ -72,28 +68,10 @@ public class StoredColor implements Serializable
 		this.id = id;
 	}
 
-	public String getHash ()
-	{
-		return hash;
-	}
-
-	public void computeHash ()
-	{
-		hash = new Hash (hashContent ()).toString ();
-	}
-
-	private byte[] hashContent ()
+	public byte[] hashContent ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
-		if ( root.getTxHash () != null )
-		{
-			writer.writeHash (new Hash (root.getTxHash ()));
-		}
-		else
-		{
-			writer.writeHash (new Hash (root.getTransaction ().getHash ()));
-		}
-		writer.writeUint32 (root.getIx ());
+		writer.writeHash (new Hash (txHash));
 		try
 		{
 			writer.writeBytes (terms.getBytes ("UTF-8"));
@@ -106,11 +84,6 @@ public class StoredColor implements Serializable
 		writer.writeVarBytes (pubkey);
 		byte[] content = writer.toByteArray ();
 		return Hash.hash (content);
-	}
-
-	public void setHash (String hash)
-	{
-		this.hash = hash;
 	}
 
 	public String getTerms ()
@@ -163,13 +136,13 @@ public class StoredColor implements Serializable
 		this.pubkey = pubkey;
 	}
 
-	public TxOut getRoot ()
+	public String getTxHash ()
 	{
-		return root;
+		return txHash;
 	}
 
-	public void setRoot (TxOut root)
+	public void setTxHash (String txHash)
 	{
-		this.root = root;
+		this.txHash = txHash;
 	}
 }

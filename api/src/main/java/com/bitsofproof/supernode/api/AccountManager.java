@@ -100,7 +100,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 					{
 						if ( color == null )
 						{
-							if ( o.getColors () == null )
+							if ( o.getColor () == null )
 							{
 								sum += o.getValue ();
 								result.add (o);
@@ -112,7 +112,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 						}
 						else
 						{
-							if ( o.getColors ().contains (color) )
+							if ( o.getColor ().equals (color) )
 							{
 								sum += o.getValue ();
 								result.add (o);
@@ -283,10 +283,10 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 
 			long amount = units * color.getUnit ();
-			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, color.getHash ());
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, color.getTransaction ());
 			if ( sufficient == null )
 			{
-				throw new ValidationException ("Insufficient holdings to transfer " + units + " of " + color.getHash ());
+				throw new ValidationException ("Insufficient holdings to transfer " + units + " of " + color.getTransaction ());
 			}
 			long in = 0;
 			long colorIn = 0;
@@ -294,7 +294,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 			{
 				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
 				in += o.getValue ();
-				if ( color != null && o.getColors ().contains (color) )
+				if ( color != null && o.getColor ().equals (color) )
 				{
 					colorIn += o.getValue ();
 				}
@@ -328,7 +328,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 		Key key = wallet.getKeyForAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (color.getPubkey ()), wallet.getAddressFlag ()));
 		if ( key == null )
 		{
-			throw new ValidationException ("Do not have key to issue color " + color.getHash ());
+			throw new ValidationException ("Do not have key to issue color " + color.getTransaction ());
 		}
 		color.sign (key);
 		api.issueColor (color);

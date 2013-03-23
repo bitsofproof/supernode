@@ -899,16 +899,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	public void store (StoredColor color)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
-		Hash hash = new Hash (color.getHash ());
-		writer.writeHash (new Hash (color.getHash ()));
+		writer.writeHash (new Hash (color.getTxHash ()));
 		writer.writeString (color.getTerms ());
 		writer.writeUint64 (color.getUnit ());
 		writer.writeUint32 (color.getExpiryHeight ());
 		writer.writeVarBytes (color.getSignature ());
 		writer.writeVarBytes (color.getPubkey ());
-		writer.writeHash (new Hash (color.getRoot ().getTxHash ()));
-		writer.writeUint32 (color.getRoot ().getIx ());
-		put (Key.createKey (KeyType.COLOR, hash.toByteArray ()), writer.toByteArray ());
+		put (Key.createKey (KeyType.COLOR, new Hash (color.getTxHash ()).toByteArray ()), writer.toByteArray ());
 	}
 
 	@Override
@@ -921,16 +918,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		}
 		WireFormat.Reader reader = new WireFormat.Reader (data);
 		StoredColor sc = new StoredColor ();
-		sc.setHash (reader.readHash ().toString ());
+		sc.setTxHash (reader.readHash ().toString ());
 		sc.setTerms (reader.readString ());
 		sc.setUnit (reader.readUint64 ());
 		sc.setExpiryHeight ((int) reader.readUint32 ());
 		sc.setSignature (reader.readVarBytes ());
 		sc.setPubkey (reader.readVarBytes ());
-		String txhash = reader.readHash ().toString ();
-		long ix = reader.readUint32 ();
-		Tx transaction = readTx (txhash);
-		sc.setRoot (transaction.getOutputs ().get ((int) ix));
 		return sc;
 	}
 }

@@ -176,8 +176,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					sc.setSignature (color.getSignature ());
 					sc.setTerms (color.getTerms ());
 					sc.setUnit (color.getUnit ());
-					sc.setRoot (out);
-					sc.computeHash ();
+					sc.setTxHash (color.getTransaction ());
 					store.store (sc);
 					reply (o.getJMSReplyTo (), null);
 				}
@@ -922,14 +921,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						color.setSignature (c.getSignature ());
 						color.setTerms (c.getTerms ());
 						color.setUnit (c.getUnit ());
-						if ( c.getRoot ().getTxHash () != null )
-						{
-							color.setTransaction (c.getRoot ().getTxHash ());
-						}
-						else
-						{
-							color.setTransaction (c.getRoot ().getTransaction ().getHash ());
-						}
+						color.setTransaction (c.getTxHash ());
 					}
 				}
 			});

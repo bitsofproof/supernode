@@ -79,6 +79,8 @@ public class TxOut implements Serializable
 	// indicate if available (UTXO)
 	private boolean available = false;
 
+	private String color;
+
 	// this is redundant but saves a join at cacheing
 	@Column (length = 64, nullable = false)
 	@Index (name = "outthash")
@@ -251,6 +253,7 @@ public class TxOut implements Serializable
 		c.height = height;
 		c.blockTime = blockTime;
 		c.coinbase = coinbase;
+		c.color = color;
 		return c;
 	}
 
@@ -292,5 +295,15 @@ public class TxOut implements Serializable
 	public void setBlockTime (long blockTime)
 	{
 		this.blockTime = blockTime;
+	}
+
+	public String getColor ()
+	{
+		return color;
+	}
+
+	public void setColor (String color)
+	{
+		this.color = color;
 	}
 }
