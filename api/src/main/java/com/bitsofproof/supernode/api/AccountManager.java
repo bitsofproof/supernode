@@ -325,13 +325,7 @@ public class AccountManager implements WalletListener, TransactionListener, Trun
 
 	public void issueColor (Color color) throws ValidationException, BCSAPIException
 	{
-		TransactionOutput o = color.getRoot ();
-		o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
-		if ( o.getVotes () != 1 )
-		{
-			throw new ValidationException ("Can not use this output to issue color");
-		}
-		Key key = wallet.getKeyForAddress (o.getAddresses ().get (0));
+		Key key = wallet.getKeyForAddress (AddressConverter.toSatoshiStyle (Hash.keyHash (color.getPubkey ()), wallet.getAddressFlag ()));
 		if ( key == null )
 		{
 			throw new ValidationException ("Do not have key to issue color " + color.getHash ());

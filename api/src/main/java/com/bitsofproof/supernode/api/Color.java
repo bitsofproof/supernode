@@ -16,24 +16,29 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import com.google.protobuf.ByteString;
 
 public class Color
 {
-	private TransactionOutput root;
+	private String transaction;
+	private int ix;
 	private String terms;
 	private long unit;
 	private int expiryHeight;
 	private byte[] signature;
+	private byte[] pubkey;
 
 	public BCSAPIMessage.Color toProtobuf ()
 	{
 		BCSAPIMessage.Color.Builder builder = BCSAPIMessage.Color.newBuilder ();
-		builder.setRoot (root.toProtobuf ());
+		builder.setTransaction (ByteString.copyFrom (new Hash (transaction).toByteArray ()));
+		builder.setIx (ix);
 		builder.setTerms (terms);
 		builder.setUnit (unit);
 		builder.setExpiryHeight (expiryHeight);
+		builder.setPubkey (ByteString.copyFrom (pubkey));
 		builder.setSignature (ByteString.copyFrom (signature));
 		return builder.build ();
 	}
@@ -41,10 +46,12 @@ public class Color
 	public static Color fromProtobuf (BCSAPIMessage.Color po)
 	{
 		Color color = new Color ();
-		color.setRoot (TransactionOutput.fromProtobuf (po.getRoot ()));
+		color.setTransaction (new Hash (po.getTransaction ().toByteArray ()).toString ());
+		color.setIx (po.getIx ());
 		color.setTerms (po.getTerms ());
 		color.setUnit (po.getUnit ());
 		color.setExpiryHeight (po.getExpiryHeight ());
+		color.setSignature (po.getPubkey ().toByteArray ());
 		color.setSignature (po.getSignature ().toByteArray ());
 		return color;
 	}
@@ -57,7 +64,8 @@ public class Color
 	private byte[] hashContent ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
-		root.toWire (writer);
+		writer.writeHash (new Hash (transaction));
+		writer.writeUint32 (ix);
 		try
 		{
 			writer.writeBytes (terms.getBytes ("UTF-8"));
@@ -67,18 +75,23 @@ public class Color
 		}
 		writer.writeUint64 (unit);
 		writer.writeUint32 (expiryHeight);
+		writer.writeVarBytes (pubkey);
 		byte[] content = writer.toByteArray ();
 		return Hash.hash (content);
 	}
 
 	public void sign (Key key) throws ValidationException
 	{
+		if ( !Arrays.equals (key.getAddress (), Hash.keyHash (pubkey)) )
+		{
+			throw new ValidationException ("Wrong key to sign this color");
+		}
 		signature = key.sign (hashContent ());
 	}
 
-	public boolean verify (Key key)
+	public boolean verify ()
 	{
-		return ECKeyPair.verify (hashContent (), signature, key.getPublic ());
+		return ECKeyPair.verify (hashContent (), signature, pubkey);
 	}
 
 	public int getExpiryHeight ()
@@ -111,14 +124,24 @@ public class Color
 		this.signature = signature;
 	}
 
-	public TransactionOutput getRoot ()
+	public String getTransaction ()
 	{
-		return root;
+		return transaction;
 	}
 
-	public void setRoot (TransactionOutput root)
+	public void setTransaction (String transaction)
 	{
-		this.root = root;
+		this.transaction = transaction;
+	}
+
+	public int getIx ()
+	{
+		return ix;
+	}
+
+	public void setIx (int ix)
+	{
+		this.ix = ix;
 	}
 
 	public String getTerms ()
@@ -129,5 +152,15 @@ public class Color
 	public void setTerms (String terms)
 	{
 		this.terms = terms;
+	}
+
+	public byte[] getPubkey ()
+	{
+		return pubkey;
+	}
+
+	public void setPubkey (byte[] pubkey)
+	{
+		this.pubkey = pubkey;
 	}
 }

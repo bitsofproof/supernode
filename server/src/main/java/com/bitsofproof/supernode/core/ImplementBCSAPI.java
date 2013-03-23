@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -49,8 +50,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Posting;
+import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
@@ -58,6 +62,7 @@ import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
+import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -121,200 +126,324 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			trunkProducer = session.createProducer (session.createTopic ("trunk"));
-			addMessageListener ("newTransaction", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						Transaction transaction = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-						transaction.computeHash ();
-						sendTransaction (transaction);
-						reply (o.getJMSReplyTo (), null);
-					}
-					catch ( Exception e )
-					{
-						BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
-						builder.setBcsapiversion (1);
-						builder.addMessage (e.getMessage ());
-						try
-						{
-							reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
-						}
-						catch ( JMSException e1 )
-						{
-							log.error ("Can not send reply ", e1);
-						}
-					}
-				}
-			});
-			addMessageListener ("newBlock", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						Block block = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body));
-						block.computeHash ();
-						sendBlock (block);
-						reply (o.getJMSReplyTo (), null);
-					}
-					catch ( Exception e )
-					{
-						BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
-						builder.setBcsapiversion (1);
-						builder.addMessage (e.getMessage ());
-						try
-						{
-							reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
-						}
-						catch ( JMSException e1 )
-						{
-							log.error ("Can not send reply ", e1);
-						}
-					}
-				}
-			});
-			addMessageListener ("blockRequest", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
-						Block b = getBlock (hash);
-						if ( b != null )
-						{
-							reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
-						}
-						else
-						{
-							reply (o.getJMSReplyTo (), null);
-						}
-					}
-					catch ( Exception e )
-					{
-						log.trace ("Rejected invalid block request ", e);
-					}
-				}
-			});
-			addMessageListener ("transactionRequest", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
-						Transaction t = getTransaction (hash);
-						if ( t != null )
-						{
-							reply (o.getJMSReplyTo (), t.toProtobuf ().toByteArray ());
-						}
-						else
-						{
-							reply (o.getJMSReplyTo (), null);
-						}
-					}
-					catch ( Exception e )
-					{
-						log.trace ("Rejected invalid transaction request ", e);
-					}
-				}
-			});
-			addMessageListener ("accountRequest", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					final BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						final BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
-
-						requestProcessor.execute (new Runnable ()
-						{
-							@Override
-							public void run ()
-							{
-								AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
-								try
-								{
-									if ( as != null )
-									{
-										reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
-									}
-									else
-									{
-										reply (o.getJMSReplyTo (), null);
-									}
-								}
-								catch ( JMSException e )
-								{
-									log.trace ("Exception while processing account request ", e);
-								}
-							}
-						});
-					}
-					catch ( Exception e )
-					{
-						log.trace ("Rejected invalid account request ", e);
-					}
-				}
-			});
-			addMessageListener ("inventory", new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message arg0)
-				{
-					BytesMessage o = (BytesMessage) arg0;
-					try
-					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						BCSAPIMessage.Hash ar = BCSAPIMessage.Hash.parseFrom (body);
-						List<String> locator = new ArrayList<String> ();
-						for ( ByteString s : ar.getHashList () )
-						{
-							locator.add (new Hash (s.toByteArray ()).toString ());
-						}
-						List<String> inventory = store.getInventory (locator, Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
-						BCSAPIMessage.Hash.Builder ab = BCSAPIMessage.Hash.newBuilder ();
-						ab.setBcsapiversion (1);
-						for ( String s : inventory )
-						{
-							ab.addHash (ByteString.copyFrom (new Hash (s).toByteArray ()));
-						}
-						reply (o.getJMSReplyTo (), ab.build ().toByteArray ());
-					}
-					catch ( Exception e )
-					{
-						log.trace ("Rejected invalid inventory request ", e);
-					}
-				}
-			});
+			addNewTransactionListener ();
+			addNewBlockListener ();
+			addBlockrequestListener ();
+			addTransactionRequestListener ();
+			addAccountRequestListener ();
+			addInventoryRequestListener ();
+			addColorRequestListener ();
+			addNewColorListener ();
 		}
 		catch ( JMSException e )
 		{
 			log.error ("Error creating JMS producer", e);
 		}
+	}
+
+	private void addNewColorListener () throws JMSException
+	{
+		addMessageListener ("newColor", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					Color color = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (body));
+					Tx tx = store.getTransaction (color.getTransaction ());
+					if ( tx == null )
+					{
+						throw new ValidationException ("Unknown transaction for new color");
+					}
+					if ( tx.getOutputs ().size () >= color.getIx () )
+					{
+						throw new ValidationException ("Unknown output for new color");
+					}
+					TxOut out = tx.getOutputs ().get (color.getIx ());
+					if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
+					{
+						throw new ValidationException ("Color output should pay to address");
+					}
+					List<Token> tokens = ScriptFormat.parse (out.getScript ());
+					if ( !Arrays.equals (tokens.get (2).data, color.getPubkey ()) )
+					{
+						throw new ValidationException ("Color key does not match output address");
+					}
+					color.verify ();
+					StoredColor sc = new StoredColor ();
+					sc.setExpiryHeight (color.getExpiryHeight ());
+					sc.setPubkey (color.getPubkey ());
+					sc.setSignature (color.getSignature ());
+					sc.setTerms (color.getTerms ());
+					sc.setUnit (color.getUnit ());
+					sc.setRoot (out);
+					((ColorStore) store).store (sc);
+					reply (o.getJMSReplyTo (), null);
+				}
+				catch ( Exception e )
+				{
+					BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
+					builder.setBcsapiversion (1);
+					builder.addMessage (e.getMessage ());
+					try
+					{
+						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+					}
+					catch ( JMSException e1 )
+					{
+						log.error ("Can not send reply ", e1);
+					}
+				}
+			}
+		});
+	}
+
+	private void addColorRequestListener () throws JMSException
+	{
+		addMessageListener ("colorRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message message)
+			{
+				BytesMessage o = (BytesMessage) message;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					Color c = getColor (hash);
+					if ( c != null )
+					{
+						reply (o.getJMSReplyTo (), c.toProtobuf ().toByteArray ());
+					}
+					else
+					{
+						reply (o.getJMSReplyTo (), null);
+					}
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid transaction request ", e);
+				}
+			}
+		});
+	}
+
+	private void addInventoryRequestListener () throws JMSException
+	{
+		addMessageListener ("inventory", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					BCSAPIMessage.Hash ar = BCSAPIMessage.Hash.parseFrom (body);
+					List<String> locator = new ArrayList<String> ();
+					for ( ByteString s : ar.getHashList () )
+					{
+						locator.add (new Hash (s.toByteArray ()).toString ());
+					}
+					List<String> inventory = store.getInventory (locator, Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
+					BCSAPIMessage.Hash.Builder ab = BCSAPIMessage.Hash.newBuilder ();
+					ab.setBcsapiversion (1);
+					for ( String s : inventory )
+					{
+						ab.addHash (ByteString.copyFrom (new Hash (s).toByteArray ()));
+					}
+					reply (o.getJMSReplyTo (), ab.build ().toByteArray ());
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid inventory request ", e);
+				}
+			}
+		});
+	}
+
+	private void addAccountRequestListener () throws JMSException
+	{
+		addMessageListener ("accountRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				final BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					final BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
+
+					requestProcessor.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
+							try
+							{
+								if ( as != null )
+								{
+									reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
+								}
+								else
+								{
+									reply (o.getJMSReplyTo (), null);
+								}
+							}
+							catch ( JMSException e )
+							{
+								log.trace ("Exception while processing account request ", e);
+							}
+						}
+					});
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid account request ", e);
+				}
+			}
+		});
+	}
+
+	private void addTransactionRequestListener () throws JMSException
+	{
+		addMessageListener ("transactionRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					Transaction t = getTransaction (hash);
+					if ( t != null )
+					{
+						reply (o.getJMSReplyTo (), t.toProtobuf ().toByteArray ());
+					}
+					else
+					{
+						reply (o.getJMSReplyTo (), null);
+					}
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid transaction request ", e);
+				}
+			}
+		});
+	}
+
+	private void addBlockrequestListener () throws JMSException
+	{
+		addMessageListener ("blockRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					Block b = getBlock (hash);
+					if ( b != null )
+					{
+						reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
+					}
+					else
+					{
+						reply (o.getJMSReplyTo (), null);
+					}
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid block request ", e);
+				}
+			}
+		});
+	}
+
+	private void addNewBlockListener () throws JMSException
+	{
+		addMessageListener ("newBlock", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					Block block = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body));
+					block.computeHash ();
+					sendBlock (block);
+					reply (o.getJMSReplyTo (), null);
+				}
+				catch ( Exception e )
+				{
+					BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
+					builder.setBcsapiversion (1);
+					builder.addMessage (e.getMessage ());
+					try
+					{
+						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+					}
+					catch ( JMSException e1 )
+					{
+						log.error ("Can not send reply ", e1);
+					}
+				}
+			}
+		});
+	}
+
+	private void addNewTransactionListener () throws JMSException
+	{
+		addMessageListener ("newTransaction", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					Transaction transaction = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+					transaction.computeHash ();
+					sendTransaction (transaction);
+					reply (o.getJMSReplyTo (), null);
+				}
+				catch ( Exception e )
+				{
+					BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
+					builder.setBcsapiversion (1);
+					builder.addMessage (e.getMessage ());
+					try
+					{
+						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+					}
+					catch ( JMSException e1 )
+					{
+						log.error ("Can not send reply ", e1);
+					}
+				}
+			}
+		});
 	}
 
 	private void reply (Destination destination, byte[] msg)
@@ -775,5 +904,48 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			out.setVotes (o.getVotes ());
 		}
 		return out;
+	}
+
+	private Color getColor (final String hash)
+	{
+		try
+		{
+			log.trace ("get color " + hash);
+			final Color color = new Color ();
+			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			{
+				@Override
+				protected void doInTransactionWithoutResult (TransactionStatus status)
+				{
+					status.setRollbackOnly ();
+					StoredColor c = ((ColorStore) store).findColor (hash);
+					if ( c != null )
+					{
+						color.setExpiryHeight (c.getExpiryHeight ());
+						color.setSignature (c.getSignature ());
+						color.setTerms (c.getTerms ());
+						color.setUnit (c.getUnit ());
+						if ( c.getRoot ().getTxHash () != null )
+						{
+							color.setTransaction (c.getRoot ().getTxHash ());
+						}
+						else
+						{
+							color.setTransaction (c.getRoot ().getTransaction ().getHash ());
+						}
+						color.setIx (c.getRoot ().getIx ().intValue ());
+					}
+				}
+			});
+			if ( color.getTerms () != null )
+			{
+				return color;
+			}
+			return null;
+		}
+		finally
+		{
+			log.trace ("get block returned " + hash);
+		}
 	}
 }

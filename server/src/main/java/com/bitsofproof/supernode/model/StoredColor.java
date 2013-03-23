@@ -51,6 +51,10 @@ public class StoredColor implements Serializable
 	@Basic (fetch = FetchType.EAGER)
 	private byte[] signature;
 
+	@Lob
+	@Basic (fetch = FetchType.EAGER)
+	private byte[] pubkey;
+
 	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	TxOut root;
 
@@ -112,6 +116,16 @@ public class StoredColor implements Serializable
 	public void setSignature (byte[] signature)
 	{
 		this.signature = signature;
+	}
+
+	public byte[] getPubkey ()
+	{
+		return pubkey;
+	}
+
+	public void setPubkey (byte[] pubkey)
+	{
+		this.pubkey = pubkey;
 	}
 
 	public TxOut getRoot ()

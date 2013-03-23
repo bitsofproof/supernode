@@ -905,6 +905,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		writer.writeUint64 (color.getUnit ());
 		writer.writeUint32 (color.getExpiryHeight ());
 		writer.writeVarBytes (color.getSignature ());
+		writer.writeVarBytes (color.getPubkey ());
 		writer.writeHash (new Hash (color.getRoot ().getTxHash ()));
 		writer.writeUint32 (color.getRoot ().getIx ());
 		put (Key.createKey (KeyType.COLOR, hash.toByteArray ()), writer.toByteArray ());
@@ -925,6 +926,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		sc.setUnit (reader.readUint64 ());
 		sc.setExpiryHeight ((int) reader.readUint32 ());
 		sc.setSignature (reader.readVarBytes ());
+		sc.setPubkey (reader.readVarBytes ());
 		String txhash = reader.readHash ().toString ();
 		long ix = reader.readUint32 ();
 		Tx transaction = readTx (txhash);
