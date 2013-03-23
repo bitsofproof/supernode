@@ -23,7 +23,6 @@ import com.google.protobuf.ByteString;
 public class Color
 {
 	private String transaction;
-	private int ix;
 	private String terms;
 	private long unit;
 	private int expiryHeight;
@@ -34,7 +33,6 @@ public class Color
 	{
 		BCSAPIMessage.Color.Builder builder = BCSAPIMessage.Color.newBuilder ();
 		builder.setTransaction (ByteString.copyFrom (new Hash (transaction).toByteArray ()));
-		builder.setIx (ix);
 		builder.setTerms (terms);
 		builder.setUnit (unit);
 		builder.setExpiryHeight (expiryHeight);
@@ -47,7 +45,6 @@ public class Color
 	{
 		Color color = new Color ();
 		color.setTransaction (new Hash (po.getTransaction ().toByteArray ()).toString ());
-		color.setIx (po.getIx ());
 		color.setTerms (po.getTerms ());
 		color.setUnit (po.getUnit ());
 		color.setExpiryHeight (po.getExpiryHeight ());
@@ -65,7 +62,6 @@ public class Color
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeHash (new Hash (transaction));
-		writer.writeUint32 (ix);
 		try
 		{
 			writer.writeBytes (terms.getBytes ("UTF-8"));
@@ -132,16 +128,6 @@ public class Color
 	public void setTransaction (String transaction)
 	{
 		this.transaction = transaction;
-	}
-
-	public int getIx ()
-	{
-		return ix;
-	}
-
-	public void setIx (int ix)
-	{
-		this.ix = ix;
 	}
 
 	public String getTerms ()

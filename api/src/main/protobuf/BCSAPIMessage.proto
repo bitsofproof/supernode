@@ -104,10 +104,9 @@ message ExceptionMessage {
 
 message Color {
 	required bytes transaction = 1;
-	required uint32 ix = 2;
-	required string terms = 3;
-	required uint64 unit = 4;
-	required uint32 expiryHeight = 5;
-	required bytes pubkey = 6;
-	required bytes signature = 7;
+	required string terms = 2;
+	required uint64 unit = 3;
+	required uint32 expiryHeight = 4;
+	required bytes pubkey = 5;
+	required bytes signature = 6;
 }

@@ -159,11 +159,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						throw new ValidationException ("Unknown transaction for new color");
 					}
-					if ( tx.getOutputs ().size () >= color.getIx () )
-					{
-						throw new ValidationException ("Unknown output for new color");
-					}
-					TxOut out = tx.getOutputs ().get (color.getIx ());
+					TxOut out = tx.getOutputs ().get (0);
 					if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
 					{
 						throw new ValidationException ("Color output should pay to address");
@@ -934,7 +930,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						{
 							color.setTransaction (c.getRoot ().getTransaction ().getHash ());
 						}
-						color.setIx (c.getRoot ().getIx ().intValue ());
 					}
 				}
 			});
