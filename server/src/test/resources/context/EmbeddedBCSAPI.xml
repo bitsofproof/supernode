@@ -15,7 +15,7 @@
 	<bean id="embeddedBus"
 		class="com.bitsofproof.supernode.api.InMemoryBusConnectionFactory" />
 
-	<bean id="chain" class="com.bitsofproof.supernode.core.BlocktesterChain"/>
+	<bean id="chain" class="com.bitsofproof.supernode.core.UnitTestChain"/>
 	
 	<bean id="tx" class="com.bitsofproof.supernode.core.TxHandler">
 		<constructor-arg>

@@ -86,6 +86,12 @@ public class Testnet3Chain implements Chain
 	}
 
 	@Override
+	public boolean allowImmediateCoinbaseSpend ()
+	{
+		return false;
+	}
+
+	@Override
 	public int getAddressFlag ()
 	{
 		return 0x6F;
@@ -153,7 +159,7 @@ public class Testnet3Chain implements Chain
 	}
 
 	@Override
-	public boolean isUnitTest ()
+	public boolean checkBeforeCheckpoint ()
 	{
 		return false;
 	}

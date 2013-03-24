@@ -809,7 +809,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 		}
 
-		if ( !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.isUnitTest () )
+		if ( !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.checkBeforeCheckpoint () )
 		{
 			log.trace ("validating block " + b.getHash ());
 
@@ -1198,7 +1198,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				if ( height != 0 && out.isCoinbase () )
 				{
-					if ( out.getHeight () > height - COINBASE_MATURITY )
+					if ( !chain.allowImmediateCoinbaseSpend () && out.getHeight () > height - COINBASE_MATURITY )
 					{
 						throw new ValidationException ("coinbase spent too early " + t.toWireDump ());
 					}

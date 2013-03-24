@@ -151,7 +151,7 @@ public class APITest
 	}
 
 	@Test
-	public void send110Blocks () throws ValidationException, BCSAPIException
+	public void send20Blocks () throws ValidationException, BCSAPIException
 	{
 		final Semaphore ready = new Semaphore (0);
 
@@ -167,7 +167,7 @@ public class APITest
 		api.registerTrunkListener (listener);
 
 		String hash = blocks.get (1).getHash ();
-		for ( int i = 0; i < 110; ++i )
+		for ( int i = 0; i < 20; ++i )
 		{
 			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
@@ -179,7 +179,7 @@ public class APITest
 
 		try
 		{
-			assertTrue (ready.tryAcquire (110, 2, TimeUnit.SECONDS));
+			assertTrue (ready.tryAcquire (20, 2, TimeUnit.SECONDS));
 			api.removeTrunkListener (listener);
 		}
 		catch ( InterruptedException e )
@@ -310,7 +310,7 @@ public class APITest
 			@Override
 			public void trunkUpdate (List<Block> removed, List<Block> added)
 			{
-				if ( added != null && added.get (0).getHash ().equals (blocks.get (112).getHash ()) )
+				if ( added != null && added.get (0).getHash ().equals (blocks.get (22).getHash ()) )
 				{
 					ready.release ();
 				}
@@ -318,11 +318,11 @@ public class APITest
 		};
 		api.registerTrunkListener (tl);
 
-		Block block = createBlock (blocks.get (111).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 112));
-		block.setCreateTime (block.getCreateTime () + 112 * 1000);
+		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 22));
+		block.setCreateTime (block.getCreateTime () + 22 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);
-		blocks.put (112, block);
+		blocks.put (22, block);
 		api.sendBlock (block);
 		try
 		{
@@ -333,7 +333,7 @@ public class APITest
 		}
 		api.removeTrunkListener (tl);
 
-		as = api.getAccountStatement (sourceAddresses, blocks.get (111).getCreateTime ());
+		as = api.getAccountStatement (sourceAddresses, blocks.get (21).getCreateTime ());
 		assertTrue (as.getOpening ().size () == 10);
 		assertTrue (as.getPosting ().size () == 10);
 		assertTrue (as.getUnconfirmedSpend () == null);

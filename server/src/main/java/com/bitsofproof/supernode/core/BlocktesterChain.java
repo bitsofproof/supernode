@@ -37,9 +37,15 @@ public class BlocktesterChain implements Chain
 	static final BigInteger minTarget = BigInteger.valueOf (1).shiftLeft (256).subtract (BigInteger.ONE);
 
 	@Override
-	public boolean isUnitTest ()
+	public boolean checkBeforeCheckpoint ()
 	{
 		return true;
+	}
+
+	@Override
+	public boolean allowImmediateCoinbaseSpend ()
+	{
+		return false;
 	}
 
 	@Override

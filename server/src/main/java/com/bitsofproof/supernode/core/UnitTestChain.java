@@ -29,24 +29,23 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 
-public class SatoshiChain implements Chain
+public class UnitTestChain implements Chain
 {
-
 	static final byte[] SATOSHI_KEY = Hex
 			.decode ("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
 
-	static final BigInteger minTarget = BigInteger.valueOf (0xFFFFL).shiftLeft (8 * (0x1d - 3));
+	static final BigInteger minTarget = BigInteger.valueOf (1).shiftLeft (256).subtract (BigInteger.ONE);
 
 	@Override
 	public boolean checkBeforeCheckpoint ()
 	{
-		return false;
+		return true;
 	}
 
 	@Override
 	public boolean allowImmediateCoinbaseSpend ()
 	{
-		return false;
+		return true;
 	}
 
 	@Override
@@ -58,7 +57,7 @@ public class SatoshiChain implements Chain
 	@Override
 	public long getMagic ()
 	{
-		return 0xD9B4BEF9L;
+		return 0xDAB5BFFAL;
 	}
 
 	@Override
@@ -70,13 +69,13 @@ public class SatoshiChain implements Chain
 	@Override
 	public long getRewardForHeight (int height)
 	{
-		return (50L * Tx.COIN) >> (height / 210000L);
+		return (50L * Tx.COIN) >> (height / 150L);
 	}
 
 	@Override
 	public int getDifficultyReviewBlocks ()
 	{
-		return 2016;
+		return 150;
 	}
 
 	@Override
@@ -118,9 +117,9 @@ public class SatoshiChain implements Chain
 		block.setHeight (0);
 
 		block.setVersion (1);
-		block.setCreateTime (1231006505L);
-		block.setDifficultyTarget (0x1d00ffffL);
-		block.setNonce (2083236893);
+		block.setCreateTime (1296688602);
+		block.setDifficultyTarget (0x207fffff);
+		block.setNonce (2);
 		block.setPreviousHash (Hash.ZERO_HASH_STRING);
 
 		List<Tx> transactions = new ArrayList<Tx> ();

@@ -11,7 +11,8 @@
 		<class>com.bitsofproof.supernode.model.TxIn</class>
 		<class>com.bitsofproof.supernode.model.TxOut</class>
 		<class>com.bitsofproof.supernode.model.KnownPeer</class>
-
+		<class>com.bitsofproof.supernode.model.StoredColor</class>
+		
 	</persistence-unit>
 	
 	

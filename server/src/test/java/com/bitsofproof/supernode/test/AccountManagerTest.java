@@ -95,7 +95,7 @@ public class AccountManagerTest
 	}
 
 	@Test
-	public void send111Blocks () throws ValidationException, BCSAPIException, InterruptedException
+	public void send21Blocks () throws ValidationException, BCSAPIException, InterruptedException
 	{
 		final Semaphore hasBlock = new Semaphore (0);
 		TrunkListener listener = new TrunkListener ()
@@ -113,7 +113,7 @@ public class AccountManagerTest
 		api.sendBlock (block);
 
 		String hash = blocks.get (1).getHash ();
-		for ( int i = 0; i < 110; ++i )
+		for ( int i = 0; i < 20; ++i )
 		{
 			block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
@@ -122,7 +122,7 @@ public class AccountManagerTest
 			hash = block.getHash ();
 			api.sendBlock (block);
 		}
-		assertTrue (hasBlock.tryAcquire (111, 2, TimeUnit.SECONDS));
+		assertTrue (hasBlock.tryAcquire (21, 2, TimeUnit.SECONDS));
 		assertFalse (hasBlock.tryAcquire ());
 
 		api.removeTrunkListener (listener);
@@ -135,12 +135,12 @@ public class AccountManagerTest
 		am.setApi (api);
 		am.track (wallet);
 
-		assertTrue (am.getBalance () == 50 * COIN * 111);
+		assertTrue (am.getBalance () == 50 * COIN * 21);
 
-		Block block = createBlock (blocks.get (111).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 50 * COIN, 113));
-		block.setCreateTime (block.getCreateTime () + 112 * 1000);
+		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 50 * COIN, 23));
+		block.setCreateTime (block.getCreateTime () + 22 * 1000);
 		mineBlock (block);
-		blocks.put (112, block);
+		blocks.put (22, block);
 
 		final Semaphore ready = new Semaphore (0);
 		AccountListener listener = new AccountListener ()
@@ -148,7 +148,7 @@ public class AccountManagerTest
 			@Override
 			public void accountChanged (AccountManager account)
 			{
-				assertTrue (account.getBalance () == 50 * COIN * 112);
+				assertTrue (account.getBalance () == 50 * COIN * 22);
 				ready.release ();
 			}
 		};
@@ -170,7 +170,7 @@ public class AccountManagerTest
 		alice.setApi (api);
 		alice.track (wallet);
 		final long balance = alice.getBalance ();
-		assertTrue (balance == 50 * COIN * 112);
+		assertTrue (balance == 50 * COIN * 22);
 
 		final Semaphore ready1 = new Semaphore (0);
 		final Semaphore ready2 = new Semaphore (0);

@@ -29,7 +29,9 @@ public interface Chain
 
 	public byte[] getAlertKey ();
 
-	public boolean isUnitTest ();
+	public boolean checkBeforeCheckpoint ();
+
+	public boolean allowImmediateCoinbaseSpend ();
 
 	public BigInteger getMinimumTarget ();
 
