@@ -442,6 +442,6 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	{
 		QStoredColor sc = QStoredColor.storedColor;
 		JPAQuery q = new JPAQuery (entityManager);
-		return q.from (sc).where (sc.hash.eq (hash)).uniqueResult (sc);
+		return q.from (sc).where (sc.txHash.eq (hash)).uniqueResult (sc);
 	}
 }
