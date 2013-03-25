@@ -134,11 +134,16 @@ public interface BCSAPI
 	public void removeFilteredListener (Collection<String> filter, TransactionListener listener);
 
 	/**
-	 * create a new key generator
+	 * create a key generator
 	 * 
-	 * @throws ValidationException
+	 * @throws BCSAPIException
 	 */
-	public KeyGenerator createNewKeyGenerator (int addressFlag, int multiAddressFlag) throws ValidationException;
+	public KeyGenerator createKeyGenerator (int addressFlag, int multiAddressFlag) throws BCSAPIException;
+
+	/**
+	 * create an account manager
+	 */
+	public AccountManager createAccountManager (KeyGenerator generator) throws BCSAPIException;
 
 	/**
 	 * Issue a color

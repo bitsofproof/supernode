@@ -771,9 +771,24 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public KeyGenerator createNewKeyGenerator (int addressFlag, int multiAddressFlag) throws ValidationException
+	public KeyGenerator createKeyGenerator (int addressFlag, int multiAddressFlag) throws BCSAPIException
 	{
-		return DefaultKeyGenerator.createKeyGenerator (addressFlag, multiAddressFlag);
+		try
+		{
+			return DefaultKeyGenerator.createKeyGenerator (addressFlag, multiAddressFlag);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	@Override
+	public AccountManager createAccountManager (KeyGenerator generator)
+	{
+		AccountManager manager = new DefaultAccountManager ();
+		manager.track (generator);
+		return manager;
 	}
 
 }
