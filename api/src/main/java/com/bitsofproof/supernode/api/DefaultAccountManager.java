@@ -587,7 +587,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	{
 		synchronized ( utxo )
 		{
-			Long balance = colorBalances.get (color.getHash ());
+			Long balance = colorBalances.get (color.getFungibleName ());
 			if ( balance != null )
 			{
 				return balance.longValue () / color.getUnit ();
