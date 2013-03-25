@@ -26,8 +26,8 @@ public class Color
 	private String terms;
 	private long unit;
 	private int expiryHeight;
-	private byte[] signature;
 	private byte[] pubkey;
+	private byte[] signature;
 
 	public BCSAPIMessage.Color toProtobuf ()
 	{
@@ -53,6 +53,22 @@ public class Color
 		return color;
 	}
 
+	public String getFungibleName ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		try
+		{
+			writer.writeBytes (terms.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+		}
+		writer.writeUint64 (unit);
+		writer.writeUint32 (expiryHeight);
+		byte[] content = writer.toByteArray ();
+		return Hash.hash (content).toString ();
+	}
+
 	private byte[] hashContent ()
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
@@ -69,11 +85,6 @@ public class Color
 		writer.writeVarBytes (pubkey);
 		byte[] content = writer.toByteArray ();
 		return Hash.hash (content);
-	}
-
-	public String getHash ()
-	{
-		return new Hash (hashContent ()).toString ();
 	}
 
 	public void sign (Key key) throws ValidationException

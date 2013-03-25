@@ -42,6 +42,9 @@ public class StoredColor implements Serializable
 	private Long id;
 
 	@Column (length = 64, nullable = false, unique = true)
+	private String fungibleName;
+
+	@Column (length = 64, nullable = false, unique = true)
 	private String txHash;
 
 	@Lob
@@ -69,27 +72,19 @@ public class StoredColor implements Serializable
 		this.id = id;
 	}
 
-	public byte[] hashContent ()
-	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeHash (new Hash (txHash));
-		try
-		{
-			writer.writeBytes (terms.getBytes ("UTF-8"));
-		}
-		catch ( UnsupportedEncodingException e )
-		{
-		}
-		writer.writeUint64 (unit);
-		writer.writeUint32 (expiryHeight);
-		writer.writeVarBytes (pubkey);
-		byte[] content = writer.toByteArray ();
-		return Hash.hash (content);
-	}
-
 	public String getTerms ()
 	{
 		return terms;
+	}
+
+	public void setFungibleName (String fungibleName)
+	{
+		this.fungibleName = fungibleName;
+	}
+
+	public String getFungibleName ()
+	{
+		return fungibleName;
 	}
 
 	public void setTerms (String terms)
@@ -147,8 +142,46 @@ public class StoredColor implements Serializable
 		this.txHash = txHash;
 	}
 
+	public byte[] hashFungibleName ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		try
+		{
+			writer.writeBytes (terms.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+		}
+		writer.writeUint64 (unit);
+		writer.writeUint32 (expiryHeight);
+		byte[] content = writer.toByteArray ();
+		return content;
+	}
+
+	private byte[] hashContent ()
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeHash (new Hash (txHash));
+		try
+		{
+			writer.writeBytes (terms.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+		}
+		writer.writeUint64 (unit);
+		writer.writeUint32 (expiryHeight);
+		writer.writeVarBytes (pubkey);
+		byte[] content = writer.toByteArray ();
+		return Hash.hash (content);
+	}
+
 	public boolean verify ()
 	{
+		if ( !new Hash (hashFungibleName ()).equals (fungibleName) )
+		{
+			return false;
+		}
 		return ECKeyPair.verify (hashContent (), signature, pubkey);
 	}
 }

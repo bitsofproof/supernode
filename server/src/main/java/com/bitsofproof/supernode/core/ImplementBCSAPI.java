@@ -152,6 +152,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					o.readBytes (body);
 					Color color = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (body));
 					StoredColor sc = new StoredColor ();
+					sc.setFungibleName (color.getFungibleName ());
 					sc.setExpiryHeight (color.getExpiryHeight ());
 					sc.setPubkey (color.getPubkey ());
 					sc.setSignature (color.getSignature ());
