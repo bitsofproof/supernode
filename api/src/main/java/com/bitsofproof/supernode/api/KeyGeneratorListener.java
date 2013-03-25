@@ -15,7 +15,7 @@
  */
 package com.bitsofproof.supernode.api;
 
-public interface WalletListener
+public interface KeyGeneratorListener
 {
 	public void notifyNewKey (String address, Key key, boolean pristine);
 }

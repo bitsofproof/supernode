@@ -42,13 +42,15 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.DefaultAccountManager;
+import com.bitsofproof.supernode.api.DefaultKeyGenerator;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.KeyGenerator;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.Wallet;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
@@ -68,7 +70,7 @@ public class AccountManagerTest
 
 	private static final long COIN = 100000000L;
 
-	private static Wallet wallet;
+	private static KeyGenerator wallet;
 
 	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
 
@@ -87,7 +89,7 @@ public class AccountManagerTest
 		new SecureRandom ().nextBytes (chainCode);
 		try
 		{
-			wallet = new Wallet (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
+			wallet = new DefaultKeyGenerator (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
 		}
 		catch ( ValidationException e )
 		{
@@ -107,7 +109,7 @@ public class AccountManagerTest
 			}
 		};
 		api.registerTrunkListener (listener);
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 		api.sendBlock (block);
@@ -115,7 +117,7 @@ public class AccountManagerTest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 20; ++i )
 		{
-			block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
+			block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -131,13 +133,13 @@ public class AccountManagerTest
 	@Test
 	public void testAccountManager1 () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		AccountManager am = new AccountManager ();
+		DefaultAccountManager am = new DefaultAccountManager ();
 		am.setApi (api);
 		am.track (wallet);
 
 		assertTrue (am.getBalance () == 50 * COIN * 21);
 
-		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 50 * COIN, 23));
+		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 23));
 		block.setCreateTime (block.getCreateTime () + 22 * 1000);
 		mineBlock (block);
 		blocks.put (22, block);
@@ -166,7 +168,7 @@ public class AccountManagerTest
 	@Test
 	public void testAccountManager2 () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		AccountManager alice = new AccountManager ();
+		DefaultAccountManager alice = new DefaultAccountManager ();
 		alice.setApi (api);
 		alice.track (wallet);
 		final long balance = alice.getBalance ();
@@ -186,8 +188,8 @@ public class AccountManagerTest
 		};
 		alice.addAccountListener (listener1);
 
-		AccountManager bob = new AccountManager ();
-		Wallet bobWallet = Wallet.createWallet (0x00, 0x05);
+		DefaultAccountManager bob = new DefaultAccountManager ();
+		KeyGenerator bobWallet = DefaultKeyGenerator.createKeyGenerator (0x00, 0x05);
 		bob.setApi (api);
 		bob.track (bobWallet);
 		AccountListener listener2 = new AccountListener ()
@@ -203,8 +205,7 @@ public class AccountManagerTest
 		bob.addAccountListener (listener2);
 
 		Transaction t1 =
-				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN,
-						COIN / 1000);
+				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.generateNextKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 1000);
 		api.sendTransaction (t1);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
@@ -239,8 +240,7 @@ public class AccountManagerTest
 		};
 		bob.addAccountListener (listener4);
 
-		Transaction t2 =
-				bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
+		Transaction t2 = bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
 		api.sendTransaction (t2);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));

@@ -45,8 +45,8 @@ public class KeyGeneratorTest
 		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic (), master.isCompressed ()), chainCode);
 		for ( int i = 0; i < 10; ++i )
 		{
-			ExtendedKey k1 = KeyGenerator.generateKey (ekprivate, i);
-			ExtendedKey k2 = KeyGenerator.generateKey (ekpublic, i);
+			ExtendedKey k1 = DefaultKeyGenerator.generateKey (ekprivate, i);
+			ExtendedKey k2 = DefaultKeyGenerator.generateKey (ekpublic, i);
 			assertTrue (Arrays.equals (k1.getKey ().getPublic (), k2.getKey ().getPublic ()));
 		}
 	}

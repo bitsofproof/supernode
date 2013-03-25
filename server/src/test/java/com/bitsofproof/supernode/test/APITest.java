@@ -40,9 +40,11 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.DefaultKeyGenerator;
 import com.bitsofproof.supernode.api.ECKeyPair;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.KeyGenerator;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.Transaction;
@@ -53,7 +55,6 @@ import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.Wallet;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
@@ -73,7 +74,7 @@ public class APITest
 
 	private static final long COIN = 100000000L;
 
-	private static Wallet wallet;
+	private static KeyGenerator wallet;
 
 	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
 
@@ -92,7 +93,7 @@ public class APITest
 		new SecureRandom ().nextBytes (chainCode);
 		try
 		{
-			wallet = new Wallet (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
+			wallet = new DefaultKeyGenerator (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
 		}
 		catch ( ValidationException e )
 		{
@@ -109,7 +110,7 @@ public class APITest
 	@Test
 	public void send1Block () throws BCSAPIException, ValidationException
 	{
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 
@@ -169,7 +170,7 @@ public class APITest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 20; ++i )
 		{
-			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, i + 2));
+			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -214,7 +215,7 @@ public class APITest
 		assertTrue (as.getPosting () == null);
 
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
-		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getKey ().getAddress (), 10 * 50 * COIN);
+		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getAddress (), 10 * 50 * COIN);
 		sinks.add (sink);
 		List<String> sinkAddresses = new ArrayList<String> ();
 		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), 0x0));
@@ -318,7 +319,7 @@ public class APITest
 		};
 		api.registerTrunkListener (tl);
 
-		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey ().getKey (), 5000000000L, 22));
+		Block block = createBlock (blocks.get (21).getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, 22));
 		block.setCreateTime (block.getCreateTime () + 22 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);

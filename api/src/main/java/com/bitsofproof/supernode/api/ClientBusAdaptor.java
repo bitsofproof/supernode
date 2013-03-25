@@ -770,4 +770,10 @@ public class ClientBusAdaptor implements BCSAPI
 		return null;
 	}
 
+	@Override
+	public KeyGenerator createNewKeyGenerator (int addressFlag, int multiAddressFlag) throws ValidationException
+	{
+		return DefaultKeyGenerator.createKeyGenerator (addressFlag, multiAddressFlag);
+	}
+
 }

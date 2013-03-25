@@ -134,6 +134,13 @@ public interface BCSAPI
 	public void removeFilteredListener (Collection<String> filter, TransactionListener listener);
 
 	/**
+	 * create a new key generator
+	 * 
+	 * @throws ValidationException
+	 */
+	public KeyGenerator createNewKeyGenerator (int addressFlag, int multiAddressFlag) throws ValidationException;
+
+	/**
 	 * Issue a color
 	 * 
 	 * @param color
