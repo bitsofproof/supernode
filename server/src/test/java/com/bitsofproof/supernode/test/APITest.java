@@ -40,9 +40,6 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.DefaultKeyGenerator;
-import com.bitsofproof.supernode.api.ECKeyPair;
-import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.KeyGenerator;
 import com.bitsofproof.supernode.api.ScriptFormat;
@@ -85,19 +82,13 @@ public class APITest
 	}
 
 	@Test
-	public void init () throws ValidationException
+	public void init () throws ValidationException, BCSAPIException
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
 		byte[] chainCode = new byte[32];
 		new SecureRandom ().nextBytes (chainCode);
-		try
-		{
-			wallet = new DefaultKeyGenerator (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
-		}
-		catch ( ValidationException e )
-		{
-		}
+		wallet = api.createKeyGenerator (0x0, 0x05);
 	}
 
 	@Test

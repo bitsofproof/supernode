@@ -42,10 +42,6 @@ import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.DefaultAccountManager;
-import com.bitsofproof.supernode.api.DefaultKeyGenerator;
-import com.bitsofproof.supernode.api.ECKeyPair;
-import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.KeyGenerator;
 import com.bitsofproof.supernode.api.Transaction;
@@ -81,19 +77,13 @@ public class AccountManagerTest
 	}
 
 	@Test
-	public void init () throws ValidationException
+	public void init () throws BCSAPIException, ValidationException
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
 		byte[] chainCode = new byte[32];
 		new SecureRandom ().nextBytes (chainCode);
-		try
-		{
-			wallet = new DefaultKeyGenerator (new ExtendedKey (ECKeyPair.createNew (true), chainCode), 0, 0x0, 0x05);
-		}
-		catch ( ValidationException e )
-		{
-		}
+		wallet = api.createKeyGenerator (0x0, 0x05);
 	}
 
 	@Test
@@ -133,9 +123,7 @@ public class AccountManagerTest
 	@Test
 	public void testAccountManager1 () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		DefaultAccountManager am = new DefaultAccountManager ();
-		am.setApi (api);
-		am.track (wallet);
+		AccountManager am = api.createAccountManager (wallet);
 
 		assertTrue (am.getBalance () == 50 * COIN * 21);
 
@@ -168,9 +156,7 @@ public class AccountManagerTest
 	@Test
 	public void testAccountManager2 () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		DefaultAccountManager alice = new DefaultAccountManager ();
-		alice.setApi (api);
-		alice.track (wallet);
+		AccountManager alice = api.createAccountManager (wallet);
 		final long balance = alice.getBalance ();
 		assertTrue (balance == 50 * COIN * 22);
 
@@ -188,10 +174,8 @@ public class AccountManagerTest
 		};
 		alice.addAccountListener (listener1);
 
-		DefaultAccountManager bob = new DefaultAccountManager ();
-		KeyGenerator bobWallet = DefaultKeyGenerator.createKeyGenerator (0x00, 0x05);
-		bob.setApi (api);
-		bob.track (bobWallet);
+		KeyGenerator bobWallet = api.createKeyGenerator (0x00, 0x05);
+		AccountManager bob = api.createAccountManager (bobWallet);
 		AccountListener listener2 = new AccountListener ()
 		{
 			@Override

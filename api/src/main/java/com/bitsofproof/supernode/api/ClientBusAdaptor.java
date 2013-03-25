@@ -786,7 +786,8 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public AccountManager createAccountManager (KeyGenerator generator)
 	{
-		AccountManager manager = new DefaultAccountManager ();
+		DefaultAccountManager manager = new DefaultAccountManager ();
+		manager.setApi (this);
 		manager.track (generator);
 		return manager;
 	}

@@ -36,7 +36,7 @@ import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DefaultKeyGenerator implements KeyGenerator
+class DefaultKeyGenerator implements KeyGenerator
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 

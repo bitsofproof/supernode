@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 
-public class DefaultAccountManager implements KeyGeneratorListener, TransactionListener, TrunkListener, AccountManager
+class DefaultAccountManager implements KeyGeneratorListener, TransactionListener, TrunkListener, AccountManager
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 
