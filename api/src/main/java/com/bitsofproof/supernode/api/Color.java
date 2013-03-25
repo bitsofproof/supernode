@@ -71,6 +71,11 @@ public class Color
 		return Hash.hash (content);
 	}
 
+	public String getHash ()
+	{
+		return new Hash (hashContent ()).toString ();
+	}
+
 	public void sign (Key key) throws ValidationException
 	{
 		if ( !Arrays.equals (key.getAddress (), Hash.keyHash (pubkey)) )

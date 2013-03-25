@@ -152,6 +152,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 
 	private BCSAPI api;
 	private final UTXO utxo = new UTXO ();
+	private final HashMap<String, Long> colorBalances = new HashMap<String, Long> ();
 	private long balance = 0;
 	private KeyGenerator wallet;
 	private final List<Posting> postings = new ArrayList<Posting> ();
@@ -201,7 +202,22 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			{
 				for ( TransactionOutput o : s.getOpening () )
 				{
-					balance += o.getValue ();
+					if ( o.getColor () == null )
+					{
+						balance += o.getValue ();
+					}
+					else
+					{
+						Long b = colorBalances.get (o.getColor ());
+						if ( b == null )
+						{
+							colorBalances.put (o.getColor (), o.getValue ());
+						}
+						else
+						{
+							colorBalances.put (o.getColor (), b.longValue () + o.getValue ());
+						}
+					}
 					utxo.add (o);
 				}
 			}
@@ -212,12 +228,44 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 				{
 					if ( p.getSpent () == null )
 					{
-						balance += p.getOutput ().getValue ();
+						TransactionOutput o = p.getOutput ();
+						if ( o.getColor () == null )
+						{
+							balance += o.getValue ();
+						}
+						else
+						{
+							Long b = colorBalances.get (o.getColor ());
+							if ( b == null )
+							{
+								colorBalances.put (o.getColor (), o.getValue ());
+							}
+							else
+							{
+								colorBalances.put (o.getColor (), b.longValue () + o.getValue ());
+							}
+						}
 						utxo.add (p.getOutput ());
 					}
 					else
 					{
-						balance -= p.getOutput ().getValue ();
+						TransactionOutput o = p.getOutput ();
+						if ( o.getColor () == null )
+						{
+							balance -= o.getValue ();
+						}
+						else
+						{
+							Long b = colorBalances.get (o.getColor ());
+							if ( b == null )
+							{
+								colorBalances.put (o.getColor (), -o.getValue ());
+							}
+							else
+							{
+								colorBalances.put (o.getColor (), b.longValue () - o.getValue ());
+							}
+						}
 						utxo.remove (p.getOutput ());
 					}
 				}
@@ -352,12 +400,6 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			sinks.add (change);
 			return Transaction.createSpend (sources, sinks, fee);
 		}
-	}
-
-	@Override
-	public void issueColor (Color color) throws BCSAPIException
-	{
-		api.issueColor (color);
 	}
 
 	@Override
@@ -543,15 +585,23 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	@Override
 	public long getBalance (Color color)
 	{
-		// TODO Auto-generated method stub
+		synchronized ( utxo )
+		{
+			Long balance = colorBalances.get (color.getHash ());
+			if ( balance != null )
+			{
+				return balance.longValue () / color.getUnit ();
+			}
+		}
 		return 0;
 	}
 
 	@Override
-	public List<Color> getColors ()
+	public List<String> getColors ()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		List<String> cols = new ArrayList<String> ();
+		cols.addAll (colorBalances.keySet ());
+		return cols;
 	}
 
 	@Override
