@@ -784,6 +784,19 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
+	public KeyGenerator getKeyGenerator (ExtendedKey master, int nextKeySequence, int addressFlag, int p2shAddressFlag) throws BCSAPIException
+	{
+		try
+		{
+			return new DefaultKeyGenerator (master, nextKeySequence, addressFlag, p2shAddressFlag);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	@Override
 	public AccountManager createAccountManager (KeyGenerator generator)
 	{
 		DefaultAccountManager manager = new DefaultAccountManager ();

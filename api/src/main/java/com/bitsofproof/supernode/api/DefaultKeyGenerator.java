@@ -176,13 +176,19 @@ class DefaultKeyGenerator implements KeyGenerator
 	}
 
 	@Override
-	public Key getKey (int sequence) throws ValidationException
+	public ExtendedKey getExtendedKey (int sequence) throws ValidationException
 	{
 		if ( sequence > nextKey )
 		{
 			throw new ValidationException ("Sequence requested is higher than generated before");
 		}
-		return generateKey (master, sequence).getKey ();
+		return generateKey (master, sequence);
+	}
+
+	@Override
+	public Key getKey (int sequence) throws ValidationException
+	{
+		return getExtendedKey (sequence).getKey ();
 	}
 
 	@Override

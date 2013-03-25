@@ -13,6 +13,8 @@ public interface KeyGenerator
 
 	public void addListener (KeyGeneratorListener listener);
 
+	public ExtendedKey getExtendedKey (int sequence) throws ValidationException;
+
 	public Key getKey (int sequence) throws ValidationException;
 
 	public Key generateNextKey () throws ValidationException;
