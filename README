@@ -1,37 +1,47 @@
------BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA1
-
 INTRODUCTION
 
-Welcome to the Bitcoin supernode.
+Welcome to bits of proof zrt.'s implementation of the Bitcoin protocol.
 
-I created this implementation of Satoshi Nakamoto's Bitcoin protocol for a server.
-This implementation will scale and is configurable to perform selected tasks. 
+This is a modern, modular, enterprise implementation targeted to merchants 
+and system integrators.
+
+The Server process handles peer-to-peer communication, protocol validation
+and block chain store. The data store can be configured tu use a relational 
+database or LevelDB.
+
+The validation engine passes most important unit tests of the Satoshi 
+implementation and the block chain integration test cases of BitcoinJ 
+that are also used in pull testing of the Satoshi implementation.
+
+This implementation supports colored Bitcoins out-of-the-box enabling uses
+of the protocol that go beyond payments in Bitcoin enabled by the original
+implementation.
+
+Clients or extensions communicate with the server process through an 
+asynchrounous message bus. The bus is provided by a separate broker
+process. The messages are in protobuf format hence interoperable with 
+modules in other languages. A library is provided to implement wallets
+using deterministic and hiararchyical key generation (BIP32) and password
+encrypted private key storage (BIP38) as well as convinient account 
+manager that enables the assembly of multi wallet or multiple client
+environments. 
+
+STATUS
+
+This is beta quality software, it already passed lots of testing and
+run months in parallel with the network. Feature set is however still
+extending until version 1.0 that is targeted for the Bitcoin 2013
+Conference in San Jose.
+
+SUPPORT
+
+bits of proof zrt. offers custom extensions and commercial support 
+for this implementation.
+
+CONTACT
+
+tamas@bitsofproof.com Tamas Blummer
 
 LICENCE
 
-Apache Licence, Version 2.0. See LICENSE file.
-
-AUTHOR
-
-Tamas Blummer tamas@bitsofproof.com
-
-DONATIONS
-
-I am sure this will enable great Bitcoin enterprises. Please honor my original 
-effort and support ongoing development by donating to:
-
-13xhxy21to93Lrb7d4ssZVaMnFtQVvRkSk
-
------BEGIN PGP SIGNATURE-----
-Version: GnuPG/MacGPG2 v2.0.19 (Darwin)
-Comment: GPGTools - http://gpgtools.org
-
-iQEcBAEBAgAGBQJQk1tDAAoJEPZykcUXcTkcp/MH/3Gi5g8DU3N/8rI7q8b6X6iY
-uQU2bs7DPWBZOcNRo1sQaNr7kEdkc0Tziy3KI04uQdcDaQRq0tB9JtrNn2/m3jLT
-ipHpLXJKYaVHZOnRr6E5m8DRvOe60KPExXHHwB4EgBe1OJxwWSulZDv+hNWPVPBV
-NtZUxgGoyjFjaw6NQLA6kc9rgvFYW1/fJMJ9zBqu771fma41Vx3lMSCQ2QBrmhV7
-27fI14goODzyk4Vz071stWaNMBTbAJ9DAPsLgKhbL3+TcPe18qrQqWgiY+n1Wl7m
-oCco8Xnk3lZTHwabuPZxv9fep6aEa640g/qA3OnWrLS6TDU8UC837svX6vAlDt0=
-=yyxr
------END PGP SIGNATURE-----
+Apache License, Version 2.0. See LICENSE file.

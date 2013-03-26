@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ * Copyright 2013 bits of proof zrt.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.bitsofproof.supernode.core.Discovery;
 
 public class FixedAddressDiscovery implements Discovery
 {

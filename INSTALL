@@ -1,12 +1,8 @@
 INSTALL
-1. Clone and install bitsofproof supernode-api as bitsofproof supernode has compile and runtime dependencies on that module. 
-2. Follow the INSTALL instructions of the supernode-api
-
-COMPILE
-mvn package
+https://github.com/bitsofproof/supernode/wiki/Build
 
 DEMO RUN
-java -jar target/supernode-0.7-SNAPSHOT.jar testnet3 memdb
+java -jar target/supernode-0.8-SNAPSHOT.jar testnet3 memdb
 
 ADVANCED USE
 https://github.com/bitsofproof/supernode/wiki

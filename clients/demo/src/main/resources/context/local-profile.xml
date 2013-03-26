@@ -9,9 +9,6 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
 
-	<description>supernode spring assembly (c) 2013 Tamas Blummer
-		tamas@bitsofproof.com</description>
-
 	<bean id="stomp" class="org.fusesource.stomp.jms.StompJmsConnectionFactory">
 	    <property name="username" value="demo"/>
 	    <property name="password" value="password"/>

@@ -10,6 +10,7 @@
 	<url>https://github.com/bitsofproof/supernode</url>
 
 	<organization>
+	    <name>bits of proof zrt.</name>
 		<url>bitsofproof.com</url>
 	</organization>
 
@@ -20,7 +21,7 @@
 		</license>
 	</licenses>
 
-	<inceptionYear>2012</inceptionYear>
+	<inceptionYear>2013</inceptionYear>
 
 	<developers>
 		<developer>
