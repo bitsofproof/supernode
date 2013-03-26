@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ * Copyright 2013 bits of proof zrt.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ public class Main
 
 	public static void main (String[] args) throws Exception
 	{
-		log.info ("bitsofproof supernode (c) 2012-2013 Tamas Blummer tamas@bitsofproof.com");
+		log.info ("bitsofproof supernode (c) 2013 bits of proof zrt.");
 		log.trace ("Spring context setup");
 
 		if ( args.length == 0 )

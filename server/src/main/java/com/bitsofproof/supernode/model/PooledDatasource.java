@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Tamas Blummer tamas@bitsofproof.com
+ * Copyright 2013 bits of proof zrt.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -173,8 +173,9 @@ public class PooledDatasource implements DataSource
 		throw new SQLException ("not implemented");
 	}
 
-	public java.util.logging.Logger getParentLogger () throws SQLFeatureNotSupportedException {
-		return java.util.logging.Logger.getLogger(java.util.logging.Logger.GLOBAL_LOGGER_NAME);
+	public java.util.logging.Logger getParentLogger () throws SQLFeatureNotSupportedException
+	{
+		return java.util.logging.Logger.getLogger (java.util.logging.Logger.GLOBAL_LOGGER_NAME);
 	}
 
 }
