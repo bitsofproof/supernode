@@ -17,8 +17,10 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -523,13 +525,19 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
+	private static final Map<String, ArrayList<MockConsumer>> consumer = new HashMap<String, ArrayList<MockConsumer>> ();
+
 	private static class MockProducer implements MessageProducer
 	{
-		private final LinkedBlockingQueue<Message> queue;
+		private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
 
-		public MockProducer (LinkedBlockingQueue<Message> queue)
+		private final LinkedBlockingQueue<Message> queue;
+		private final String name;
+
+		public MockProducer (String name, LinkedBlockingQueue<Message> queue)
 		{
 			this.queue = queue;
+			this.name = name;
 		}
 
 		@Override
@@ -601,64 +609,68 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void send (Message message) throws JMSException
 		{
-			queue.add (message);
+			List<MockConsumer> cl = consumer.get (name);
+			if ( cl != null )
+			{
+				for ( MockConsumer c : cl )
+				{
+					queue.add (message);
+					consumerExecutor.execute (c);
+				}
+			}
 		}
 
 		@Override
 		public void send (Message message, int deliveryMode, int priority, long timeToLive) throws JMSException
 		{
-			queue.add (message);
+			List<MockConsumer> cl = consumer.get (name);
+			if ( cl != null )
+			{
+				for ( MockConsumer c : cl )
+				{
+					queue.add (message);
+					consumerExecutor.execute (c);
+				}
+			}
 		}
 
 		@Override
 		public void send (Destination destination, Message message) throws JMSException
 		{
-			queue.add (message);
+			List<MockConsumer> cl = consumer.get (name);
+			if ( cl != null )
+			{
+				for ( MockConsumer c : cl )
+				{
+					queue.add (message);
+					consumerExecutor.execute (c);
+				}
+			}
 		}
 
 		@Override
 		public void send (Destination destination, Message message, int deliveryMode, int priority, long timeToLive) throws JMSException
 		{
-			queue.add (message);
+			List<MockConsumer> cl = consumer.get (name);
+			if ( cl != null )
+			{
+				for ( MockConsumer c : cl )
+				{
+					queue.add (message);
+					consumerExecutor.execute (c);
+				}
+			}
 		}
 	}
 
-	private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
-
-	private static class MockConsumer implements MessageConsumer
+	private static class MockConsumer implements MessageConsumer, Runnable
 	{
 		private final LinkedBlockingQueue<Message> queue;
 		private MessageListener listener = null;
 
-		public MockConsumer (LinkedBlockingQueue<Message> queue, final boolean temp)
+		public MockConsumer (LinkedBlockingQueue<Message> queue)
 		{
 			this.queue = queue;
-
-			consumerExecutor.execute (new Runnable ()
-			{
-				@Override
-				public void run ()
-				{
-					Message m = null;
-					try
-					{
-						if ( (m = receive (1)) != null )
-						{
-							if ( listener != null )
-							{
-								listener.onMessage (m);
-							}
-						}
-						if ( !temp || (temp && m == null) )
-						{
-							consumerExecutor.execute (this);
-						}
-					}
-					catch ( JMSException e )
-					{
-					}
-				}
-			});
 		}
 
 		@Override
@@ -714,6 +726,20 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void close () throws JMSException
 		{
+		}
+
+		@Override
+		public void run ()
+		{
+			Message m;
+			try
+			{
+				m = queue.take ();
+				listener.onMessage (m);
+			}
+			catch ( InterruptedException e )
+			{
+			}
 		}
 	}
 
@@ -840,14 +866,13 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				list = new LinkedBlockingQueue<Message> ();
 				queue.put (name, list);
 			}
-			return new MockProducer (list);
+			return new MockProducer (name, list);
 		}
 
 		@Override
 		public MessageConsumer createConsumer (Destination destination) throws JMSException
 		{
 			String name = null;
-			boolean temp = false;
 			if ( destination instanceof MockTopic )
 			{
 				name = ((MockTopic) destination).getTopicName ();
@@ -859,7 +884,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			if ( destination instanceof MockTemporaryQueue )
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
-				temp = true;
 			}
 			LinkedBlockingQueue<Message> list = queue.get (name);
 			if ( list == null )
@@ -867,7 +891,15 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				list = new LinkedBlockingQueue<Message> ();
 				queue.put (name, list);
 			}
-			return new MockConsumer (list, temp);
+			MockConsumer c = new MockConsumer (list);
+			ArrayList<MockConsumer> cl = consumer.get (name);
+			if ( cl == null )
+			{
+				cl = new ArrayList<MockConsumer> ();
+				consumer.put (name, cl);
+			}
+			cl.add (c);
+			return c;
 		}
 
 		@Override
