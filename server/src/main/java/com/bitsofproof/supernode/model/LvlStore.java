@@ -515,7 +515,8 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 					sh.setPreviousHeight (h.getPreviousHeight ());
 				}
 				cachedHeads.put (h.getId (), sh);
-				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork () )
+				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork ()
+						|| (currentHead.getChainWork () == sh.getChainWork () && sh.getId () < currentHead.getId ()) )
 				{
 					currentHead = sh;
 				}
@@ -717,11 +718,8 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	@Override
 	protected void insertHead (Head head)
 	{
-		long id = rnd.nextLong ();
-		while ( id == 0L || readHead (id) != null )
-		{
-			id = rnd.nextLong ();
-		}
+		// unique and ensures order to find the head associated with UTXO in cacheHeads
+		long id = System.currentTimeMillis ();
 		head.setId (id);
 		writeHead (head);
 	}
