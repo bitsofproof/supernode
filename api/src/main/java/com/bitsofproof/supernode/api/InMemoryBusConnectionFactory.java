@@ -526,11 +526,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	}
 
 	private static final Map<String, ArrayList<MockConsumer>> consumer = new HashMap<String, ArrayList<MockConsumer>> ();
+	private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
 
 	private static class MockProducer implements MessageProducer
 	{
-		private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
-
 		private final LinkedBlockingQueue<Message> queue;
 		private final String name;
 
@@ -734,10 +733,16 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			Message m;
 			try
 			{
-				m = queue.take ();
-				listener.onMessage (m);
+				if ( (m = receive (10)) != null )
+				{
+					listener.onMessage (m);
+				}
+				else
+				{
+					consumerExecutor.execute (this);
+				}
 			}
-			catch ( InterruptedException e )
+			catch ( JMSException e )
 			{
 			}
 		}
