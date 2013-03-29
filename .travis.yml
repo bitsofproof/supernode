@@ -2,3 +2,6 @@ language: java
 
 before_install:
   - sudo apt-get install protobuf-compiler
+
+jdk:
+  - openjdk6
