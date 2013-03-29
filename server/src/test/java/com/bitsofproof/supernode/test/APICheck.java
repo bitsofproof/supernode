@@ -58,7 +58,7 @@ import com.bitsofproof.supernode.core.Difficulty;
 
 @RunWith (SpringJUnit4ClassRunner.class)
 @ContextConfiguration (locations = { "/context/store1.xml", "/context/EmbeddedBCSAPI.xml" })
-public class APITest
+public class APICheck
 {
 	@Autowired
 	BlockStore store;
