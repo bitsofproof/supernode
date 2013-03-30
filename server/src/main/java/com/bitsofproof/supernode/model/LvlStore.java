@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -848,7 +849,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public List<KnownPeer> getConnectablePeers ()
+	public Collection<KnownPeer> getConnectablePeers ()
 	{
 		final List<KnownPeer> peers = new ArrayList<KnownPeer> ();
 		forAll (KeyType.TX, new DataProcessor ()

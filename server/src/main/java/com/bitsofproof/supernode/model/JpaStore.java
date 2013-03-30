@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.model;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -354,7 +355,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 
 	@Override
 	@Transactional (propagation = Propagation.REQUIRED)
-	public List<KnownPeer> getConnectablePeers ()
+	public Collection<KnownPeer> getConnectablePeers ()
 	{
 		QKnownPeer kp = QKnownPeer.knownPeer;
 		JPAQuery q = new JPAQuery (entityManager);

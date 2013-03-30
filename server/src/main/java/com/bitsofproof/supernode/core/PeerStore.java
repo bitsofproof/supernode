@@ -16,14 +16,14 @@
 package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
-import java.util.List;
+import java.util.Collection;
 
 import com.bitsofproof.supernode.model.KnownPeer;
 
 public interface PeerStore
 {
 
-	public List<KnownPeer> getConnectablePeers ();
+	public Collection<KnownPeer> getConnectablePeers ();
 
 	public void store (KnownPeer peer);
 
