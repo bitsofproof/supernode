@@ -43,7 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
@@ -128,17 +127,13 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	protected void startBatch ()
-	{
-	};
+	protected abstract void clearStore ();
 
-	protected void endBatch ()
-	{
-	};
+	protected abstract void startBatch ();
 
-	protected void cancelBatch ()
-	{
-	};
+	protected abstract void endBatch ();
+
+	protected abstract void cancelBatch ();
 
 	protected abstract void cacheChain ();
 
@@ -963,7 +958,7 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean colorPreserving = true;
 			for ( TxOut o : t.getOutputs () )
 			{
-				parseOwners (o, chain);
+				o.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
 				o.setBlockTime (b.getCreateTime ());
@@ -1405,74 +1400,6 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private static void parseOwners (TxOut out, Chain chain)
-	{
-		List<ScriptFormat.Token> parsed;
-		try
-		{
-			parsed = ScriptFormat.parse (out.getScript ());
-			if ( parsed.size () == 2 && parsed.get (0).data != null && parsed.get (1).op == ScriptFormat.Opcode.OP_CHECKSIG )
-			{
-				// pay to key
-				out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (0).data), chain.getAddressFlag ()));
-				out.setVotes (1L);
-			}
-			else if ( parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
-					&& parsed.get (2).data != null && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
-					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG )
-			{
-				// pay to address
-				out.setOwner1 (AddressConverter.toSatoshiStyle (parsed.get (2).data, chain.getAddressFlag ()));
-				out.setVotes (1L);
-			}
-			else if ( parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && parsed.get (1).data != null
-					&& parsed.get (1).data.length == 20 && parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL )
-			{
-				byte[] hash = parsed.get (1).data;
-				if ( hash.length == 20 )
-				{
-					// BIP 0013
-					out.setOwner1 (AddressConverter.toSatoshiStyle (hash, chain.getP2SHAddressFlag ()));
-					out.setVotes (1L);
-				}
-			}
-			else
-			{
-				for ( int i = 0; i < parsed.size (); ++i )
-				{
-					if ( parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIG || parsed.get (i).op == ScriptFormat.Opcode.OP_CHECKMULTISIGVERIFY )
-					{
-						if ( chain.isProduction () )
-						{
-							int nkeys = parsed.get (i - 1).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1;
-							for ( int j = 0; j < nkeys; ++j )
-							{
-								if ( j == 0 )
-								{
-									out.setOwner1 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
-								}
-								if ( j == 1 )
-								{
-									out.setOwner2 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
-								}
-								if ( j == 2 )
-								{
-									out.setOwner3 (AddressConverter.toSatoshiStyle (Hash.keyHash (parsed.get (i - j - 2).data), chain.getAddressFlag ()));
-								}
-							}
-							out.setVotes ((long) parsed.get (i - nkeys - 2).op.ordinal () - ScriptFormat.Opcode.OP_1.ordinal () + 1);
-							return;
-						}
-					}
-				}
-			}
-		}
-		catch ( Exception e )
-		{
-			// parsing owner is a nice to have
-		}
-	}
-
 	@Override
 	public String getHeadHash ()
 	{
@@ -1493,11 +1420,13 @@ public abstract class CachedBlockStore implements BlockStore
 	public void resetStore (Chain chain) throws TransactionValidationException
 	{
 		log.info ("Reset block store");
+		clearStore ();
+
 		this.chain = chain;
 
 		Blk genesis = chain.getGenesis ();
 		TxOut out = genesis.getTransactions ().get (0).getOutputs ().get (0);
-		parseOwners (out, chain);
+		out.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);
@@ -1571,7 +1500,7 @@ public abstract class CachedBlockStore implements BlockStore
 			validateTransaction (tcontext, t);
 			for ( TxOut o : t.getOutputs () )
 			{
-				parseOwners (o, chain);
+				o.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
 			}
 
 			return relay;

@@ -56,6 +56,26 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	private PlatformTransactionManager transactionManager;
 
 	@Override
+	protected void clearStore ()
+	{
+	}
+
+	@Override
+	protected void startBatch ()
+	{
+	}
+
+	@Override
+	protected void endBatch ()
+	{
+	}
+
+	@Override
+	protected void cancelBatch ()
+	{
+	}
+
+	@Override
 	protected void cacheUTXO (int lookback, TxOutCache cache)
 	{
 		long after = Math.max (currentHead.getHeight () - lookback, 0L);

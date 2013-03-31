@@ -260,7 +260,14 @@ public class TransactionOutput implements Serializable, Cloneable
 		}
 		if ( po.hasVotes () )
 		{
-			output.setAddresses (po.getAddressList ());
+			output.addresses = new ArrayList<String> ();
+			for ( String s : po.getAddressList () )
+			{
+				if ( s.length () > 0 )
+				{
+					output.addresses.add (s);
+				}
+			}
 			output.setVotes (po.getVotes ());
 		}
 		if ( po.hasColor () )

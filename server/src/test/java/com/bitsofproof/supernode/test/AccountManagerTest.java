@@ -52,7 +52,7 @@ import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
 
 @RunWith (SpringJUnit4ClassRunner.class)
-@ContextConfiguration (locations = { "/context/store2.xml", "/context/EmbeddedBCSAPI.xml" })
+@ContextConfiguration (locations = { "/context/memory-store.xml", "/context/EmbeddedBCSAPI.xml" })
 public class AccountManagerTest
 {
 	@Autowired
@@ -84,6 +84,13 @@ public class AccountManagerTest
 		byte[] chainCode = new byte[32];
 		new SecureRandom ().nextBytes (chainCode);
 		wallet = api.createKeyGenerator (0x0, 0x05);
+	}
+
+	@Test
+	public void checkGenesis () throws BCSAPIException
+	{
+		String genesisHash = chain.getGenesis ().getHash ();
+		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
 	}
 
 	@Test
