@@ -87,13 +87,6 @@ public class AccountManagerTest
 	}
 
 	@Test
-	public void checkGenesis () throws BCSAPIException
-	{
-		String genesisHash = chain.getGenesis ().getHash ();
-		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
-	}
-
-	@Test
 	public void send11Blocks () throws ValidationException, BCSAPIException, InterruptedException
 	{
 		final Semaphore hasBlock = new Semaphore (0);
@@ -102,6 +95,7 @@ public class AccountManagerTest
 			@Override
 			public void trunkUpdate (List<Block> removed, List<Block> added)
 			{
+				System.out.println ("added " + added.get (0).getHash ());
 				hasBlock.release ();
 			}
 		};

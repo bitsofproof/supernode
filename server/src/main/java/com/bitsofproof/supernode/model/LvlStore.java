@@ -56,6 +56,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	protected void clearStore ()
 	{
 		store.clearStore ();
+		currentHead = null;
 	}
 
 	private void writeAtx (String address, String hash)

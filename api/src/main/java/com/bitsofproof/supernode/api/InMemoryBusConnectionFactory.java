@@ -527,15 +527,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private static final Map<String, ArrayList<MockConsumer>> consumer = new HashMap<String, ArrayList<MockConsumer>> ();
 	private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
+	private static final Map<String, MockProducer> producer = new HashMap<String, MockProducer> ();
 
 	private static class MockProducer implements MessageProducer
 	{
-		private final LinkedBlockingQueue<Message> queue;
 		private final String name;
 
-		public MockProducer (String name, LinkedBlockingQueue<Message> queue)
+		public MockProducer (String name)
 		{
-			this.queue = queue;
 			this.name = name;
 		}
 
@@ -613,7 +612,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				for ( MockConsumer c : cl )
 				{
-					queue.add (message);
+					c.getQueue ().add (message);
 					consumerExecutor.execute (c);
 				}
 			}
@@ -627,7 +626,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				for ( MockConsumer c : cl )
 				{
-					queue.add (message);
+					c.getQueue ().add (message);
 					consumerExecutor.execute (c);
 				}
 			}
@@ -641,7 +640,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				for ( MockConsumer c : cl )
 				{
-					queue.add (message);
+					c.getQueue ().add (message);
 					consumerExecutor.execute (c);
 				}
 			}
@@ -655,7 +654,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				for ( MockConsumer c : cl )
 				{
-					queue.add (message);
+					c.getQueue ().add (message);
 					consumerExecutor.execute (c);
 				}
 			}
@@ -664,12 +663,12 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private static class MockConsumer implements MessageConsumer, Runnable
 	{
-		private final LinkedBlockingQueue<Message> queue;
+		private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<Message> ();
 		private MessageListener listener = null;
 
-		public MockConsumer (LinkedBlockingQueue<Message> queue)
+		public LinkedBlockingQueue<Message> getQueue ()
 		{
-			this.queue = queue;
+			return queue;
 		}
 
 		@Override
@@ -743,8 +742,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private static class MockSession implements Session
 	{
-		Map<String, LinkedBlockingQueue<Message>> queue = new HashMap<String, LinkedBlockingQueue<Message>> ();
-
 		@Override
 		public BytesMessage createBytesMessage () throws JMSException
 		{
@@ -858,13 +855,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
 
-			LinkedBlockingQueue<Message> list = queue.get (name);
-			if ( list == null )
+			if ( producer.containsKey (name) )
 			{
-				list = new LinkedBlockingQueue<Message> ();
-				queue.put (name, list);
+				return producer.get (name);
 			}
-			return new MockProducer (name, list);
+
+			MockProducer p = new MockProducer (name);
+			producer.put (name, p);
+			return p;
 		}
 
 		@Override
@@ -883,13 +881,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
-			LinkedBlockingQueue<Message> list = queue.get (name);
-			if ( list == null )
-			{
-				list = new LinkedBlockingQueue<Message> ();
-				queue.put (name, list);
-			}
-			MockConsumer c = new MockConsumer (list);
+			MockConsumer c = new MockConsumer ();
 			ArrayList<MockConsumer> cl = consumer.get (name);
 			if ( cl == null )
 			{
