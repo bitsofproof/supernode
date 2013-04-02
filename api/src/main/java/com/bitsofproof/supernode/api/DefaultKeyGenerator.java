@@ -54,7 +54,7 @@ class DefaultKeyGenerator implements KeyGenerator
 	/**
 	 * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032
 	 */
-	public static ExtendedKey generateKey (ExtendedKey parent, int sequence) throws ValidationException
+	private static ExtendedKey generateKey (ExtendedKey parent, int sequence) throws ValidationException
 	{
 		try
 		{

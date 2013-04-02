@@ -43,11 +43,15 @@ public class KeyGeneratorTest
 		random.nextBytes (chainCode);
 		ExtendedKey ekprivate = new ExtendedKey (master, chainCode);
 		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (master.getPublic (), master.isCompressed ()), chainCode);
+
+		KeyGenerator privateGenerator = new DefaultKeyGenerator (ekprivate, 0, 0x00, 0x05);
+		KeyGenerator publicGenerator = new DefaultKeyGenerator (ekpublic, 0, 0x00, 0x05);
+
 		for ( int i = 0; i < 10; ++i )
 		{
-			ExtendedKey k1 = DefaultKeyGenerator.generateKey (ekprivate, i);
-			ExtendedKey k2 = DefaultKeyGenerator.generateKey (ekpublic, i);
-			assertTrue (Arrays.equals (k1.getKey ().getPublic (), k2.getKey ().getPublic ()));
+			Key k1 = privateGenerator.generateNextKey ();
+			Key k2 = publicGenerator.generateNextKey ();
+			assertTrue (Arrays.equals (k1.getPublic (), k2.getPublic ()));
 		}
 	}
 }
