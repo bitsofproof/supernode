@@ -84,7 +84,7 @@ class DefaultKeyGenerator implements KeyGenerator
 				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
 
-				return new ExtendedKey (new ECPublicKey (pub, parent.getKey ().isCompressed ()), r);
+				return new ExtendedKey (new ECPublicKey (pub, true), r);
 			}
 		}
 		catch ( NoSuchAlgorithmException e )
