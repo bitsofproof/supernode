@@ -180,6 +180,14 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
+	protected void updateColor (TxOut root, String fungibleName)
+	{
+		Tx t = readTx (root.getTxHash ());
+		t.getOutputs ().get (0).setColor (fungibleName);
+		store.put (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
+	}
+
+	@Override
 	public Tx getTransaction (String hash)
 	{
 		Tx t = readTx (hash);

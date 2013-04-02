@@ -178,7 +178,7 @@ public class StoredColor implements Serializable
 
 	public boolean verify ()
 	{
-		if ( !new Hash (hashFungibleName ()).equals (fungibleName) )
+		if ( !Hash.hash (hashFungibleName ()).equals (fungibleName) )
 		{
 			return false;
 		}

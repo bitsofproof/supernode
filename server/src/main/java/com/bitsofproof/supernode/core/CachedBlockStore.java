@@ -169,6 +169,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract List<TxIn> getSpendList (List<String> addresses, long after);
 
+	protected abstract void updateColor (TxOut root, String fungibleName);
+
 	@Override
 	public void addTrunkListener (TrunkListener listener)
 	{
@@ -1537,12 +1539,16 @@ public abstract class CachedBlockStore implements BlockStore
 							throw new ValidationException ("Unknown transaction for new color");
 						}
 						TxOut out = tx.getOutputs ().get (0);
+						if ( !out.isAvailable () )
+						{
+							throw new ValidationException ("The color genesis was already spent.");
+						}
 						if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
 						{
 							throw new ValidationException ("Color output should pay to address");
 						}
 						List<Token> tokens = ScriptFormat.parse (out.getScript ());
-						if ( !Arrays.equals (tokens.get (2).data, color.getPubkey ()) )
+						if ( !Arrays.equals (tokens.get (2).data, Hash.keyHash (color.getPubkey ())) )
 						{
 							throw new ValidationException ("Color key does not match output address");
 						}
@@ -1554,6 +1560,8 @@ public abstract class CachedBlockStore implements BlockStore
 						{
 							throw new ValidationException ("Color is not valid");
 						}
+
+						updateColor (out, color.getFungibleName ());
 
 						endBatch ();
 					}

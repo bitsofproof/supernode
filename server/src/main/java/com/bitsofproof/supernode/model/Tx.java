@@ -173,6 +173,7 @@ public class Tx implements Serializable
 			o.setAvailable (reader.readByte () != 0);
 			o.setTxHash (reader.readHash ().toString ());
 			o.setHeight (reader.readUint32 ());
+			o.setColor (reader.readString ());
 			t.getOutputs ().add (o);
 		}
 		return t;
@@ -212,6 +213,7 @@ public class Tx implements Serializable
 			writer.writeByte (o.isAvailable () ? 1 : 0);
 			writer.writeHash (new Hash (o.getTxHash ()));
 			writer.writeUint32 (o.getHeight ());
+			writer.writeString (o.getColor ());
 		}
 		return writer.toByteArray ();
 	}

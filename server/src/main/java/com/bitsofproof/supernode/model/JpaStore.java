@@ -465,4 +465,11 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 		JPAQuery q = new JPAQuery (entityManager);
 		return q.from (sc).where (sc.txHash.eq (hash)).uniqueResult (sc);
 	}
+
+	@Override
+	@Transactional (propagation = Propagation.MANDATORY)
+	protected void updateColor (TxOut root, String fungibleName)
+	{
+		root.setColor (fungibleName);
+	}
 }

@@ -48,7 +48,7 @@ public class Color
 		color.setTerms (po.getTerms ());
 		color.setUnit (po.getUnit ());
 		color.setExpiryHeight (po.getExpiryHeight ());
-		color.setSignature (po.getPubkey ().toByteArray ());
+		color.setPubkey (po.getPubkey ().toByteArray ());
 		color.setSignature (po.getSignature ().toByteArray ());
 		return color;
 	}
