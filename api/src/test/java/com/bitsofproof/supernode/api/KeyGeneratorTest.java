@@ -47,11 +47,85 @@ public class KeyGeneratorTest
 		KeyGenerator privateGenerator = new DefaultKeyGenerator (ekprivate, 0, 0x00, 0x05);
 		KeyGenerator publicGenerator = new DefaultKeyGenerator (ekpublic, 0, 0x00, 0x05);
 
-		for ( int i = 0; i < 10; ++i )
+		for ( int i = 0; i < 20; ++i )
 		{
-			Key k1 = privateGenerator.generateNextKey ();
-			Key k2 = publicGenerator.generateNextKey ();
-			assertTrue (Arrays.equals (k1.getPublic (), k2.getPublic ()));
+			Key fullControl = privateGenerator.generateNextKey ();
+			Key readOnly = publicGenerator.generateNextKey ();
+
+			assertTrue (Arrays.equals (fullControl.getPublic (), readOnly.getPublic ()));
+			assertTrue (Arrays.equals (fullControl.getAddress (), readOnly.getAddress ()));
+
+			byte[] toSign = new byte[100];
+			random.nextBytes (toSign);
+			byte[] signature = fullControl.sign (toSign);
+
+			assertTrue (readOnly.verify (toSign, signature));
 		}
 	}
+
+	@SuppressWarnings ("unused")
+	@Test
+	public void testKeyHierarhcy () throws ValidationException
+	{
+		KeyGenerator wallet = DefaultKeyGenerator.createKeyGenerator (0x0, 0x05);
+		ExtendedKey master = wallet.getMaster ();
+		KeyGenerator account1 = wallet.createSubKeyGenerator (0);
+		KeyGenerator account2 = wallet.createSubKeyGenerator (1);
+		Key address10 = account1.generateNextKey ();
+		Key address11 = account1.generateNextKey ();
+		Key address12 = account1.generateNextKey ();
+		assertTrue (account1.getNextKeySequence () == 3);
+		Key address20 = account2.generateNextKey ();
+		Key address21 = account2.generateNextKey ();
+		Key address22 = account2.generateNextKey ();
+		assertTrue (account2.getNextKeySequence () == 3);
+		KeyGenerator account21 = account2.createSubKeyGenerator (1);
+		Key address210 = account21.generateNextKey ();
+		Key address211 = account21.generateNextKey ();
+		Key address212 = account21.generateNextKey ();
+		assertTrue (account21.getNextKeySequence () == 3);
+
+		assertTrue (account21.getAddresses ().size () == 3);
+		assertTrue (account2.getAddresses ().size () == 6);
+		assertTrue (wallet.getAddresses ().size () == 11);
+
+		assertTrue (Arrays.equals (account21.getMaster ().getKey ().getPublic (), account2.getKey (1).getPublic ()));
+	}
+
+	@Test
+	public void testReadOnlyWallet () throws ValidationException
+	{
+		KeyGenerator fullControlWallet = DefaultKeyGenerator.createKeyGenerator (0x0, 0x05);
+
+		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().isCompressed ());
+		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
+
+		KeyGenerator readOnlyWallet = new DefaultKeyGenerator (new ExtendedKey (pub, chainCode), 0, 0x0, 0x05);
+
+		KeyGenerator account1 = readOnlyWallet.createSubKeyGenerator (0);
+		KeyGenerator fullAccount1 = fullControlWallet.createSubKeyGenerator (0);
+		Key address10 = account1.generateNextKey ();
+		Key fullAddress10 = fullAccount1.generateNextKey ();
+
+		assertTrue (Arrays.equals (address10.getPublic (), fullAddress10.getPublic ()));
+
+		KeyGenerator account2 = readOnlyWallet.createSubKeyGenerator (1);
+		KeyGenerator fullAccount2 = fullControlWallet.createSubKeyGenerator (1);
+		byte[] a1 = account2.generateNextKey ().getAddress ();
+		byte[] a2 = account2.generateNextKey ().getAddress ();
+		byte[] a3 = account2.generateNextKey ().getAddress ();
+
+		assertTrue (Arrays.equals (fullAccount2.generateNextKey ().getAddress (), a1));
+		assertTrue (Arrays.equals (fullAccount2.generateNextKey ().getAddress (), a2));
+		assertTrue (Arrays.equals (fullAccount2.generateNextKey ().getAddress (), a3));
+
+		KeyGenerator subWallet = account2.createSubKeyGenerator (1);
+		KeyGenerator subFullWallet = fullAccount2.createSubKeyGenerator (1);
+		Key a11 = subWallet.generateNextKey ();
+		Key fa11 = subFullWallet.generateNextKey ();
+
+		assertTrue (Arrays.equals (a11.getPublic (), fa11.getPublic ()));
+
+	}
+
 }

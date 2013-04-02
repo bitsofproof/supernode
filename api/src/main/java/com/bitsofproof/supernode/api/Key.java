@@ -28,4 +28,6 @@ public interface Key extends Cloneable
 	public Key clone () throws CloneNotSupportedException;
 
 	public byte[] sign (byte[] data) throws ValidationException;
+
+	public boolean verify (byte[] data, byte[] signature);
 }

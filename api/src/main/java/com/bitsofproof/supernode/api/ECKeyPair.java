@@ -180,6 +180,11 @@ public class ECKeyPair implements Key
 		return null;
 	}
 
+	public boolean verify (byte[] hash, byte[] signature)
+	{
+		return verify (hash, signature, pub);
+	}
+
 	public static boolean verify (byte[] hash, byte[] signature, byte[] pub)
 	{
 		ASN1InputStream asn1 = new ASN1InputStream (signature);

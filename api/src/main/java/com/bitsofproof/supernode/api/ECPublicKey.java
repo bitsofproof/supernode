@@ -71,4 +71,10 @@ public class ECPublicKey implements Key
 		throw new ValidationException ("Can not sign with public key");
 	}
 
+	@Override
+	public boolean verify (byte[] hash, byte[] signature)
+	{
+		return ECKeyPair.verify (hash, signature, pub);
+	}
+
 }
