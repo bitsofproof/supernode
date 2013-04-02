@@ -97,7 +97,7 @@ public class KeyGeneratorTest
 	{
 		KeyGenerator fullControlWallet = DefaultKeyGenerator.createKeyGenerator (0x0, 0x05);
 
-		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), fullControlWallet.getMaster ().getKey ().isCompressed ());
+		ECPublicKey pub = new ECPublicKey (fullControlWallet.getMaster ().getKey ().getPublic (), true);
 		byte[] chainCode = fullControlWallet.getMaster ().getChainCode ();
 
 		KeyGenerator readOnlyWallet = new DefaultKeyGenerator (new ExtendedKey (pub, chainCode), 0, 0x0, 0x05);
