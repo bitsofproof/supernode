@@ -283,6 +283,9 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+		api.removeTransactionListener (validationListener);
+		api.removeFilteredListener (receiverAddresses, addressListener);
+		api.removeFilteredListener (spendingTxs, outputListener);
 
 		as = api.getAccountStatement (sourceAddresses, 0);
 		assertTrue (as.getOpening ().size () == 10);
