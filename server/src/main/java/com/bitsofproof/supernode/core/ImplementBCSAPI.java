@@ -478,10 +478,17 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					public Transaction doInTransaction (TransactionStatus status)
 					{
 						status.setRollbackOnly ();
-						Tx t = store.getTransaction (hash);
-						if ( t != null )
+						Tx t;
+						try
 						{
-							return toBCSAPITransaction (t);
+							t = store.getTransaction (hash);
+							if ( t != null )
+							{
+								return toBCSAPITransaction (t);
+							}
+						}
+						catch ( ValidationException e )
+						{
 						}
 						return null;
 					}
@@ -515,10 +522,17 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						h = store.getHeadHash ();
 					}
-					Blk b = store.getBlock (h);
-					if ( b != null )
+					Blk b;
+					try
 					{
-						b.toWire (writer);
+						b = store.getBlock (h);
+						if ( b != null )
+						{
+							b.toWire (writer);
+						}
+					}
+					catch ( ValidationException e )
+					{
 					}
 				}
 			});
@@ -697,118 +711,125 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					List<TransactionOutput> balances = new ArrayList<TransactionOutput> ();
 					statement.setOpening (balances);
 
-					Blk trunk = store.getBlock (store.getHeadHash ());
-					statement.setTimestamp (trunk.getCreateTime ());
-					statement.setLastBlock (store.getHeadHash ());
-					if ( !addresses.isEmpty () )
+					Blk trunk;
+					try
 					{
-						HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
-						for ( TxOut o : store.getUnspentOutput (addresses) )
+						trunk = store.getBlock (store.getHeadHash ());
+						statement.setTimestamp (trunk.getCreateTime ());
+						statement.setLastBlock (store.getHeadHash ());
+						if ( !addresses.isEmpty () )
 						{
-							HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-							if ( outs == null )
+							HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
+							for ( TxOut o : store.getUnspentOutput (addresses) )
 							{
-								outs = new HashMap<Long, TxOut> ();
-								utxo.put (o.getTxHash (), outs);
-								openTX.add (o.getTxHash ());
-							}
-							outs.put (o.getIx (), o);
-						}
-
-						List<Posting> postings = new ArrayList<Posting> ();
-						statement.setPosting (postings);
-						if ( from > 0 )
-						{
-							for ( TxIn spent : store.getSpent (addresses, from) )
-							{
-								Posting p = new Posting ();
-								postings.add (p);
-
-								p.setTimestamp (spent.getBlockTime ());
-								if ( spent.getTransaction ().getBlockHash () != null )
-								{
-									p.setBlock (spent.getTransaction ().getBlockHash ());
-								}
-								else
-								{
-									p.setBlock (spent.getTransaction ().getBlock ().getHash ());
-								}
-
-								TxOut o = spent.getSource ();
 								HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
 								if ( outs == null )
 								{
 									outs = new HashMap<Long, TxOut> ();
 									utxo.put (o.getTxHash (), outs);
-									openTX.remove (o.getTxHash ());
+									openTX.add (o.getTxHash ());
 								}
 								outs.put (o.getIx (), o);
-
-								TransactionOutput out = toBCSAPITransactionOutput (o);
-								p.setOutput (out);
-								p.setSpent (spent.getTransaction ().getHash ());
 							}
 
-							for ( TxOut o : store.getReceived (addresses, from) )
+							List<Posting> postings = new ArrayList<Posting> ();
+							statement.setPosting (postings);
+							if ( from > 0 )
 							{
-								Posting p = new Posting ();
-								postings.add (p);
+								for ( TxIn spent : store.getSpent (addresses, from) )
+								{
+									Posting p = new Posting ();
+									postings.add (p);
 
-								p.setTimestamp (o.getBlockTime ());
-								if ( o.getTransaction ().getBlockHash () != null )
-								{
-									p.setBlock (o.getTransaction ().getBlockHash ());
-								}
-								else
-								{
-									p.setBlock (o.getTransaction ().getBlock ().getHash ());
-								}
-								HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-								if ( outs != null )
-								{
-									outs.remove (o.getIx ());
-									if ( outs.size () == 0 )
+									p.setTimestamp (spent.getBlockTime ());
+									if ( spent.getTransaction ().getBlockHash () != null )
 									{
-										utxo.remove (o.getTxHash ());
-										openTX.add (o.getTxHash ());
+										p.setBlock (spent.getTransaction ().getBlockHash ());
+									}
+									else
+									{
+										p.setBlock (spent.getTransaction ().getBlock ().getHash ());
+									}
+
+									TxOut o = spent.getSource ();
+									HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+									if ( outs == null )
+									{
+										outs = new HashMap<Long, TxOut> ();
+										utxo.put (o.getTxHash (), outs);
+										openTX.remove (o.getTxHash ());
+									}
+									outs.put (o.getIx (), o);
+
+									TransactionOutput out = toBCSAPITransactionOutput (o);
+									p.setOutput (out);
+									p.setSpent (spent.getTransaction ().getHash ());
+								}
+
+								for ( TxOut o : store.getReceived (addresses, from) )
+								{
+									Posting p = new Posting ();
+									postings.add (p);
+
+									p.setTimestamp (o.getBlockTime ());
+									if ( o.getTransaction ().getBlockHash () != null )
+									{
+										p.setBlock (o.getTransaction ().getBlockHash ());
+									}
+									else
+									{
+										p.setBlock (o.getTransaction ().getBlock ().getHash ());
+									}
+									HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
+									if ( outs != null )
+									{
+										outs.remove (o.getIx ());
+										if ( outs.size () == 0 )
+										{
+											utxo.remove (o.getTxHash ());
+											openTX.add (o.getTxHash ());
+										}
+									}
+
+									TransactionOutput out = toBCSAPITransactionOutput (o);
+									p.setOutput (out);
+								}
+							}
+							for ( HashMap<Long, TxOut> outs : utxo.values () )
+							{
+								for ( TxOut o : outs.values () )
+								{
+									TransactionOutput out = toBCSAPITransactionOutput (o);
+									balances.add (out);
+								}
+							}
+							Collections.sort (postings, new Comparator<Posting> ()
+							{
+								@Override
+								public int compare (Posting arg0, Posting arg1)
+								{
+									if ( arg0.getTimestamp () != arg1.getTimestamp () )
+									{
+										return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
+									}
+									else
+									{
+										if ( arg0.getSpent () == null && arg1.getSpent () != null )
+										{
+											return -1;
+										}
+										if ( arg0.getSpent () != null && arg1.getSpent () == null )
+										{
+											return 1;
+										}
+										return 0;
 									}
 								}
-
-								TransactionOutput out = toBCSAPITransactionOutput (o);
-								p.setOutput (out);
-							}
+							});
 						}
-						for ( HashMap<Long, TxOut> outs : utxo.values () )
-						{
-							for ( TxOut o : outs.values () )
-							{
-								TransactionOutput out = toBCSAPITransactionOutput (o);
-								balances.add (out);
-							}
-						}
-						Collections.sort (postings, new Comparator<Posting> ()
-						{
-							@Override
-							public int compare (Posting arg0, Posting arg1)
-							{
-								if ( arg0.getTimestamp () != arg1.getTimestamp () )
-								{
-									return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
-								}
-								else
-								{
-									if ( arg0.getSpent () == null && arg1.getSpent () != null )
-									{
-										return -1;
-									}
-									if ( arg0.getSpent () != null && arg1.getSpent () == null )
-									{
-										return 1;
-									}
-									return 0;
-								}
-							}
-						});
+					}
+					catch ( ValidationException e )
+					{
 					}
 				}
 			});
@@ -885,15 +906,24 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				protected void doInTransactionWithoutResult (TransactionStatus status)
 				{
 					status.setRollbackOnly ();
-					StoredColor c = ((ColorStore) store).findColor (hash);
-					if ( c != null )
+					StoredColor c;
+					try
 					{
-						color.setExpiryHeight (c.getExpiryHeight ());
-						color.setSignature (c.getSignature ());
-						color.setTerms (c.getTerms ());
-						color.setUnit (c.getUnit ());
-						color.setTransaction (c.getTxHash ());
+						c = ((ColorStore) store).findColor (hash);
+						if ( c != null )
+						{
+							color.setExpiryHeight (c.getExpiryHeight ());
+							color.setSignature (c.getSignature ());
+							color.setTerms (c.getTerms ());
+							color.setUnit (c.getUnit ());
+							color.setTransaction (c.getTxHash ());
+						}
 					}
+					catch ( ValidationException e )
+					{
+						log.error ("can not get color " + hash, e);
+					}
+
 				}
 			});
 			if ( color.getTerms () != null )

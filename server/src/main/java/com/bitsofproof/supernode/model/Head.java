@@ -24,7 +24,9 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.api.ValidationException;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 @Entity
 @Table (name = "head")
@@ -43,40 +45,46 @@ public class Head implements Serializable
 	@Column (length = 64, nullable = false)
 	private String leaf;
 
-	public static Head fromLevelDB (byte[] data)
+	public static Head fromLevelDB (byte[] data) throws ValidationException
 	{
-		Head h = new Head ();
-		WireFormat.Reader reader = new WireFormat.Reader (data);
-		h.id = reader.readUint64 ();
-		h.chainWork = reader.readUint64 ();
-		h.height = (int) reader.readUint32 ();
-		h.leaf = reader.readHash ().toString ();
-		long pid = reader.readUint64 ();
-		if ( pid != 0L )
+		LevelDBStore.HEAD p;
+		try
 		{
-			h.previousId = pid;
+			p = LevelDBStore.HEAD.parseFrom (data);
+
+			Head h = new Head ();
+			h.id = p.getId ();
+			h.chainWork = p.getChainWork ();
+			h.height = p.getHeight ();
+			h.leaf = new Hash (p.getLeaf ().toByteArray ()).toString ();
+			if ( p.hasPreviousId () )
+			{
+				h.previousId = p.getPreviousId ();
+			}
+			h.previousHeight = p.getPreviousHeight ();
+
+			return h;
 		}
-		h.previousHeight = (int) reader.readUint32 ();
-		return h;
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	public byte[] toLevelDB ()
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeUint64 (id);
-		writer.writeUint64 (chainWork);
-		writer.writeUint32 (height);
-		writer.writeHash (new Hash (leaf));
+		LevelDBStore.HEAD.Builder builder = LevelDBStore.HEAD.newBuilder ();
+		builder.setStoreVersion (1);
+		builder.setId (id);
+		builder.setChainWork (chainWork);
+		builder.setHeight (height);
+		builder.setLeaf (ByteString.copyFrom (new Hash (leaf).toByteArray ()));
 		if ( previousId != null )
 		{
-			writer.writeUint64 (previousId);
+			builder.setPreviousId (previousId);
+			builder.setPreviousHeight (previousHeight);
 		}
-		else
-		{
-			writer.writeUint64 (0L);
-		}
-		writer.writeUint32 (previousHeight);
-		return writer.toByteArray ();
+		return builder.build ().toByteArray ();
 	}
 
 	public Long getId ()

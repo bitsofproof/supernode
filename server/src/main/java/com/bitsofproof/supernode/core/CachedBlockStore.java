@@ -82,9 +82,9 @@ public abstract class CachedBlockStore implements BlockStore
 		checkPoints.put (193000, "000000000000059f452a5f7340de6682a977387c17010ff6e6c3bd83ca8b1317");
 		checkPoints.put (210000, "000000000000048b95347e83192f69cf0366076336c639f9b7228e9ba171342e");
 		checkPoints.put (222222, "00000000000000b8b49d0b61b14994b5c0a511c4b48a1e251ff2b479b2e6f678");
-		checkPoints.put (224500, "0000000000000023a93be8080fdbb7d1e76c711b7f7d1fe809776e27d7114152");
+		checkPoints.put (230000, "000000000000012cfb19f5662707816e122ad60dd9b1cd646c6c9899be2c9667");
 
-		lastCheckPoint = 224500;
+		lastCheckPoint = 230000;
 	}
 
 	private Chain chain;
@@ -143,33 +143,33 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void cacheUTXO (int lookback, TxOutCache cache);
 
-	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need);
+	protected abstract List<TxOut> findTxOuts (Map<String, HashSet<Long>> need) throws ValidationException;
 
 	protected abstract void checkBIP30Compliance (Set<String> txs, int untilHeight) throws ValidationException;
 
-	protected abstract void backwardCache (Blk b, TxOutCache cache, boolean modify);
+	protected abstract void backwardCache (Blk b, TxOutCache cache, boolean modify) throws ValidationException;
 
-	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify);
+	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify) throws ValidationException;
 
-	protected abstract List<TxOut> getReceivedList (List<String> addresses, long after);
+	protected abstract List<TxOut> getReceivedList (List<String> addresses, long after) throws ValidationException;
 
-	protected abstract TxOut getSourceReference (TxOut source);
+	protected abstract TxOut getSourceReference (TxOut source) throws ValidationException;
 
-	protected abstract void insertBlock (Blk b);
+	protected abstract void insertBlock (Blk b) throws ValidationException;
 
 	protected abstract void insertHead (Head head);
 
 	protected abstract Head updateHead (Head head);
 
-	protected abstract Head retrieveHead (CachedHead cached);
+	protected abstract Head retrieveHead (CachedHead cached) throws ValidationException;
 
-	protected abstract Blk retrieveBlock (CachedBlock cached);
+	protected abstract Blk retrieveBlock (CachedBlock cached) throws ValidationException;
 
-	protected abstract Blk retrieveBlockHeader (CachedBlock cached);
+	protected abstract Blk retrieveBlockHeader (CachedBlock cached) throws ValidationException;
 
-	protected abstract List<TxIn> getSpendList (List<String> addresses, long after);
+	protected abstract List<TxIn> getSpendList (List<String> addresses, long after) throws ValidationException;
 
-	protected abstract void updateColor (TxOut root, String fungibleName);
+	protected abstract void updateColor (TxOut root, String fungibleName) throws ValidationException;
 
 	@Override
 	public void addTrunkListener (TrunkListener listener)
@@ -502,7 +502,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxIn> getSpent (List<String> addresses, long after)
+	public List<TxIn> getSpent (List<String> addresses, long after) throws ValidationException
 	{
 		List<TxIn> rows = getSpendList (addresses, after);
 		try
@@ -529,7 +529,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Override
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxOut> getReceived (List<String> addresses, long after)
+	public List<TxOut> getReceived (List<String> addresses, long after) throws ValidationException
 	{
 		List<TxOut> rows = getReceivedList (addresses, after);
 		try
@@ -1419,7 +1419,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
-	public void resetStore (Chain chain) throws TransactionValidationException
+	public void resetStore (Chain chain) throws ValidationException
 	{
 		log.info ("Reset block store");
 		clearStore ();
@@ -1440,7 +1440,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
-	public Blk getBlock (String hash)
+	public Blk getBlock (String hash) throws ValidationException
 	{
 
 		CachedBlock cached = null;

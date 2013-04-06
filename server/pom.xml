@@ -9,7 +9,7 @@
 	<packaging>jar</packaging>
 
 	<organization>
-	    <name>bits of proof zrt.</name>
+		<name>bits of proof zrt.</name>
 		<url>bitsofproof.com</url>
 	</organization>
 
@@ -104,6 +104,27 @@
 					<descriptor>src/main/assembly/supernode.xml</descriptor>
 				</configuration>
 			</plugin>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>compile-protoc</id>
+						<phase>generate-sources</phase>
+						<configuration>
+							<tasks>
+								<exec executable="protoc" failonerror="true">
+									<arg value="--java_out=${project.basedir}/src/main/java" />
+									<arg value="-I${project.basedir}/src" />
+									<arg value="${project.basedir}/src/main/protobuf/LevelDBStore.proto" />
+								</exec>
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>
@@ -160,6 +181,11 @@
 			<groupId>org.fusesource.leveldbjni</groupId>
 			<artifactId>leveldbjni-all</artifactId>
 			<version>${leveldbjni.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>2.4.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.derby</groupId>

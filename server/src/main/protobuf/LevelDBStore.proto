@@ -1,0 +1,97 @@
+/*
+ * Copyright 2013 bits of proof zrt.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.bitsofproof.supernode.model;
+
+message TX {
+	required uint32 storeVersion = 1;
+	required bytes blockHash = 2;
+	required bytes hash = 3;
+	required uint32 version = 4;
+	required uint32 lockTime = 5;
+	required uint32 ix = 6;
+	message TXIN {
+		required uint32 ix = 1;
+		required bytes sourceHash = 2;
+		required bytes script = 3;
+		required uint32 sequence = 4;
+	}
+	repeated TXIN txin = 7;
+	
+	message TXOUT {
+		required uint64 value = 1;
+		required bytes script = 2;
+		required uint32 height = 3;
+		required bool coinbase = 4;
+		required bool available = 5;
+		optional string color = 6;
+		optional uint32 votes = 7;
+		repeated string owner = 8;
+	}
+	repeated TXOUT txout = 8;
+}
+
+message BLOCK {
+	required uint32 storeVersion = 1;
+	required bytes hash = 2;
+	required uint32 height = 3;
+	required uint32 version = 4;
+	required bytes previousHash = 5;
+	required bytes merkleRoot = 6;
+	required uint32 createTime = 7;
+	required uint32 difficultyTarget = 8;
+	required uint32 nonce = 9;
+	required uint64 chainWork = 10;
+	required uint64 headId = 11;
+	repeated bytes txHashes = 12; 
+}
+
+message PEER {
+	required uint32 storeVersion = 1;
+	required string address = 2;
+	required uint32 version = 3;
+	required uint64 services = 4;
+	required uint32 height = 5;
+	required string name = 6;
+	required string agent = 7;
+	required uint64 responseTime = 8;
+	required uint64 connected = 9;
+	required uint64 disconnected = 10;
+	required uint64 trafficIn = 11;
+	required uint64 trafficOut = 12;
+	required uint64 banned = 13;
+	optional string banReason = 14;
+}
+
+message COLOR {
+	required uint32 storeVersion = 1;
+	required string fungibleName = 2;
+	required bytes txHash = 3;
+	required string terms = 4;
+	required uint64 unit = 5;
+	required uint32 expiryHeight = 6;
+	required bytes signature = 7;
+	required bytes pubkey = 8;
+}
+
+message HEAD {
+	required uint32 storeVersion = 1;
+	required uint64 id = 2;
+	required uint64 chainWork = 3;
+	required uint32 height = 4;
+	required bytes leaf = 5;
+	optional uint64 previousId = 6;
+	optional uint32 previousHeight = 7;
+}

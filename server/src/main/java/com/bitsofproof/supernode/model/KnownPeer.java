@@ -23,7 +23,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.api.ValidationException;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 @Entity
 @Table (name = "peer")
@@ -65,41 +66,57 @@ public class KnownPeer implements Serializable
 
 	public byte[] toLevelDB ()
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeString (address);
-		writer.writeUint64 (version);
-		writer.writeUint64 (services);
-		writer.writeUint64 (height);
-		writer.writeString (name);
-		writer.writeString (agent);
-		writer.writeUint64 (responseTime);
-		writer.writeUint64 (connected);
-		writer.writeUint64 (disconnected);
-		writer.writeUint64 (trafficIn);
-		writer.writeUint64 (trafficOut);
-		writer.writeUint64 (banned);
-		writer.writeString (banReason);
-		return writer.toByteArray ();
+		LevelDBStore.PEER.Builder builder = LevelDBStore.PEER.newBuilder ();
+		builder.setStoreVersion (1);
+		builder.setAddress (address);
+		builder.setVersion ((int) version);
+		builder.setServices (services);
+		builder.setHeight ((int) height);
+		builder.setName (name);
+		builder.setAgent (agent);
+		builder.setResponseTime (responseTime);
+		builder.setConnected (connected);
+		builder.setDisconnected (disconnected);
+		builder.setTrafficIn (trafficIn);
+		builder.setTrafficOut (trafficOut);
+		builder.setBanned (banned);
+		if ( banReason != null )
+		{
+			builder.setBanReason (banReason);
+		}
+
+		return builder.build ().toByteArray ();
 	}
 
-	public static KnownPeer fromLevelDB (byte[] data)
+	public static KnownPeer fromLevelDB (byte[] data) throws ValidationException
 	{
-		WireFormat.Reader reader = new WireFormat.Reader (data);
-		KnownPeer p = new KnownPeer ();
-		p.address = reader.readString ();
-		p.version = reader.readUint64 ();
-		p.services = reader.readUint64 ();
-		p.height = reader.readUint64 ();
-		p.name = reader.readString ();
-		p.agent = reader.readString ();
-		p.responseTime = reader.readUint64 ();
-		p.connected = reader.readUint64 ();
-		p.disconnected = reader.readUint64 ();
-		p.trafficIn = reader.readUint64 ();
-		p.trafficOut = reader.readUint64 ();
-		p.banned = reader.readUint64 ();
-		p.banReason = reader.readString ();
-		return p;
+		LevelDBStore.PEER p;
+		try
+		{
+			p = LevelDBStore.PEER.parseFrom (data);
+			KnownPeer e = new KnownPeer ();
+			e.address = p.getAddress ();
+			e.version = p.getVersion ();
+			e.services = p.getServices ();
+			e.height = p.getHeight ();
+			e.name = p.getName ();
+			e.agent = p.getAgent ();
+			e.responseTime = p.getResponseTime ();
+			e.connected = p.getConnected ();
+			e.disconnected = p.getDisconnected ();
+			e.trafficIn = p.getTrafficIn ();
+			e.trafficOut = p.getTrafficOut ();
+			e.banned = p.getBanned ();
+			if ( p.hasBanReason () )
+			{
+				e.banReason = p.getBanReason ();
+			}
+			return e;
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	public long getConnected ()

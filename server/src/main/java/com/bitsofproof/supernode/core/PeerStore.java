@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.core;
 import java.net.InetAddress;
 import java.util.Collection;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.KnownPeer;
 
 public interface PeerStore
@@ -27,5 +28,5 @@ public interface PeerStore
 
 	public void store (KnownPeer peer);
 
-	public KnownPeer findPeer (InetAddress address);
+	public KnownPeer findPeer (InetAddress address) throws ValidationException;
 }

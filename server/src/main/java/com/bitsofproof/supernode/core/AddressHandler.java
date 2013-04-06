@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.api.WireFormat.Address;
 import com.bitsofproof.supernode.messages.AddrMessage;
@@ -67,13 +68,20 @@ public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 			peer.getNetwork ().addPeer (a.address, (int) a.port);
 			if ( network.getPeerStore () != null )
 			{
-				KnownPeer p = network.getPeerStore ().findPeer (a.address);
-				if ( p == null )
+				KnownPeer p;
+				try
 				{
-					p = new KnownPeer ();
-					p.setAddress (a.address.getHostAddress ());
-					p.setResponseTime (Integer.MAX_VALUE);
-					network.getPeerStore ().store (p);
+					p = network.getPeerStore ().findPeer (a.address);
+					if ( p == null )
+					{
+						p = new KnownPeer ();
+						p.setAddress (a.address.getHostAddress ());
+						p.setResponseTime (Integer.MAX_VALUE);
+						network.getPeerStore ().store (p);
+					}
+				}
+				catch ( ValidationException e )
+				{
 				}
 			}
 		}

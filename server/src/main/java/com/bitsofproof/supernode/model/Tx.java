@@ -35,7 +35,10 @@ import org.json.JSONObject;
 
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 @Entity
 @Table (name = "tx")
@@ -135,87 +138,139 @@ public class Tx implements Serializable
 		return hash;
 	}
 
-	public static Tx fromLevelDB (byte[] data)
+	public static Tx fromLevelDB (byte[] data) throws ValidationException
 	{
-		WireFormat.Reader reader = new WireFormat.Reader (data);
-		Tx t = new Tx ();
-
-		t.blockHash = reader.readHash ().toString ();
-		t.hash = reader.readHash ().toString ();
-		t.version = reader.readUint32 ();
-		t.lockTime = reader.readUint32 ();
-		t.ix = reader.readUint32 ();
-		int n = (int) reader.readVarInt ();
-		t.setInputs (new ArrayList<TxIn> (n));
-		for ( int i = 0; i < n; ++i )
+		LevelDBStore.TX p;
+		try
 		{
-			TxIn in = new TxIn ();
-			in.setIx (reader.readUint32 ());
-			in.setSourceHash (reader.readHash ().toString ());
-			in.setScript (reader.readVarBytes ());
-			in.setSequence (reader.readUint32 ());
-			t.getInputs ().add (in);
-		}
+			p = LevelDBStore.TX.parseFrom (data);
+			Tx t = new Tx ();
 
-		n = (int) reader.readVarInt ();
-		t.setOutputs (new ArrayList<TxOut> ());
-		for ( int i = 0; i < n; ++i )
-		{
-			TxOut o = new TxOut ();
-			o.setValue (reader.readUint64 ());
-			o.setScript (reader.readVarBytes ());
-			o.setIx (reader.readUint32 ());
-			o.setVotes (reader.readUint32 ());
-			o.setCoinbase (reader.readByte () != 0);
-			o.setOwner1 (reader.readString ());
-			o.setOwner2 (reader.readString ());
-			o.setOwner3 (reader.readString ());
-			o.setAvailable (reader.readByte () != 0);
-			o.setTxHash (reader.readHash ().toString ());
-			o.setHeight (reader.readUint32 ());
-			o.setColor (reader.readString ());
-			t.getOutputs ().add (o);
+			t.setBlockHash (new Hash (p.getBlockHash ().toByteArray ()).toString ());
+			t.hash = new Hash (p.getHash ().toByteArray ()).toString ();
+			t.version = p.getVersion ();
+			t.lockTime = p.getLockTime ();
+			t.ix = p.getIx ();
+			if ( p.getTxinCount () > 0 )
+			{
+				List<TxIn> inputs = new ArrayList<TxIn> (p.getTxinCount ());
+				for ( LevelDBStore.TX.TXIN i : p.getTxinList () )
+				{
+					TxIn in = new TxIn ();
+					in.setIx ((long) i.getIx ());
+					in.setSourceHash (new Hash (i.getSourceHash ().toByteArray ()).toString ());
+					in.setScript (i.getScript ().toByteArray ());
+					in.setSequence (i.getSequence ());
+					inputs.add (in);
+				}
+				t.setInputs (inputs);
+			}
+			if ( p.getTxoutCount () > 0 )
+			{
+				List<TxOut> outputs = new ArrayList<TxOut> (p.getTxoutCount ());
+				long ix = 0;
+				for ( LevelDBStore.TX.TXOUT o : p.getTxoutList () )
+				{
+					TxOut out = new TxOut ();
+					out.setValue (o.getValue ());
+					out.setScript (o.getScript ().toByteArray ());
+					out.setIx (ix++);
+					out.setHeight (o.getHeight ());
+					out.setCoinbase (o.getCoinbase ());
+					out.setAvailable (o.getAvailable ());
+					out.setTxHash (t.hash);
+					if ( o.hasVotes () )
+					{
+						out.setVotes ((long) o.getVotes ());
+					}
+					if ( o.getOwnerCount () > 0 )
+					{
+						out.setOwner1 (o.getOwner (0));
+					}
+					if ( o.getOwnerCount () > 1 )
+					{
+						out.setOwner2 (o.getOwner (1));
+					}
+					if ( o.getOwnerCount () > 2 )
+					{
+						out.setOwner3 (o.getOwner (2));
+					}
+					if ( o.hasColor () )
+					{
+						out.setColor (o.getColor ());
+					}
+					outputs.add (out);
+				}
+				t.setOutputs (outputs);
+			}
+			return t;
 		}
-		return t;
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	public byte[] toLevelDB ()
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
+		LevelDBStore.TX.Builder builder = LevelDBStore.TX.newBuilder ();
+
 		if ( blockHash == null )
 		{
 			blockHash = block.getHash ();
 		}
-		writer.writeHash (new Hash (blockHash));
-		writer.writeHash (new Hash (hash));
-		writer.writeUint32 (version);
-		writer.writeUint32 (lockTime);
-		writer.writeUint32 (ix);
-		writer.writeVarInt (inputs.size ());
-		for ( TxIn in : inputs )
+		builder.setStoreVersion (1);
+		builder.setBlockHash (ByteString.copyFrom (new Hash (blockHash).toByteArray ()));
+		builder.setHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+		builder.setVersion ((int) version);
+		builder.setLockTime ((int) lockTime);
+		builder.setIx ((int) ix);
+		if ( inputs != null )
 		{
-			writer.writeUint32 (in.getIx ());
-			writer.writeHash (new Hash (in.getSourceHash ()));
-			writer.writeVarBytes (in.getScript ());
-			writer.writeUint32 (in.getSequence ());
+			for ( TxIn in : inputs )
+			{
+				LevelDBStore.TX.TXIN.Builder b = LevelDBStore.TX.TXIN.newBuilder ();
+				b.setIx (in.getIx ().intValue ());
+				b.setSourceHash (ByteString.copyFrom (new Hash (in.getSourceHash ()).toByteArray ()));
+				b.setScript (ByteString.copyFrom (in.getScript ()));
+				b.setSequence ((int) in.getSequence ());
+				builder.addTxin (b.build ());
+			}
 		}
-		writer.writeVarInt (outputs.size ());
-		for ( TxOut o : outputs )
+		if ( outputs != null )
 		{
-			writer.writeUint64 (o.getValue ());
-			writer.writeVarBytes (o.getScript ());
-			writer.writeUint32 (o.getIx ());
-			writer.writeUint32 (o.getVotes () == null ? 0 : o.getVotes ().longValue ());
-			writer.writeByte (o.isCoinbase () ? 1 : 0);
-			writer.writeString (o.getOwner1 ());
-			writer.writeString (o.getOwner2 ());
-			writer.writeString (o.getOwner3 ());
-			writer.writeByte (o.isAvailable () ? 1 : 0);
-			writer.writeHash (new Hash (o.getTxHash ()));
-			writer.writeUint32 (o.getHeight ());
-			writer.writeString (o.getColor ());
+			for ( TxOut o : outputs )
+			{
+				LevelDBStore.TX.TXOUT.Builder b = LevelDBStore.TX.TXOUT.newBuilder ();
+				b.setValue (o.getValue ());
+				b.setScript (ByteString.copyFrom (o.getScript ()));
+				b.setHeight ((int) o.getHeight ());
+				b.setAvailable (o.isAvailable ());
+				b.setCoinbase (o.isCoinbase ());
+				if ( o.getVotes () != null )
+				{
+					b.setVotes (o.getVotes ().intValue ());
+				}
+				if ( o.getOwner1 () != null )
+				{
+					b.addOwner (o.getOwner1 ());
+				}
+				if ( o.getOwner2 () != null )
+				{
+					b.addOwner (o.getOwner2 ());
+				}
+				if ( o.getOwner3 () != null )
+				{
+					b.addOwner (o.getOwner3 ());
+				}
+				if ( o.getColor () != null )
+				{
+					b.setColor (o.getColor ());
+				}
+				builder.addTxout (b.build ());
+			}
 		}
-		return writer.toByteArray ();
+		return builder.build ().toByteArray ();
 	}
 
 	public String toWireDump ()

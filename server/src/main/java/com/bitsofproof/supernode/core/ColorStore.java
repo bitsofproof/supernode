@@ -24,5 +24,5 @@ public interface ColorStore
 
 	public void storeColor (StoredColor color) throws ValidationException;
 
-	public StoredColor findColor (String hash);
+	public StoredColor findColor (String hash) throws ValidationException;
 }

@@ -40,6 +40,8 @@ import com.bitsofproof.supernode.core.PeerStore;
 import com.bitsofproof.supernode.core.TxOutCache;
 import com.bitsofproof.supernode.model.OrderedMapStore.DataProcessor;
 import com.bitsofproof.supernode.model.OrderedMapStoreKey.KeyType;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, ColorStore
 {
@@ -69,7 +71,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		store.put (OrderedMapStoreKey.createKey (KeyType.ATX, k), new byte[1]);
 	}
 
-	private Tx readTx (String hash)
+	private Tx readTx (String hash) throws ValidationException
 	{
 		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
 		if ( data != null )
@@ -84,7 +86,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		return store.get (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (hash).toByteArray ())) != null;
 	}
 
-	private void writeTx (Tx t)
+	private void writeTx (Tx t) throws ValidationException
 	{
 		store.put (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
 		for ( TxOut o : t.getOutputs () )
@@ -128,7 +130,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		}
 	}
 
-	private Head readHead (Long id)
+	private Head readHead (Long id) throws ValidationException
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeUint64 (id);
@@ -147,12 +149,12 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		store.put (OrderedMapStoreKey.createKey (KeyType.HEAD, writer.toByteArray ()), h.toLevelDB ());
 	}
 
-	private Blk readBlk (String hash, boolean full)
+	private Blk readBlk (String hash, boolean full) throws ValidationException
 	{
 		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.BLOCK, new Hash (hash).toByteArray ()));
 		if ( data != null )
 		{
-			Blk b = Blk.fromLevelDB (data, true);
+			Blk b = Blk.fromLevelDB (data);
 			if ( full )
 			{
 				b.setTransactions (new ArrayList<Tx> ());
@@ -166,7 +168,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		return null;
 	}
 
-	private void writeBlk (Blk b)
+	private void writeBlk (Blk b) throws ValidationException
 	{
 		store.put (OrderedMapStoreKey.createKey (KeyType.BLOCK, new Hash (b.getHash ()).toByteArray ()), b.toLevelDB ());
 		for ( Tx t : b.getTransactions () )
@@ -180,7 +182,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected void updateColor (TxOut root, String fungibleName)
+	protected void updateColor (TxOut root, String fungibleName) throws ValidationException
 	{
 		Tx t = readTx (root.getTxHash ());
 		t.getOutputs ().get (0).setColor (fungibleName);
@@ -188,7 +190,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public Tx getTransaction (String hash)
+	public Tx getTransaction (String hash) throws ValidationException
 	{
 		Tx t = readTx (hash);
 		return t;
@@ -199,7 +201,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		store.put (OrderedMapStoreKey.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
 	}
 
-	private KnownPeer readPeer (String address)
+	private KnownPeer readPeer (String address) throws ValidationException
 	{
 		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.PEER, address.getBytes ()));
 		if ( data != null )
@@ -218,9 +220,18 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 			@Override
 			public boolean process (byte[] key, byte[] data)
 			{
-				Blk b = Blk.fromLevelDB (data, false);
-				blocks.add (b);
-				return true;
+				Blk b;
+				try
+				{
+					b = Blk.fromLevelDB (data);
+					blocks.add (b);
+					return true;
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Error parsing block ", e);
+					return false;
+				}
 			}
 		});
 		Collections.sort (blocks, new Comparator<Blk> ()
@@ -261,24 +272,32 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 			@Override
 			public boolean process (byte[] key, byte[] data)
 			{
-				Head h = Head.fromLevelDB (data);
-
-				CachedHead sh = new CachedHead ();
-				sh.setId (h.getId ());
-				sh.setChainWork (h.getChainWork ());
-				sh.setHeight (h.getHeight ());
-				if ( h.getPreviousId () != null )
+				Head h;
+				try
 				{
-					prevIds.put (sh, h.getPreviousId ());
-					sh.setPreviousHeight (h.getPreviousHeight ());
+					h = Head.fromLevelDB (data);
+					CachedHead sh = new CachedHead ();
+					sh.setId (h.getId ());
+					sh.setChainWork (h.getChainWork ());
+					sh.setHeight (h.getHeight ());
+					if ( h.getPreviousId () != null )
+					{
+						prevIds.put (sh, h.getPreviousId ());
+						sh.setPreviousHeight (h.getPreviousHeight ());
+					}
+					cachedHeads.put (h.getId (), sh);
+					if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork ()
+							|| (currentHead.getChainWork () == sh.getChainWork () && sh.getId () < currentHead.getId ()) )
+					{
+						currentHead = sh;
+					}
+					return true;
 				}
-				cachedHeads.put (h.getId (), sh);
-				if ( currentHead == null || currentHead.getChainWork () < sh.getChainWork ()
-						|| (currentHead.getChainWork () == sh.getChainWork () && sh.getId () < currentHead.getId ()) )
+				catch ( ValidationException e )
 				{
-					currentHead = sh;
+					log.error ("Error caching head", e);
+					return false;
 				}
-				return true;
 			}
 		});
 		for ( CachedHead head : cachedHeads.values () )
@@ -319,7 +338,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected void backwardCache (Blk b, TxOutCache cache, boolean modify)
+	protected void backwardCache (Blk b, TxOutCache cache, boolean modify) throws ValidationException
 	{
 		List<Tx> txs = new ArrayList<Tx> ();
 		txs.addAll (b.getTransactions ());
@@ -358,7 +377,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected void forwardCache (Blk b, TxOutCache cache, boolean modify)
+	protected void forwardCache (Blk b, TxOutCache cache, boolean modify) throws ValidationException
 	{
 		for ( Tx t : b.getTransactions () )
 		{
@@ -394,7 +413,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected List<TxOut> findTxOuts (Map<String, HashSet<Long>> need)
+	protected List<TxOut> findTxOuts (Map<String, HashSet<Long>> need) throws ValidationException
 	{
 		ArrayList<TxOut> outs = new ArrayList<TxOut> ();
 
@@ -456,7 +475,15 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 					String hash = new Hash (h).toString ();
 					if ( !result.containsKey (hash) )
 					{
-						result.put (hash, readTx (hash));
+						try
+						{
+							result.put (hash, readTx (hash));
+						}
+						catch ( ValidationException e )
+						{
+							log.error ("error reading transaction ", e);
+							return false;
+						}
 					}
 					return true;
 				}
@@ -466,13 +493,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected TxOut getSourceReference (TxOut source)
+	protected TxOut getSourceReference (TxOut source) throws ValidationException
 	{
 		return readTx (source.getTxHash ()).getOutputs ().get (source.getIx ().intValue ());
 	}
 
 	@Override
-	protected void insertBlock (Blk b)
+	protected void insertBlock (Blk b) throws ValidationException
 	{
 		writeBlk (b);
 	}
@@ -494,19 +521,19 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected Head retrieveHead (CachedHead cached)
+	protected Head retrieveHead (CachedHead cached) throws ValidationException
 	{
 		return readHead (cached.getId ());
 	}
 
 	@Override
-	protected Blk retrieveBlock (CachedBlock cached)
+	protected Blk retrieveBlock (CachedBlock cached) throws ValidationException
 	{
 		return readBlk (cached.getHash (), true);
 	}
 
 	@Override
-	protected Blk retrieveBlockHeader (CachedBlock cached)
+	protected Blk retrieveBlockHeader (CachedBlock cached) throws ValidationException
 	{
 		return readBlk (cached.getHash (), false);
 	}
@@ -530,7 +557,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected List<TxIn> getSpendList (List<String> addresses, long after)
+	protected List<TxIn> getSpendList (List<String> addresses, long after) throws ValidationException
 	{
 		List<TxIn> result = new ArrayList<TxIn> ();
 		Collection<Tx> related = readRelatedTx (addresses);
@@ -561,7 +588,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	protected List<TxOut> getReceivedList (final List<String> addresses, long after)
+	protected List<TxOut> getReceivedList (final List<String> addresses, long after) throws ValidationException
 	{
 		List<TxOut> result = new ArrayList<TxOut> ();
 		Collection<Tx> related = readRelatedTx (addresses);
@@ -594,10 +621,19 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 			@Override
 			public boolean process (byte[] key, byte[] data)
 			{
-				KnownPeer p = KnownPeer.fromLevelDB (data);
-				if ( p.getBanned () < System.currentTimeMillis () / 1000 )
+				KnownPeer p;
+				try
 				{
-					peers.add (p);
+					p = KnownPeer.fromLevelDB (data);
+					if ( p.getBanned () < System.currentTimeMillis () / 1000 )
+					{
+						peers.add (p);
+					}
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Can not read peer ", e);
+					return false;
 				}
 				return true;
 			}
@@ -630,7 +666,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public KnownPeer findPeer (InetAddress address)
+	public KnownPeer findPeer (InetAddress address) throws ValidationException
 	{
 		return readPeer (address.getHostName ());
 	}
@@ -656,33 +692,44 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	@Override
 	public void storeColor (StoredColor color)
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeHash (new Hash (color.getTxHash ()));
-		writer.writeString (color.getTerms ());
-		writer.writeUint64 (color.getUnit ());
-		writer.writeUint32 (color.getExpiryHeight ());
-		writer.writeVarBytes (color.getSignature ());
-		writer.writeVarBytes (color.getPubkey ());
-		store.put (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (color.getTxHash ()).toByteArray ()), writer.toByteArray ());
+		LevelDBStore.COLOR.Builder builder = LevelDBStore.COLOR.newBuilder ();
+		builder.setStoreVersion (1);
+		builder.setTxHash (ByteString.copyFrom (new Hash (color.getTxHash ()).toByteArray ()));
+		builder.setFungibleName (color.getFungibleName ());
+		builder.setTerms (color.getTerms ());
+		builder.setUnit (color.getUnit ());
+		builder.setExpiryHeight (color.getExpiryHeight ());
+		builder.setSignature (ByteString.copyFrom (color.getSignature ()));
+		builder.setPubkey (ByteString.copyFrom (color.getPubkey ()));
+		store.put (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (color.getTxHash ()).toByteArray ()), builder.build ().toByteArray ());
 	}
 
 	@Override
-	public StoredColor findColor (String hash)
+	public StoredColor findColor (String hash) throws ValidationException
 	{
 		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (hash).toByteArray ()));
 		if ( data == null )
 		{
 			return null;
 		}
-		WireFormat.Reader reader = new WireFormat.Reader (data);
-		StoredColor sc = new StoredColor ();
-		sc.setTxHash (reader.readHash ().toString ());
-		sc.setTerms (reader.readString ());
-		sc.setUnit (reader.readUint64 ());
-		sc.setExpiryHeight ((int) reader.readUint32 ());
-		sc.setSignature (reader.readVarBytes ());
-		sc.setPubkey (reader.readVarBytes ());
-		return sc;
+		LevelDBStore.COLOR p;
+		try
+		{
+			p = LevelDBStore.COLOR.parseFrom (data);
+			StoredColor sc = new StoredColor ();
+			sc.setTxHash (new Hash (p.getTxHash ().toByteArray ()).toString ());
+			sc.setFungibleName (p.getFungibleName ());
+			sc.setTerms (p.getTerms ());
+			sc.setUnit (p.getUnit ());
+			sc.setExpiryHeight (p.getExpiryHeight ());
+			sc.setSignature (p.getSignature ().toByteArray ());
+			sc.setPubkey (p.getPubkey ().toByteArray ());
+			return sc;
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	@Override

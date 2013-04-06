@@ -37,6 +37,8 @@ import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 @Entity
 @Table (name = "blk")
@@ -73,51 +75,62 @@ public class Blk implements Serializable
 	private transient ArrayList<String> txHashes;
 	private Long headId;
 
-	public static Blk fromLevelDB (byte[] data, boolean txhashes)
+	public static Blk fromLevelDB (byte[] data) throws ValidationException
 	{
-		Blk b = new Blk ();
-		WireFormat.Reader reader = new WireFormat.Reader (data);
-		b.hash = reader.readHash ().toString ();
-		b.height = (int) reader.readUint32 ();
-		b.version = reader.readUint32 ();
-		b.previousHash = reader.readHash ().toString ();
-		b.merkleRoot = reader.readHash ().toString ();
-		b.createTime = reader.readUint32 ();
-		b.difficultyTarget = reader.readUint32 ();
-		b.nonce = reader.readUint32 ();
-		b.chainWork = reader.readUint64 ();
-		b.headId = reader.readUint64 ();
-		if ( txhashes )
+		LevelDBStore.BLOCK p;
+		try
 		{
-			long nt = reader.readVarInt ();
-			b.txHashes = new ArrayList<String> ((int) nt);
-			for ( long i = 0; i < nt; ++i )
+			p = LevelDBStore.BLOCK.parseFrom (data);
+			Blk b = new Blk ();
+			b.setHash (new Hash (p.getHash ().toByteArray ()).toString ());
+			b.setHeight (p.getHeight ());
+			b.setVersion (p.getVersion ());
+			b.setPreviousHash (new Hash (p.getPreviousHash ().toByteArray ()).toString ());
+			b.setMerkleRoot (new Hash (p.getMerkleRoot ().toByteArray ()).toString ());
+			b.setCreateTime (p.getCreateTime ());
+			b.setDifficultyTarget (p.getDifficultyTarget ());
+			b.setNonce (p.getNonce ());
+			b.setChainWork (p.getChainWork ());
+			b.setHeadId (p.getHeadId ());
+			if ( p.getTxHashesCount () > 0 )
 			{
-				b.txHashes.add (reader.readHash ().toString ());
+				b.txHashes = new ArrayList<String> (p.getTxHashesCount ());
+				for ( ByteString bs : p.getTxHashesList () )
+				{
+					b.txHashes.add (new Hash (bs.toByteArray ()).toString ());
+				}
 			}
+
+			return b;
 		}
-		return b;
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	public byte[] toLevelDB ()
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeHash (new Hash (hash));
-		writer.writeUint32 (height);
-		writer.writeUint32 (version);
-		writer.writeHash (new Hash (previousHash));
-		writer.writeHash (new Hash (merkleRoot));
-		writer.writeUint32 (createTime);
-		writer.writeUint32 (difficultyTarget);
-		writer.writeUint32 (nonce);
-		writer.writeUint64 (chainWork);
-		writer.writeUint64 (headId);
-		writer.writeVarInt (transactions.size ());
-		for ( long i = 0; i < transactions.size (); ++i )
+		LevelDBStore.BLOCK.Builder builder = LevelDBStore.BLOCK.newBuilder ();
+		builder.setStoreVersion (1);
+		builder.setHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+		builder.setHeight (height);
+		builder.setVersion ((int) version);
+		builder.setPreviousHash (ByteString.copyFrom (new Hash (previousHash).toByteArray ()));
+		builder.setMerkleRoot (ByteString.copyFrom (new Hash (merkleRoot).toByteArray ()));
+		builder.setCreateTime ((int) createTime);
+		builder.setDifficultyTarget ((int) difficultyTarget);
+		builder.setNonce ((int) nonce);
+		builder.setChainWork (chainWork);
+		builder.setHeadId (headId);
+		if ( transactions != null )
 		{
-			writer.writeHash (new Hash (transactions.get ((int) i).getHash ()));
+			for ( Tx t : transactions )
+			{
+				builder.addTxHashes (ByteString.copyFrom (new Hash (t.getHash ()).toByteArray ()));
+			}
 		}
-		return writer.toByteArray ();
+		return builder.build ().toByteArray ();
 	}
 
 	public ArrayList<String> getTxHashes ()

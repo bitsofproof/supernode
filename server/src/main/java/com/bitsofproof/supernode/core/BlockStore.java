@@ -42,9 +42,9 @@ public interface BlockStore extends ColorStore
 
 	public List<TxOut> getUnspentOutput (List<String> addresses);
 
-	public List<TxIn> getSpent (List<String> addresses, long from);
+	public List<TxIn> getSpent (List<String> addresses, long from) throws ValidationException;
 
-	public List<TxOut> getReceived (List<String> addresses, long from);
+	public List<TxOut> getReceived (List<String> addresses, long from) throws ValidationException;
 
 	public void storeBlock (Blk b) throws ValidationException;
 
@@ -52,9 +52,9 @@ public interface BlockStore extends ColorStore
 
 	public void resetStore (Chain chain) throws ValidationException;
 
-	public Blk getBlock (String hash);
+	public Blk getBlock (String hash) throws ValidationException;
 
-	public Tx getTransaction (String hash);
+	public Tx getTransaction (String hash) throws ValidationException;
 
 	public boolean isStoredBlock (String hash);
 

@@ -26,6 +26,7 @@ import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetHeadersMessage;
@@ -69,12 +70,19 @@ public class GetHeadersHandler implements BitcoinMessageListener<GetHeadersMessa
 				{
 					status.setRollbackOnly ();
 
-					Blk b = store.getBlock (h);
-					if ( b != null )
+					Blk b;
+					try
 					{
-						WireFormat.Writer writer = new WireFormat.Writer ();
-						b.toWireHeaderOnly (writer);
-						hm.getBlockHeader ().add (writer.toByteArray ());
+						b = store.getBlock (h);
+						if ( b != null )
+						{
+							WireFormat.Writer writer = new WireFormat.Writer ();
+							b.toWireHeaderOnly (writer);
+							hm.getBlockHeader ().add (writer.toByteArray ());
+						}
+					}
+					catch ( ValidationException e )
+					{
 					}
 				}
 			});

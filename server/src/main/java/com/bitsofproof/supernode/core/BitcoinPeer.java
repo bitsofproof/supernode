@@ -230,30 +230,39 @@ public class BitcoinPeer extends P2P.Peer
 					peerServices = v.getServices ();
 					if ( network.getPeerStore () != null )
 					{
-						KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-						if ( p == null )
+						KnownPeer p;
+						try
 						{
-							p = new KnownPeer ();
+							p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
+							if ( p == null )
+							{
+								p = new KnownPeer ();
+							}
+							trafficIn = p.getTrafficIn ();
+							trafficOut = p.getTrafficOut ();
+							if ( p.getBanned () > System.currentTimeMillis () / 1000 )
+							{
+								log.trace ("Disconnecting banned peer " + address);
+								peer.disconnect ();
+							}
+							else
+							{
+								p.setAddress (address.getAddress ().getHostAddress ());
+								p.setName (address.toString ());
+								p.setVersion (peerVersion);
+								p.setHeight (height);
+								p.setAgent (agent);
+								p.setServices (peerServices);
+								p.setResponseTime (Integer.MAX_VALUE);
+								p.setConnected (System.currentTimeMillis () / 1000);
+								network.getPeerStore ().store (p);
+							}
 						}
-						trafficIn = p.getTrafficIn ();
-						trafficOut = p.getTrafficOut ();
-						if ( p.getBanned () > System.currentTimeMillis () / 1000 )
+						catch ( ValidationException e )
 						{
-							log.trace ("Disconnecting banned peer " + address);
-							peer.disconnect ();
+							log.error ("Can not read peer", e);
 						}
-						else
-						{
-							p.setAddress (address.getAddress ().getHostAddress ());
-							p.setName (address.toString ());
-							p.setVersion (peerVersion);
-							p.setHeight (height);
-							p.setAgent (agent);
-							p.setServices (peerServices);
-							p.setResponseTime (Integer.MAX_VALUE);
-							p.setConnected (System.currentTimeMillis () / 1000);
-							network.getPeerStore ().store (p);
-						}
+
 					}
 					if ( !outgoing )
 					{
@@ -330,23 +339,32 @@ public class BitcoinPeer extends P2P.Peer
 		log.info ("Disconnected '" + getAgent () + "' at " + getAddress ());
 		if ( network.getPeerStore () != null )
 		{
-			KnownPeer p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-			if ( p != null )
+			KnownPeer p;
+			try
 			{
-				p.setTrafficIn (trafficIn);
-				p.setTrafficOut (trafficOut);
-				p.setDisconnected (System.currentTimeMillis () / 1000);
-				if ( timeout > 0 )
+				p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
+				if ( p != null )
 				{
-					p.setResponseTime (timeout * 1000 + 1);
+					p.setTrafficIn (trafficIn);
+					p.setTrafficOut (trafficOut);
+					p.setDisconnected (System.currentTimeMillis () / 1000);
+					if ( timeout > 0 )
+					{
+						p.setResponseTime (timeout * 1000 + 1);
+					}
+					if ( bannedForSeconds > 0 )
+					{
+						p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
+						p.setBanReason (reason);
+					}
+					network.getPeerStore ().store (p);
 				}
-				if ( bannedForSeconds > 0 )
-				{
-					p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
-					p.setBanReason (reason);
-				}
-				network.getPeerStore ().store (p);
 			}
+			catch ( ValidationException e )
+			{
+				log.error ("Can not read peer", e);
+			}
+
 		}
 	}
 
