@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.api;
 
 import static org.junit.Assert.assertTrue;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
@@ -24,6 +26,8 @@ import java.util.Arrays;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KeyGeneratorTest
 {
@@ -128,4 +132,24 @@ public class KeyGeneratorTest
 
 	}
 
+	private static final ThreadMXBean mxb = ManagementFactory.getThreadMXBean ();
+	private static final Logger log = LoggerFactory.getLogger (KeyGeneratorTest.class);
+
+	@Test
+	public void testECDSASpeed () throws ValidationException
+	{
+		ECKeyPair key = ECKeyPair.createNew (true);
+		byte[] data = new byte[32];
+		random.nextBytes (data);
+		byte[] signature = key.sign (data);
+		long cpu = -mxb.getCurrentThreadUserTime ();
+		for ( int i = 0; i < 100; ++i )
+		{
+			assertTrue (key.verify (data, signature));
+		}
+		cpu += mxb.getCurrentThreadUserTime ();
+		double speed = 100.0 / (cpu / 10.0e9);
+		log.info ("ECDSA validation speed : " + speed + " signatures/second");
+		assertTrue (speed > 100.0);
+	}
 }
