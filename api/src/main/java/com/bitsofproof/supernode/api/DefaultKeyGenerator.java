@@ -218,7 +218,7 @@ class DefaultKeyGenerator implements KeyGenerator
 		{
 			importedKeys.add (k.clone ());
 
-			String address = AddressConverter.toSatoshiStyle (k.getPublic (), addressFlag);
+			String address = AddressConverter.toSatoshiStyle (k.getAddress (), addressFlag);
 			log.debug ("Imported key for address " + address);
 			keyForAddress.put (address, k);
 			notifyNewKey (k, address, false);
