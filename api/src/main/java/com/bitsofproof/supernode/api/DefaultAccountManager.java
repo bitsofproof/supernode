@@ -310,15 +310,22 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 				in += o.getValue ();
 			}
 			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
-			TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee);
-			if ( new SecureRandom ().nextBoolean () )
+			if ( (in - amount - fee) > 0 )
 			{
-				sinks.add (target);
-				sinks.add (change);
+				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee);
+				if ( new SecureRandom ().nextBoolean () )
+				{
+					sinks.add (target);
+					sinks.add (change);
+				}
+				else
+				{
+					sinks.add (change);
+					sinks.add (target);
+				}
 			}
 			else
 			{
-				sinks.add (change);
 				sinks.add (target);
 			}
 			return Transaction.createSpend (sources, sinks, fee);
