@@ -46,7 +46,7 @@ public class KeyFormatter
 		this.addressFlag = addressFlag;
 	}
 
-	public String serializeKey (Key key)
+	public String serializeKey (Key key) throws ValidationException
 	{
 		if ( passphrase == null )
 		{
@@ -55,12 +55,29 @@ public class KeyFormatter
 		return serializeBIP38 (key);
 	}
 
+	public ExtendedKey parseSerializedExtendedKey (String serialized) throws ValidationException
+	{
+		byte[] extendedAndCC = ByteUtils.fromBase58 (serialized);
+		if ( extendedAndCC.length < 69 )
+		{
+			throw new ValidationException ("Invalid extended key");
+		}
+		byte[] key = Arrays.copyOfRange (extendedAndCC, 0, extendedAndCC.length - 32);
+		byte[] cc = Arrays.copyOfRange (extendedAndCC, extendedAndCC.length - 32, extendedAndCC.length);
+		return new ExtendedKey (parseBytesKey (key), cc);
+	}
+
 	public ECKeyPair parseSerializedKey (String serialized) throws ValidationException
 	{
 		byte[] store = ByteUtils.fromBase58 (serialized);
+		return parseBytesKey (store);
+	}
+
+	private ECKeyPair parseBytesKey (byte[] store) throws ValidationException
+	{
 		if ( (store[0] & 0xff) == 0x80 )
 		{
-			return parseWIF (serialized);
+			return parseBytesWIF (store);
 		}
 		else if ( (store[0] & 0xff) == 0x01 )
 		{
@@ -74,7 +91,27 @@ public class KeyFormatter
 		throw new ValidationException ("invalid key");
 	}
 
+	private String serializeBIP38 (Key key) throws ValidationException
+	{
+		return ByteUtils.toBase58 (bytesBIP38 (key));
+	}
+
 	public static String serializeWIF (Key key)
+	{
+		return ByteUtils.toBase58 (bytesWIF (key));
+	}
+
+	public String serializeExtendedKey (ExtendedKey key) throws ValidationException
+	{
+		Key master = key.getKey ();
+		byte[] keybytes = bytesBIP38 (master);
+		byte[] ext = new byte[keybytes.length + 32];
+		System.arraycopy (keybytes, 0, ext, 0, keybytes.length);
+		System.arraycopy (key.getChainCode (), 0, ext, keybytes.length, 32);
+		return ByteUtils.toBase58 (ext);
+	}
+
+	private static byte[] bytesWIF (Key key)
 	{
 		byte[] k = key.getPrivate ();
 		if ( key.isCompressed () )
@@ -87,7 +124,7 @@ public class KeyFormatter
 			byte[] hash = Hash.hash (ek);
 			System.arraycopy (ek, 0, encoded, 0, ek.length);
 			System.arraycopy (hash, 0, encoded, ek.length, 4);
-			return ByteUtils.toBase58 (encoded);
+			return encoded;
 		}
 		else
 		{
@@ -98,13 +135,18 @@ public class KeyFormatter
 			byte[] hash = Hash.hash (ek);
 			System.arraycopy (ek, 0, encoded, 0, ek.length);
 			System.arraycopy (hash, 0, encoded, ek.length, 4);
-			return ByteUtils.toBase58 (encoded);
+			return encoded;
 		}
 	}
 
 	public static ECKeyPair parseWIF (String serialized) throws ValidationException
 	{
 		byte[] store = ByteUtils.fromBase58 (serialized);
+		return parseBytesWIF (store);
+	}
+
+	private static ECKeyPair parseBytesWIF (byte[] store) throws ValidationException
+	{
 		if ( store.length == 37 )
 		{
 			checkChecksum (store);
@@ -407,8 +449,12 @@ public class KeyFormatter
 		}
 	}
 
-	private String serializeBIP38 (Key key)
+	private byte[] bytesBIP38 (Key key) throws ValidationException
 	{
+		if ( passphrase == null )
+		{
+			throw new ValidationException ("Must have passphrase to encrypt keys");
+		}
 		byte[] store = new byte[43];
 		store[0] = 0x01;
 		store[1] = 0x42;
@@ -461,7 +507,6 @@ public class KeyFormatter
 		catch ( BadPaddingException e )
 		{
 		}
-
-		return ByteUtils.toBase58 (store);
+		return store;
 	}
 }

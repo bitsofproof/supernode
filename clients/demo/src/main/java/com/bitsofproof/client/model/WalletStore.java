@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.bitsofproof.supernode.api.KeyFormatter;
 import com.bitsofproof.supernode.api.KeyGenerator;
+import com.bitsofproof.supernode.api.ValidationException;
 import com.mysema.query.jpa.impl.JPAQuery;
 
 public class WalletStore
@@ -31,7 +32,7 @@ public class WalletStore
 	private EntityManager entityManager;
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
-	public void store (String name, KeyGenerator wallet, String passphrase, int addressFlag)
+	public void store (String name, KeyGenerator wallet, String passphrase, int addressFlag) throws ValidationException
 	{
 		KeyFormatter formatter = new KeyFormatter (passphrase, addressFlag);
 		QWalletEntity qwe = QWalletEntity.walletEntity;

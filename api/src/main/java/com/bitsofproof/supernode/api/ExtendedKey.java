@@ -15,12 +15,22 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.security.SecureRandom;
+
 import org.bouncycastle.util.Arrays;
 
 public class ExtendedKey
 {
 	private final Key master;
 	private final byte[] chainCode;
+
+	public static ExtendedKey createNew ()
+	{
+		Key key = ECKeyPair.createNew (true);
+		byte[] chainCode = new byte[32];
+		new SecureRandom ().nextBytes (chainCode);
+		return new ExtendedKey (key, chainCode);
+	}
 
 	public ExtendedKey (Key key, byte[] chainCode)
 	{

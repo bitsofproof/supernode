@@ -40,6 +40,7 @@ public class KeySerializerTest
 	private static final String WIF = "WIF.json";
 	private static final String BIP38NoEC = "BIP38NoEC.json";
 	private static final String BIP38EC = "BIP38EC.json";
+	private static final String Extended = "ExtendedKey.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
@@ -83,9 +84,9 @@ public class KeySerializerTest
 			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
-			String unencrypted = KeyFormatter.serializeWIF (kp);
-			assertTrue (test.getString (1).equals (unencrypted));
-			ECKeyPair kp2 = formatter.parseSerializedKey (unencrypted);
+			String decrypted = KeyFormatter.serializeWIF (kp);
+			assertTrue (test.getString (1).equals (decrypted));
+			ECKeyPair kp2 = formatter.parseSerializedKey (decrypted);
 			assertTrue (formatter.serializeKey (kp2).equals (test.getString (0)));
 		}
 	}
@@ -100,8 +101,8 @@ public class KeySerializerTest
 
 			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
-			String unencrypted = KeyFormatter.serializeWIF (kp);
-			assertTrue (test.getString (1).equals (unencrypted));
+			String decrypted = KeyFormatter.serializeWIF (kp);
+			assertTrue (test.getString (1).equals (decrypted));
 		}
 	}
 
@@ -125,6 +126,22 @@ public class KeySerializerTest
 			ECKeyPair kp2 = formatter.parseSerializedKey (serialized);
 			assertTrue (Arrays.equals (kp.getPublic (), kp2.getPublic ()));
 			assertTrue (Arrays.equals (kp.getPrivate (), kp2.getPrivate ()));
+		}
+	}
+
+	@Test
+	public void extendedKeyTest () throws ValidationException, IOException, JSONException
+	{
+		JSONArray testData = readObjectArray (Extended);
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			final JSONArray test = testData.getJSONArray (i);
+
+			KeyFormatter formatter = new KeyFormatter (test.getString (3), 0x0);
+			ExtendedKey ek = formatter.parseSerializedExtendedKey (test.getString (0));
+			assertTrue (test.getString (1).equals (KeyFormatter.serializeWIF (ek.getKey ())));
+			assertTrue (test.getString (2).equals (ByteUtils.toBase58 (ek.getChainCode ())));
+			assertTrue (test.getString (0).equals (formatter.serializeExtendedKey (ek)));
 		}
 	}
 }
