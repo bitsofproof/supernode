@@ -35,6 +35,8 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 
+	private static final long DUST = 10000;
+
 	private class UTXO
 	{
 		private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
@@ -440,7 +442,11 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 					sum += o.getValue ();
 				}
 				List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-				sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), sum - fee));
+				// make it look like a spend
+				long a = Math.max ((((sum - fee) - Math.abs ((new SecureRandom ().nextLong () % (sum - fee)))) / DUST) * DUST, DUST);
+				long b = (sum - fee) - a;
+				sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), a));
+				sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), b));
 				return Transaction.createSpend (sources, sinks, fee);
 			}
 			throw new ValidationException ("No input available on this key");
