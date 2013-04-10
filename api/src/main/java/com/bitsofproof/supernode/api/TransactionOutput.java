@@ -253,11 +253,8 @@ public class TransactionOutput implements Serializable, Cloneable
 		TransactionOutput output = new TransactionOutput ();
 		output.setScript (po.getScript ().toByteArray ());
 		output.setValue (po.getValue ());
-		if ( po.hasTransaction () )
-		{
-			output.setTransactionHash (new Hash (po.getTransaction ().toByteArray ()).toString ());
-			output.setSelfIx (po.getSelfix ());
-		}
+		output.setTransactionHash (new Hash (po.getTransaction ().toByteArray ()).toString ());
+		output.setSelfIx (po.getSelfix ());
 		if ( po.hasVotes () )
 		{
 			output.addresses = new ArrayList<String> ();
