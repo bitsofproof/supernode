@@ -110,7 +110,7 @@ class DefaultKeyGenerator implements KeyGenerator
 		for ( int i = 0; i < nextKey; ++i )
 		{
 			Key k = getKey (i);
-			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getPublic (), addressFlag), k);
+			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getAddress (), addressFlag), k);
 		}
 	}
 
