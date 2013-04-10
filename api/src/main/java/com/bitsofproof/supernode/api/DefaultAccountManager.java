@@ -335,6 +335,45 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	}
 
 	@Override
+	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException
+	{
+		synchronized ( utxo )
+		{
+			List<TransactionSource> sources = new ArrayList<TransactionSource> ();
+			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
+
+			long amount = 0;
+			for ( long a : amounts )
+			{
+				amount += a;
+			}
+			List<TransactionOutput> sufficient = utxo.getSufficientSources (amount, fee, null);
+			if ( sufficient == null )
+			{
+				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
+			}
+			long in = 0;
+			for ( TransactionOutput o : sufficient )
+			{
+				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
+				in += o.getValue ();
+			}
+			for ( long a : amounts )
+			{
+				TransactionSink target = new TransactionSink (wallet.generateNextKey ().getAddress (), a);
+				sinks.add (target);
+			}
+			if ( (in - amount - fee) > 0 )
+			{
+				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee);
+				sinks.add (change);
+			}
+			Collections.shuffle (sinks);
+			return Transaction.createSpend (sources, sinks, fee);
+		}
+	}
+
+	@Override
 	public Transaction transfer (String receiver, long units, long fee, Color color) throws ValidationException, BCSAPIException
 	{
 		synchronized ( utxo )

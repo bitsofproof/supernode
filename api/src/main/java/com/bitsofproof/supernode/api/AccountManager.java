@@ -23,6 +23,8 @@ public interface AccountManager
 
 	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
+	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;
+
 	public Transaction transfer (String receiver, long units, long fee, Color color) throws ValidationException, BCSAPIException;
 
 	public Transaction createColorGenesis (long quantity, long unitSize, long fee) throws ValidationException, BCSAPIException;
