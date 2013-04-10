@@ -873,6 +873,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		o.toWire (writer);
 		TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		out.setTransactionHash (o.getTxHash ());
+		out.setSelfIx (o.getIx ());
 		List<String> addresses = new ArrayList<String> ();
 		if ( o.getOwner1 () != null )
 		{
