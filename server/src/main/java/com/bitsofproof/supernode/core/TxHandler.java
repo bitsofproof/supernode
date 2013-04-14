@@ -51,7 +51,7 @@ public class TxHandler implements TrunkListener
 
 	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final Set<Tx> own = Collections.synchronizedSet (new HashSet<Tx> ());
+	private final Set<String> own = Collections.synchronizedSet (new HashSet<String> ());
 	private TxOutCache availableOutput = null;
 	private PlatformTransactionManager transactionManager;
 
@@ -90,10 +90,10 @@ public class TxHandler implements TrunkListener
 						for ( BitcoinPeer peer : network.getConnectPeers () )
 						{
 							InvMessage tm = (InvMessage) peer.createMessage ("inv");
-							for ( Tx t : own )
+							for ( String t : own )
 							{
-								log.debug ("Re-broadcast " + t.getHash ());
-								tm.getTransactionHashes ().add (new Hash (t.getHash ()).toByteArray ());
+								log.debug ("Re-broadcast " + t);
+								tm.getTransactionHashes ().add (new Hash (t).toByteArray ());
 							}
 							peer.send (tm);
 						}
@@ -208,7 +208,7 @@ public class TxHandler implements TrunkListener
 									{
 										synchronized ( own )
 										{
-											own.add (t);
+											own.add (t.getHash ());
 										}
 									}
 									return null;
