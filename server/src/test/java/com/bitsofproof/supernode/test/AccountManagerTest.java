@@ -83,7 +83,7 @@ public class AccountManagerTest
 		store.cache (chain, 0);
 		byte[] chainCode = new byte[32];
 		new SecureRandom ().nextBytes (chainCode);
-		wallet = api.createKeyGenerator (0x0, 0x05);
+		wallet = api.createKeyGenerator (10, 0x0);
 	}
 
 	@Test
@@ -100,7 +100,7 @@ public class AccountManagerTest
 			}
 		};
 		api.registerTrunkListener (listener);
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.getRandomKey (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 		api.sendBlock (block);
@@ -108,7 +108,7 @@ public class AccountManagerTest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, i + 2));
+			block = createBlock (hash, Transaction.createCoinbase (wallet.getRandomKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -128,7 +128,7 @@ public class AccountManagerTest
 
 		assertTrue (am.getBalance () == 50 * COIN * 11);
 
-		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 13));
+		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.getRandomKey (), 50 * COIN, 13));
 		block.setCreateTime (block.getCreateTime () + 12 * 1000);
 		mineBlock (block);
 		blocks.put (22, block);
@@ -175,7 +175,7 @@ public class AccountManagerTest
 		};
 		alice.addAccountListener (listener1);
 
-		KeyGenerator bobWallet = api.createKeyGenerator (0x00, 0x05);
+		KeyGenerator bobWallet = api.createKeyGenerator (10, 0x00);
 		AccountManager bob = api.createAccountManager (bobWallet);
 		AccountListener listener2 = new AccountListener ()
 		{
@@ -190,7 +190,7 @@ public class AccountManagerTest
 		bob.addAccountListener (listener2);
 
 		Transaction t1 =
-				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.generateNextKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 1000);
+				alice.pay (AddressConverter.toSatoshiStyle (bobWallet.getRandomKey ().getAddress (), wallet.getAddressFlag ()), 10 * COIN, COIN / 1000);
 		api.sendTransaction (t1);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
@@ -225,7 +225,7 @@ public class AccountManagerTest
 		};
 		bob.addAccountListener (listener4);
 
-		Transaction t2 = bob.pay (AddressConverter.toSatoshiStyle (wallet.generateNextKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
+		Transaction t2 = bob.pay (AddressConverter.toSatoshiStyle (wallet.getRandomKey ().getAddress (), wallet.getAddressFlag ()), 5 * COIN, COIN / 1000);
 		api.sendTransaction (t2);
 
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));

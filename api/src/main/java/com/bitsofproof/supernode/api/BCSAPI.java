@@ -138,14 +138,14 @@ public interface BCSAPI
 	 * 
 	 * @throws BCSAPIException
 	 */
-	public KeyGenerator createKeyGenerator (int addressFlag, int p2shAddressFlag) throws BCSAPIException;
+	public KeyGenerator createKeyGenerator (int size, int addressFlag) throws BCSAPIException;
 
 	/**
 	 * get the key generator for a master key and next key sequence
 	 * 
 	 * @throws BCSAPIException
 	 */
-	public KeyGenerator getKeyGenerator (ExtendedKey master, int nextKeySequence, int addressFlag, int p2shAddressFlag) throws BCSAPIException;
+	public KeyGenerator getKeyGenerator (ExtendedKey master, int size, int addressFlag) throws BCSAPIException;
 
 	/**
 	 * create an account manager

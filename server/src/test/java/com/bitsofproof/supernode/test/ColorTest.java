@@ -80,20 +80,17 @@ public class ColorTest
 		store.resetStore (chain);
 		store.cache (chain, 0);
 
-		keyGenerator = api.createKeyGenerator (0x00, 0x05);
+		keyGenerator = api.createKeyGenerator (10, 0x00);
 		accountManager = api.createAccountManager (keyGenerator);
 	}
 
 	@Test
 	public void issueColor () throws ValidationException, BCSAPIException, InterruptedException
 	{
-		KeyGenerator keyGenerator = api.createKeyGenerator (0x00, 0x05);
-		AccountManager accountManager = api.createAccountManager (keyGenerator);
-
 		String hash = chain.getGenesis ().getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			Block block = createBlock (hash, Transaction.createCoinbase (keyGenerator.generateNextKey (), 5000000000L, i + 1));
+			Block block = createBlock (hash, Transaction.createCoinbase (keyGenerator.getRandomKey (), 5000000000L, i + 1));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 1, block);
@@ -108,7 +105,7 @@ public class ColorTest
 
 		final Transaction colorGenesis = accountManager.createColorGenesis (1000, color.getUnit (), COIN / 1000);
 
-		final Block block = createBlock (hash, Transaction.createCoinbase (keyGenerator.generateNextKey (), 5000000000L, 11));
+		final Block block = createBlock (hash, Transaction.createCoinbase (keyGenerator.getRandomKey (), 5000000000L, 11));
 		block.setCreateTime (block.getCreateTime () + 11 * 1000); // avoid clash of timestamp with median
 		block.getTransactions ().add (colorGenesis);
 		mineBlock (block);

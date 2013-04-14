@@ -88,7 +88,7 @@ public class APITest
 		store.cache (chain, 0);
 		byte[] chainCode = new byte[32];
 		new SecureRandom ().nextBytes (chainCode);
-		wallet = api.createKeyGenerator (0x0, 0x05);
+		wallet = api.createKeyGenerator (50, 0x0);
 	}
 
 	@Test
@@ -101,7 +101,7 @@ public class APITest
 	@Test
 	public void send1Block () throws BCSAPIException, ValidationException
 	{
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (wallet.getKey (0), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 
@@ -161,7 +161,7 @@ public class APITest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			Block block = createBlock (hash, Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, i + 2));
+			Block block = createBlock (hash, Transaction.createCoinbase (wallet.getKey (i + 1), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -193,7 +193,7 @@ public class APITest
 			TransactionOutput o = blocks.get (i + 1).getTransactions ().get (0).getOutputs ().get (0);
 			List<Token> tokens = ScriptFormat.parse (o.getScript ());
 			sources.add (new TransactionSource (o, wallet.getKeyForAddress (AddressConverter.toSatoshiStyle (tokens.get (2).data, wallet.getAddressFlag ()))));
-			o.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
+			o.parseOwners (wallet.getAddressFlag (), 0x05);
 			sourceAddresses.addAll (o.getAddresses ());
 		}
 
@@ -206,7 +206,7 @@ public class APITest
 		assertTrue (as.getPosting () == null);
 
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
-		Transaction.TransactionSink sink = new TransactionSink (wallet.generateNextKey ().getAddress (), 10 * 50 * COIN);
+		Transaction.TransactionSink sink = new TransactionSink (wallet.getRandomKey ().getAddress (), 10 * 50 * COIN);
 		sinks.add (sink);
 		List<String> sinkAddresses = new ArrayList<String> ();
 		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), 0x0));
@@ -313,7 +313,7 @@ public class APITest
 		};
 		api.registerTrunkListener (tl);
 
-		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.generateNextKey (), 5000000000L, 12));
+		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.getRandomKey (), 5000000000L, 12));
 		block.setCreateTime (block.getCreateTime () + 12 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);

@@ -175,7 +175,6 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			this.wallet = wallet;
 			walletAddresses.addAll (wallet.getAddresses ());
 			trackAddresses (walletAddresses);
-			wallet.addListener (this);
 			api.registerTrunkListener (this);
 		}
 		catch ( ValidationException e )
@@ -314,7 +313,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (wallet.getRandomKey ().getAddress (), in - amount - fee);
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
@@ -360,12 +359,12 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			}
 			for ( long a : amounts )
 			{
-				TransactionSink target = new TransactionSink (wallet.generateNextKey ().getAddress (), a);
+				TransactionSink target = new TransactionSink (wallet.getRandomKey ().getAddress (), a);
 				sinks.add (target);
 			}
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (wallet.getRandomKey ().getAddress (), in - amount - fee);
 				sinks.add (change);
 			}
 			Collections.shuffle (sinks);
@@ -401,7 +400,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			TransactionSink target = new TransactionSink (AddressConverter.fromSatoshiStyle (receiver, wallet.getAddressFlag ()), amount);
 			if ( colorIn > amount )
 			{
-				TransactionSink colorChange = new TransactionSink (wallet.generateNextKey ().getAddress (), colorIn - amount);
+				TransactionSink colorChange = new TransactionSink (wallet.getRandomKey ().getAddress (), colorIn - amount);
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
@@ -417,7 +416,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			{
 				sinks.add (target);
 			}
-			sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), in - amount - fee));
+			sinks.add (new TransactionSink (wallet.getRandomKey ().getAddress (), in - amount - fee));
 			return Transaction.createSpend (sources, sinks, fee);
 		}
 	}
@@ -441,23 +440,12 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 				sources.add (new TransactionSource (o, wallet.getKeyForAddress (o.getAddresses ().get (0))));
 				in += o.getValue ();
 			}
-			Key issuerKey = wallet.generateNextKey ();
+			Key issuerKey = wallet.getRandomKey ();
 			TransactionSink target = new TransactionSink (issuerKey.getAddress (), quantity * unitSize);
-			TransactionSink change = new TransactionSink (wallet.generateNextKey ().getAddress (), in - quantity * unitSize - fee);
+			TransactionSink change = new TransactionSink (wallet.getRandomKey ().getAddress (), in - quantity * unitSize - fee);
 			sinks.add (target);
 			sinks.add (change);
 			return Transaction.createSpend (sources, sinks, fee);
-		}
-	}
-
-	@Override
-	public void importKey (String serialized, String passpharse) throws ValidationException
-	{
-		synchronized ( utxo )
-		{
-			KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
-			Key key = formatter.parseSerializedKey (serialized);
-			wallet.importKey (key);
 		}
 	}
 
@@ -468,7 +456,6 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 		{
 			KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
 			Key key = formatter.parseSerializedKey (serialized);
-			wallet.importKey (key);
 			String inAddress = AddressConverter.toSatoshiStyle (key.getAddress (), wallet.getAddressFlag ());
 			List<TransactionOutput> available = utxo.getAddressSources (inAddress);
 			if ( available.size () > 0 )
@@ -484,8 +471,8 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 				// make it look like a spend
 				long a = Math.max ((((sum - fee) - Math.abs ((new SecureRandom ().nextLong () % (sum - fee)))) / DUST) * DUST, DUST);
 				long b = (sum - fee) - a;
-				sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), a));
-				sinks.add (new TransactionSink (wallet.generateNextKey ().getAddress (), b));
+				sinks.add (new TransactionSink (wallet.getRandomKey ().getAddress (), a));
+				sinks.add (new TransactionSink (wallet.getRandomKey ().getAddress (), b));
 				return Transaction.createSpend (sources, sinks, fee);
 			}
 			throw new ValidationException ("No input available on this key");
@@ -587,7 +574,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			{
 				for ( TransactionOutput output : t.getOutputs () )
 				{
-					output.parseOwners (wallet.getAddressFlag (), wallet.getP2SHAddressFlag ());
+					output.parseOwners (wallet.getAddressFlag (), 0x05);
 					for ( String address : output.getAddresses () )
 					{
 						if ( walletAddresses.contains (address) )

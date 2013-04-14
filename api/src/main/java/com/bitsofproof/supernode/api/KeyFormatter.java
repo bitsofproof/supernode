@@ -67,6 +67,43 @@ public class KeyFormatter
 		return new ExtendedKey (parseBytesKey (key), cc);
 	}
 
+	public String serializeExtendedKey (ExtendedKey key) throws ValidationException
+	{
+		Key master = key.getKey ();
+		byte[] keybytes = bytesBIP38 (master);
+		byte[] ext = new byte[keybytes.length + 32];
+		System.arraycopy (keybytes, 0, ext, 0, keybytes.length);
+		System.arraycopy (key.getChainCode (), 0, ext, keybytes.length, 32);
+		return ByteUtils.toBase58 (ext);
+	}
+
+	public String serializeKeyGenerator (KeyGenerator kg) throws ValidationException
+	{
+		Key master = kg.getMaster ().getKey ();
+		byte[] keybytes = bytesBIP38 (master);
+		byte[] ext = new byte[keybytes.length + 32 + 3];
+		ext[0] = (byte) kg.getAddressFlag ();
+		ext[1] = (byte) (kg.getSize () & 0xff);
+		ext[2] = (byte) ((kg.getSize () >>> 8) & 0xff);
+		System.arraycopy (keybytes, 0, ext, 3, keybytes.length);
+		System.arraycopy (kg.getMaster ().getChainCode (), 0, ext, keybytes.length + 3, 32);
+		return ByteUtils.toBase58WithChecksum (ext);
+	}
+
+	public KeyGenerator parseSerializedKeyGenerator (String serialized) throws ValidationException
+	{
+		byte[] extendedAndCC = ByteUtils.fromBase58WithChecksum (serialized);
+		if ( extendedAndCC.length < 72 )
+		{
+			throw new ValidationException ("Invalid extended key");
+		}
+		int addressFlag = extendedAndCC[0];
+		int size = (extendedAndCC[1] & 0xff) | (extendedAndCC[2] & 0xff) << 8;
+		byte[] key = Arrays.copyOfRange (extendedAndCC, 3, extendedAndCC.length - 32);
+		byte[] cc = Arrays.copyOfRange (extendedAndCC, extendedAndCC.length - 32, extendedAndCC.length);
+		return new DefaultKeyGenerator (new ExtendedKey (parseBytesKey (key), cc), size, addressFlag);
+	}
+
 	public ECKeyPair parseSerializedKey (String serialized) throws ValidationException
 	{
 		byte[] store = ByteUtils.fromBase58 (serialized);
@@ -99,16 +136,6 @@ public class KeyFormatter
 	public static String serializeWIF (Key key)
 	{
 		return ByteUtils.toBase58 (bytesWIF (key));
-	}
-
-	public String serializeExtendedKey (ExtendedKey key) throws ValidationException
-	{
-		Key master = key.getKey ();
-		byte[] keybytes = bytesBIP38 (master);
-		byte[] ext = new byte[keybytes.length + 32];
-		System.arraycopy (keybytes, 0, ext, 0, keybytes.length);
-		System.arraycopy (key.getChainCode (), 0, ext, keybytes.length, 32);
-		return ByteUtils.toBase58 (ext);
 	}
 
 	private static byte[] bytesWIF (Key key)

@@ -29,8 +29,6 @@ public interface AccountManager
 
 	public Transaction createColorGenesis (long quantity, long unitSize, long fee) throws ValidationException, BCSAPIException;
 
-	public void importKey (String serialized, String passpharse) throws ValidationException;
-
 	public Transaction cashIn (String serialized, String passpharse, long fee) throws ValidationException, BCSAPIException;
 
 	public long getBalance ();

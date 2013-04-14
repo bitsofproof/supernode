@@ -41,13 +41,11 @@ class DefaultKeyGenerator implements KeyGenerator
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 
 	private final ExtendedKey master;
-	private int nextKey;
+	private final int size;
 	private List<DefaultKeyGenerator> subs;
-	private final List<Key> importedKeys = new ArrayList<Key> ();
 	private final Map<String, Key> keyForAddress = new HashMap<String, Key> ();
-	private final List<KeyGeneratorListener> walletListener = new ArrayList<KeyGeneratorListener> ();
 	private final int addressFlag;
-	private final int p2shAddressFlag;
+	private final SecureRandom rnd = new SecureRandom ();
 
 	private static final X9ECParameters curve = SECNamedCurves.getByName ("secp256k1");
 
@@ -101,13 +99,12 @@ class DefaultKeyGenerator implements KeyGenerator
 		}
 	}
 
-	public DefaultKeyGenerator (ExtendedKey master, int nextKey, int addressFlag, int p2shAddressFlag) throws ValidationException
+	public DefaultKeyGenerator (ExtendedKey master, int size, int addressFlag) throws ValidationException
 	{
 		this.master = master;
-		this.nextKey = nextKey;
+		this.size = size;
 		this.addressFlag = addressFlag;
-		this.p2shAddressFlag = p2shAddressFlag;
-		for ( int i = 0; i < nextKey; ++i )
+		for ( int i = 0; i < size; ++i )
 		{
 			Key k = getKey (i);
 			keyForAddress.put (AddressConverter.toSatoshiStyle (k.getAddress (), addressFlag), k);
@@ -120,13 +117,7 @@ class DefaultKeyGenerator implements KeyGenerator
 		return addressFlag;
 	}
 
-	@Override
-	public int getP2SHAddressFlag ()
-	{
-		return p2shAddressFlag;
-	}
-
-	public static KeyGenerator createKeyGenerator (int addressFlag, int multiAddressFlag) throws ValidationException
+	public static KeyGenerator createKeyGenerator (int size, int addressFlag) throws ValidationException
 	{
 		SecureRandom random = new SecureRandom ();
 		ECKeyPair master = ECKeyPair.createNew (true);
@@ -134,53 +125,15 @@ class DefaultKeyGenerator implements KeyGenerator
 		random.nextBytes (chainCode);
 		ExtendedKey parent = new ExtendedKey (master, chainCode);
 		log.debug ("Created new wallet");
-		return new DefaultKeyGenerator (parent, 0, addressFlag, multiAddressFlag);
-	}
-
-	@Override
-	public KeyGenerator createSubKeyGenerator (int sequence) throws ValidationException
-	{
-		if ( sequence > nextKey )
-		{
-			throw new ValidationException ("Subwallets must use consecutive sequences");
-		}
-		if ( sequence == nextKey )
-		{
-			generateNextKey ();
-		}
-		if ( subs == null )
-		{
-			subs = new ArrayList<DefaultKeyGenerator> ();
-		}
-		DefaultKeyGenerator sub = new DefaultKeyGenerator (generateKey (master, sequence), 0, addressFlag, p2shAddressFlag);
-		subs.add (sub);
-		for ( KeyGeneratorListener l : walletListener )
-		{
-			sub.addListener (l);
-		}
-		log.debug ("Created new sub-wallet " + sequence);
-		return sub;
-	}
-
-	@Override
-	public void addListener (KeyGeneratorListener listener)
-	{
-		walletListener.add (listener);
-		if ( subs != null )
-		{
-			for ( KeyGenerator sub : subs )
-			{
-				sub.addListener (listener);
-			}
-		}
+		return new DefaultKeyGenerator (parent, size, addressFlag);
 	}
 
 	@Override
 	public ExtendedKey getExtendedKey (int sequence) throws ValidationException
 	{
-		if ( sequence > nextKey )
+		if ( sequence >= size )
 		{
-			throw new ValidationException ("Sequence requested is higher than generated before");
+			throw new ValidationException ("Sequence requested is higher than size");
 		}
 		return generateKey (master, sequence);
 	}
@@ -192,40 +145,17 @@ class DefaultKeyGenerator implements KeyGenerator
 	}
 
 	@Override
-	public Key generateNextKey () throws ValidationException
+	public Key getRandomKey () throws ValidationException
 	{
-		ExtendedKey k = generateKey (master, nextKey++);
-		String address = AddressConverter.toSatoshiStyle (k.getKey ().getAddress (), addressFlag);
-		log.debug ("Created new key [" + (nextKey - 1) + "] for address " + address);
-		Key key = k.getKey ();
-		keyForAddress.put (address, key);
-		notifyNewKey (key, address, true);
-		return key;
-	}
-
-	private void notifyNewKey (Key k, String address, boolean pristine)
-	{
-		for ( KeyGeneratorListener l : walletListener )
+		int n = Math.abs (rnd.nextInt ()) % keyForAddress.size ();
+		for ( Key k : keyForAddress.values () )
 		{
-			l.notifyNewKey (address, k, pristine);
+			if ( n-- == 0 )
+			{
+				return k;
+			}
 		}
-	}
-
-	@Override
-	public void importKey (Key k)
-	{
-		try
-		{
-			importedKeys.add (k.clone ());
-
-			String address = AddressConverter.toSatoshiStyle (k.getAddress (), addressFlag);
-			log.debug ("Imported key for address " + address);
-			keyForAddress.put (address, k);
-			notifyNewKey (k, address, false);
-		}
-		catch ( CloneNotSupportedException e )
-		{
-		}
+		return null; // can not happen
 	}
 
 	@Override
@@ -255,8 +185,8 @@ class DefaultKeyGenerator implements KeyGenerator
 	}
 
 	@Override
-	public int getNextKeySequence ()
+	public int getSize ()
 	{
-		return nextKey;
+		return size;
 	}
 }

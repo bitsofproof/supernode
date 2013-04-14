@@ -735,11 +735,11 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public KeyGenerator createKeyGenerator (int addressFlag, int multiAddressFlag) throws BCSAPIException
+	public KeyGenerator createKeyGenerator (int size, int addressFlag) throws BCSAPIException
 	{
 		try
 		{
-			return DefaultKeyGenerator.createKeyGenerator (addressFlag, multiAddressFlag);
+			return DefaultKeyGenerator.createKeyGenerator (size, addressFlag);
 		}
 		catch ( ValidationException e )
 		{
@@ -748,11 +748,11 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public KeyGenerator getKeyGenerator (ExtendedKey master, int nextKeySequence, int addressFlag, int p2shAddressFlag) throws BCSAPIException
+	public KeyGenerator getKeyGenerator (ExtendedKey master, int nextKeySequence, int addressFlag) throws BCSAPIException
 	{
 		try
 		{
-			return new DefaultKeyGenerator (master, nextKeySequence, addressFlag, p2shAddressFlag);
+			return new DefaultKeyGenerator (master, nextKeySequence, addressFlag);
 		}
 		catch ( ValidationException e )
 		{
