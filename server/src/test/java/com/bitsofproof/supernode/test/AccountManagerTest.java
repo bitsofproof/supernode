@@ -236,6 +236,29 @@ public class AccountManagerTest
 		bob.removeAccountListener (listener4);
 	}
 
+	@Test
+	public void testSplit () throws BCSAPIException, ValidationException, InterruptedException
+	{
+		AccountManager alice = api.createAccountManager (wallet);
+		final long balance = alice.getBalance ();
+
+		Transaction split = alice.split (new long[] { 50000, 60000, 100000 }, 50000);
+
+		final Semaphore ready1 = new Semaphore (0);
+		AccountListener listener1 = new AccountListener ()
+		{
+			@Override
+			public void accountChanged (AccountManager account)
+			{
+				assertTrue (account.getBalance () == balance - 50000);
+				ready1.release ();
+			}
+		};
+		alice.addAccountListener (listener1);
+		api.sendTransaction (split);
+		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
+	}
+
 	private Block createBlock (String previous, Transaction coinbase)
 	{
 		Block block = new Block ();
