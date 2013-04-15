@@ -206,7 +206,7 @@ public class APITest
 		assertTrue (as.getPosting () == null);
 
 		List<Transaction.TransactionSink> sinks = new ArrayList<Transaction.TransactionSink> ();
-		Transaction.TransactionSink sink = new TransactionSink (wallet.getRandomKey ().getAddress (), 10 * 50 * COIN);
+		Transaction.TransactionSink sink = new TransactionSink (wallet.getKey (20).getAddress (), 10 * 50 * COIN);
 		sinks.add (sink);
 		List<String> sinkAddresses = new ArrayList<String> ();
 		sinkAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), 0x0));
@@ -313,7 +313,7 @@ public class APITest
 		};
 		api.registerTrunkListener (tl);
 
-		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.getRandomKey (), 5000000000L, 12));
+		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.getKey (12), 5000000000L, 12));
 		block.setCreateTime (block.getCreateTime () + 12 * 1000);
 		block.getTransactions ().add (transaction);
 		mineBlock (block);
