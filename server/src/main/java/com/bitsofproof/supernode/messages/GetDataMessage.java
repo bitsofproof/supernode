@@ -25,6 +25,7 @@ import com.bitsofproof.supernode.core.BitcoinPeer;
 public class GetDataMessage extends BitcoinPeer.Message
 {
 
+	List<byte[]> filteredBlocks = new ArrayList<byte[]> ();
 	List<byte[]> blocks = new ArrayList<byte[]> ();
 	List<byte[]> transactions = new ArrayList<byte[]> ();
 
@@ -47,6 +48,11 @@ public class GetDataMessage extends BitcoinPeer.Message
 			writer.writeUint32 (2);
 			writer.writeBytes (h);
 		}
+		for ( byte[] h : filteredBlocks )
+		{
+			writer.writeUint32 (3);
+			writer.writeBytes (h);
+		}
 	}
 
 	@Override
@@ -60,9 +66,13 @@ public class GetDataMessage extends BitcoinPeer.Message
 			{
 				transactions.add (reader.readBytes (32));
 			}
-			else
+			if ( type == 2 )
 			{
 				blocks.add (reader.readBytes (32));
+			}
+			if ( type == 3 )
+			{
+				filteredBlocks.add (reader.readBytes (32));
 			}
 		}
 	}
@@ -75,6 +85,16 @@ public class GetDataMessage extends BitcoinPeer.Message
 	public void setBlocks (List<byte[]> blocks)
 	{
 		this.blocks = blocks;
+	}
+
+	public List<byte[]> getFilteredBlocks ()
+	{
+		return filteredBlocks;
+	}
+
+	public void setFilteredBlocks (List<byte[]> filteredBlocks)
+	{
+		this.filteredBlocks = filteredBlocks;
 	}
 
 	public List<byte[]> getTransactions ()
