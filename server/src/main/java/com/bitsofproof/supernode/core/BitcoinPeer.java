@@ -50,6 +50,7 @@ import com.bitsofproof.supernode.messages.GetHeadersMessage;
 import com.bitsofproof.supernode.messages.HeadersMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
 import com.bitsofproof.supernode.messages.MempoolMessage;
+import com.bitsofproof.supernode.messages.MerkleBlockMessage;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
@@ -74,6 +75,7 @@ public class BitcoinPeer extends P2P.Peer
 	private long trafficOut;
 	private long errors;
 	private BloomFilter filter;
+	private boolean relay;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -165,6 +167,10 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new BlockMessage (this);
 		}
+		else if ( command.equals ("merkleblock") )
+		{
+			return new MerkleBlockMessage (this);
+		}
 		else if ( command.equals ("headers") )
 		{
 			return new HeadersMessage (this);
@@ -209,8 +215,17 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new FilterClearMessage (this);
 		}
+		else if ( command.equals ("notfound") )
+		{
+			return new Message (command);
+		}
 		log.trace ("Peer sent unknown message: " + command + " " + getAddress ());
 		return new Message (command);
+	}
+
+	public boolean isRelay ()
+	{
+		return relay;
 	}
 
 	public long getLastSpoken ()
@@ -255,6 +270,7 @@ public class BitcoinPeer extends P2P.Peer
 					height = v.getHeight ();
 					peerVersion = Math.min (peerVersion, v.getVersion ());
 					peerServices = v.getServices ();
+					relay = v.isRelay ();
 					if ( network.getPeerStore () != null )
 					{
 						KnownPeer p;

@@ -31,13 +31,8 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
@@ -312,7 +307,7 @@ public class TxHandler implements TrunkListener
 		{
 			if ( p != peer )
 			{
-				if ( passesFilter (tx, peer) )
+				if ( peer.isRelay () || peer.getFilter () == null || tx.passesFilter (peer.getFilter ()) )
 				{
 					InvMessage tm = (InvMessage) p.createMessage ("inv");
 					tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
@@ -321,85 +316,6 @@ public class TxHandler implements TrunkListener
 			}
 		}
 		log.debug ("relaying transaction " + tx.getHash ());
-	}
-
-	private boolean passesFilter (Tx tx, BitcoinPeer peer)
-	{
-		BloomFilter filter = peer.getFilter ();
-		if ( filter == null )
-		{
-			return true;
-		}
-		if ( filter.contains (new Hash (tx.getHash ()).toByteArray ()) )
-		{
-			return true;
-		}
-		boolean found = false;
-		for ( TxOut out : tx.getOutputs () )
-		{
-			try
-			{
-				List<Token> tokens = ScriptFormat.parse (out.getScript ());
-				for ( Token t : tokens )
-				{
-					if ( t.data != null && filter.contains (t.data) )
-					{
-						if ( filter.getUpdateMode () == UpdateMode.all )
-						{
-							WireFormat.Writer writer = new WireFormat.Writer ();
-							out.toWire (writer);
-							filter.add (writer.toByteArray ());
-						}
-						else if ( filter.getUpdateMode () == UpdateMode.keys )
-						{
-							if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
-							{
-								WireFormat.Writer writer = new WireFormat.Writer ();
-								out.toWire (writer);
-								filter.add (writer.toByteArray ());
-							}
-						}
-						found = true;
-					}
-				}
-			}
-			catch ( ValidationException e )
-			{
-			}
-		}
-		if ( found )
-		{
-			return true;
-		}
-
-		for ( TxIn in : tx.getInputs () )
-		{
-			if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-			{
-				TxOut out = availableOutput.get (in.getSourceHash (), in.getIx ());
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				out.toWire (writer);
-				if ( filter.contains (writer.toByteArray ()) )
-				{
-					return true;
-				}
-				try
-				{
-					List<Token> tokens = ScriptFormat.parse (out.getScript ());
-					for ( Token t : tokens )
-					{
-						if ( t.data != null && filter.contains (t.data) )
-						{
-							return true;
-						}
-					}
-				}
-				catch ( ValidationException e )
-				{
-				}
-			}
-		}
-		return false;
 	}
 
 	private void notifyListener (Tx tx)

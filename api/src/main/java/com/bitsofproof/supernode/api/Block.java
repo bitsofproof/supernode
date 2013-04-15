@@ -106,37 +106,29 @@ public class Block implements Serializable, Cloneable
 		if ( transactions != null )
 		{
 			ArrayList<byte[]> tree = new ArrayList<byte[]> ();
-			int nt = transactions.size ();
-
 			for ( Transaction t : transactions )
 			{
 				t.computeHash ();
 				tree.add (new Hash (t.getHash ()).toByteArray ());
 			}
-			int levelOffset = 0;
-			try
+			BinaryAggregator<byte[]> aggregator = new BinaryAggregator<byte[]> ()
 			{
-				MessageDigest digest = MessageDigest.getInstance ("SHA-256");
-
-				for ( int levelSize = nt; levelSize > 1; levelSize = (levelSize + 1) / 2 )
+				@Override
+				public byte[] merge (byte[] a, byte[] b)
 				{
-					for ( int left = 0; left < levelSize; left += 2 )
+					try
 					{
-						int right = Math.min (left + 1, levelSize - 1);
-						byte[] leftBytes = tree.get (levelOffset + left);
-						byte[] rightBytes = tree.get (levelOffset + right);
-						digest.update (leftBytes);
-						digest.update (rightBytes);
-						tree.add (digest.digest (digest.digest ()));
+						MessageDigest digest = MessageDigest.getInstance ("SHA-256");
+						digest.update (a);
+						return digest.digest (digest.digest (b));
 					}
-					levelOffset += levelSize;
+					catch ( NoSuchAlgorithmException e )
+					{
+						return null;
+					}
 				}
-			}
-			catch ( NoSuchAlgorithmException e )
-			{
-			}
-
-			merkleRoot = new Hash (tree.get (tree.size () - 1)).toString ();
+			};
+			merkleRoot = new Hash (aggregator.aggregate (tree)).toString ();
 		}
 	}
 

@@ -33,8 +33,12 @@ import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.bitsofproof.supernode.api.BloomFilter;
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.ScriptFormat;
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
 import com.google.protobuf.ByteString;
@@ -306,6 +310,82 @@ public class Tx implements Serializable
 	public void setIx (Long ix)
 	{
 		this.ix = ix;
+	}
+
+	public boolean passesFilter (BloomFilter filter)
+	{
+		if ( filter.contains (new Hash (hash).toByteArray ()) )
+		{
+			return true;
+		}
+		boolean found = false;
+		for ( TxOut out : outputs )
+		{
+			try
+			{
+				List<Token> tokens = ScriptFormat.parse (out.getScript ());
+				for ( Token t : tokens )
+				{
+					if ( t.data != null && filter.contains (t.data) )
+					{
+						if ( filter.getUpdateMode () == UpdateMode.all )
+						{
+							WireFormat.Writer writer = new WireFormat.Writer ();
+							writer.writeHash (new Hash (hash));
+							writer.writeUint32 (out.getIx ());
+							filter.add (writer.toByteArray ());
+						}
+						else if ( filter.getUpdateMode () == UpdateMode.keys )
+						{
+							if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
+							{
+								WireFormat.Writer writer = new WireFormat.Writer ();
+								writer.writeHash (new Hash (hash));
+								writer.writeUint32 (out.getIx ());
+								filter.add (writer.toByteArray ());
+							}
+						}
+						found = true;
+					}
+				}
+			}
+			catch ( ValidationException e )
+			{
+			}
+		}
+		if ( found )
+		{
+			return true;
+		}
+
+		for ( TxIn in : inputs )
+		{
+			if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+			{
+				WireFormat.Writer writer = new WireFormat.Writer ();
+				writer.writeHash (new Hash (in.getSourceHash ()));
+				writer.writeUint32 (in.getIx ());
+				if ( filter.contains (writer.toByteArray ()) )
+				{
+					return true;
+				}
+				try
+				{
+					List<Token> tokens = ScriptFormat.parse (in.getScript ());
+					for ( Token t : tokens )
+					{
+						if ( t.data != null && filter.contains (t.data) )
+						{
+							return true;
+						}
+					}
+				}
+				catch ( ValidationException e )
+				{
+				}
+			}
+		}
+		return false;
 	}
 
 	public JSONObject toJSON ()

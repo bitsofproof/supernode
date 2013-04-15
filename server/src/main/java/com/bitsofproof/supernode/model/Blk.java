@@ -33,6 +33,7 @@ import javax.persistence.Table;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.bitsofproof.supernode.api.BinaryAggregator;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
@@ -292,39 +293,28 @@ public class Blk implements Serializable
 			throw new ValidationException ("block has no transactions");
 		}
 
-		// Start by adding all the hashes of the transactions as leaves of the tree.
 		for ( Tx t : transactions )
 		{
 			tree.add (new Hash (t.getHash ()).toByteArray ());
 		}
-		int levelOffset = 0;
-		try
+		BinaryAggregator<byte[]> aggregator = new BinaryAggregator<byte[]> ()
 		{
-			MessageDigest digest = MessageDigest.getInstance ("SHA-256");
-
-			// Step through each level, stopping when we reach the root (levelSize == 1).
-			for ( int levelSize = nt; levelSize > 1; levelSize = (levelSize + 1) / 2 )
+			@Override
+			public byte[] merge (byte[] a, byte[] b)
 			{
-				// For each pair of nodes on that level:
-				for ( int left = 0; left < levelSize; left += 2 )
+				try
 				{
-					// The right hand node can be the same as the left hand, in the case where we don't have enough
-					// transactions.
-					int right = Math.min (left + 1, levelSize - 1);
-					byte[] leftBytes = tree.get (levelOffset + left);
-					byte[] rightBytes = tree.get (levelOffset + right);
-					digest.update (leftBytes);
-					digest.update (rightBytes);
-					tree.add (digest.digest (digest.digest ()));
+					MessageDigest digest = MessageDigest.getInstance ("SHA-256");
+					digest.update (a);
+					return digest.digest (digest.digest (b));
 				}
-				// Move to the next level.
-				levelOffset += levelSize;
+				catch ( NoSuchAlgorithmException e )
+				{
+					return null;
+				}
 			}
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-		}
-		return new Hash (tree.get (tree.size () - 1)).toString ();
+		};
+		return new Hash (aggregator.aggregate (tree)).toString ();
 	}
 
 	public String toWireDump ()
@@ -371,6 +361,21 @@ public class Blk implements Serializable
 		nonce = reader.readUint32 ();
 
 		wireTransactions = reader.readRest ();
+		transactions = null;
+
+		hash = reader.hash (cursor, 80).toString ();
+	}
+
+	public void fromWireHeaderOnly (WireFormat.Reader reader)
+	{
+		int cursor = reader.getCursor ();
+		version = reader.readUint32 ();
+
+		previousHash = reader.readHash ().toString ();
+		merkleRoot = reader.readHash ().toString ();
+		createTime = reader.readUint32 ();
+		difficultyTarget = reader.readUint32 ();
+		nonce = reader.readUint32 ();
 		transactions = null;
 
 		hash = reader.hash (cursor, 80).toString ();

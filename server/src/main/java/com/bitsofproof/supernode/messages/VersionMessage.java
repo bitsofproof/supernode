@@ -41,6 +41,7 @@ public class VersionMessage extends BitcoinPeer.Message
 	private long nonce;
 	private String agent = "/bitsofproof:0.9/";
 	private long height;
+	private boolean relay = true;
 
 	@Override
 	public void toWire (Writer writer)
@@ -66,6 +67,11 @@ public class VersionMessage extends BitcoinPeer.Message
 		writer.writeUint64 (nonce);
 		writer.writeString (agent);
 		writer.writeUint32 (height);
+		if ( getVersion () >= 70001 )
+		{
+			// TODO: https://github.com/bitcoin/bitcoin/issues/2534
+			// writer.writeByte (relay ? 1 : 0);
+		}
 	}
 
 	@Override
@@ -83,6 +89,21 @@ public class VersionMessage extends BitcoinPeer.Message
 		nonce = reader.readUint64 ();
 		agent = reader.readString ();
 		height = reader.readUint32 ();
+		if ( getVersion () >= 70001 )
+		{
+			// TODO: https://github.com/bitcoin/bitcoin/issues/2534
+			// relay = reader.readByte () == 1;
+		}
+	}
+
+	public boolean isRelay ()
+	{
+		return relay;
+	}
+
+	public void setRelay (boolean relay)
+	{
+		this.relay = relay;
 	}
 
 	public long getServices ()
