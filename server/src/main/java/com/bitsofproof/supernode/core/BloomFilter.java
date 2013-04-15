@@ -25,6 +25,7 @@ import com.bitsofproof.supernode.api.WireFormat;
 public class BloomFilter
 {
 	private final BigInteger filter;
+	private final int mod;
 	private final long hashFunctions;
 	private final long tweak;
 	private final long flags;
@@ -32,6 +33,7 @@ public class BloomFilter
 	public BloomFilter (byte[] data, long hashFunctions, long tweak, long flags)
 	{
 		byte[] tmp = Arrays.clone (data);
+		mod = data.length * 8;
 		this.filter = new BigInteger (1, ByteUtils.reverse (tmp));
 		this.hashFunctions = hashFunctions;
 		this.tweak = tweak;
@@ -60,7 +62,7 @@ public class BloomFilter
 
 	private int murmurhash3bit (int hashNum, byte[] data)
 	{
-		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % ((filter.bitCount () >>> 3) * 8));
+		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % mod);
 	}
 
 	public void toWire (WireFormat.Writer writer)
