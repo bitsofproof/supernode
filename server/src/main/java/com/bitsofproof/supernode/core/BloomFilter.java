@@ -60,7 +60,7 @@ public class BloomFilter
 
 	private int murmurhash3bit (int hashNum, byte[] data)
 	{
-		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % (data.length * 8));
+		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % ((filter.bitCount () >>> 3) * 8));
 	}
 
 	public void toWire (WireFormat.Writer writer)
