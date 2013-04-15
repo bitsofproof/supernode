@@ -69,7 +69,13 @@ public class BloomFilter
 	{
 		byte[] data = filter.toByteArray ();
 		ByteUtils.reverse (data);
-		writer.writeVarBytes (data);
+		writer.writeVarInt (mod);
+		writer.writeBytes (data);
+		if ( data.length < mod )
+		{
+			byte[] fill = new byte[mod - data.length];
+			writer.writeBytes (fill);
+		}
 		writer.writeUint32 (hashFunctions);
 		writer.writeUint32 (tweak);
 		writer.writeUint32 (flags);
