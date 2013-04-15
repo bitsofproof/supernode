@@ -97,7 +97,7 @@ public class BloomFilter
 		writer.writeVarBytes (filter);
 		writer.writeUint32 (hashFunctions);
 		writer.writeUint32 (tweak);
-		writer.writeUint32 (update.ordinal ());
+		writer.writeByte (update.ordinal ());
 	}
 
 	public static BloomFilter fromWire (WireFormat.Reader reader)
@@ -105,8 +105,8 @@ public class BloomFilter
 		byte[] data = reader.readVarBytes ();
 		long hashFunctions = reader.readUint32 ();
 		long tweak = reader.readUint32 ();
-		long update = reader.readUint32 ();
-		return new BloomFilter (data, hashFunctions, tweak, UpdateMode.values ()[(int) update]);
+		int update = reader.readByte ();
+		return new BloomFilter (data, hashFunctions, tweak, UpdateMode.values ()[update]);
 	}
 
 	/*
