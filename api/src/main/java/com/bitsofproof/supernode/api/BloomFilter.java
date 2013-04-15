@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.core;
+package com.bitsofproof.supernode.api;
 
-import java.math.BigInteger;
 import java.security.SecureRandom;
 
 import org.bouncycastle.util.Arrays;
-
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.WireFormat;
 
 public class BloomFilter
 {
@@ -30,8 +26,7 @@ public class BloomFilter
 		none, all, keys
 	}
 
-	private final BigInteger filter;
-	private final int mod;
+	private final byte[] filter;
 	private final long hashFunctions;
 	private final long tweak;
 	private final UpdateMode update;
@@ -39,31 +34,44 @@ public class BloomFilter
 	private static final int MAX_FILTER_SIZE = 36000;
 	private static final int MAX_HASH_FUNCS = 50;
 
-	public static BloomFilter createOptimalFilter (int n, double probFalsePositive, UpdateMode update)
+	public static BloomFilter createOptimalFilter (int n, double falsePositiveProbability, UpdateMode update)
 	{
 		long tweak = Math.abs (new SecureRandom ().nextInt ());
 		// http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives
 		double ln2 = Math.log (2.0);
-		int mod = Math.max (1, (int) Math.min ((-n * Math.log (probFalsePositive) / (ln2 * ln2)) / 8.0, MAX_FILTER_SIZE));
+		int mod = Math.max (1, (int) Math.min ((-n * Math.log (falsePositiveProbability) / (ln2 * ln2)) / 8.0, MAX_FILTER_SIZE));
 		long hashFunctions = Math.max (1, Math.min ((int) (mod * 8.0 / n * ln2), MAX_HASH_FUNCS));
 		return new BloomFilter (new byte[mod], hashFunctions, tweak, update);
 	}
 
+	public double getFalsePositiveProbability (int n)
+	{
+		return Math.pow (1 - Math.pow (Math.E, -1.0 * (hashFunctions * n) / (filter.length * 8)), hashFunctions);
+	}
+
 	public BloomFilter (byte[] data, long hashFunctions, long tweak, UpdateMode update)
 	{
-		byte[] tmp = Arrays.copyOf (data, Math.min (data.length, MAX_FILTER_SIZE));
-		mod = data.length * 8;
-		this.filter = new BigInteger (1, ByteUtils.reverse (tmp));
+		filter = Arrays.clone (data);
 		this.hashFunctions = Math.min (hashFunctions, MAX_HASH_FUNCS);
 		this.tweak = tweak;
 		this.update = update;
+	}
+
+	private void setBit (int n)
+	{
+		filter[n >>> 3] |= 1 << (7 & n);
+	}
+
+	private boolean testBit (int n)
+	{
+		return (filter[n >>> 3] & 1 << (7 & n)) != 0;
 	}
 
 	public void add (byte[] data)
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			filter.setBit (murmurhash3bit (i, data));
+			setBit (murmurhash3bit (i, data));
 		}
 	}
 
@@ -71,7 +79,7 @@ public class BloomFilter
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			if ( !filter.testBit (murmurhash3bit (i, data)) )
+			if ( !testBit (murmurhash3bit (i, data)) )
 			{
 				return false;
 			}
@@ -81,20 +89,12 @@ public class BloomFilter
 
 	private int murmurhash3bit (int hashNum, byte[] data)
 	{
-		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % mod);
+		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % (filter.length * 8));
 	}
 
 	public void toWire (WireFormat.Writer writer)
 	{
-		byte[] data = filter.toByteArray ();
-		ByteUtils.reverse (data);
-		writer.writeVarInt (mod);
-		writer.writeBytes (data);
-		if ( data.length < mod )
-		{
-			byte[] fill = new byte[mod - data.length];
-			writer.writeBytes (fill);
-		}
+		writer.writeVarBytes (filter);
 		writer.writeUint32 (hashFunctions);
 		writer.writeUint32 (tweak);
 		writer.writeUint32 (update.ordinal ());
@@ -171,9 +171,9 @@ public class BloomFilter
 		return h1;
 	}
 
-	public BigInteger getFilter ()
+	public byte[] getFilter ()
 	{
-		return filter;
+		return filter.clone ();
 	}
 
 	public long getHashFunctions ()

@@ -1,0 +1,48 @@
+package com.bitsofproof.supernode.api;
+
+import static org.junit.Assert.assertTrue;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.Test;
+
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+
+public class BloomFilterTest
+{
+	@Test
+	public void bloomTest ()
+	{
+		int n = 500;
+		double falsepositiveTarget = 0.01;
+		BloomFilter filter = BloomFilter.createOptimalFilter (n, falsepositiveTarget, UpdateMode.all);
+		assertTrue (filter.getFalsePositiveProbability (n) < 0.02);
+
+		List<byte[]> mustHave = new ArrayList<byte[]> ();
+		SecureRandom rnd = new SecureRandom ();
+		for ( int i = 0; i < n; ++i )
+		{
+			byte[] data = new byte[32];
+			rnd.nextBytes (data);
+			mustHave.add (data);
+			filter.add (data);
+		}
+		for ( byte[] data : mustHave )
+		{
+			assertTrue (filter.contains (data));
+		}
+		int falsePositive = 0;
+		for ( int i = 0; i < n * 100; ++i )
+		{
+			byte[] data = new byte[32];
+			rnd.nextBytes (data);
+			if ( filter.contains (data) )
+			{
+				++falsePositive;
+			}
+		}
+		assertTrue (falsePositive < 2 * n * 100 * filter.getFalsePositiveProbability (n));
+	}
+}
