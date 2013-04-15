@@ -131,7 +131,7 @@ public class AccountManagerTest
 		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (wallet.getRandomKey (), 50 * COIN, 13));
 		block.setCreateTime (block.getCreateTime () + 12 * 1000);
 		mineBlock (block);
-		blocks.put (22, block);
+		blocks.put (12, block);
 
 		final Semaphore ready = new Semaphore (0);
 		AccountListener listener = new AccountListener ()
@@ -257,6 +257,7 @@ public class AccountManagerTest
 		alice.addAccountListener (listener1);
 		api.sendTransaction (split);
 		assertTrue (ready1.tryAcquire (2, TimeUnit.SECONDS));
+		alice.removeAccountListener (listener1);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)
