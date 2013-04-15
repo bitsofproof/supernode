@@ -39,6 +39,9 @@ import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.AlertMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.BlockMessage;
+import com.bitsofproof.supernode.messages.FilterAddMessage;
+import com.bitsofproof.supernode.messages.FilterClearMessage;
+import com.bitsofproof.supernode.messages.FilterLoadMessage;
 import com.bitsofproof.supernode.messages.GetAddrMessage;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.GetDataMessage;
@@ -69,6 +72,7 @@ public class BitcoinPeer extends P2P.Peer
 	private long trafficIn;
 	private long trafficOut;
 	private long errors;
+	private BloomFilter filter;
 
 	private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool (1);
 	private static final long CONNECTIONTIMEOUT = 30;
@@ -192,6 +196,18 @@ public class BitcoinPeer extends P2P.Peer
 		{
 			return new GetAddrMessage (this);
 		}
+		else if ( command.equals ("filterload") )
+		{
+			return new FilterLoadMessage (this);
+		}
+		else if ( command.equals ("filteradd") )
+		{
+			return new FilterAddMessage (this);
+		}
+		else if ( command.equals ("filterclear") )
+		{
+			return new FilterClearMessage (this);
+		}
 		log.trace ("Peer sent unknown message: " + command + " " + getAddress ());
 		return new Message (command);
 	}
@@ -199,6 +215,16 @@ public class BitcoinPeer extends P2P.Peer
 	public long getLastSpoken ()
 	{
 		return lastSpoken;
+	}
+
+	public BloomFilter getFilter ()
+	{
+		return filter;
+	}
+
+	public void setFilter (BloomFilter filter)
+	{
+		this.filter = filter;
 	}
 
 	private final Map<String, ArrayList<BitcoinMessageListener<? extends BitcoinPeer.Message>>> listener = Collections

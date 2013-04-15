@@ -69,7 +69,12 @@
 		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
-	<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
+	<bean id="bloom" class="com.bitsofproof.supernode.core.BloomFilterHandler">
+		<constructor-arg>
+			<ref bean="bitcoinNetwork" />
+		</constructor-arg>
+	</bean>
+		<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
