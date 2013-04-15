@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
+import java.security.SecureRandom;
 
 import org.bouncycastle.util.Arrays;
 
@@ -37,6 +38,16 @@ public class BloomFilter
 
 	private static final int MAX_FILTER_SIZE = 36000;
 	private static final int MAX_HASH_FUNCS = 50;
+
+	public static BloomFilter createOptimalFilter (int n, double probFalsePositive, UpdateMode update)
+	{
+		long tweak = Math.abs (new SecureRandom ().nextInt ());
+		// http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives
+		double ln2 = Math.log (2.0);
+		int mod = Math.max (1, (int) Math.min ((-n * Math.log (probFalsePositive) / (ln2 * ln2)) / 8.0, MAX_FILTER_SIZE));
+		long hashFunctions = Math.max (1, Math.min ((int) (mod * 8.0 / n * ln2), MAX_HASH_FUNCS));
+		return new BloomFilter (new byte[mod], hashFunctions, tweak, update);
+	}
 
 	public BloomFilter (byte[] data, long hashFunctions, long tweak, UpdateMode update)
 	{
