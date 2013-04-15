@@ -24,20 +24,28 @@ import com.bitsofproof.supernode.api.WireFormat;
 
 public class BloomFilter
 {
+	public static enum UpdateMode
+	{
+		none, all, keys
+	}
+
 	private final BigInteger filter;
 	private final int mod;
 	private final long hashFunctions;
 	private final long tweak;
-	private final long flags;
+	private final UpdateMode update;
 
-	public BloomFilter (byte[] data, long hashFunctions, long tweak, long flags)
+	private static final int MAX_FILTER_SIZE = 36000;
+	private static final int MAX_HASH_FUNCS = 50;
+
+	public BloomFilter (byte[] data, long hashFunctions, long tweak, UpdateMode update)
 	{
-		byte[] tmp = Arrays.clone (data);
+		byte[] tmp = Arrays.copyOf (data, Math.min (data.length, MAX_FILTER_SIZE));
 		mod = data.length * 8;
 		this.filter = new BigInteger (1, ByteUtils.reverse (tmp));
-		this.hashFunctions = hashFunctions;
+		this.hashFunctions = Math.min (hashFunctions, MAX_HASH_FUNCS);
 		this.tweak = tweak;
-		this.flags = flags;
+		this.update = update;
 	}
 
 	public void add (byte[] data)
@@ -78,7 +86,7 @@ public class BloomFilter
 		}
 		writer.writeUint32 (hashFunctions);
 		writer.writeUint32 (tweak);
-		writer.writeUint32 (flags);
+		writer.writeUint32 (update.ordinal ());
 	}
 
 	public static BloomFilter fromWire (WireFormat.Reader reader)
@@ -86,8 +94,8 @@ public class BloomFilter
 		byte[] data = reader.readVarBytes ();
 		long hashFunctions = reader.readUint32 ();
 		long tweak = reader.readUint32 ();
-		long flags = reader.readUint32 ();
-		return new BloomFilter (data, hashFunctions, tweak, flags);
+		long update = reader.readUint32 ();
+		return new BloomFilter (data, hashFunctions, tweak, UpdateMode.values ()[(int) update]);
 	}
 
 	/*
@@ -167,8 +175,8 @@ public class BloomFilter
 		return tweak;
 	}
 
-	public long getFlags ()
+	public UpdateMode getUpdateMode ()
 	{
-		return flags;
+		return update;
 	}
 }
