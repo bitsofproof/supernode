@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +63,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer colorRequestProducer;
 	private MessageProducer filterRequestProducer;
 
-	private final Map<String, MessageDispatcher> messageDispatcher = Collections.synchronizedMap (new HashMap<String, MessageDispatcher> ());
+	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
 
 	private class MessageDispatcher
 	{
@@ -83,7 +82,12 @@ public class ClientBusAdaptor implements BCSAPI
 					@Override
 					public void onMessage (Message message)
 					{
-						for ( MessageListener listener : wrapperMap.values () )
+						List<MessageListener> listenerList = new ArrayList<MessageListener> ();
+						synchronized ( wrapperMap )
+						{
+							listenerList.addAll (wrapperMap.values ());
+						}
+						for ( MessageListener listener : listenerList )
 						{
 							listener.onMessage (message);
 						}
@@ -98,17 +102,26 @@ public class ClientBusAdaptor implements BCSAPI
 
 		public void addListener (Object inner, MessageListener listener)
 		{
-			wrapperMap.put (inner, listener);
+			synchronized ( wrapperMap )
+			{
+				wrapperMap.put (inner, listener);
+			}
 		}
 
 		public void removeListener (Object inner)
 		{
-			wrapperMap.remove (inner);
+			synchronized ( wrapperMap )
+			{
+				wrapperMap.remove (inner);
+			}
 		}
 
 		public boolean isListened ()
 		{
-			return !wrapperMap.isEmpty ();
+			synchronized ( wrapperMap )
+			{
+				return !wrapperMap.isEmpty ();
+			}
 		}
 
 		public MessageConsumer getConsumer ()
@@ -251,39 +264,36 @@ public class ClientBusAdaptor implements BCSAPI
 							m.readBytes (body);
 							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 							t.computeHash ();
-							// amend filter for what is received
-							for ( TransactionOutput out : t.getOutputs () )
+							if ( filter.getUpdateMode () != UpdateMode.none )
 							{
-								List<Token> tokens;
-								try
+								// amend filter for what is received
+								for ( TransactionOutput out : t.getOutputs () )
 								{
-									tokens = ScriptFormat.parse (out.getScript ());
-									for ( Token k : tokens )
+									List<Token> tokens;
+									try
 									{
-										if ( k.data != null && filter.contains (k.data) )
+										tokens = ScriptFormat.parse (out.getScript ());
+										for ( Token k : tokens )
 										{
-											if ( filter.getUpdateMode () == UpdateMode.all )
+											if ( k.data != null && filter.contains (k.data) )
 											{
-												WireFormat.Writer writer = new WireFormat.Writer ();
-												writer.writeHash (new Hash (t.getHash ()));
-												writer.writeUint32 (out.getSelfIx ());
-												filter.add (writer.toByteArray ());
-											}
-											else if ( filter.getUpdateMode () == UpdateMode.keys )
-											{
-												if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
+												if ( filter.getUpdateMode () == UpdateMode.all )
 												{
-													WireFormat.Writer writer = new WireFormat.Writer ();
-													writer.writeHash (new Hash (t.getHash ()));
-													writer.writeUint32 (out.getSelfIx ());
-													filter.add (writer.toByteArray ());
+													filter.addOutpoint (t.getHash (), out.getSelfIx ());
+												}
+												else if ( filter.getUpdateMode () == UpdateMode.keys )
+												{
+													if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
+													{
+														filter.addOutpoint (t.getHash (), out.getSelfIx ());
+													}
 												}
 											}
 										}
 									}
-								}
-								catch ( ValidationException e )
-								{
+									catch ( ValidationException e )
+									{
+									}
 								}
 							}
 							// send to listener
