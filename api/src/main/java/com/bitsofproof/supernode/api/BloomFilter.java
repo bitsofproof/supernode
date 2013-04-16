@@ -62,6 +62,32 @@ public class BloomFilter
 		return String.valueOf (Math.abs (murmurhash3 (filter, 0, filter.length, 0)));
 	}
 
+	public void addAddress (String address, int addressFlag) throws ValidationException
+	{
+		add (AddressConverter.fromSatoshiStyle (address, addressFlag));
+	}
+
+	public void addOutpoint (String hash, long ix)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeHash (new Hash (hash));
+		writer.writeUint32 (ix);
+		add (writer.toByteArray ());
+	}
+
+	public boolean containsOutpoint (String hash, long ix)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		writer.writeHash (new Hash (hash));
+		writer.writeUint32 (ix);
+		return contains (writer.toByteArray ());
+	}
+
+	public boolean containsAddress (String address, int addressFlag) throws ValidationException
+	{
+		return contains (AddressConverter.fromSatoshiStyle (address, addressFlag));
+	}
+
 	private void setBit (int n)
 	{
 		filter[n >>> 3] |= 1 << (7 & n);

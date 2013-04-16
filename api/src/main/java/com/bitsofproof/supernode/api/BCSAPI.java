@@ -109,32 +109,20 @@ public interface BCSAPI
 	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException;
 
 	/**
-	 * Register listener for new transactions for the given addresses. listener.process will be called for new transactions
-	 * 
-	 * @param addresses
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void registerAddressListener (Collection<String> addresses, TransactionListener newTransactions) throws BCSAPIException;
-
-	/**
-	 * register listener for spend of given set of transactions. listener.process will be called if an output of the transactions is spent
-	 * 
-	 * @param hashes
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void registerOutputListener (Collection<String> hashes, TransactionListener spendingTransaction) throws BCSAPIException;
-
-	/**
-	 * remove a listener previously registered for spend, receive or confirmations
+	 * register listener with a Bloom filter
 	 * 
 	 * @param filter
+	 * @param listener
+	 * @throws BCSAPIException
 	 */
-	public void removeFilteredListener (Collection<String> filter, TransactionListener listener);
-
 	public void registerFilteredListener (BloomFilter filter, TransactionListener listener) throws BCSAPIException;
 
+	/**
+	 * remove the listener of a Bloom filter
+	 * 
+	 * @param filter
+	 * @param listener
+	 */
 	public void removeFilteredListener (BloomFilter filter, TransactionListener listener);
 
 	/**

@@ -84,7 +84,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
-	private final Map<String, MessageProducer> filterProducer = new HashMap<String, MessageProducer> ();
 	private final Map<BloomFilter, MessageProducer> bloomFilterProducer = Collections.synchronizedMap (new HashMap<BloomFilter, MessageProducer> ());
 
 	private final ExecutorService requestProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
@@ -614,33 +613,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 	}
 
-	private void sendToHashFilter (String hash, BytesMessage m) throws JMSException
-	{
-		String key = hash.substring (hash.length () - 3, hash.length ());
-		MessageProducer p = filterProducer.get (key);
-		if ( p == null )
-		{
-			p = session.createProducer (session.createTopic ("output" + key));
-			filterProducer.put (key, p);
-		}
-		p.send (m);
-	}
-
-	private void sendToAddressFilter (String address, BytesMessage m) throws JMSException
-	{
-		if ( address != null )
-		{
-			String key = address.substring (address.length () - 2, address.length ());
-			MessageProducer p = filterProducer.get (key);
-			if ( p == null )
-			{
-				p = session.createProducer (session.createTopic ("address" + key));
-				filterProducer.put (key, p);
-			}
-			p.send (m);
-		}
-	}
-
 	@Override
 	public void process (Tx tx)
 	{
@@ -660,17 +632,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						bloomFilterProducer.get (filter).send (m);
 					}
 				}
-			}
-
-			for ( TxOut o : tx.getOutputs () )
-			{
-				sendToAddressFilter (o.getOwner1 (), m);
-				sendToAddressFilter (o.getOwner2 (), m);
-				sendToAddressFilter (o.getOwner3 (), m);
-			}
-			for ( TxIn i : tx.getInputs () )
-			{
-				sendToHashFilter (i.getSourceHash (), m);
 			}
 		}
 		catch ( Exception e )

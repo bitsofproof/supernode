@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,10 +27,11 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 
-class DefaultAccountManager implements KeyGeneratorListener, TransactionListener, TrunkListener, AccountManager
+class DefaultAccountManager implements TransactionListener, TrunkListener, AccountManager
 {
 	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
 
@@ -40,11 +40,6 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	private class UTXO
 	{
 		private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
-
-		public void clear ()
-		{
-			utxo.clear ();
-		}
 
 		public void add (TransactionOutput out)
 		{
@@ -85,9 +80,15 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 			remove (out.getTransactionHash (), out.getSelfIx ());
 		}
 
-		private Collection<String> getTransactionHashes ()
+		private void addOutpoints (BloomFilter filter)
 		{
-			return utxo.keySet ();
+			for ( HashMap<Long, TransactionOutput> outpoint : utxo.values () )
+			{
+				for ( TransactionOutput out : outpoint.values () )
+				{
+					filter.addOutpoint (out.getTransactionHash (), out.getSelfIx ());
+				}
+			}
 		}
 
 		private List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
@@ -157,6 +158,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	private final HashMap<String, Long> colorBalances = new HashMap<String, Long> ();
 	private long balance = 0;
 	private KeyGenerator wallet;
+	private BloomFilter filter;
 	private final List<Posting> postings = new ArrayList<Posting> ();
 	private final Set<String> walletAddresses = new HashSet<String> ();
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
@@ -174,62 +176,14 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 		{
 			this.wallet = wallet;
 			walletAddresses.addAll (wallet.getAddresses ());
-			trackAddresses (walletAddresses);
-			api.registerTrunkListener (this);
-		}
-		catch ( ValidationException e )
-		{
-			log.error ("Error extracting wallet adresses", e);
-		}
-		catch ( BCSAPIException e )
-		{
-			log.error ("Error talking to server", e);
-		}
 
-	}
-
-	private AccountStatement trackAddresses (Collection<String> addresses) throws BCSAPIException
-	{
-		api.removeFilteredListener (walletAddresses, this);
-		api.removeFilteredListener (utxo.getTransactionHashes (), this);
-		balance = 0;
-		postings.clear ();
-		utxo.clear ();
-		received.clear ();
-		AccountStatement s = api.getAccountStatement (addresses, 0);
-		if ( s != null )
-		{
-			if ( s.getOpening () != null )
+			AccountStatement s = api.getAccountStatement (walletAddresses, 0);
+			if ( s != null )
 			{
-				for ( TransactionOutput o : s.getOpening () )
+				if ( s.getOpening () != null )
 				{
-					if ( o.getColor () == null )
+					for ( TransactionOutput o : s.getOpening () )
 					{
-						balance += o.getValue ();
-					}
-					else
-					{
-						Long b = colorBalances.get (o.getColor ());
-						if ( b == null )
-						{
-							colorBalances.put (o.getColor (), o.getValue ());
-						}
-						else
-						{
-							colorBalances.put (o.getColor (), b.longValue () + o.getValue ());
-						}
-					}
-					utxo.add (o);
-				}
-			}
-			if ( s.getPosting () != null )
-			{
-				postings.addAll (s.getPosting ());
-				for ( Posting p : s.getPosting () )
-				{
-					if ( p.getSpent () == null )
-					{
-						TransactionOutput o = p.getOutput ();
 						if ( o.getColor () == null )
 						{
 							balance += o.getValue ();
@@ -246,49 +200,92 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 								colorBalances.put (o.getColor (), b.longValue () + o.getValue ());
 							}
 						}
-						utxo.add (p.getOutput ());
+						utxo.add (o);
 					}
-					else
+				}
+				if ( s.getPosting () != null )
+				{
+					postings.addAll (s.getPosting ());
+					for ( Posting p1 : s.getPosting () )
 					{
-						TransactionOutput o = p.getOutput ();
-						if ( o.getColor () == null )
+						if ( p1.getSpent () == null )
 						{
-							balance -= o.getValue ();
-						}
-						else
-						{
-							Long b = colorBalances.get (o.getColor ());
-							if ( b == null )
+							TransactionOutput o = p1.getOutput ();
+							if ( o.getColor () == null )
 							{
-								colorBalances.put (o.getColor (), -o.getValue ());
+								balance += o.getValue ();
 							}
 							else
 							{
-								colorBalances.put (o.getColor (), b.longValue () - o.getValue ());
+								Long b = colorBalances.get (o.getColor ());
+								if ( b == null )
+								{
+									colorBalances.put (o.getColor (), o.getValue ());
+								}
+								else
+								{
+									colorBalances.put (o.getColor (), b.longValue () + o.getValue ());
+								}
 							}
+							utxo.add (p1.getOutput ());
 						}
-						utxo.remove (p.getOutput ());
+						else
+						{
+							TransactionOutput o = p1.getOutput ();
+							if ( o.getColor () == null )
+							{
+								balance -= o.getValue ();
+							}
+							else
+							{
+								Long b = colorBalances.get (o.getColor ());
+								if ( b == null )
+								{
+									colorBalances.put (o.getColor (), -o.getValue ());
+								}
+								else
+								{
+									colorBalances.put (o.getColor (), b.longValue () - o.getValue ());
+								}
+							}
+							utxo.remove (p1.getOutput ());
+						}
+					}
+				}
+				if ( s.getUnconfirmedReceive () != null )
+				{
+					for ( Transaction t : s.getUnconfirmedReceive () )
+					{
+						updateWithTransaction (t, null);
+					}
+				}
+				if ( s.getUnconfirmedSpend () != null )
+				{
+					for ( Transaction t : s.getUnconfirmedReceive () )
+					{
+						updateWithTransaction (t, null);
 					}
 				}
 			}
-			if ( s.getUnconfirmedReceive () != null )
+
+			filter = BloomFilter.createOptimalFilter (wallet.getAddresses ().size (), 0.01, UpdateMode.all);
+			for ( String a : walletAddresses )
 			{
-				for ( Transaction t : s.getUnconfirmedReceive () )
-				{
-					updateWithTransaction (t, null);
-				}
+				filter.addAddress (a, wallet.getAddressFlag ());
 			}
-			if ( s.getUnconfirmedSpend () != null )
-			{
-				for ( Transaction t : s.getUnconfirmedReceive () )
-				{
-					updateWithTransaction (t, null);
-				}
-			}
-			api.registerOutputListener (utxo.getTransactionHashes (), this);
+			utxo.addOutpoints (filter);
+			api.registerFilteredListener (filter, this);
+			api.registerTrunkListener (this);
 		}
-		api.registerAddressListener (addresses, this);
-		return s;
+		catch ( ValidationException e )
+		{
+			log.error ("Error extracting wallet adresses", e);
+		}
+		catch ( BCSAPIException e )
+		{
+			log.error ("Error talking to server", e);
+		}
+
 	}
 
 	@Override
@@ -480,62 +477,9 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 	}
 
 	@Override
-	public void notifyNewKey (String address, Key key, boolean pristine)
-	{
-		if ( pristine )
-		{
-			walletAddresses.add (address);
-			List<String> addresses = new ArrayList<String> ();
-			addresses.add (address);
-			try
-			{
-				api.registerAddressListener (addresses, this);
-			}
-			catch ( BCSAPIException e )
-			{
-				log.error ("Can not register listener for new key", e);
-			}
-		}
-		else
-		{
-			boolean notify = false;
-			synchronized ( utxo )
-			{
-				long oldBalance = balance;
-				ArrayList<String> a = new ArrayList<String> ();
-				a.add (address);
-				try
-				{
-					api.removeFilteredListener (walletAddresses, this);
-					api.removeFilteredListener (utxo.getTransactionHashes (), this);
-					walletAddresses.add (address);
-					trackAddresses (walletAddresses);
-					notify = oldBalance != balance;
-				}
-				catch ( BCSAPIException e )
-				{
-					log.error ("Can not track new key " + address, e);
-				}
-			}
-			if ( notify )
-			{
-				notifyListener ();
-			}
-		}
-	}
-
-	@Override
 	public void process (Transaction t)
 	{
 		if ( updateWithTransaction (t, null) )
-		{
-			notifyListener ();
-		}
-	}
-
-	public void process (Transaction t, Block b)
-	{
-		if ( updateWithTransaction (t, b) )
 		{
 			notifyListener ();
 		}
@@ -596,15 +540,6 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 							notify = true;
 						}
 					}
-				}
-				ArrayList<String> txs = new ArrayList<String> ();
-				txs.add (t.getHash ());
-				try
-				{
-					api.registerOutputListener (txs, this);
-				}
-				catch ( BCSAPIException e )
-				{
 				}
 				received.add (t.getHash ());
 			}
@@ -678,19 +613,7 @@ class DefaultAccountManager implements KeyGeneratorListener, TransactionListener
 		boolean notify = false;
 		synchronized ( utxo )
 		{
-			if ( removed != null )
-			{
-				try
-				{
-					trackAddresses (walletAddresses);
-					notify = true;
-				}
-				catch ( BCSAPIException e )
-				{
-					log.error ("Error reloading account after reorg", e);
-				}
-			}
-			else if ( added != null )
+			if ( added != null )
 			{
 				for ( Block block : added )
 				{

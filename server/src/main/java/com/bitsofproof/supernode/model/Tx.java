@@ -330,19 +330,13 @@ public class Tx implements Serializable
 					{
 						if ( filter.getUpdateMode () == UpdateMode.all )
 						{
-							WireFormat.Writer writer = new WireFormat.Writer ();
-							writer.writeHash (new Hash (hash));
-							writer.writeUint32 (out.getIx ());
-							filter.add (writer.toByteArray ());
+							filter.addOutpoint (hash, out.getIx ());
 						}
 						else if ( filter.getUpdateMode () == UpdateMode.keys )
 						{
 							if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
 							{
-								WireFormat.Writer writer = new WireFormat.Writer ();
-								writer.writeHash (new Hash (hash));
-								writer.writeUint32 (out.getIx ());
-								filter.add (writer.toByteArray ());
+								filter.addOutpoint (hash, out.getIx ());
 							}
 						}
 						found = true;
@@ -362,10 +356,7 @@ public class Tx implements Serializable
 		{
 			if ( !in.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				writer.writeHash (new Hash (in.getSourceHash ()));
-				writer.writeUint32 (in.getIx ());
-				if ( filter.contains (writer.toByteArray ()) )
+				if ( filter.containsOutpoint (in.getSourceHash (), in.getIx ()) )
 				{
 					return true;
 				}

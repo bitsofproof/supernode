@@ -47,7 +47,6 @@ import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
-import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkListener;
@@ -183,8 +182,6 @@ public class APITest
 	public void spendSome () throws ValidationException, BCSAPIException
 	{
 		final Semaphore ready = new Semaphore (0);
-		final Semaphore ready2 = new Semaphore (0);
-		final Semaphore ready3 = new Semaphore (0);
 
 		List<String> sourceAddresses = new ArrayList<String> ();
 		List<Transaction.TransactionSource> sources = new ArrayList<Transaction.TransactionSource> ();
@@ -213,7 +210,6 @@ public class APITest
 
 		Transaction transaction = Transaction.createSpend (sources, sinks, 0);
 		final String hash = transaction.getHash ();
-		final List<String> spendingTxs = new ArrayList<String> ();
 
 		TransactionListener validationListener = new TransactionListener ()
 		{
@@ -227,65 +223,16 @@ public class APITest
 			}
 
 		};
-		TransactionListener outputListener = new TransactionListener ()
-		{
-
-			@Override
-			public void process (Transaction t)
-			{
-				t.computeHash ();
-				boolean spent = false;
-				for ( TransactionInput i : t.getInputs () )
-				{
-					if ( spendingTxs.contains (i.getSourceHash ()) )
-					{
-						spent = true;
-					}
-				}
-				assertTrue (spent);
-				ready2.release ();
-			}
-
-		};
-
 		api.registerTransactionListener (validationListener);
-
-		TransactionListener addressListener = new TransactionListener ()
-		{
-
-			@Override
-			public void process (Transaction t)
-			{
-				t.computeHash ();
-				assertTrue (t.getHash ().equals (hash));
-				ready3.release ();
-			}
-
-		};
-
-		List<String> receiverAddresses = new ArrayList<String> ();
-		receiverAddresses.add (AddressConverter.toSatoshiStyle (sink.getAddress (), wallet.getAddressFlag ()));
-		api.registerAddressListener (receiverAddresses, addressListener);
-
-		for ( Transaction.TransactionSource s : sources )
-		{
-			spendingTxs.add (s.getOutput ().getTransactionHash ());
-		}
-		api.registerOutputListener (spendingTxs, outputListener);
-
 		api.sendTransaction (transaction);
 		try
 		{
 			assertTrue (ready.tryAcquire (2, TimeUnit.SECONDS));
-			assertTrue (ready3.tryAcquire (2, TimeUnit.SECONDS));
-			assertTrue (ready2.tryAcquire (2, TimeUnit.SECONDS));
 		}
 		catch ( InterruptedException e )
 		{
 		}
 		api.removeTransactionListener (validationListener);
-		api.removeFilteredListener (receiverAddresses, addressListener);
-		api.removeFilteredListener (spendingTxs, outputListener);
 
 		as = api.getAccountStatement (sourceAddresses, 0);
 		assertTrue (as.getOpening ().size () == 10);
