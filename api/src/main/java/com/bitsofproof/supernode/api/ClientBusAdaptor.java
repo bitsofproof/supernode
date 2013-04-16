@@ -62,6 +62,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer colorProducer;
 	private MessageProducer colorRequestProducer;
 	private MessageProducer filterRequestProducer;
+	private MessageProducer scanRequestProducer;
 
 	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
 
@@ -207,6 +208,7 @@ public class ClientBusAdaptor implements BCSAPI
 			colorProducer = session.createProducer (session.createTopic ("newColor"));
 			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
 			filterRequestProducer = session.createProducer (session.createTopic ("filterRequest"));
+			scanRequestProducer = session.createProducer (session.createTopic ("scanRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -229,93 +231,90 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public void registerFilteredListener (final BloomFilter filter, final TransactionListener listener) throws BCSAPIException
 	{
-		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
-		builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
-		builder.setHashFunctions ((int) filter.getHashFunctions ());
-		builder.setTweak ((int) filter.getTweak ());
-		builder.setMode (filter.getUpdateMode ().ordinal ());
-
 		try
 		{
-			BytesMessage m = session.createBytesMessage ();
-			m.writeBytes (builder.build ().toByteArray ());
-			synchronized ( messageDispatcher )
-			{
-				MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
-				if ( dispatcher == null )
-				{
-					TemporaryQueue answerQueue = session.createTemporaryQueue ();
-					MessageConsumer consumer = session.createConsumer (answerQueue);
-					dispatcher = new MessageDispatcher (consumer);
-					dispatcher.setTemporaryQueue (answerQueue);
-					messageDispatcher.put (filter.toString (), dispatcher);
-				}
-				m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
-				dispatcher.addListener (listener, new MessageListener ()
-				{
-					@Override
-					public void onMessage (Message message)
-					{
-						BytesMessage m = (BytesMessage) message;
-						byte[] body;
-						try
-						{
-							body = new byte[(int) m.getBodyLength ()];
-							m.readBytes (body);
-							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-							t.computeHash ();
-							if ( filter.getUpdateMode () != UpdateMode.none )
-							{
-								// amend filter for what is received
-								for ( TransactionOutput out : t.getOutputs () )
-								{
-									List<Token> tokens;
-									try
-									{
-										tokens = ScriptFormat.parse (out.getScript ());
-										for ( Token k : tokens )
-										{
-											if ( k.data != null && filter.contains (k.data) )
-											{
-												if ( filter.getUpdateMode () == UpdateMode.all )
-												{
-													filter.addOutpoint (t.getHash (), out.getSelfIx ());
-												}
-												else if ( filter.getUpdateMode () == UpdateMode.keys )
-												{
-													if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
-													{
-														filter.addOutpoint (t.getHash (), out.getSelfIx ());
-													}
-												}
-											}
-										}
-									}
-									catch ( ValidationException e )
-									{
-									}
-								}
-							}
-							// send to listener
-							listener.process (t);
-						}
-						catch ( JMSException e )
-						{
-							log.error ("Malformed message received for filter", e);
-						}
-						catch ( InvalidProtocolBufferException e )
-						{
-							log.error ("Malformed message received for filter", e);
-						}
-					}
-				});
-			}
+			BytesMessage m = compileFilterFeedRequest (filter, listener);
+
 			filterRequestProducer.send (m);
 		}
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
 		}
+	}
+
+	@Override
+	public void scanTransactions (BloomFilter filter, TransactionListener listener) throws BCSAPIException
+	{
+		try
+		{
+			BytesMessage m = compileFilterFeedRequest (filter, listener);
+
+			scanRequestProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	private BytesMessage compileFilterFeedRequest (final BloomFilter filter, final TransactionListener listener) throws JMSException
+	{
+		BytesMessage m = session.createBytesMessage ();
+		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
+		builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
+		builder.setHashFunctions ((int) filter.getHashFunctions ());
+		builder.setTweak ((int) filter.getTweak ());
+		builder.setMode (filter.getUpdateMode ().ordinal ());
+
+		m.writeBytes (builder.build ().toByteArray ());
+		synchronized ( messageDispatcher )
+		{
+			MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
+			if ( dispatcher == null )
+			{
+				TemporaryQueue answerQueue = session.createTemporaryQueue ();
+				MessageConsumer consumer = session.createConsumer (answerQueue);
+				dispatcher = new MessageDispatcher (consumer);
+				dispatcher.setTemporaryQueue (answerQueue);
+				messageDispatcher.put (filter.toString (), dispatcher);
+			}
+			m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
+			dispatcher.addListener (listener, new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message message)
+				{
+					BytesMessage m = (BytesMessage) message;
+					byte[] body;
+					try
+					{
+						if ( m.getBodyLength () > 0 )
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+							t.computeHash ();
+							updateFilter (filter, t);
+							listener.process (t);
+						}
+						else
+						{
+							listener.process (null);
+						}
+					}
+					catch ( JMSException e )
+					{
+						log.error ("Malformed message received for filter", e);
+					}
+					catch ( InvalidProtocolBufferException e )
+					{
+						log.error ("Malformed message received for filter", e);
+					}
+				}
+			});
+		}
+		return m;
 	}
 
 	@Override
@@ -834,6 +833,42 @@ public class ClientBusAdaptor implements BCSAPI
 		manager.setApi (this);
 		manager.track (generator);
 		return manager;
+	}
+
+	private void updateFilter (final BloomFilter filter, Transaction t)
+	{
+		if ( filter.getUpdateMode () != UpdateMode.none )
+		{
+			// amend filter for what is received
+			for ( TransactionOutput out : t.getOutputs () )
+			{
+				List<Token> tokens;
+				try
+				{
+					tokens = ScriptFormat.parse (out.getScript ());
+					for ( Token k : tokens )
+					{
+						if ( k.data != null && filter.contains (k.data) )
+						{
+							if ( filter.getUpdateMode () == UpdateMode.all )
+							{
+								filter.addOutpoint (t.getHash (), out.getSelfIx ());
+							}
+							else if ( filter.getUpdateMode () == UpdateMode.keys )
+							{
+								if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
+								{
+									filter.addOutpoint (t.getHash (), out.getSelfIx ());
+								}
+							}
+						}
+					}
+				}
+				catch ( ValidationException e )
+				{
+				}
+			}
+		}
 	}
 
 }

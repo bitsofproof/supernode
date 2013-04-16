@@ -58,6 +58,7 @@ import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.StoredColor;
@@ -134,6 +135,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addColorRequestListener ();
 			addNewColorListener ();
 			addBloomFilterListener ();
+			addBloomScanListener ();
 		}
 		catch ( JMSException e )
 		{
@@ -162,6 +164,79 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
 					MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
 					bloomFilterProducer.put (filter, producer);
+				}
+				catch ( JMSException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+			}
+		});
+	}
+
+	private void addBloomScanListener () throws JMSException
+	{
+		addMessageListener ("scanRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message msg)
+			{
+				BytesMessage o = (BytesMessage) msg;
+				byte[] body;
+				try
+				{
+					body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					BCSAPIMessage.FilterRequest request = BCSAPIMessage.FilterRequest.parseFrom (body);
+					byte[] data = request.getFilter ().toByteArray ();
+					long hashFunctions = request.getHashFunctions ();
+					long tweak = request.getTweak ();
+					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
+					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
+					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					requestProcessor.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							store.scan (filter, new TransactionProcessor ()
+							{
+								@Override
+								public void process (Tx tx)
+								{
+									if ( tx != null )
+									{
+										Transaction transaction = toBCSAPITransaction (tx);
+										BytesMessage m;
+										try
+										{
+											m = session.createBytesMessage ();
+											m.writeBytes (transaction.toProtobuf ().toByteArray ());
+											producer.send (m);
+										}
+										catch ( JMSException e )
+										{
+										}
+									}
+									else
+									{
+										try
+										{
+											BytesMessage m = session.createBytesMessage ();
+											producer.send (m); // indicate EOF
+											producer.close ();
+										}
+										catch ( JMSException e )
+										{
+										}
+									}
+								}
+							});
+						}
+					});
 				}
 				catch ( JMSException e )
 				{

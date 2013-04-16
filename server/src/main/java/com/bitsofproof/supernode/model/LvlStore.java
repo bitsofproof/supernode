@@ -30,6 +30,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
@@ -610,6 +611,13 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 			}
 		}
 		return result;
+	}
+
+	@Override
+	public void scan (BloomFilter filter, TransactionProcessor processor)
+	{
+		log.error ("Bloom scan not yet implemented in LvlStore");
+		processor.process (null);
 	}
 
 	@Override

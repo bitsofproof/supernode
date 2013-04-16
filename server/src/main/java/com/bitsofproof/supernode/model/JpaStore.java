@@ -36,6 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.core.CachedBlockStore;
@@ -73,6 +74,13 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	@Override
 	protected void cancelBatch ()
 	{
+	}
+
+	@Override
+	public void scan (BloomFilter filter, TransactionProcessor processor)
+	{
+		log.error ("Bloom scan not yet implemented in JpaStore");
+		processor.process (null);
 	}
 
 	@Override

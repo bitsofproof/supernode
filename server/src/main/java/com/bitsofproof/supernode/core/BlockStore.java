@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.core;
 
 import java.util.List;
 
+import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
@@ -28,6 +29,11 @@ public interface BlockStore extends ColorStore
 	public interface CacheContextRunnable
 	{
 		public void run (TxOutCache cache) throws ValidationException;
+	}
+
+	public interface TransactionProcessor
+	{
+		public void process (Tx transaction);
 	}
 
 	public void cache (Chain chain, int cacheSize) throws ValidationException;
@@ -67,4 +73,6 @@ public interface BlockStore extends ColorStore
 	public boolean isEmpty ();
 
 	public List<String> getInventory (List<String> locator, String last, int limit);
+
+	public void scan (BloomFilter filter, TransactionProcessor processor);
 }
