@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -614,17 +615,43 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public void scan (BloomFilter filter, TransactionProcessor processor)
+	public void scan (final BloomFilter filter, final TransactionProcessor processor)
 	{
-		log.error ("Bloom scan not yet implemented in LvlStore");
-		processor.process (null);
+		final AtomicInteger n = new AtomicInteger (0);
+		store.forAll (KeyType.TX, new DataProcessor ()
+		{
+			@Override
+			public boolean process (byte[] key, byte[] data)
+			{
+				Tx t;
+				try
+				{
+					int nr = n.incrementAndGet ();
+					if ( (nr % 10000) == 0 )
+					{
+						log.info ("Scanned " + nr);
+					}
+					t = Tx.fromLevelDB (data);
+					if ( t.passesFilter (filter) )
+					{
+						processor.process (null);
+					}
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Can not read transaction ", e);
+					return false;
+				}
+				return true;
+			}
+		});
 	}
 
 	@Override
 	public Collection<KnownPeer> getConnectablePeers ()
 	{
 		final List<KnownPeer> peers = new ArrayList<KnownPeer> ();
-		store.forAll (KeyType.TX, new DataProcessor ()
+		store.forAll (KeyType.PEER, new DataProcessor ()
 		{
 			@Override
 			public boolean process (byte[] key, byte[] data)
