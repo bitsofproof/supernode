@@ -634,7 +634,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 					t = Tx.fromLevelDB (data);
 					if ( t.passesFilter (filter) )
 					{
-						processor.process (null);
+						processor.process (t);
 					}
 				}
 				catch ( ValidationException e )
@@ -645,6 +645,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 				return true;
 			}
 		});
+		processor.process (null);
 	}
 
 	@Override
