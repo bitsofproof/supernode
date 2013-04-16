@@ -57,11 +57,6 @@ public class BloomFilter
 		this.update = update;
 	}
 
-	public String getNonUniqueName ()
-	{
-		return String.valueOf (Math.abs (murmurhash3 (filter, 0, filter.length, 0)));
-	}
-
 	public void addAddress (String address, int addressFlag) throws ValidationException
 	{
 		add (AddressConverter.fromSatoshiStyle (address, addressFlag));

@@ -224,19 +224,18 @@ public class ClientBusAdaptor implements BCSAPI
 
 		try
 		{
-			log.trace ("register bloom filter");
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (builder.build ().toByteArray ());
 			synchronized ( messageDispatcher )
 			{
-				MessageDispatcher dispatcher = messageDispatcher.get (filter.getNonUniqueName ());
+				MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
 				if ( dispatcher == null )
 				{
 					TemporaryQueue answerQueue = session.createTemporaryQueue ();
 					MessageConsumer consumer = session.createConsumer (answerQueue);
 					dispatcher = new MessageDispatcher (consumer);
 					dispatcher.setTemporaryQueue (answerQueue);
-					messageDispatcher.put (filter.getNonUniqueName (), dispatcher);
+					messageDispatcher.put (filter.toString (), dispatcher);
 				}
 				m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
 				dispatcher.addListener (listener, new MessageListener ()
@@ -314,13 +313,13 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		synchronized ( messageDispatcher )
 		{
-			MessageDispatcher dispatcher = messageDispatcher.get (filter.getNonUniqueName ());
+			MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
 			if ( dispatcher != null )
 			{
 				dispatcher.removeListener (listener);
 				if ( !dispatcher.isListened () )
 				{
-					messageDispatcher.remove (filter.getNonUniqueName ());
+					messageDispatcher.remove (filter.toString ());
 					try
 					{
 						dispatcher.getConsumer ().close ();
