@@ -194,6 +194,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] data = request.getFilter ().toByteArray ();
 					long hashFunctions = request.getHashFunctions ();
 					long tweak = request.getTweak ();
+					final long after = request.getAfter ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
@@ -202,39 +203,46 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						@Override
 						public void run ()
 						{
-							store.scan (filter, new TransactionProcessor ()
+							try
 							{
-								@Override
-								public void process (Tx tx)
+								store.scan (filter, after, new TransactionProcessor ()
 								{
-									if ( tx != null )
+									@Override
+									public void process (Tx tx)
 									{
-										Transaction transaction = toBCSAPITransaction (tx);
-										BytesMessage m;
-										try
+										if ( tx != null )
 										{
-											m = session.createBytesMessage ();
-											m.writeBytes (transaction.toProtobuf ().toByteArray ());
-											producer.send (m);
+											Transaction transaction = toBCSAPITransaction (tx);
+											BytesMessage m;
+											try
+											{
+												m = session.createBytesMessage ();
+												m.writeBytes (transaction.toProtobuf ().toByteArray ());
+												producer.send (m);
+											}
+											catch ( JMSException e )
+											{
+											}
 										}
-										catch ( JMSException e )
+										else
 										{
+											try
+											{
+												BytesMessage m = session.createBytesMessage ();
+												producer.send (m); // indicate EOF
+												producer.close ();
+											}
+											catch ( JMSException e )
+											{
+											}
 										}
 									}
-									else
-									{
-										try
-										{
-											BytesMessage m = session.createBytesMessage ();
-											producer.send (m); // indicate EOF
-											producer.close ();
-										}
-										catch ( JMSException e )
-										{
-										}
-									}
-								}
-							});
+								});
+							}
+							catch ( ValidationException e )
+							{
+								log.error ("Error while scanning", e);
+							}
 						}
 					});
 				}

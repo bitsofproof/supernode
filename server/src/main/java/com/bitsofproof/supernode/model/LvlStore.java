@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -615,36 +614,24 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public void scan (final BloomFilter filter, final TransactionProcessor processor)
+	public void scan (final BloomFilter filter, long after, final TransactionProcessor processor) throws ValidationException
 	{
-		final AtomicInteger n = new AtomicInteger (0);
-		store.forAll (KeyType.TX, new DataProcessor ()
+		List<String> inventory = getInventory (new ArrayList<String> (), Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
+		Collections.reverse (inventory);
+
+		for ( String bhash : inventory )
 		{
-			@Override
-			public boolean process (byte[] key, byte[] data)
+			Blk b = readBlk (bhash, false);
+			for ( String thash : b.getTxHashes () )
 			{
-				Tx t;
-				try
+				Tx t = readTx (thash);
+				if ( t.passesFilter (filter) )
 				{
-					int nr = n.incrementAndGet ();
-					if ( (nr % 10000) == 0 )
-					{
-						log.info ("Scanned " + nr);
-					}
-					t = Tx.fromLevelDB (data);
-					if ( t.passesFilter (filter) )
-					{
-						processor.process (t);
-					}
+					processor.process (t);
 				}
-				catch ( ValidationException e )
-				{
-					log.error ("Can not read transaction ", e);
-					return false;
-				}
-				return true;
 			}
-		});
+			log.info ("scan block " + bhash);
+		}
 		processor.process (null);
 	}
 

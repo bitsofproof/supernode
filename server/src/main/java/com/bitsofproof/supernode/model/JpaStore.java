@@ -77,7 +77,7 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public void scan (BloomFilter filter, TransactionProcessor processor)
+	public void scan (BloomFilter filter, long after, TransactionProcessor processor)
 	{
 		log.error ("Bloom scan not yet implemented in JpaStore");
 		processor.process (null);

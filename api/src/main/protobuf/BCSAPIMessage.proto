@@ -112,8 +112,10 @@ message Color {
 }
 
 message FilterRequest {
-	required bytes filter = 1;
-	required uint32 hashFunctions = 2;
-	required uint32 tweak = 3;
-	required uint32 mode = 4;
+	required uint32 bcsapiversion = 1;
+	required bytes filter = 2;
+	required uint32 hashFunctions = 3;
+	required uint32 tweak = 4;
+	required uint32 mode = 5;
+	optional uint32 after = 6;
 }

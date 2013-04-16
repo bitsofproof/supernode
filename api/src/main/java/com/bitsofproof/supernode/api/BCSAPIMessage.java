@@ -8895,21 +8895,29 @@ public final class BCSAPIMessage {
   public interface FilterRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes filter = 1;
+    // required uint32 bcsapiversion = 1;
+    boolean hasBcsapiversion();
+    int getBcsapiversion();
+    
+    // required bytes filter = 2;
     boolean hasFilter();
     com.google.protobuf.ByteString getFilter();
     
-    // required uint32 hashFunctions = 2;
+    // required uint32 hashFunctions = 3;
     boolean hasHashFunctions();
     int getHashFunctions();
     
-    // required uint32 tweak = 3;
+    // required uint32 tweak = 4;
     boolean hasTweak();
     int getTweak();
     
-    // required uint32 mode = 4;
+    // required uint32 mode = 5;
     boolean hasMode();
     int getMode();
+    
+    // optional uint32 after = 6;
+    boolean hasAfter();
+    int getAfter();
   }
   public static final class FilterRequest extends
       com.google.protobuf.GeneratedMessage
@@ -8940,57 +8948,83 @@ public final class BCSAPIMessage {
     }
     
     private int bitField0_;
-    // required bytes filter = 1;
-    public static final int FILTER_FIELD_NUMBER = 1;
+    // required uint32 bcsapiversion = 1;
+    public static final int BCSAPIVERSION_FIELD_NUMBER = 1;
+    private int bcsapiversion_;
+    public boolean hasBcsapiversion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getBcsapiversion() {
+      return bcsapiversion_;
+    }
+    
+    // required bytes filter = 2;
+    public static final int FILTER_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString filter_;
     public boolean hasFilter() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public com.google.protobuf.ByteString getFilter() {
       return filter_;
     }
     
-    // required uint32 hashFunctions = 2;
-    public static final int HASHFUNCTIONS_FIELD_NUMBER = 2;
+    // required uint32 hashFunctions = 3;
+    public static final int HASHFUNCTIONS_FIELD_NUMBER = 3;
     private int hashFunctions_;
     public boolean hasHashFunctions() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     public int getHashFunctions() {
       return hashFunctions_;
     }
     
-    // required uint32 tweak = 3;
-    public static final int TWEAK_FIELD_NUMBER = 3;
+    // required uint32 tweak = 4;
+    public static final int TWEAK_FIELD_NUMBER = 4;
     private int tweak_;
     public boolean hasTweak() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     public int getTweak() {
       return tweak_;
     }
     
-    // required uint32 mode = 4;
-    public static final int MODE_FIELD_NUMBER = 4;
+    // required uint32 mode = 5;
+    public static final int MODE_FIELD_NUMBER = 5;
     private int mode_;
     public boolean hasMode() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     public int getMode() {
       return mode_;
     }
     
+    // optional uint32 after = 6;
+    public static final int AFTER_FIELD_NUMBER = 6;
+    private int after_;
+    public boolean hasAfter() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public int getAfter() {
+      return after_;
+    }
+    
     private void initFields() {
+      bcsapiversion_ = 0;
       filter_ = com.google.protobuf.ByteString.EMPTY;
       hashFunctions_ = 0;
       tweak_ = 0;
       mode_ = 0;
+      after_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
+      if (!hasBcsapiversion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       if (!hasFilter()) {
         memoizedIsInitialized = 0;
         return false;
@@ -9015,16 +9049,22 @@ public final class BCSAPIMessage {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, filter_);
+        output.writeUInt32(1, bcsapiversion_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt32(2, hashFunctions_);
+        output.writeBytes(2, filter_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(3, tweak_);
+        output.writeUInt32(3, hashFunctions_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt32(4, mode_);
+        output.writeUInt32(4, tweak_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt32(5, mode_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeUInt32(6, after_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -9037,19 +9077,27 @@ public final class BCSAPIMessage {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, filter_);
+          .computeUInt32Size(1, bcsapiversion_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(2, hashFunctions_);
+          .computeBytesSize(2, filter_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, tweak_);
+          .computeUInt32Size(3, hashFunctions_);
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, mode_);
+          .computeUInt32Size(4, tweak_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, mode_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, after_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -9175,14 +9223,18 @@ public final class BCSAPIMessage {
       
       public Builder clear() {
         super.clear();
-        filter_ = com.google.protobuf.ByteString.EMPTY;
+        bcsapiversion_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
-        hashFunctions_ = 0;
+        filter_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000002);
-        tweak_ = 0;
+        hashFunctions_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
-        mode_ = 0;
+        tweak_ = 0;
         bitField0_ = (bitField0_ & ~0x00000008);
+        mode_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        after_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -9224,19 +9276,27 @@ public final class BCSAPIMessage {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        result.filter_ = filter_;
+        result.bcsapiversion_ = bcsapiversion_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.hashFunctions_ = hashFunctions_;
+        result.filter_ = filter_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        result.tweak_ = tweak_;
+        result.hashFunctions_ = hashFunctions_;
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
           to_bitField0_ |= 0x00000008;
         }
+        result.tweak_ = tweak_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
         result.mode_ = mode_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.after_ = after_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9253,6 +9313,9 @@ public final class BCSAPIMessage {
       
       public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.FilterRequest other) {
         if (other == com.bitsofproof.supernode.api.BCSAPIMessage.FilterRequest.getDefaultInstance()) return this;
+        if (other.hasBcsapiversion()) {
+          setBcsapiversion(other.getBcsapiversion());
+        }
         if (other.hasFilter()) {
           setFilter(other.getFilter());
         }
@@ -9265,11 +9328,18 @@ public final class BCSAPIMessage {
         if (other.hasMode()) {
           setMode(other.getMode());
         }
+        if (other.hasAfter()) {
+          setAfter(other.getAfter());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
+        if (!hasBcsapiversion()) {
+          
+          return false;
+        }
         if (!hasFilter()) {
           
           return false;
@@ -9312,24 +9382,34 @@ public final class BCSAPIMessage {
               }
               break;
             }
-            case 10: {
+            case 8: {
               bitField0_ |= 0x00000001;
-              filter_ = input.readBytes();
+              bcsapiversion_ = input.readUInt32();
               break;
             }
-            case 16: {
+            case 18: {
               bitField0_ |= 0x00000002;
-              hashFunctions_ = input.readUInt32();
+              filter_ = input.readBytes();
               break;
             }
             case 24: {
               bitField0_ |= 0x00000004;
-              tweak_ = input.readUInt32();
+              hashFunctions_ = input.readUInt32();
               break;
             }
             case 32: {
               bitField0_ |= 0x00000008;
+              tweak_ = input.readUInt32();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
               mode_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              after_ = input.readUInt32();
               break;
             }
           }
@@ -9338,10 +9418,31 @@ public final class BCSAPIMessage {
       
       private int bitField0_;
       
-      // required bytes filter = 1;
+      // required uint32 bcsapiversion = 1;
+      private int bcsapiversion_ ;
+      public boolean hasBcsapiversion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public int getBcsapiversion() {
+        return bcsapiversion_;
+      }
+      public Builder setBcsapiversion(int value) {
+        bitField0_ |= 0x00000001;
+        bcsapiversion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearBcsapiversion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        bcsapiversion_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // required bytes filter = 2;
       private com.google.protobuf.ByteString filter_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasFilter() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public com.google.protobuf.ByteString getFilter() {
         return filter_;
@@ -9350,77 +9451,98 @@ public final class BCSAPIMessage {
         if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000001;
+  bitField0_ |= 0x00000002;
         filter_ = value;
         onChanged();
         return this;
       }
       public Builder clearFilter() {
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
         filter_ = getDefaultInstance().getFilter();
         onChanged();
         return this;
       }
       
-      // required uint32 hashFunctions = 2;
+      // required uint32 hashFunctions = 3;
       private int hashFunctions_ ;
       public boolean hasHashFunctions() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public int getHashFunctions() {
         return hashFunctions_;
       }
       public Builder setHashFunctions(int value) {
-        bitField0_ |= 0x00000002;
+        bitField0_ |= 0x00000004;
         hashFunctions_ = value;
         onChanged();
         return this;
       }
       public Builder clearHashFunctions() {
-        bitField0_ = (bitField0_ & ~0x00000002);
+        bitField0_ = (bitField0_ & ~0x00000004);
         hashFunctions_ = 0;
         onChanged();
         return this;
       }
       
-      // required uint32 tweak = 3;
+      // required uint32 tweak = 4;
       private int tweak_ ;
       public boolean hasTweak() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       public int getTweak() {
         return tweak_;
       }
       public Builder setTweak(int value) {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         tweak_ = value;
         onChanged();
         return this;
       }
       public Builder clearTweak() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         tweak_ = 0;
         onChanged();
         return this;
       }
       
-      // required uint32 mode = 4;
+      // required uint32 mode = 5;
       private int mode_ ;
       public boolean hasMode() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       public int getMode() {
         return mode_;
       }
       public Builder setMode(int value) {
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         mode_ = value;
         onChanged();
         return this;
       }
       public Builder clearMode() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         mode_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 after = 6;
+      private int after_ ;
+      public boolean hasAfter() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public int getAfter() {
+        return after_;
+      }
+      public Builder setAfter(int value) {
+        bitField0_ |= 0x00000020;
+        after_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAfter() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        after_ = 0;
         onChanged();
         return this;
       }
@@ -9547,9 +9669,10 @@ public final class BCSAPIMessage {
       "(\r\022\017\n\007message\030\002 \003(\t\"r\n\005Color\022\023\n\013transact",
       "ion\030\001 \002(\014\022\r\n\005terms\030\002 \002(\t\022\014\n\004unit\030\003 \002(\004\022\024" +
       "\n\014expiryHeight\030\004 \002(\r\022\016\n\006pubkey\030\005 \002(\014\022\021\n\t" +
-      "signature\030\006 \002(\014\"S\n\rFilterRequest\022\016\n\006filt" +
-      "er\030\001 \002(\014\022\025\n\rhashFunctions\030\002 \002(\r\022\r\n\005tweak" +
-      "\030\003 \002(\r\022\014\n\004mode\030\004 \002(\r"
+      "signature\030\006 \002(\014\"y\n\rFilterRequest\022\025\n\rbcsa" +
+      "piversion\030\001 \002(\r\022\016\n\006filter\030\002 \002(\014\022\025\n\rhashF" +
+      "unctions\030\003 \002(\r\022\r\n\005tweak\030\004 \002(\r\022\014\n\004mode\030\005 " +
+      "\002(\r\022\r\n\005after\030\006 \001(\r"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9649,7 +9772,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_FilterRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_FilterRequest_descriptor,
-              new java.lang.String[] { "Filter", "HashFunctions", "Tweak", "Mode", },
+              new java.lang.String[] { "Bcsapiversion", "Filter", "HashFunctions", "Tweak", "Mode", "After", },
               com.bitsofproof.supernode.api.BCSAPIMessage.FilterRequest.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.FilterRequest.Builder.class);
           return null;

@@ -109,13 +109,14 @@ public interface BCSAPI
 	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException;
 
 	/**
-	 * scan all transactions for match with the filter
+	 * scan transactions matching the filter after the timestamp
 	 * 
 	 * @param filter
+	 * @param after
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanTransactions (BloomFilter filter, TransactionListener listener) throws BCSAPIException;
+	public void scanTransactions (BloomFilter filter, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * register listener with a Bloom filter
