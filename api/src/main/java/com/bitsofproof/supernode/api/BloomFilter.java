@@ -57,6 +57,11 @@ public class BloomFilter
 		this.update = update;
 	}
 
+	public String getNonUniqueName ()
+	{
+		return String.valueOf (Math.abs (murmurhash3 (filter, 0, filter.length, 0)));
+	}
+
 	private void setBit (int n)
 	{
 		filter[n >>> 3] |= 1 << (7 & n);

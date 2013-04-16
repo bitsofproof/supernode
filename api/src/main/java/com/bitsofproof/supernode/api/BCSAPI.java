@@ -133,6 +133,10 @@ public interface BCSAPI
 	 */
 	public void removeFilteredListener (Collection<String> filter, TransactionListener listener);
 
+	public void registerFilteredListener (BloomFilter filter, TransactionListener listener) throws BCSAPIException;
+
+	public void removeFilteredListener (BloomFilter filter, TransactionListener listener);
+
 	/**
 	 * create a key generator
 	 * 

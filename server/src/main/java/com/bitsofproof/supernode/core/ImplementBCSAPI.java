@@ -48,6 +48,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
+import com.bitsofproof.supernode.api.BloomFilter;
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Posting;
@@ -63,6 +65,7 @@ import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ImplementBCSAPI implements TrunkListener, TxListener
 {
@@ -82,6 +85,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
 	private final Map<String, MessageProducer> filterProducer = new HashMap<String, MessageProducer> ();
+	private final Map<BloomFilter, MessageProducer> bloomFilterProducer = Collections.synchronizedMap (new HashMap<BloomFilter, MessageProducer> ());
 
 	private final ExecutorService requestProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
@@ -130,11 +134,46 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addInventoryRequestListener ();
 			addColorRequestListener ();
 			addNewColorListener ();
+			addBloomFilterListener ();
 		}
 		catch ( JMSException e )
 		{
 			log.error ("Error creating JMS producer", e);
 		}
+	}
+
+	private void addBloomFilterListener () throws JMSException
+	{
+		addMessageListener ("filterRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message msg)
+			{
+				BytesMessage o = (BytesMessage) msg;
+				byte[] body;
+				try
+				{
+					body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					BCSAPIMessage.FilterRequest request = BCSAPIMessage.FilterRequest.parseFrom (body);
+					byte[] data = request.getFilter ().toByteArray ();
+					long hashFunctions = request.getHashFunctions ();
+					long tweak = request.getTweak ();
+					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
+					BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
+					MessageProducer producer = session.createProducer (msg.getJMSDestination ());
+					bloomFilterProducer.put (filter, producer);
+				}
+				catch ( JMSException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+			}
+		});
 	}
 
 	private void addNewColorListener () throws JMSException
@@ -611,6 +650,17 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
+
+			synchronized ( bloomFilterProducer )
+			{
+				for ( BloomFilter filter : bloomFilterProducer.keySet () )
+				{
+					if ( tx.passesFilter (filter) )
+					{
+						bloomFilterProducer.get (filter).send (m);
+					}
+				}
+			}
 
 			for ( TxOut o : tx.getOutputs () )
 			{

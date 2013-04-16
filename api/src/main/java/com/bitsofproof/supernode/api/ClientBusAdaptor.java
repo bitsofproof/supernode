@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,16 +60,20 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer accountRequestProducer;
 	private MessageProducer colorProducer;
 	private MessageProducer colorRequestProducer;
+	private MessageProducer filterRequestProducer;
 
-	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
-	private final Map<Object, MessageListener> wrapperMap = new HashMap<Object, MessageListener> ();
+	private final Map<String, MessageDispatcher> messageDispatcher = Collections.synchronizedMap (new HashMap<String, MessageDispatcher> ());
 
 	private class MessageDispatcher
 	{
-		private final List<MessageListener> listenerList = new ArrayList<MessageListener> ();
+		private final Map<Object, MessageListener> wrapperMap = new HashMap<Object, MessageListener> ();
+
+		private final MessageConsumer consumer;
+		private TemporaryQueue temporaryQueue;
 
 		public MessageDispatcher (MessageConsumer consumer)
 		{
+			this.consumer = consumer;
 			try
 			{
 				consumer.setMessageListener (new MessageListener ()
@@ -76,12 +81,9 @@ public class ClientBusAdaptor implements BCSAPI
 					@Override
 					public void onMessage (Message message)
 					{
-						synchronized ( listenerList )
+						for ( MessageListener listener : wrapperMap.values () )
 						{
-							for ( MessageListener listener : listenerList )
-							{
-								listener.onMessage (message);
-							}
+							listener.onMessage (message);
 						}
 					}
 				});
@@ -94,25 +96,34 @@ public class ClientBusAdaptor implements BCSAPI
 
 		public void addListener (Object inner, MessageListener listener)
 		{
-			synchronized ( listenerList )
-			{
-				listenerList.add (listener);
-				wrapperMap.put (inner, listener);
-			}
+			wrapperMap.put (inner, listener);
 		}
 
 		public void removeListener (Object inner)
 		{
-			synchronized ( listenerList )
-			{
-				MessageListener listener = wrapperMap.get (inner);
-				if ( listener != null )
-				{
-					listenerList.remove (listener);
-					wrapperMap.remove (inner);
-				}
-			}
+			wrapperMap.remove (inner);
 		}
+
+		public boolean isListened ()
+		{
+			return !wrapperMap.isEmpty ();
+		}
+
+		public MessageConsumer getConsumer ()
+		{
+			return consumer;
+		}
+
+		public TemporaryQueue getTemporaryQueue ()
+		{
+			return temporaryQueue;
+		}
+
+		public void setTemporaryQueue (TemporaryQueue temporaryQueue)
+		{
+			this.temporaryQueue = temporaryQueue;
+		}
+
 	}
 
 	public void setClientId (String clientId)
@@ -127,22 +138,39 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private void addTopicListener (String topic, Object inner, MessageListener listener) throws JMSException
 	{
-		MessageDispatcher dispatcher = messageDispatcher.get (topic);
-		if ( dispatcher == null )
+		synchronized ( messageDispatcher )
 		{
-			Destination destination = session.createTopic (topic);
-			MessageConsumer consumer = session.createConsumer (destination);
-			messageDispatcher.put (topic, dispatcher = new MessageDispatcher (consumer));
+			MessageDispatcher dispatcher = messageDispatcher.get (topic);
+			if ( dispatcher == null )
+			{
+				Destination destination = session.createTopic (topic);
+				MessageConsumer consumer = session.createConsumer (destination);
+				messageDispatcher.put (topic, dispatcher = new MessageDispatcher (consumer));
+			}
+			dispatcher.addListener (inner, listener);
 		}
-		dispatcher.addListener (inner, listener);
 	}
 
 	private void removeTopicListener (String topic, Object inner)
 	{
-		MessageDispatcher dispatcher = messageDispatcher.get (topic);
-		if ( dispatcher != null )
+		synchronized ( messageDispatcher )
 		{
-			dispatcher.removeListener (inner);
+			MessageDispatcher dispatcher = messageDispatcher.get (topic);
+			if ( dispatcher != null )
+			{
+				dispatcher.removeListener (inner);
+				if ( !dispatcher.isListened () )
+				{
+					messageDispatcher.remove (dispatcher);
+					try
+					{
+						dispatcher.getConsumer ().close ();
+					}
+					catch ( JMSException e )
+					{
+					}
+				}
+			}
 		}
 	}
 
@@ -163,6 +191,7 @@ public class ClientBusAdaptor implements BCSAPI
 			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
 			colorProducer = session.createProducer (session.createTopic ("newColor"));
 			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
+			filterRequestProducer = session.createProducer (session.createTopic ("filterRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -179,6 +208,91 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 		catch ( JMSException e )
 		{
+		}
+	}
+
+	@Override
+	public void registerFilteredListener (BloomFilter filter, final TransactionListener listener) throws BCSAPIException
+	{
+		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
+		builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
+		builder.setHashFunctions ((int) filter.getHashFunctions ());
+		builder.setTweak ((int) filter.getTweak ());
+		builder.setMode (filter.getUpdateMode ().ordinal ());
+
+		try
+		{
+			log.trace ("register bloom filter");
+			BytesMessage m = session.createBytesMessage ();
+			m.writeBytes (builder.build ().toByteArray ());
+			synchronized ( messageDispatcher )
+			{
+				MessageDispatcher dispatcher = messageDispatcher.get (filter.getNonUniqueName ());
+				if ( dispatcher == null )
+				{
+					TemporaryQueue answerQueue = session.createTemporaryQueue ();
+					MessageConsumer consumer = session.createConsumer (answerQueue);
+					dispatcher = new MessageDispatcher (consumer);
+					dispatcher.setTemporaryQueue (answerQueue);
+					messageDispatcher.put (filter.getNonUniqueName (), dispatcher);
+				}
+				m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
+				dispatcher.addListener (listener, new MessageListener ()
+				{
+					@Override
+					public void onMessage (Message message)
+					{
+						BytesMessage m = (BytesMessage) message;
+						byte[] body;
+						try
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+							t.computeHash ();
+							listener.process (t);
+						}
+						catch ( JMSException e )
+						{
+							log.error ("Malformed message received for filter", e);
+						}
+						catch ( InvalidProtocolBufferException e )
+						{
+							log.error ("Malformed message received for filter", e);
+						}
+					}
+				});
+			}
+			filterRequestProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	@Override
+	public void removeFilteredListener (BloomFilter filter, TransactionListener listener)
+	{
+		synchronized ( messageDispatcher )
+		{
+			MessageDispatcher dispatcher = messageDispatcher.get (filter.getNonUniqueName ());
+			if ( dispatcher != null )
+			{
+				dispatcher.removeListener (listener);
+				if ( !dispatcher.isListened () )
+				{
+					messageDispatcher.remove (filter.getNonUniqueName ());
+					try
+					{
+						dispatcher.getConsumer ().close ();
+						dispatcher.getTemporaryQueue ().delete ();
+					}
+					catch ( JMSException e )
+					{
+					}
+				}
+			}
 		}
 	}
 

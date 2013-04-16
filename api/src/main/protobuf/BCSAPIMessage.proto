@@ -110,3 +110,10 @@ message Color {
 	required bytes pubkey = 5;
 	required bytes signature = 6;
 }
+
+message FilterRequest {
+	required bytes filter = 1;
+	required uint32 hashFunctions = 2;
+	required uint32 tweak = 3;
+	required uint32 mode = 4;
+}
