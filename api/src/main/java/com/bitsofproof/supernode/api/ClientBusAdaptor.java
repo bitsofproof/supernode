@@ -39,6 +39,8 @@ import javax.jms.TemporaryQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -212,7 +214,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void registerFilteredListener (BloomFilter filter, final TransactionListener listener) throws BCSAPIException
+	public void registerFilteredListener (final BloomFilter filter, final TransactionListener listener) throws BCSAPIException
 	{
 		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
 		builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
@@ -250,6 +252,42 @@ public class ClientBusAdaptor implements BCSAPI
 							m.readBytes (body);
 							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 							t.computeHash ();
+							// amend filter for what is received
+							for ( TransactionOutput out : t.getOutputs () )
+							{
+								List<Token> tokens;
+								try
+								{
+									tokens = ScriptFormat.parse (out.getScript ());
+									for ( Token k : tokens )
+									{
+										if ( k.data != null && filter.contains (k.data) )
+										{
+											if ( filter.getUpdateMode () == UpdateMode.all )
+											{
+												WireFormat.Writer writer = new WireFormat.Writer ();
+												writer.writeHash (new Hash (t.getHash ()));
+												writer.writeUint32 (out.getSelfIx ());
+												filter.add (writer.toByteArray ());
+											}
+											else if ( filter.getUpdateMode () == UpdateMode.keys )
+											{
+												if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
+												{
+													WireFormat.Writer writer = new WireFormat.Writer ();
+													writer.writeHash (new Hash (t.getHash ()));
+													writer.writeUint32 (out.getSelfIx ());
+													filter.add (writer.toByteArray ());
+												}
+											}
+										}
+									}
+								}
+								catch ( ValidationException e )
+								{
+								}
+							}
+							// send to listener
 							listener.process (t);
 						}
 						catch ( JMSException e )
