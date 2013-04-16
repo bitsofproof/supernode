@@ -74,5 +74,5 @@ public interface BlockStore extends ColorStore
 
 	public List<String> getInventory (List<String> locator, String last, int limit);
 
-	public void scan (BloomFilter filter, long after, TransactionProcessor processor) throws ValidationException;
+	public void scan (BloomFilter filter, TransactionProcessor processor) throws ValidationException;
 }

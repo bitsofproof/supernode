@@ -233,7 +233,7 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
-			BytesMessage m = compileFilterFeedRequest (filter, 0, listener);
+			BytesMessage m = compileFilterFeedRequest (filter, listener);
 
 			filterRequestProducer.send (m);
 		}
@@ -244,11 +244,11 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void scanTransactions (BloomFilter filter, long after, TransactionListener listener) throws BCSAPIException
+	public void scanTransactions (BloomFilter filter, TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
-			BytesMessage m = compileFilterFeedRequest (filter, after, listener);
+			BytesMessage m = compileFilterFeedRequest (filter, listener);
 
 			scanRequestProducer.send (m);
 		}
@@ -258,7 +258,7 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
-	private BytesMessage compileFilterFeedRequest (final BloomFilter filter, long after, final TransactionListener listener) throws JMSException
+	private BytesMessage compileFilterFeedRequest (final BloomFilter filter, final TransactionListener listener) throws JMSException
 	{
 		BytesMessage m = session.createBytesMessage ();
 		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
@@ -267,10 +267,6 @@ public class ClientBusAdaptor implements BCSAPI
 		builder.setHashFunctions ((int) filter.getHashFunctions ());
 		builder.setTweak ((int) filter.getTweak ());
 		builder.setMode (filter.getUpdateMode ().ordinal ());
-		if ( after > 0 )
-		{
-			builder.setAfter ((int) after);
-		}
 
 		m.writeBytes (builder.build ().toByteArray ());
 		synchronized ( messageDispatcher )

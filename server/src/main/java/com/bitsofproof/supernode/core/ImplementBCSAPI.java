@@ -194,7 +194,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] data = request.getFilter ().toByteArray ();
 					long hashFunctions = request.getHashFunctions ();
 					long tweak = request.getTweak ();
-					final long after = request.getAfter ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
@@ -205,7 +204,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						{
 							try
 							{
-								store.scan (filter, after, new TransactionProcessor ()
+								store.scan (filter, new TransactionProcessor ()
 								{
 									@Override
 									public void process (Tx tx)

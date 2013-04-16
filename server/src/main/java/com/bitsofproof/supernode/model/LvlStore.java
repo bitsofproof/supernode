@@ -614,24 +614,30 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public void scan (final BloomFilter filter, long after, final TransactionProcessor processor) throws ValidationException
+	public void scan (final BloomFilter filter, final TransactionProcessor processor)
 	{
-		List<String> inventory = getInventory (new ArrayList<String> (), Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
-		Collections.reverse (inventory);
-
-		for ( String bhash : inventory )
+		store.forAll (KeyType.TX, new DataProcessor ()
 		{
-			Blk b = readBlk (bhash, false);
-			for ( String thash : b.getTxHashes () )
+			@Override
+			public boolean process (byte[] key, byte[] data)
 			{
-				Tx t = readTx (thash);
-				if ( t.passesFilter (filter) )
+				Tx t;
+				try
 				{
-					processor.process (t);
+					t = Tx.fromLevelDB (data);
+					if ( t.passesFilter (filter) )
+					{
+						processor.process (t);
+					}
 				}
+				catch ( ValidationException e )
+				{
+					log.error ("Can not read transaction ", e);
+					return false;
+				}
+				return true;
 			}
-			log.info ("scan block " + bhash);
-		}
+		});
 		processor.process (null);
 	}
 

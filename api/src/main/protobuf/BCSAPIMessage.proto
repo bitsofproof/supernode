@@ -117,5 +117,4 @@ message FilterRequest {
 	required uint32 hashFunctions = 3;
 	required uint32 tweak = 4;
 	required uint32 mode = 5;
-	optional uint32 after = 6;
 }
