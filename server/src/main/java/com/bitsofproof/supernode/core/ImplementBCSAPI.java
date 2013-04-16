@@ -161,7 +161,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					long tweak = request.getTweak ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
-					MessageProducer producer = session.createProducer (msg.getJMSDestination ());
+					MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
 					bloomFilterProducer.put (filter, producer);
 				}
 				catch ( JMSException e )
