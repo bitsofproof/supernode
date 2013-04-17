@@ -64,6 +64,19 @@ public class LvlMemoryStore implements OrderedMapStore
 	}
 
 	@Override
+	public void remove (byte[] key)
+	{
+		if ( batch != null )
+		{
+			batch.remove (key);
+		}
+		else
+		{
+			db.remove (key);
+		}
+	}
+
+	@Override
 	public synchronized byte[] get (byte[] key)
 	{
 		if ( batch != null )

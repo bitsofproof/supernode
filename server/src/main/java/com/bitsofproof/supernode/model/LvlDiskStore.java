@@ -57,6 +57,20 @@ public class LvlDiskStore implements OrderedMapStore
 	}
 
 	@Override
+	public synchronized void remove (byte[] key)
+	{
+		if ( batch != null )
+		{
+			batch.delete (key);
+			batchCache.remove (ByteUtils.toHex (key));
+		}
+		else
+		{
+			db.delete (key);
+		}
+	}
+
+	@Override
 	public void clearStore ()
 	{
 	}

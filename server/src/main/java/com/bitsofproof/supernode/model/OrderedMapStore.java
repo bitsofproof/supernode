@@ -28,6 +28,8 @@ public interface OrderedMapStore
 
 	public void put (byte[] key, byte[] data);
 
+	public void remove (byte[] key);
+
 	public byte[] get (byte[] key);
 
 	public void startBatch ();
