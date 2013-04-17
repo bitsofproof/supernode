@@ -625,7 +625,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 				try
 				{
 					t = Tx.fromLevelDB (data);
-					if ( t.passesFilter (filter) )
+					if ( t.passesFilter (filter) && isOnTrunk (t.getBlockHash ()) )
 					{
 						processor.process (t);
 					}

@@ -378,10 +378,19 @@ public abstract class CachedBlockStore implements BlockStore
 		return isBlockOnBranch (block, branch.getPrevious (), branch.getPreviousHeight ());
 	}
 
-	private boolean isOnTrunk (String block)
+	protected boolean isOnTrunk (String block)
 	{
-		CachedBlock b = cachedBlocks.get (block);
-		return isBlockOnBranch (b, currentHead, (int) currentHead.getHeight ());
+		try
+		{
+			lock.readLock ().lock ();
+
+			CachedBlock b = cachedBlocks.get (block);
+			return isBlockOnBranch (b, currentHead, (int) currentHead.getHeight ());
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
 	}
 
 	private boolean isSuperMajority (int minVersion, CachedBlock from, int nRequired, int nToCheck)
