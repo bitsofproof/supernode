@@ -340,6 +340,7 @@ public class Tx implements Serializable
 							}
 						}
 						found = true;
+						break;
 					}
 				}
 			}
