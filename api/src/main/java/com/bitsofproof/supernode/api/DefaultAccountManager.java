@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -37,124 +36,8 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 
 	private static final long DUST = 10000;
 
-	private class UTXO
-	{
-		private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
-
-		public void add (TransactionOutput out)
-		{
-			HashMap<Long, TransactionOutput> outs = utxo.get (out.getTransactionHash ());
-			if ( outs == null )
-			{
-				outs = new HashMap<Long, TransactionOutput> ();
-				utxo.put (out.getTransactionHash (), outs);
-			}
-			outs.put (out.getSelfIx (), out);
-		}
-
-		private TransactionOutput get (String tx, Long ix)
-		{
-			HashMap<Long, TransactionOutput> outs = utxo.get (tx);
-			if ( outs != null )
-			{
-				return outs.get (ix);
-			}
-			return null;
-		}
-
-		private void remove (String tx, Long ix)
-		{
-			HashMap<Long, TransactionOutput> outs = utxo.get (tx);
-			if ( outs != null )
-			{
-				outs.remove (ix);
-				if ( outs.size () == 0 )
-				{
-					utxo.remove (tx);
-				}
-			}
-		}
-
-		private void remove (TransactionOutput out)
-		{
-			remove (out.getTransactionHash (), out.getSelfIx ());
-		}
-
-		private void addOutpoints (BloomFilter filter)
-		{
-			for ( HashMap<Long, TransactionOutput> outpoint : utxo.values () )
-			{
-				for ( TransactionOutput out : outpoint.values () )
-				{
-					filter.addOutpoint (out.getTransactionHash (), out.getSelfIx ());
-				}
-			}
-		}
-
-		private List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
-		{
-			List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
-			long sum = 0;
-			for ( HashMap<Long, TransactionOutput> outs : utxo.values () )
-			{
-				for ( TransactionOutput o : outs.values () )
-				{
-					if ( o.getVotes () == 1 && o.getAddresses ().size () == 1 )
-					{
-						if ( color == null )
-						{
-							if ( o.getColor () == null )
-							{
-								sum += o.getValue ();
-								result.add (o);
-								if ( sum >= (amount + fee) )
-								{
-									return result;
-								}
-							}
-						}
-						else
-						{
-							if ( o.getColor ().equals (color) )
-							{
-								sum += o.getValue ();
-								result.add (o);
-								if ( sum >= amount )
-								{
-									if ( fee > 0 )
-									{
-										result.addAll (getSufficientSources (0, fee, null));
-									}
-									return result;
-								}
-							}
-						}
-					}
-				}
-			}
-			return null;
-		}
-
-		private List<TransactionOutput> getAddressSources (String address)
-		{
-			List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
-			for ( HashMap<Long, TransactionOutput> outs : utxo.values () )
-			{
-				for ( TransactionOutput o : outs.values () )
-				{
-					if ( o.getVotes () == 1 && o.getAddresses ().size () == 1 && o.getAddresses ().get (0).equals (address) )
-					{
-						result.add (o);
-					}
-				}
-			}
-			return result;
-		}
-
-	}
-
 	private BCSAPI api;
-	private final UTXO utxo = new UTXO ();
+	private final LocalUTXO utxo = new LocalUTXO ();
 	private final HashMap<String, Long> colorBalances = new HashMap<String, Long> ();
 	private long balance = 0;
 	private KeyGenerator wallet;
