@@ -314,11 +314,11 @@ public class Tx implements Serializable
 
 	public boolean passesFilter (BloomFilter filter)
 	{
+		boolean found = false;
 		if ( filter.contains (new Hash (hash).toByteArray ()) )
 		{
-			return true;
+			found = true;
 		}
-		boolean found = false;
 		for ( TxOut out : outputs )
 		{
 			try
