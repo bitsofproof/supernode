@@ -829,7 +829,7 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						if ( txs.contains (t.getHash ()) )
 						{
-							throw new ValidationException ("BIP30 violation block contains unspent tx " + t.getHash ());
+							throw new ValidationException ("BIP30 violation: block contains spent tx " + t.getHash ());
 						}
 					}
 				}
