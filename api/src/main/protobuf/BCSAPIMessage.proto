@@ -88,12 +88,19 @@ message FilterRequest {
 	required uint32 mode = 5;
 }
 
+message ExactMatchRequest
+{
+	required uint32 bcsapiversion = 1;
+	required uint32 mode = 2;
+	repeated bytes match = 3;
+}
+
 message Wallet {
 	required uint32 bcsapiversion = 1;
 	message Key
 	{
 		required string key = 1;
-		optional uint32 maxSequence =2;
+		optional uint32 maxSequence = 2;
 		optional string name = 3;
 	}
 	message PublicAddress

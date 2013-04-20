@@ -57,6 +57,7 @@ import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ImplementBCSAPI implements TrunkListener, TxListener
@@ -125,6 +126,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addNewColorListener ();
 			addBloomFilterListener ();
 			addBloomScanListener ();
+			addMatchScanListener ();
 		}
 		catch ( JMSException e )
 		{
@@ -194,6 +196,87 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 							try
 							{
 								store.scan (filter, new TransactionProcessor ()
+								{
+									@Override
+									public void process (Tx tx)
+									{
+										if ( tx != null )
+										{
+											Transaction transaction = toBCSAPITransaction (tx);
+											BytesMessage m;
+											try
+											{
+												m = session.createBytesMessage ();
+												m.writeBytes (transaction.toProtobuf ().toByteArray ());
+												producer.send (m);
+											}
+											catch ( JMSException e )
+											{
+											}
+										}
+										else
+										{
+											try
+											{
+												BytesMessage m = session.createBytesMessage ();
+												producer.send (m); // indicate EOF
+												producer.close ();
+											}
+											catch ( JMSException e )
+											{
+											}
+										}
+									}
+								});
+							}
+							catch ( ValidationException e )
+							{
+								log.error ("Error while scanning", e);
+							}
+						}
+					});
+				}
+				catch ( JMSException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+			}
+		});
+	}
+
+	private void addMatchScanListener () throws JMSException
+	{
+		addMessageListener ("matchRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message msg)
+			{
+				BytesMessage o = (BytesMessage) msg;
+				byte[] body;
+				try
+				{
+					body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					BCSAPIMessage.ExactMatchRequest request = BCSAPIMessage.ExactMatchRequest.parseFrom (body);
+					final List<byte[]> match = new ArrayList<byte[]> ();
+					for ( ByteString bs : request.getMatchList () )
+					{
+						match.add (bs.toByteArray ());
+					}
+					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
+					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					requestProcessor.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							try
+							{
+								store.filterTransactions (match, mode, new TransactionProcessor ()
 								{
 									@Override
 									public void process (Tx tx)

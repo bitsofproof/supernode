@@ -15,6 +15,9 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.util.Collection;
+
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 
 /**
  * This is the API extensions to the bitsofproof supernode should build on
@@ -88,7 +91,16 @@ public interface BCSAPI
 	public void removeTrunkListener (TrunkListener listener);
 
 	/**
-	 * scan transactions matching the filter after the timestamp
+	 * Match transactions using and address or outpoint in match. This returns only exact matches but limited in result set.
+	 * 
+	 * @param match
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, TransactionListener listener) throws BCSAPIException;
+
+	/**
+	 * scan transactions matching the filter
 	 * 
 	 * @param filter
 	 * @param after

@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer colorRequestProducer;
 	private MessageProducer filterRequestProducer;
 	private MessageProducer scanRequestProducer;
+	private MessageProducer exactMatchProducer;
 
 	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
 
@@ -204,6 +206,7 @@ public class ClientBusAdaptor implements BCSAPI
 			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
 			filterRequestProducer = session.createProducer (session.createTopic ("filterRequest"));
 			scanRequestProducer = session.createProducer (session.createTopic ("scanRequest"));
+			exactMatchProducer = session.createProducer (session.createTopic ("matchRequest"));
 		}
 		catch ( JMSException e )
 		{
@@ -221,6 +224,68 @@ public class ClientBusAdaptor implements BCSAPI
 		catch ( JMSException e )
 		{
 		}
+	}
+
+	@Override
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, final TransactionListener listener) throws BCSAPIException
+	{
+		try
+		{
+			BytesMessage m = session.createBytesMessage ();
+
+			BCSAPIMessage.ExactMatchRequest.Builder builder = BCSAPIMessage.ExactMatchRequest.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.setMode (mode.ordinal ());
+			for ( byte[] d : match )
+			{
+				builder.addMatch (ByteString.copyFrom (d));
+			}
+			m.writeBytes (builder.build ().toByteArray ());
+			final TemporaryQueue answerQueue = session.createTemporaryQueue ();
+			final MessageConsumer consumer = session.createConsumer (answerQueue);
+			m.setJMSReplyTo (answerQueue);
+			consumer.setMessageListener (new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message message)
+				{
+					BytesMessage m = (BytesMessage) message;
+					byte[] body;
+					try
+					{
+						if ( m.getBodyLength () > 0 )
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+							t.computeHash ();
+							listener.process (t);
+						}
+						else
+						{
+							listener.process (null);
+							consumer.close ();
+							answerQueue.delete ();
+						}
+					}
+					catch ( JMSException e )
+					{
+						log.error ("Malformed message received for scan matching transactions", e);
+					}
+					catch ( InvalidProtocolBufferException e )
+					{
+						log.error ("Malformed message received for scan matching transactions", e);
+					}
+				}
+			});
+
+			exactMatchProducer.send (m);
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+
 	}
 
 	@Override

@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.core;
 import java.util.List;
 
 import com.bitsofproof.supernode.api.BloomFilter;
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
@@ -67,4 +68,6 @@ public interface BlockStore extends ColorStore
 	public List<String> getInventory (List<String> locator, String last, int limit);
 
 	public void scan (BloomFilter filter, TransactionProcessor processor) throws ValidationException;
+
+	public void filterTransactions (List<byte[]> data, UpdateMode update, TransactionProcessor processor) throws ValidationException;
 }

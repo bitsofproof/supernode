@@ -66,20 +66,22 @@ public class BloomFilter
 		add (AddressConverter.fromSatoshiStyle (address, addressFlag));
 	}
 
-	public void addOutpoint (String hash, long ix)
+	public static byte[] serializedOutpoint (String hash, long ix)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		writer.writeHash (new Hash (hash));
 		writer.writeUint32 (ix);
-		add (writer.toByteArray ());
+		return writer.toByteArray ();
+	}
+
+	public void addOutpoint (String hash, long ix)
+	{
+		add (serializedOutpoint (hash, ix));
 	}
 
 	public boolean containsOutpoint (String hash, long ix)
 	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		writer.writeHash (new Hash (hash));
-		writer.writeUint32 (ix);
-		return contains (writer.toByteArray ());
+		return contains (serializedOutpoint (hash, ix));
 	}
 
 	public boolean containsAddress (String address, int addressFlag) throws ValidationException
