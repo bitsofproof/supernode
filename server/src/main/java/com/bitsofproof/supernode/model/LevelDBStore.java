@@ -2552,7 +2552,15 @@ public final class LevelDBStore {
     boolean hasHeadId();
     long getHeadId();
     
-    // repeated bytes txHashes = 12;
+    // required bytes filterMap = 12;
+    boolean hasFilterMap();
+    com.google.protobuf.ByteString getFilterMap();
+    
+    // required uint32 filterFunctions = 13;
+    boolean hasFilterFunctions();
+    int getFilterFunctions();
+    
+    // repeated bytes txHashes = 14;
     java.util.List<com.google.protobuf.ByteString> getTxHashesList();
     int getTxHashesCount();
     com.google.protobuf.ByteString getTxHashes(int index);
@@ -2696,8 +2704,28 @@ public final class LevelDBStore {
       return headId_;
     }
     
-    // repeated bytes txHashes = 12;
-    public static final int TXHASHES_FIELD_NUMBER = 12;
+    // required bytes filterMap = 12;
+    public static final int FILTERMAP_FIELD_NUMBER = 12;
+    private com.google.protobuf.ByteString filterMap_;
+    public boolean hasFilterMap() {
+      return ((bitField0_ & 0x00000800) == 0x00000800);
+    }
+    public com.google.protobuf.ByteString getFilterMap() {
+      return filterMap_;
+    }
+    
+    // required uint32 filterFunctions = 13;
+    public static final int FILTERFUNCTIONS_FIELD_NUMBER = 13;
+    private int filterFunctions_;
+    public boolean hasFilterFunctions() {
+      return ((bitField0_ & 0x00001000) == 0x00001000);
+    }
+    public int getFilterFunctions() {
+      return filterFunctions_;
+    }
+    
+    // repeated bytes txHashes = 14;
+    public static final int TXHASHES_FIELD_NUMBER = 14;
     private java.util.List<com.google.protobuf.ByteString> txHashes_;
     public java.util.List<com.google.protobuf.ByteString>
         getTxHashesList() {
@@ -2722,6 +2750,8 @@ public final class LevelDBStore {
       nonce_ = 0;
       chainWork_ = 0L;
       headId_ = 0L;
+      filterMap_ = com.google.protobuf.ByteString.EMPTY;
+      filterFunctions_ = 0;
       txHashes_ = java.util.Collections.emptyList();;
     }
     private byte memoizedIsInitialized = -1;
@@ -2773,6 +2803,14 @@ public final class LevelDBStore {
         memoizedIsInitialized = 0;
         return false;
       }
+      if (!hasFilterMap()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasFilterFunctions()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -2813,8 +2851,14 @@ public final class LevelDBStore {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         output.writeUInt64(11, headId_);
       }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        output.writeBytes(12, filterMap_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        output.writeUInt32(13, filterFunctions_);
+      }
       for (int i = 0; i < txHashes_.size(); i++) {
-        output.writeBytes(12, txHashes_.get(i));
+        output.writeBytes(14, txHashes_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -2868,6 +2912,14 @@ public final class LevelDBStore {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(11, headId_);
+      }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(12, filterMap_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(13, filterFunctions_);
       }
       {
         int dataSize = 0;
@@ -3024,8 +3076,12 @@ public final class LevelDBStore {
         bitField0_ = (bitField0_ & ~0x00000200);
         headId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000400);
-        txHashes_ = java.util.Collections.emptyList();;
+        filterMap_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000800);
+        filterFunctions_ = 0;
+        bitField0_ = (bitField0_ & ~0x00001000);
+        txHashes_ = java.util.Collections.emptyList();;
+        bitField0_ = (bitField0_ & ~0x00002000);
         return this;
       }
       
@@ -3108,9 +3164,17 @@ public final class LevelDBStore {
           to_bitField0_ |= 0x00000400;
         }
         result.headId_ = headId_;
-        if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+          to_bitField0_ |= 0x00000800;
+        }
+        result.filterMap_ = filterMap_;
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+          to_bitField0_ |= 0x00001000;
+        }
+        result.filterFunctions_ = filterFunctions_;
+        if (((bitField0_ & 0x00002000) == 0x00002000)) {
           txHashes_ = java.util.Collections.unmodifiableList(txHashes_);
-          bitField0_ = (bitField0_ & ~0x00000800);
+          bitField0_ = (bitField0_ & ~0x00002000);
         }
         result.txHashes_ = txHashes_;
         result.bitField0_ = to_bitField0_;
@@ -3162,10 +3226,16 @@ public final class LevelDBStore {
         if (other.hasHeadId()) {
           setHeadId(other.getHeadId());
         }
+        if (other.hasFilterMap()) {
+          setFilterMap(other.getFilterMap());
+        }
+        if (other.hasFilterFunctions()) {
+          setFilterFunctions(other.getFilterFunctions());
+        }
         if (!other.txHashes_.isEmpty()) {
           if (txHashes_.isEmpty()) {
             txHashes_ = other.txHashes_;
-            bitField0_ = (bitField0_ & ~0x00000800);
+            bitField0_ = (bitField0_ & ~0x00002000);
           } else {
             ensureTxHashesIsMutable();
             txHashes_.addAll(other.txHashes_);
@@ -3218,6 +3288,14 @@ public final class LevelDBStore {
           return false;
         }
         if (!hasHeadId()) {
+          
+          return false;
+        }
+        if (!hasFilterMap()) {
+          
+          return false;
+        }
+        if (!hasFilterFunctions()) {
           
           return false;
         }
@@ -3303,6 +3381,16 @@ public final class LevelDBStore {
               break;
             }
             case 98: {
+              bitField0_ |= 0x00000800;
+              filterMap_ = input.readBytes();
+              break;
+            }
+            case 104: {
+              bitField0_ |= 0x00001000;
+              filterFunctions_ = input.readUInt32();
+              break;
+            }
+            case 114: {
               ensureTxHashesIsMutable();
               txHashes_.add(input.readBytes());
               break;
@@ -3553,12 +3641,57 @@ public final class LevelDBStore {
         return this;
       }
       
-      // repeated bytes txHashes = 12;
+      // required bytes filterMap = 12;
+      private com.google.protobuf.ByteString filterMap_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasFilterMap() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      public com.google.protobuf.ByteString getFilterMap() {
+        return filterMap_;
+      }
+      public Builder setFilterMap(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000800;
+        filterMap_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFilterMap() {
+        bitField0_ = (bitField0_ & ~0x00000800);
+        filterMap_ = getDefaultInstance().getFilterMap();
+        onChanged();
+        return this;
+      }
+      
+      // required uint32 filterFunctions = 13;
+      private int filterFunctions_ ;
+      public boolean hasFilterFunctions() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      public int getFilterFunctions() {
+        return filterFunctions_;
+      }
+      public Builder setFilterFunctions(int value) {
+        bitField0_ |= 0x00001000;
+        filterFunctions_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFilterFunctions() {
+        bitField0_ = (bitField0_ & ~0x00001000);
+        filterFunctions_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // repeated bytes txHashes = 14;
       private java.util.List<com.google.protobuf.ByteString> txHashes_ = java.util.Collections.emptyList();;
       private void ensureTxHashesIsMutable() {
-        if (!((bitField0_ & 0x00000800) == 0x00000800)) {
+        if (!((bitField0_ & 0x00002000) == 0x00002000)) {
           txHashes_ = new java.util.ArrayList<com.google.protobuf.ByteString>(txHashes_);
-          bitField0_ |= 0x00000800;
+          bitField0_ |= 0x00002000;
          }
       }
       public java.util.List<com.google.protobuf.ByteString>
@@ -3599,7 +3732,7 @@ public final class LevelDBStore {
       }
       public Builder clearTxHashes() {
         txHashes_ = java.util.Collections.emptyList();;
-        bitField0_ = (bitField0_ & ~0x00000800);
+        bitField0_ = (bitField0_ & ~0x00002000);
         onChanged();
         return this;
       }
@@ -6608,27 +6741,28 @@ public final class LevelDBStore {
       "Hash\030\002 \002(\014\022\016\n\006script\030\003 \002(\014\022\020\n\010sequence\030\004" +
       " \002(\r\032j\n\005TXOUT\022\r\n\005value\030\001 \002(\004\022\016\n\006script\030\002",
       " \002(\014\022\016\n\006height\030\003 \002(\r\022\020\n\010coinbase\030\004 \002(\010\022\021" +
-      "\n\tavailable\030\005 \002(\010\022\r\n\005color\030\006 \001(\t\"\350\001\n\005BLO" +
+      "\n\tavailable\030\005 \002(\010\022\r\n\005color\030\006 \001(\t\"\224\002\n\005BLO" +
       "CK\022\024\n\014storeVersion\030\001 \002(\r\022\014\n\004hash\030\002 \002(\014\022\016" +
       "\n\006height\030\003 \002(\r\022\017\n\007version\030\004 \002(\r\022\024\n\014previ" +
       "ousHash\030\005 \002(\014\022\022\n\nmerkleRoot\030\006 \002(\014\022\022\n\ncre" +
       "ateTime\030\007 \002(\r\022\030\n\020difficultyTarget\030\010 \002(\r\022" +
       "\r\n\005nonce\030\t \002(\r\022\021\n\tchainWork\030\n \002(\004\022\016\n\006hea" +
-      "dId\030\013 \002(\004\022\020\n\010txHashes\030\014 \003(\014\"\206\002\n\004PEER\022\024\n\014" +
-      "storeVersion\030\001 \002(\r\022\017\n\007address\030\002 \002(\t\022\017\n\007v" +
-      "ersion\030\003 \002(\r\022\020\n\010services\030\004 \002(\004\022\016\n\006height",
-      "\030\005 \002(\r\022\014\n\004name\030\006 \002(\t\022\r\n\005agent\030\007 \002(\t\022\024\n\014r" +
-      "esponseTime\030\010 \002(\004\022\021\n\tconnected\030\t \002(\004\022\024\n\014" +
-      "disconnected\030\n \002(\004\022\021\n\ttrafficIn\030\013 \002(\004\022\022\n" +
-      "\ntrafficOut\030\014 \002(\004\022\016\n\006banned\030\r \002(\004\022\021\n\tban" +
-      "Reason\030\016 \001(\t\"\231\001\n\005COLOR\022\024\n\014storeVersion\030\001" +
-      " \002(\r\022\024\n\014fungibleName\030\002 \002(\t\022\016\n\006txHash\030\003 \002" +
-      "(\014\022\r\n\005terms\030\004 \002(\t\022\014\n\004unit\030\005 \002(\004\022\024\n\014expir" +
-      "yHeight\030\006 \002(\r\022\021\n\tsignature\030\007 \002(\014\022\016\n\006pubk" +
-      "ey\030\010 \002(\014\"\205\001\n\004HEAD\022\024\n\014storeVersion\030\001 \002(\r\022" +
-      "\n\n\002id\030\002 \002(\004\022\021\n\tchainWork\030\003 \002(\004\022\016\n\006height",
-      "\030\004 \002(\r\022\014\n\004leaf\030\005 \002(\014\022\022\n\npreviousId\030\006 \001(\004" +
-      "\022\026\n\016previousHeight\030\007 \001(\r"
+      "dId\030\013 \002(\004\022\021\n\tfilterMap\030\014 \002(\014\022\027\n\017filterFu" +
+      "nctions\030\r \002(\r\022\020\n\010txHashes\030\016 \003(\014\"\206\002\n\004PEER" +
+      "\022\024\n\014storeVersion\030\001 \002(\r\022\017\n\007address\030\002 \002(\t\022",
+      "\017\n\007version\030\003 \002(\r\022\020\n\010services\030\004 \002(\004\022\016\n\006he" +
+      "ight\030\005 \002(\r\022\014\n\004name\030\006 \002(\t\022\r\n\005agent\030\007 \002(\t\022" +
+      "\024\n\014responseTime\030\010 \002(\004\022\021\n\tconnected\030\t \002(\004" +
+      "\022\024\n\014disconnected\030\n \002(\004\022\021\n\ttrafficIn\030\013 \002(" +
+      "\004\022\022\n\ntrafficOut\030\014 \002(\004\022\016\n\006banned\030\r \002(\004\022\021\n" +
+      "\tbanReason\030\016 \001(\t\"\231\001\n\005COLOR\022\024\n\014storeVersi" +
+      "on\030\001 \002(\r\022\024\n\014fungibleName\030\002 \002(\t\022\016\n\006txHash" +
+      "\030\003 \002(\014\022\r\n\005terms\030\004 \002(\t\022\014\n\004unit\030\005 \002(\004\022\024\n\014e" +
+      "xpiryHeight\030\006 \002(\r\022\021\n\tsignature\030\007 \002(\014\022\016\n\006" +
+      "pubkey\030\010 \002(\014\"\205\001\n\004HEAD\022\024\n\014storeVersion\030\001 ",
+      "\002(\r\022\n\n\002id\030\002 \002(\004\022\021\n\tchainWork\030\003 \002(\004\022\016\n\006he" +
+      "ight\030\004 \002(\r\022\014\n\004leaf\030\005 \002(\014\022\022\n\npreviousId\030\006" +
+      " \001(\004\022\026\n\016previousHeight\030\007 \001(\r"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -6664,7 +6798,7 @@ public final class LevelDBStore {
           internal_static_com_bitsofproof_supernode_model_BLOCK_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_model_BLOCK_descriptor,
-              new java.lang.String[] { "StoreVersion", "Hash", "Height", "Version", "PreviousHash", "MerkleRoot", "CreateTime", "DifficultyTarget", "Nonce", "ChainWork", "HeadId", "TxHashes", },
+              new java.lang.String[] { "StoreVersion", "Hash", "Height", "Version", "PreviousHash", "MerkleRoot", "CreateTime", "DifficultyTarget", "Nonce", "ChainWork", "HeadId", "FilterMap", "FilterFunctions", "TxHashes", },
               com.bitsofproof.supernode.model.LevelDBStore.BLOCK.class,
               com.bitsofproof.supernode.model.LevelDBStore.BLOCK.Builder.class);
           internal_static_com_bitsofproof_supernode_model_PEER_descriptor =

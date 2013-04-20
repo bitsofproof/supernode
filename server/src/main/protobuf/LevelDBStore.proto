@@ -53,7 +53,9 @@ message BLOCK {
 	required uint32 nonce = 9;
 	required uint64 chainWork = 10;
 	required uint64 headId = 11;
-	repeated bytes txHashes = 12; 
+	required bytes filterMap = 12;
+	required uint32 filterFunctions = 13;
+	repeated bytes txHashes = 14;
 }
 
 message PEER {

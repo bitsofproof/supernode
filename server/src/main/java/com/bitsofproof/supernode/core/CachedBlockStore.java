@@ -43,6 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.api.BloomFilter;
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
@@ -745,6 +747,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 		log.trace ("resolving inputs for block " + b.getHash ());
 		Set<String> txs = new HashSet<String> ();
+		int numberOfOutputs = 0;
 		for ( Tx t : b.getTransactions () )
 		{
 			txs.add (t.getHash ());
@@ -753,6 +756,7 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				o.setHeight (b.getHeight ());
 				tcontext.resolvedInputs.add (o);
+				++numberOfOutputs;
 			}
 		}
 
@@ -866,6 +870,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
+		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000.0, UpdateMode.none);
 		List<String> colors = new ArrayList<String> ();
 		List<Long> colorQuantities = new ArrayList<Long> ();
 
@@ -876,6 +881,21 @@ public abstract class CachedBlockStore implements BlockStore
 			{
 				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 				{
+					filter.addOutpoint (i.getSourceHash (), i.getIx ());
+					try
+					{
+						for ( Token token : ScriptFormat.parse (i.getScript ()) )
+						{
+							if ( token.data != null )
+							{
+								filter.add (token.data);
+							}
+						}
+					}
+					catch ( Exception e )
+					{
+						// this is best effort
+					}
 					TxOut source = tcontext.resolvedInputs.get (i.getSourceHash (), i.getIx ());
 					if ( source.getId () == null )
 					{
@@ -909,6 +929,21 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean colorPreserving = true;
 			for ( TxOut o : t.getOutputs () )
 			{
+				try
+				{
+					for ( Token token : ScriptFormat.parse (o.getScript ()) )
+					{
+						if ( token.data != null )
+						{
+							filter.add (token.data);
+						}
+					}
+				}
+				catch ( Exception e )
+				{
+					// this is best effort
+				}
+
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
 
@@ -939,6 +974,8 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 			}
 		}
+		b.setFilterFunctions ((int) filter.getHashFunctions ());
+		b.setFilterMap (filter.getFilter ());
 
 		log.trace ("storing block " + b.getHash ());
 		insertBlock (b);

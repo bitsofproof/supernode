@@ -21,12 +21,14 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -76,6 +78,12 @@ public class Blk implements Serializable
 	private transient ArrayList<String> txHashes;
 	private Long headId;
 
+	@Lob
+	@Basic (fetch = FetchType.EAGER)
+	private byte[] filterMap;
+
+	private int filterFunctions;
+
 	public static Blk fromLevelDB (byte[] data) throws ValidationException
 	{
 		LevelDBStore.BLOCK p;
@@ -93,6 +101,8 @@ public class Blk implements Serializable
 			b.setNonce (p.getNonce ());
 			b.setChainWork (p.getChainWork ());
 			b.setHeadId (p.getHeadId ());
+			b.setFilterMap (p.getFilterMap ().toByteArray ());
+			b.setFilterFunctions (p.getFilterFunctions ());
 			if ( p.getTxHashesCount () > 0 )
 			{
 				b.txHashes = new ArrayList<String> (p.getTxHashesCount ());
@@ -124,6 +134,8 @@ public class Blk implements Serializable
 		builder.setNonce ((int) nonce);
 		builder.setChainWork (chainWork);
 		builder.setHeadId (headId);
+		builder.setFilterMap (ByteString.copyFrom (filterMap));
+		builder.setFilterFunctions (filterFunctions);
 		if ( transactions != null )
 		{
 			for ( Tx t : transactions )
@@ -456,6 +468,26 @@ public class Blk implements Serializable
 	public void setHeadId (Long headId)
 	{
 		this.headId = headId;
+	}
+
+	public byte[] getFilterMap ()
+	{
+		return filterMap;
+	}
+
+	public void setFilterMap (byte[] filterMap)
+	{
+		this.filterMap = filterMap;
+	}
+
+	public int getFilterFunctions ()
+	{
+		return filterFunctions;
+	}
+
+	public void setFilterFunctions (int filterFunctions)
+	{
+		this.filterFunctions = filterFunctions;
 	}
 
 }
