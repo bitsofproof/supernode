@@ -183,22 +183,6 @@ public class Tx implements Serializable
 					out.setCoinbase (o.getCoinbase ());
 					out.setAvailable (o.getAvailable ());
 					out.setTxHash (t.hash);
-					if ( o.hasVotes () )
-					{
-						out.setVotes ((long) o.getVotes ());
-					}
-					if ( o.getOwnerCount () > 0 )
-					{
-						out.setOwner1 (o.getOwner (0));
-					}
-					if ( o.getOwnerCount () > 1 )
-					{
-						out.setOwner2 (o.getOwner (1));
-					}
-					if ( o.getOwnerCount () > 2 )
-					{
-						out.setOwner3 (o.getOwner (2));
-					}
 					if ( o.hasColor () )
 					{
 						out.setColor (o.getColor ());
@@ -251,22 +235,6 @@ public class Tx implements Serializable
 				b.setHeight ((int) o.getHeight ());
 				b.setAvailable (o.isAvailable ());
 				b.setCoinbase (o.isCoinbase ());
-				if ( o.getVotes () != null )
-				{
-					b.setVotes (o.getVotes ().intValue ());
-				}
-				if ( o.getOwner1 () != null )
-				{
-					b.addOwner (o.getOwner1 ());
-				}
-				if ( o.getOwner2 () != null )
-				{
-					b.addOwner (o.getOwner2 ());
-				}
-				if ( o.getOwner3 () != null )
-				{
-					b.addOwner (o.getOwner3 ());
-				}
 				if ( o.getColor () != null )
 				{
 					b.setColor (o.getColor ());

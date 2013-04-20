@@ -151,8 +151,6 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected abstract void forwardCache (Blk b, TxOutCache cache, boolean modify) throws ValidationException;
 
-	protected abstract List<TxOut> getReceivedList (List<String> addresses, long after) throws ValidationException;
-
 	protected abstract TxOut getSourceReference (TxOut source) throws ValidationException;
 
 	protected abstract void insertBlock (Blk b) throws ValidationException;
@@ -166,8 +164,6 @@ public abstract class CachedBlockStore implements BlockStore
 	protected abstract Blk retrieveBlock (CachedBlock cached) throws ValidationException;
 
 	protected abstract Blk retrieveBlockHeader (CachedBlock cached) throws ValidationException;
-
-	protected abstract List<TxIn> getSpendList (List<String> addresses, long after) throws ValidationException;
 
 	protected abstract void updateColor (TxOut root, String fungibleName) throws ValidationException;
 
@@ -510,60 +506,6 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxIn> getSpent (List<String> addresses, long after) throws ValidationException
-	{
-		List<TxIn> rows = getSpendList (addresses, after);
-		try
-		{
-			lock.readLock ().lock ();
-
-			Iterator<TxIn> i = rows.iterator ();
-			while ( i.hasNext () )
-			{
-				TxIn in = i.next ();
-				String block = in.getTransaction ().getBlock ().getHash ();
-				if ( !isOnTrunk (block) )
-				{
-					i.remove ();
-				}
-			}
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-		return rows;
-	}
-
-	@Override
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
-	public List<TxOut> getReceived (List<String> addresses, long after) throws ValidationException
-	{
-		List<TxOut> rows = getReceivedList (addresses, after);
-		try
-		{
-			lock.readLock ().lock ();
-
-			Iterator<TxOut> i = rows.iterator ();
-			while ( i.hasNext () )
-			{
-				TxOut cols = i.next ();
-				String block = cols.getTransaction ().getBlock ().getHash ();
-				if ( !isOnTrunk (block) )
-				{
-					i.remove ();
-				}
-			}
-		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
-		return rows;
-	}
-
-	@Override
 	public long getPeriodLength (String previousHash, int reviewPeriod)
 	{
 		try
@@ -810,7 +752,6 @@ public abstract class CachedBlockStore implements BlockStore
 			for ( TxOut o : t.getOutputs () )
 			{
 				o.setHeight (b.getHeight ());
-				o.setBlockTime (b.getCreateTime ());
 				tcontext.resolvedInputs.add (o);
 			}
 		}
@@ -954,7 +895,6 @@ public abstract class CachedBlockStore implements BlockStore
 						}
 					}
 				}
-				i.setBlockTime (b.getCreateTime ());
 			}
 
 			Iterator<String> ci = colors.iterator ();
@@ -969,10 +909,8 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean colorPreserving = true;
 			for ( TxOut o : t.getOutputs () )
 			{
-				o.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
-				o.setBlockTime (b.getCreateTime ());
 
 				if ( color != null )
 				{
@@ -1436,8 +1374,6 @@ public abstract class CachedBlockStore implements BlockStore
 		this.chain = chain;
 
 		Blk genesis = chain.getGenesis ();
-		TxOut out = genesis.getTransactions ().get (0).getOutputs ().get (0);
-		out.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
 		Head h = new Head ();
 		h.setLeaf (genesis.getHash ());
 		h.setHeight (0);
@@ -1509,10 +1445,6 @@ public abstract class CachedBlockStore implements BlockStore
 			boolean relay = !chain.isProduction () || checkForRelay (t, resolvedInputs);
 
 			validateTransaction (tcontext, t);
-			for ( TxOut o : t.getOutputs () )
-			{
-				o.parseOwners (chain.getAddressFlag (), chain.getP2SHAddressFlag ());
-			}
 
 			return relay;
 		}

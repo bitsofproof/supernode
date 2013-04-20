@@ -28,7 +28,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -66,10 +65,6 @@ public class TxIn implements Serializable
 	@Basic (fetch = FetchType.EAGER)
 	// scriptSig
 	private byte[] script;
-
-	// this is redundant for joinless account balance
-	@Index (name = "intime")
-	private long blockTime;
 
 	public Long getId ()
 	{
@@ -153,16 +148,6 @@ public class TxIn implements Serializable
 	public void setTransaction (Tx transaction)
 	{
 		this.transaction = transaction;
-	}
-
-	public long getBlockTime ()
-	{
-		return blockTime;
-	}
-
-	public void setBlockTime (long blockTime)
-	{
-		this.blockTime = blockTime;
 	}
 
 	public JSONObject toJSON ()

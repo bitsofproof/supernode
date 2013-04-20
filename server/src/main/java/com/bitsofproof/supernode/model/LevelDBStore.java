@@ -656,15 +656,6 @@ public final class LevelDBStore {
       // optional string color = 6;
       boolean hasColor();
       String getColor();
-      
-      // optional uint32 votes = 7;
-      boolean hasVotes();
-      int getVotes();
-      
-      // repeated string owner = 8;
-      java.util.List<String> getOwnerList();
-      int getOwnerCount();
-      String getOwner(int index);
     }
     public static final class TXOUT extends
         com.google.protobuf.GeneratedMessage
@@ -777,30 +768,6 @@ public final class LevelDBStore {
         }
       }
       
-      // optional uint32 votes = 7;
-      public static final int VOTES_FIELD_NUMBER = 7;
-      private int votes_;
-      public boolean hasVotes() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
-      }
-      public int getVotes() {
-        return votes_;
-      }
-      
-      // repeated string owner = 8;
-      public static final int OWNER_FIELD_NUMBER = 8;
-      private com.google.protobuf.LazyStringList owner_;
-      public java.util.List<String>
-          getOwnerList() {
-        return owner_;
-      }
-      public int getOwnerCount() {
-        return owner_.size();
-      }
-      public String getOwner(int index) {
-        return owner_.get(index);
-      }
-      
       private void initFields() {
         value_ = 0L;
         script_ = com.google.protobuf.ByteString.EMPTY;
@@ -808,8 +775,6 @@ public final class LevelDBStore {
         coinbase_ = false;
         available_ = false;
         color_ = "";
-        votes_ = 0;
-        owner_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -861,12 +826,6 @@ public final class LevelDBStore {
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           output.writeBytes(6, getColorBytes());
         }
-        if (((bitField0_ & 0x00000040) == 0x00000040)) {
-          output.writeUInt32(7, votes_);
-        }
-        for (int i = 0; i < owner_.size(); i++) {
-          output.writeBytes(8, owner_.getByteString(i));
-        }
         getUnknownFields().writeTo(output);
       }
       
@@ -899,19 +858,6 @@ public final class LevelDBStore {
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           size += com.google.protobuf.CodedOutputStream
             .computeBytesSize(6, getColorBytes());
-        }
-        if (((bitField0_ & 0x00000040) == 0x00000040)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(7, votes_);
-        }
-        {
-          int dataSize = 0;
-          for (int i = 0; i < owner_.size(); i++) {
-            dataSize += com.google.protobuf.CodedOutputStream
-              .computeBytesSizeNoTag(owner_.getByteString(i));
-          }
-          size += dataSize;
-          size += 1 * getOwnerList().size();
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -1049,10 +995,6 @@ public final class LevelDBStore {
           bitField0_ = (bitField0_ & ~0x00000010);
           color_ = "";
           bitField0_ = (bitField0_ & ~0x00000020);
-          votes_ = 0;
-          bitField0_ = (bitField0_ & ~0x00000040);
-          owner_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000080);
           return this;
         }
         
@@ -1115,16 +1057,6 @@ public final class LevelDBStore {
             to_bitField0_ |= 0x00000020;
           }
           result.color_ = color_;
-          if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-            to_bitField0_ |= 0x00000040;
-          }
-          result.votes_ = votes_;
-          if (((bitField0_ & 0x00000080) == 0x00000080)) {
-            owner_ = new com.google.protobuf.UnmodifiableLazyStringList(
-                owner_);
-            bitField0_ = (bitField0_ & ~0x00000080);
-          }
-          result.owner_ = owner_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -1158,19 +1090,6 @@ public final class LevelDBStore {
           }
           if (other.hasColor()) {
             setColor(other.getColor());
-          }
-          if (other.hasVotes()) {
-            setVotes(other.getVotes());
-          }
-          if (!other.owner_.isEmpty()) {
-            if (owner_.isEmpty()) {
-              owner_ = other.owner_;
-              bitField0_ = (bitField0_ & ~0x00000080);
-            } else {
-              ensureOwnerIsMutable();
-              owner_.addAll(other.owner_);
-            }
-            onChanged();
           }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
@@ -1251,16 +1170,6 @@ public final class LevelDBStore {
               case 50: {
                 bitField0_ |= 0x00000020;
                 color_ = input.readBytes();
-                break;
-              }
-              case 56: {
-                bitField0_ |= 0x00000040;
-                votes_ = input.readUInt32();
-                break;
-              }
-              case 66: {
-                ensureOwnerIsMutable();
-                owner_.add(input.readBytes());
                 break;
               }
             }
@@ -1410,83 +1319,6 @@ public final class LevelDBStore {
         void setColor(com.google.protobuf.ByteString value) {
           bitField0_ |= 0x00000020;
           color_ = value;
-          onChanged();
-        }
-        
-        // optional uint32 votes = 7;
-        private int votes_ ;
-        public boolean hasVotes() {
-          return ((bitField0_ & 0x00000040) == 0x00000040);
-        }
-        public int getVotes() {
-          return votes_;
-        }
-        public Builder setVotes(int value) {
-          bitField0_ |= 0x00000040;
-          votes_ = value;
-          onChanged();
-          return this;
-        }
-        public Builder clearVotes() {
-          bitField0_ = (bitField0_ & ~0x00000040);
-          votes_ = 0;
-          onChanged();
-          return this;
-        }
-        
-        // repeated string owner = 8;
-        private com.google.protobuf.LazyStringList owner_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-        private void ensureOwnerIsMutable() {
-          if (!((bitField0_ & 0x00000080) == 0x00000080)) {
-            owner_ = new com.google.protobuf.LazyStringArrayList(owner_);
-            bitField0_ |= 0x00000080;
-           }
-        }
-        public java.util.List<String>
-            getOwnerList() {
-          return java.util.Collections.unmodifiableList(owner_);
-        }
-        public int getOwnerCount() {
-          return owner_.size();
-        }
-        public String getOwner(int index) {
-          return owner_.get(index);
-        }
-        public Builder setOwner(
-            int index, String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureOwnerIsMutable();
-          owner_.set(index, value);
-          onChanged();
-          return this;
-        }
-        public Builder addOwner(String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureOwnerIsMutable();
-          owner_.add(value);
-          onChanged();
-          return this;
-        }
-        public Builder addAllOwner(
-            java.lang.Iterable<String> values) {
-          ensureOwnerIsMutable();
-          super.addAll(values, owner_);
-          onChanged();
-          return this;
-        }
-        public Builder clearOwner() {
-          owner_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000080);
-          onChanged();
-          return this;
-        }
-        void addOwner(com.google.protobuf.ByteString value) {
-          ensureOwnerIsMutable();
-          owner_.add(value);
           onChanged();
         }
         
@@ -6766,7 +6598,7 @@ public final class LevelDBStore {
   static {
     java.lang.String[] descriptorData = {
       "\n main/protobuf/LevelDBStore.proto\022\037com." +
-      "bitsofproof.supernode.model\"\261\003\n\002TX\022\024\n\014st" +
+      "bitsofproof.supernode.model\"\222\003\n\002TX\022\024\n\014st" +
       "oreVersion\030\001 \002(\r\022\021\n\tblockHash\030\002 \002(\014\022\014\n\004h" +
       "ash\030\003 \002(\014\022\017\n\007version\030\004 \002(\r\022\020\n\010lockTime\030\005" +
       " \002(\r\022\n\n\002ix\030\006 \002(\r\0226\n\004txin\030\007 \003(\0132(.com.bit" +
@@ -6774,30 +6606,29 @@ public final class LevelDBStore {
       "t\030\010 \003(\0132).com.bitsofproof.supernode.mode" +
       "l.TX.TXOUT\032H\n\004TXIN\022\n\n\002ix\030\001 \002(\r\022\022\n\nsource" +
       "Hash\030\002 \002(\014\022\016\n\006script\030\003 \002(\014\022\020\n\010sequence\030\004" +
-      " \002(\r\032\210\001\n\005TXOUT\022\r\n\005value\030\001 \002(\004\022\016\n\006script\030",
-      "\002 \002(\014\022\016\n\006height\030\003 \002(\r\022\020\n\010coinbase\030\004 \002(\010\022" +
-      "\021\n\tavailable\030\005 \002(\010\022\r\n\005color\030\006 \001(\t\022\r\n\005vot" +
-      "es\030\007 \001(\r\022\r\n\005owner\030\010 \003(\t\"\350\001\n\005BLOCK\022\024\n\014sto" +
-      "reVersion\030\001 \002(\r\022\014\n\004hash\030\002 \002(\014\022\016\n\006height\030" +
-      "\003 \002(\r\022\017\n\007version\030\004 \002(\r\022\024\n\014previousHash\030\005" +
-      " \002(\014\022\022\n\nmerkleRoot\030\006 \002(\014\022\022\n\ncreateTime\030\007" +
-      " \002(\r\022\030\n\020difficultyTarget\030\010 \002(\r\022\r\n\005nonce\030" +
-      "\t \002(\r\022\021\n\tchainWork\030\n \002(\004\022\016\n\006headId\030\013 \002(\004" +
-      "\022\020\n\010txHashes\030\014 \003(\014\"\206\002\n\004PEER\022\024\n\014storeVers" +
-      "ion\030\001 \002(\r\022\017\n\007address\030\002 \002(\t\022\017\n\007version\030\003 ",
-      "\002(\r\022\020\n\010services\030\004 \002(\004\022\016\n\006height\030\005 \002(\r\022\014\n" +
-      "\004name\030\006 \002(\t\022\r\n\005agent\030\007 \002(\t\022\024\n\014responseTi" +
-      "me\030\010 \002(\004\022\021\n\tconnected\030\t \002(\004\022\024\n\014disconnec" +
-      "ted\030\n \002(\004\022\021\n\ttrafficIn\030\013 \002(\004\022\022\n\ntrafficO" +
-      "ut\030\014 \002(\004\022\016\n\006banned\030\r \002(\004\022\021\n\tbanReason\030\016 " +
-      "\001(\t\"\231\001\n\005COLOR\022\024\n\014storeVersion\030\001 \002(\r\022\024\n\014f" +
-      "ungibleName\030\002 \002(\t\022\016\n\006txHash\030\003 \002(\014\022\r\n\005ter" +
-      "ms\030\004 \002(\t\022\014\n\004unit\030\005 \002(\004\022\024\n\014expiryHeight\030\006" +
-      " \002(\r\022\021\n\tsignature\030\007 \002(\014\022\016\n\006pubkey\030\010 \002(\014\"" +
-      "\205\001\n\004HEAD\022\024\n\014storeVersion\030\001 \002(\r\022\n\n\002id\030\002 \002",
-      "(\004\022\021\n\tchainWork\030\003 \002(\004\022\016\n\006height\030\004 \002(\r\022\014\n" +
-      "\004leaf\030\005 \002(\014\022\022\n\npreviousId\030\006 \001(\004\022\026\n\016previ" +
-      "ousHeight\030\007 \001(\r"
+      " \002(\r\032j\n\005TXOUT\022\r\n\005value\030\001 \002(\004\022\016\n\006script\030\002",
+      " \002(\014\022\016\n\006height\030\003 \002(\r\022\020\n\010coinbase\030\004 \002(\010\022\021" +
+      "\n\tavailable\030\005 \002(\010\022\r\n\005color\030\006 \001(\t\"\350\001\n\005BLO" +
+      "CK\022\024\n\014storeVersion\030\001 \002(\r\022\014\n\004hash\030\002 \002(\014\022\016" +
+      "\n\006height\030\003 \002(\r\022\017\n\007version\030\004 \002(\r\022\024\n\014previ" +
+      "ousHash\030\005 \002(\014\022\022\n\nmerkleRoot\030\006 \002(\014\022\022\n\ncre" +
+      "ateTime\030\007 \002(\r\022\030\n\020difficultyTarget\030\010 \002(\r\022" +
+      "\r\n\005nonce\030\t \002(\r\022\021\n\tchainWork\030\n \002(\004\022\016\n\006hea" +
+      "dId\030\013 \002(\004\022\020\n\010txHashes\030\014 \003(\014\"\206\002\n\004PEER\022\024\n\014" +
+      "storeVersion\030\001 \002(\r\022\017\n\007address\030\002 \002(\t\022\017\n\007v" +
+      "ersion\030\003 \002(\r\022\020\n\010services\030\004 \002(\004\022\016\n\006height",
+      "\030\005 \002(\r\022\014\n\004name\030\006 \002(\t\022\r\n\005agent\030\007 \002(\t\022\024\n\014r" +
+      "esponseTime\030\010 \002(\004\022\021\n\tconnected\030\t \002(\004\022\024\n\014" +
+      "disconnected\030\n \002(\004\022\021\n\ttrafficIn\030\013 \002(\004\022\022\n" +
+      "\ntrafficOut\030\014 \002(\004\022\016\n\006banned\030\r \002(\004\022\021\n\tban" +
+      "Reason\030\016 \001(\t\"\231\001\n\005COLOR\022\024\n\014storeVersion\030\001" +
+      " \002(\r\022\024\n\014fungibleName\030\002 \002(\t\022\016\n\006txHash\030\003 \002" +
+      "(\014\022\r\n\005terms\030\004 \002(\t\022\014\n\004unit\030\005 \002(\004\022\024\n\014expir" +
+      "yHeight\030\006 \002(\r\022\021\n\tsignature\030\007 \002(\014\022\016\n\006pubk" +
+      "ey\030\010 \002(\014\"\205\001\n\004HEAD\022\024\n\014storeVersion\030\001 \002(\r\022" +
+      "\n\n\002id\030\002 \002(\004\022\021\n\tchainWork\030\003 \002(\004\022\016\n\006height",
+      "\030\004 \002(\r\022\014\n\004leaf\030\005 \002(\014\022\022\n\npreviousId\030\006 \001(\004" +
+      "\022\026\n\016previousHeight\030\007 \001(\r"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -6825,7 +6656,7 @@ public final class LevelDBStore {
           internal_static_com_bitsofproof_supernode_model_TX_TXOUT_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_model_TX_TXOUT_descriptor,
-              new java.lang.String[] { "Value", "Script", "Height", "Coinbase", "Available", "Color", "Votes", "Owner", },
+              new java.lang.String[] { "Value", "Script", "Height", "Coinbase", "Available", "Color", },
               com.bitsofproof.supernode.model.LevelDBStore.TX.TXOUT.class,
               com.bitsofproof.supernode.model.LevelDBStore.TX.TXOUT.Builder.class);
           internal_static_com_bitsofproof_supernode_model_BLOCK_descriptor =

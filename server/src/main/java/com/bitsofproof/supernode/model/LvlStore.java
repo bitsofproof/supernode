@@ -62,16 +62,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		currentHead = null;
 	}
 
-	private void writeAtx (String address, String hash)
-	{
-		byte[] a = address.getBytes ();
-		byte[] h = new Hash (hash).toByteArray ();
-		byte[] k = new byte[a.length + h.length];
-		System.arraycopy (a, 0, k, 0, a.length);
-		System.arraycopy (h, 0, k, a.length, h.length);
-		store.put (OrderedMapStoreKey.createKey (KeyType.ATX, k), new byte[1]);
-	}
-
 	private Tx readTx (String hash) throws ValidationException
 	{
 		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (hash).toByteArray ()));
@@ -90,45 +80,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	private void writeTx (Tx t) throws ValidationException
 	{
 		store.put (OrderedMapStoreKey.createKey (KeyType.TX, new Hash (t.getHash ()).toByteArray ()), t.toLevelDB ());
-		for ( TxOut o : t.getOutputs () )
-		{
-			if ( o.getOwner1 () != null )
-			{
-				writeAtx (o.getOwner1 (), t.getHash ());
-			}
-			if ( o.getOwner2 () != null )
-			{
-				writeAtx (o.getOwner2 (), t.getHash ());
-			}
-			if ( o.getOwner3 () != null )
-			{
-				writeAtx (o.getOwner3 (), t.getHash ());
-			}
-		}
-		for ( TxIn i : t.getInputs () )
-		{
-			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-			{
-				TxOut o = i.getSource ();
-				if ( o == null )
-				{
-					Tx out = readTx (i.getSourceHash ());
-					o = out.getOutputs ().get (i.getIx ().intValue ());
-				}
-				if ( o.getOwner1 () != null )
-				{
-					writeAtx (o.getOwner1 (), t.getHash ());
-				}
-				if ( o.getOwner2 () != null )
-				{
-					writeAtx (o.getOwner2 (), t.getHash ());
-				}
-				if ( o.getOwner3 () != null )
-				{
-					writeAtx (o.getOwner3 (), t.getHash ());
-				}
-			}
-		}
 	}
 
 	private Head readHead (Long id) throws ValidationException
@@ -460,39 +411,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		}
 	}
 
-	private Collection<Tx> readRelatedTx (List<String> addresses)
-	{
-		final HashMap<String, Tx> result = new HashMap<String, Tx> ();
-		for ( String address : addresses )
-		{
-			final byte[] pk = address.getBytes ();
-			store.forAll (KeyType.ATX, pk, new DataProcessor ()
-			{
-				@Override
-				public boolean process (byte[] key, byte[] data)
-				{
-					byte[] h = new byte[key.length - pk.length - 1];
-					System.arraycopy (key, pk.length + 1, h, 0, key.length - pk.length - 1);
-					String hash = new Hash (h).toString ();
-					if ( !result.containsKey (hash) )
-					{
-						try
-						{
-							result.put (hash, readTx (hash));
-						}
-						catch ( ValidationException e )
-						{
-							log.error ("error reading transaction ", e);
-							return false;
-						}
-					}
-					return true;
-				}
-			});
-		}
-		return result.values ();
-	}
-
 	@Override
 	protected TxOut getSourceReference (TxOut source) throws ValidationException
 	{
@@ -537,80 +455,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	protected Blk retrieveBlockHeader (CachedBlock cached) throws ValidationException
 	{
 		return readBlk (cached.getHash (), false);
-	}
-
-	@Override
-	public List<TxOut> getUnspentOutput (List<String> addresses)
-	{
-		List<TxOut> result = new ArrayList<TxOut> ();
-		Collection<Tx> related = readRelatedTx (addresses);
-		for ( Tx t : related )
-		{
-			for ( TxOut o : t.getOutputs () )
-			{
-				if ( o.isAvailable () && (addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ())) )
-				{
-					result.add (o);
-				}
-			}
-		}
-		return result;
-	}
-
-	@Override
-	protected List<TxIn> getSpendList (List<String> addresses, long after) throws ValidationException
-	{
-		List<TxIn> result = new ArrayList<TxIn> ();
-		Collection<Tx> related = readRelatedTx (addresses);
-		for ( Tx t : related )
-		{
-			Blk b = readBlk (t.getBlockHash (), false);
-			for ( TxIn i : t.getInputs () )
-			{
-				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-				{
-					Tx s = readTx (i.getSourceHash ());
-					if ( b.getCreateTime () > after )
-					{
-						TxOut spend = s.getOutputs ().get (i.getIx ().intValue ());
-						i.setSource (spend);
-						if ( addresses.contains (spend.getOwner1 ()) || addresses.contains (spend.getOwner2 ()) || addresses.contains (spend.getOwner3 ()) )
-						{
-							i.setTransaction (t);
-							t.setBlock (b);
-							i.setBlockTime (b.getCreateTime ());
-							result.add (i);
-						}
-					}
-				}
-			}
-		}
-		return result;
-	}
-
-	@Override
-	protected List<TxOut> getReceivedList (final List<String> addresses, long after) throws ValidationException
-	{
-		List<TxOut> result = new ArrayList<TxOut> ();
-		Collection<Tx> related = readRelatedTx (addresses);
-		for ( Tx t : related )
-		{
-			Blk b = readBlk (t.getBlockHash (), false);
-			if ( b.getCreateTime () > after )
-			{
-				t.setBlock (b);
-				for ( TxOut o : t.getOutputs () )
-				{
-					if ( addresses.contains (o.getOwner1 ()) || addresses.contains (o.getOwner2 ()) || addresses.contains (o.getOwner3 ()) )
-					{
-						o.setTransaction (t);
-						o.setBlockTime (b.getCreateTime ());
-						result.add (o);
-					}
-				}
-			}
-		}
-		return result;
 	}
 
 	@Override

@@ -37,8 +37,6 @@ message TX {
 		required bool coinbase = 4;
 		required bool available = 5;
 		optional string color = 6;
-		optional uint32 votes = 7;
-		repeated string owner = 8;
 	}
 	repeated TXOUT txout = 8;
 }
