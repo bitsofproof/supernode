@@ -17,12 +17,9 @@ package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,16 +42,13 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.api.AccountStatement;
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.Posting;
 import com.bitsofproof.supernode.api.Transaction;
-import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.api.ValidationException;
 import com.bitsofproof.supernode.api.WireFormat;
@@ -63,9 +57,6 @@ import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
-import com.bitsofproof.supernode.model.TxIn;
-import com.bitsofproof.supernode.model.TxOut;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 public class ImplementBCSAPI implements TrunkListener, TxListener
@@ -130,8 +121,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addNewBlockListener ();
 			addBlockrequestListener ();
 			addTransactionRequestListener ();
-			addAccountRequestListener ();
-			addInventoryRequestListener ();
 			addColorRequestListener ();
 			addNewColorListener ();
 			addBloomFilterListener ();
@@ -325,87 +314,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				catch ( Exception e )
 				{
 					log.trace ("Rejected invalid transaction request ", e);
-				}
-			}
-		});
-	}
-
-	private void addInventoryRequestListener () throws JMSException
-	{
-		addMessageListener ("inventory", new MessageListener ()
-		{
-			@Override
-			public void onMessage (Message arg0)
-			{
-				BytesMessage o = (BytesMessage) arg0;
-				try
-				{
-					byte[] body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					BCSAPIMessage.Hash ar = BCSAPIMessage.Hash.parseFrom (body);
-					List<String> locator = new ArrayList<String> ();
-					for ( ByteString s : ar.getHashList () )
-					{
-						locator.add (new Hash (s.toByteArray ()).toString ());
-					}
-					List<String> inventory = store.getInventory (locator, Hash.ZERO_HASH_STRING, Integer.MAX_VALUE);
-					BCSAPIMessage.Hash.Builder ab = BCSAPIMessage.Hash.newBuilder ();
-					ab.setBcsapiversion (1);
-					for ( String s : inventory )
-					{
-						ab.addHash (ByteString.copyFrom (new Hash (s).toByteArray ()));
-					}
-					reply (o.getJMSReplyTo (), ab.build ().toByteArray ());
-				}
-				catch ( Exception e )
-				{
-					log.trace ("Rejected invalid inventory request ", e);
-				}
-			}
-		});
-	}
-
-	private void addAccountRequestListener () throws JMSException
-	{
-		addMessageListener ("accountRequest", new MessageListener ()
-		{
-			@Override
-			public void onMessage (Message arg0)
-			{
-				final BytesMessage o = (BytesMessage) arg0;
-				try
-				{
-					byte[] body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					final BCSAPIMessage.AccountRequest ar = BCSAPIMessage.AccountRequest.parseFrom (body);
-
-					requestProcessor.execute (new Runnable ()
-					{
-						@Override
-						public void run ()
-						{
-							AccountStatement as = getAccountStatement (ar.getAddressList (), ar.getFrom ());
-							try
-							{
-								if ( as != null )
-								{
-									reply (o.getJMSReplyTo (), as.toProtobuf ().toByteArray ());
-								}
-								else
-								{
-									reply (o.getJMSReplyTo (), null);
-								}
-							}
-							catch ( JMSException e )
-							{
-								log.trace ("Exception while processing account request ", e);
-							}
-						}
-					});
-				}
-				catch ( Exception e )
-				{
-					log.trace ("Rejected invalid account request ", e);
 				}
 			}
 		});
@@ -727,33 +635,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		tx.toWire (writer);
 		Transaction transaction = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		for ( int i = 0; i < tx.getOutputs ().size (); ++i )
-		{
-			TxOut xo = tx.getOutputs ().get (i);
-			TransactionOutput o = transaction.getOutputs ().get (i);
-			if ( xo.getVotes () == null )
-			{
-				o.parseOwners (network.getChain ().getAddressFlag (), network.getChain ().getP2SHAddressFlag ());
-			}
-			if ( xo.getVotes () != null )
-			{
-				o.setVotes (xo.getVotes ());
-				o.setAddresses (new ArrayList<String> ());
-				if ( xo.getOwner1 () != null )
-				{
-					o.getAddresses ().add (xo.getOwner1 ());
-				}
-				if ( xo.getOwner2 () != null )
-				{
-					o.getAddresses ().add (xo.getOwner2 ());
-				}
-				if ( xo.getOwner3 () != null )
-				{
-					o.getAddresses ().add (xo.getOwner3 ());
-				}
-			}
-		}
-
 		return transaction;
 	}
 
@@ -785,207 +666,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		{
 			log.error ("Can not send JMS message ", e);
 		}
-	}
-
-	public AccountStatement getAccountStatement (final List<String> addresses, final long from)
-	{
-		log.trace ("get account statement ");
-		try
-		{
-			final AccountStatement statement = new AccountStatement ();
-			final Set<String> openTX = new HashSet<String> ();
-
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
-				{
-					status.setRollbackOnly ();
-					List<TransactionOutput> balances = new ArrayList<TransactionOutput> ();
-					statement.setOpening (balances);
-
-					Blk trunk;
-					try
-					{
-						trunk = store.getBlock (store.getHeadHash ());
-						statement.setTimestamp (trunk.getCreateTime ());
-						statement.setLastBlock (store.getHeadHash ());
-						if ( !addresses.isEmpty () )
-						{
-							HashMap<String, HashMap<Long, TxOut>> utxo = new HashMap<String, HashMap<Long, TxOut>> ();
-							for ( TxOut o : store.getUnspentOutput (addresses) )
-							{
-								HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-								if ( outs == null )
-								{
-									outs = new HashMap<Long, TxOut> ();
-									utxo.put (o.getTxHash (), outs);
-									openTX.add (o.getTxHash ());
-								}
-								outs.put (o.getIx (), o);
-							}
-
-							List<Posting> postings = new ArrayList<Posting> ();
-							statement.setPosting (postings);
-							if ( from > 0 )
-							{
-								for ( TxIn spent : store.getSpent (addresses, from) )
-								{
-									Posting p = new Posting ();
-									postings.add (p);
-
-									p.setTimestamp (spent.getBlockTime ());
-									if ( spent.getTransaction ().getBlockHash () != null )
-									{
-										p.setBlock (spent.getTransaction ().getBlockHash ());
-									}
-									else
-									{
-										p.setBlock (spent.getTransaction ().getBlock ().getHash ());
-									}
-
-									TxOut o = spent.getSource ();
-									HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-									if ( outs == null )
-									{
-										outs = new HashMap<Long, TxOut> ();
-										utxo.put (o.getTxHash (), outs);
-										openTX.remove (o.getTxHash ());
-									}
-									outs.put (o.getIx (), o);
-
-									TransactionOutput out = toBCSAPITransactionOutput (o);
-									p.setOutput (out);
-									p.setSpent (spent.getTransaction ().getHash ());
-								}
-
-								for ( TxOut o : store.getReceived (addresses, from) )
-								{
-									Posting p = new Posting ();
-									postings.add (p);
-
-									p.setTimestamp (o.getBlockTime ());
-									if ( o.getTransaction ().getBlockHash () != null )
-									{
-										p.setBlock (o.getTransaction ().getBlockHash ());
-									}
-									else
-									{
-										p.setBlock (o.getTransaction ().getBlock ().getHash ());
-									}
-									HashMap<Long, TxOut> outs = utxo.get (o.getTxHash ());
-									if ( outs != null )
-									{
-										outs.remove (o.getIx ());
-										if ( outs.size () == 0 )
-										{
-											utxo.remove (o.getTxHash ());
-											openTX.add (o.getTxHash ());
-										}
-									}
-
-									TransactionOutput out = toBCSAPITransactionOutput (o);
-									p.setOutput (out);
-								}
-							}
-							for ( HashMap<Long, TxOut> outs : utxo.values () )
-							{
-								for ( TxOut o : outs.values () )
-								{
-									TransactionOutput out = toBCSAPITransactionOutput (o);
-									balances.add (out);
-								}
-							}
-							Collections.sort (postings, new Comparator<Posting> ()
-							{
-								@Override
-								public int compare (Posting arg0, Posting arg1)
-								{
-									if ( arg0.getTimestamp () != arg1.getTimestamp () )
-									{
-										return (int) (arg0.getTimestamp () - arg1.getTimestamp ());
-									}
-									else
-									{
-										if ( arg0.getSpent () == null && arg1.getSpent () != null )
-										{
-											return -1;
-										}
-										if ( arg0.getSpent () != null && arg1.getSpent () == null )
-										{
-											return 1;
-										}
-										return 0;
-									}
-								}
-							});
-						}
-					}
-					catch ( ValidationException e )
-					{
-					}
-				}
-			});
-			if ( !addresses.isEmpty () )
-			{
-				statement.setUnconfirmedSpend (new ArrayList<Transaction> ());
-				Set<String> alreadyIn = new HashSet<String> ();
-				for ( Tx t : txhandler.getUnconfirmedForHashes (openTX) )
-				{
-					if ( !alreadyIn.contains (t.getHash ()) )
-					{
-						statement.getUnconfirmedSpend ().add (toBCSAPITransaction (t));
-						alreadyIn.add (t.getHash ());
-					}
-				}
-
-				Set<String> as = new HashSet<String> ();
-				as.addAll (addresses);
-				statement.setUnconfirmedReceive (new ArrayList<Transaction> ());
-				alreadyIn = new HashSet<String> ();
-				for ( Tx t : txhandler.getUnconfirmedForAddresses (as) )
-				{
-					if ( !alreadyIn.contains (t.getHash ()) )
-					{
-						statement.getUnconfirmedReceive ().add (toBCSAPITransaction (t));
-						alreadyIn.add (t.getHash ());
-					}
-				}
-			}
-			return statement;
-		}
-		finally
-		{
-			log.trace ("get account statement returned");
-		}
-	}
-
-	private TransactionOutput toBCSAPITransactionOutput (TxOut o)
-	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		o.toWire (writer);
-		TransactionOutput out = TransactionOutput.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		out.setTransactionHash (o.getTxHash ());
-		out.setSelfIx (o.getIx ());
-		List<String> addresses = new ArrayList<String> ();
-		if ( o.getOwner1 () != null )
-		{
-			addresses.add (o.getOwner1 ());
-		}
-		if ( o.getOwner2 () != null )
-		{
-			addresses.add (o.getOwner2 ());
-		}
-		if ( o.getOwner3 () != null )
-		{
-			addresses.add (o.getOwner3 ());
-		}
-		out.setAddresses (addresses);
-		if ( o.getVotes () != null )
-		{
-			out.setVotes (o.getVotes ());
-		}
-		return out;
 	}
 
 	private Color getColor (final String hash)

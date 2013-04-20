@@ -149,8 +149,6 @@ public class Transaction implements Serializable, Cloneable
 		{
 			TransactionOutput o = s.getOutput ();
 			TransactionInput i = new TransactionInput ();
-			i.setIx (o.getSelfIx ());
-			i.setSourceHash (o.getTransactionHash ());
 			sumInput += o.getValue ();
 
 			transaction.getInputs ().add (i);
@@ -308,24 +306,6 @@ public class Transaction implements Serializable, Cloneable
 		toWire (writer);
 		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
 		hash = reader.hash ().toString ();
-		if ( inputs != null )
-		{
-			int i = 0;
-			for ( TransactionInput in : inputs )
-			{
-				in.setTransactionHash (hash);
-				in.setSelfIx (i++);
-			}
-		}
-		if ( outputs != null )
-		{
-			int i = 0;
-			for ( TransactionOutput out : outputs )
-			{
-				out.setTransactionHash (hash);
-				out.setSelfIx (i++);
-			}
-		}
 	}
 
 	public String getHash ()
@@ -429,20 +409,6 @@ public class Transaction implements Serializable, Cloneable
 
 		t.hash = reader.hash (cursor, reader.getCursor () - cursor).toString ();
 
-		if ( t.inputs != null )
-		{
-			for ( TransactionInput in : t.inputs )
-			{
-				in.setTransactionHash (t.hash);
-			}
-		}
-		if ( t.outputs != null )
-		{
-			for ( TransactionOutput out : t.outputs )
-			{
-				out.setTransactionHash (t.hash);
-			}
-		}
 		return t;
 	}
 

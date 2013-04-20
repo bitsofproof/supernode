@@ -13,25 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.bitsofproof.supernode.api;
 
-import java.util.List;
-
-public interface KeyGenerator
+public interface Wallet
 {
-	public int getAddressFlag ();
+	Key getKeyForAddress (byte[] address);
 
-	public ExtendedKey getExtendedKey (int sequence) throws ValidationException;
-
-	public Key getKey (int sequence) throws ValidationException;
-
-	public Key getRandomKey () throws ValidationException;
-
-	public Key getKeyForAddress (String address);
-
-	public List<String> getAddresses () throws ValidationException;
-
-	public ExtendedKey getMaster ();
-
-	public int getSize ();
+	Key getNextKey (String account);
 }

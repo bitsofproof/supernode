@@ -15,22 +15,12 @@
  */
 package com.bitsofproof.supernode.api;
 
-import java.util.Collection;
-import java.util.List;
 
 /**
  * This is the API extensions to the bitsofproof supernode should build on
  */
 public interface BCSAPI
 {
-	/**
-	 * get the chain hash list from genesis to most recent
-	 * 
-	 * @return block hashes
-	 * @throws BCSAPIException
-	 */
-	List<String> getBlocks () throws BCSAPIException;
-
 	/**
 	 * get block for the hash
 	 * 
@@ -98,17 +88,6 @@ public interface BCSAPI
 	public void removeTrunkListener (TrunkListener listener);
 
 	/**
-	 * Get account statement
-	 * 
-	 * @param addresses
-	 * @param from
-	 *            - unix time point the account statement should start from
-	 * @return
-	 * @throws BCSAPIException
-	 */
-	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException;
-
-	/**
 	 * scan transactions matching the filter after the timestamp
 	 * 
 	 * @param filter
@@ -134,25 +113,6 @@ public interface BCSAPI
 	 * @param listener
 	 */
 	public void removeFilteredListener (BloomFilter filter, TransactionListener listener);
-
-	/**
-	 * create a key generator
-	 * 
-	 * @throws BCSAPIException
-	 */
-	public KeyGenerator createKeyGenerator (int size, int addressFlag) throws BCSAPIException;
-
-	/**
-	 * get the key generator for a master key and next key sequence
-	 * 
-	 * @throws BCSAPIException
-	 */
-	public KeyGenerator getKeyGenerator (ExtendedKey master, int size, int addressFlag) throws BCSAPIException;
-
-	/**
-	 * create an account manager
-	 */
-	public AccountManager createAccountManager (KeyGenerator generator) throws BCSAPIException;
 
 	/**
 	 * Issue a color

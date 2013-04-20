@@ -22,19 +22,13 @@ message TransactionInput {
 	required uint32 sourceix = 2;    		// index of the output in the source stransaction
 	required uint32 sequence = 3; 			// higher wins
 	required bytes script = 4;    			// inputs to the script of the transaction output
-	optional bytes transaction = 5;			// the transaction this input is part of
-	optional uint32 selfix = 6;				// self index within the transaction this input is part of
 }
 
 // output point of a transaction. 
 message TransactionOutput {
 	required uint64 value = 1; 				// value that can be claimed ...
 	required bytes script = 2; 				// ... if satisfying this output script
-	required uint32 selfix = 3;				// self index within the transaction this input is part of
-	required bytes transaction = 4;			// the transaction this input is part of
-	repeated string address = 5;			// address(es) output was sent (if standard tx)
-	optional uint32 votes = 6;				// number of signatures from owner(s) needed to redeem
-	optional bytes color = 7;				// color of this output (root transaction hash)
+	optional bytes color = 3;				// color of this output terms hash
 }
 
 // a transaction. 
@@ -72,31 +66,6 @@ message Hash {
 	repeated bytes hash = 2;
 }
 
-message AccountRequest {
-	required uint32 bcsapiversion = 1;
-	repeated string address = 2;			// indicate interest in addresses
-	optional uint32 from = 3;				// from time 
-}
-
-message AccountStatement {
-
-	message Posting {
-		required TransactionOutput output = 1;	
-		required bytes  block = 2;
-		required uint32 timestamp = 3;
-		required uint32 height = 4;
-		optional bytes  spent = 5;
-	}
-	
-	required uint32 bcsapiversion = 1;
-	required bytes lastBlock = 2;
-	required uint32 timestamp = 3;
-	repeated TransactionOutput opening = 4;
-	repeated Posting posting = 5;
-	repeated Transaction unconfirmedSpend = 6;
-	repeated Transaction unconfirmedReceive = 7;
-}
-
 message ExceptionMessage {
 	required uint32 bcsapiversion = 1;
 	repeated string message = 2;
@@ -117,4 +86,22 @@ message FilterRequest {
 	required uint32 hashFunctions = 3;
 	required uint32 tweak = 4;
 	required uint32 mode = 5;
+}
+
+message Wallet {
+	required uint32 bcsapiversion = 1;
+	message Key
+	{
+		required string key = 1;
+		optional uint32 maxSequence =2;
+		optional string name = 3;
+	}
+	message PublicAddress
+	{
+		required string address = 1;
+		required string name = 2;
+	}
+	repeated Key keys = 2;
+	repeated PublicAddress publicAddresses = 3;
+	repeated Transaction transactions = 4;
 }

@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,12 +52,10 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private String clientId;
 
-	private MessageProducer inventoryProducer;
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
 	private MessageProducer blockRequestProducer;
 	private MessageProducer transactionRequestProducer;
-	private MessageProducer accountRequestProducer;
 	private MessageProducer colorProducer;
 	private MessageProducer colorRequestProducer;
 	private MessageProducer filterRequestProducer;
@@ -199,12 +196,10 @@ public class ClientBusAdaptor implements BCSAPI
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 
-			inventoryProducer = session.createProducer (session.createTopic ("inventory"));
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
 			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
-			accountRequestProducer = session.createProducer (session.createTopic ("accountRequest"));
 			colorProducer = session.createProducer (session.createTopic ("newColor"));
 			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
 			filterRequestProducer = session.createProducer (session.createTopic ("filterRequest"));
@@ -602,55 +597,6 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public AccountStatement getAccountStatement (Collection<String> addresses, long from) throws BCSAPIException
-	{
-		try
-		{
-			log.trace ("get account statement");
-			Queue replyQueue = session.createTemporaryQueue ();
-
-			BytesMessage m = session.createBytesMessage ();
-			BCSAPIMessage.AccountRequest.Builder ab = BCSAPIMessage.AccountRequest.newBuilder ();
-			ab.setBcsapiversion (1);
-			for ( String a : addresses )
-			{
-				ab.addAddress (a);
-			}
-			ab.setFrom ((int) from);
-			m.writeBytes (ab.build ().toByteArray ());
-			byte[] response = synchronousRequest (accountRequestProducer, m, replyQueue);
-			if ( response != null )
-			{
-				AccountStatement s = AccountStatement.fromProtobuf (BCSAPIMessage.AccountStatement.parseFrom (response));
-				if ( s.getUnconfirmedSpend () != null )
-				{
-					for ( Transaction t : s.getUnconfirmedSpend () )
-					{
-						t.computeHash ();
-					}
-				}
-				if ( s.getUnconfirmedReceive () != null )
-				{
-					for ( Transaction t : s.getUnconfirmedReceive () )
-					{
-						t.computeHash ();
-					}
-				}
-				return s;
-			}
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		catch ( InvalidProtocolBufferException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		return null;
-	}
-
-	@Override
 	public void sendTransaction (Transaction transaction) throws BCSAPIException
 	{
 		try
@@ -706,40 +652,6 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
-	}
-
-	@Override
-	public List<String> getBlocks () throws BCSAPIException
-	{
-		try
-		{
-			log.trace ("get blocks ");
-			BytesMessage m = session.createBytesMessage ();
-			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
-			builder.setBcsapiversion (1);
-			builder.addHash (ByteString.copyFrom (Hash.ZERO_HASH.toByteArray ()));
-			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (inventoryProducer, m);
-			if ( response != null )
-			{
-				List<String> chain = new ArrayList<String> ();
-				BCSAPIMessage.Hash b = BCSAPIMessage.Hash.parseFrom (response);
-				for ( ByteString bs : b.getHashList () )
-				{
-					chain.add (new Hash (bs.toByteArray ()).toString ());
-				}
-				return chain;
-			}
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		catch ( InvalidProtocolBufferException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		return null;
 	}
 
 	@Override
@@ -801,46 +713,12 @@ public class ClientBusAdaptor implements BCSAPI
 		return null;
 	}
 
-	@Override
-	public KeyGenerator createKeyGenerator (int size, int addressFlag) throws BCSAPIException
-	{
-		try
-		{
-			return DefaultKeyGenerator.createKeyGenerator (size, addressFlag);
-		}
-		catch ( ValidationException e )
-		{
-			throw new BCSAPIException (e);
-		}
-	}
-
-	@Override
-	public KeyGenerator getKeyGenerator (ExtendedKey master, int nextKeySequence, int addressFlag) throws BCSAPIException
-	{
-		try
-		{
-			return new DefaultKeyGenerator (master, nextKeySequence, addressFlag);
-		}
-		catch ( ValidationException e )
-		{
-			throw new BCSAPIException (e);
-		}
-	}
-
-	@Override
-	public AccountManager createAccountManager (KeyGenerator generator)
-	{
-		DefaultAccountManager manager = new DefaultAccountManager ();
-		manager.setApi (this);
-		manager.track (generator);
-		return manager;
-	}
-
 	private void updateFilter (final BloomFilter filter, Transaction t)
 	{
 		if ( filter.getUpdateMode () != UpdateMode.none )
 		{
 			// amend filter for what is received
+			int ix = 0;
 			for ( TransactionOutput out : t.getOutputs () )
 			{
 				List<Token> tokens;
@@ -853,13 +731,13 @@ public class ClientBusAdaptor implements BCSAPI
 						{
 							if ( filter.getUpdateMode () == UpdateMode.all )
 							{
-								filter.addOutpoint (t.getHash (), out.getSelfIx ());
+								filter.addOutpoint (t.getHash (), ix);
 							}
 							else if ( filter.getUpdateMode () == UpdateMode.keys )
 							{
 								if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
 								{
-									filter.addOutpoint (t.getHash (), out.getSelfIx ());
+									filter.addOutpoint (t.getHash (), ix);
 								}
 							}
 						}
@@ -868,6 +746,7 @@ public class ClientBusAdaptor implements BCSAPI
 				catch ( ValidationException e )
 				{
 				}
+				++ix;
 			}
 		}
 	}

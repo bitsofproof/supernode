@@ -46,62 +46,23 @@ public class KeyFormatter
 		this.addressFlag = addressFlag;
 	}
 
+	public boolean hasPassPhrase ()
+	{
+		return passphrase != null;
+	}
+
+	public int getAddressFlag ()
+	{
+		return addressFlag;
+	}
+
 	public String serializeKey (Key key) throws ValidationException
 	{
 		if ( passphrase == null )
 		{
-			return serializeWIF (key);
+			return ECKeyPair.serializeWIF (key);
 		}
 		return serializeBIP38 (key);
-	}
-
-	public ExtendedKey parseSerializedExtendedKey (String serialized) throws ValidationException
-	{
-		byte[] extendedAndCC = ByteUtils.fromBase58 (serialized);
-		if ( extendedAndCC.length < 69 )
-		{
-			throw new ValidationException ("Invalid extended key");
-		}
-		byte[] key = Arrays.copyOfRange (extendedAndCC, 0, extendedAndCC.length - 32);
-		byte[] cc = Arrays.copyOfRange (extendedAndCC, extendedAndCC.length - 32, extendedAndCC.length);
-		return new ExtendedKey (parseBytesKey (key), cc);
-	}
-
-	public String serializeExtendedKey (ExtendedKey key) throws ValidationException
-	{
-		Key master = key.getKey ();
-		byte[] keybytes = bytesBIP38 (master);
-		byte[] ext = new byte[keybytes.length + 32];
-		System.arraycopy (keybytes, 0, ext, 0, keybytes.length);
-		System.arraycopy (key.getChainCode (), 0, ext, keybytes.length, 32);
-		return ByteUtils.toBase58 (ext);
-	}
-
-	public String serializeKeyGenerator (KeyGenerator kg) throws ValidationException
-	{
-		Key master = kg.getMaster ().getKey ();
-		byte[] keybytes = bytesBIP38 (master);
-		byte[] ext = new byte[keybytes.length + 32 + 3];
-		ext[0] = (byte) kg.getAddressFlag ();
-		ext[1] = (byte) (kg.getSize () & 0xff);
-		ext[2] = (byte) ((kg.getSize () >>> 8) & 0xff);
-		System.arraycopy (keybytes, 0, ext, 3, keybytes.length);
-		System.arraycopy (kg.getMaster ().getChainCode (), 0, ext, keybytes.length + 3, 32);
-		return ByteUtils.toBase58WithChecksum (ext);
-	}
-
-	public KeyGenerator parseSerializedKeyGenerator (String serialized) throws ValidationException
-	{
-		byte[] extendedAndCC = ByteUtils.fromBase58WithChecksum (serialized);
-		if ( extendedAndCC.length < 72 )
-		{
-			throw new ValidationException ("Invalid extended key");
-		}
-		int addressFlag = extendedAndCC[0];
-		int size = (extendedAndCC[1] & 0xff) | (extendedAndCC[2] & 0xff) << 8;
-		byte[] key = Arrays.copyOfRange (extendedAndCC, 3, extendedAndCC.length - 32);
-		byte[] cc = Arrays.copyOfRange (extendedAndCC, extendedAndCC.length - 32, extendedAndCC.length);
-		return new DefaultKeyGenerator (new ExtendedKey (parseBytesKey (key), cc), size, addressFlag);
 	}
 
 	public ECKeyPair parseSerializedKey (String serialized) throws ValidationException
@@ -114,7 +75,7 @@ public class KeyFormatter
 	{
 		if ( (store[0] & 0xff) == 0x80 )
 		{
-			return parseBytesWIF (store);
+			return ECKeyPair.parseBytesWIF (store);
 		}
 		else if ( (store[0] & 0xff) == 0x01 )
 		{
@@ -131,80 +92,6 @@ public class KeyFormatter
 	private String serializeBIP38 (Key key) throws ValidationException
 	{
 		return ByteUtils.toBase58 (bytesBIP38 (key));
-	}
-
-	public static String serializeWIF (Key key)
-	{
-		return ByteUtils.toBase58 (bytesWIF (key));
-	}
-
-	private static byte[] bytesWIF (Key key)
-	{
-		byte[] k = key.getPrivate ();
-		if ( key.isCompressed () )
-		{
-			byte[] encoded = new byte[k.length + 6];
-			byte[] ek = new byte[k.length + 2];
-			ek[0] = (byte) 0x80;
-			System.arraycopy (k, 0, ek, 1, k.length);
-			ek[k.length + 1] = 0x01;
-			byte[] hash = Hash.hash (ek);
-			System.arraycopy (ek, 0, encoded, 0, ek.length);
-			System.arraycopy (hash, 0, encoded, ek.length, 4);
-			return encoded;
-		}
-		else
-		{
-			byte[] encoded = new byte[k.length + 5];
-			byte[] ek = new byte[k.length + 1];
-			ek[0] = (byte) 0x80;
-			System.arraycopy (k, 0, ek, 1, k.length);
-			byte[] hash = Hash.hash (ek);
-			System.arraycopy (ek, 0, encoded, 0, ek.length);
-			System.arraycopy (hash, 0, encoded, ek.length, 4);
-			return encoded;
-		}
-	}
-
-	public static ECKeyPair parseWIF (String serialized) throws ValidationException
-	{
-		byte[] store = ByteUtils.fromBase58 (serialized);
-		return parseBytesWIF (store);
-	}
-
-	private static ECKeyPair parseBytesWIF (byte[] store) throws ValidationException
-	{
-		if ( store.length == 37 )
-		{
-			checkChecksum (store);
-			byte[] key = new byte[store.length - 5];
-			System.arraycopy (store, 1, key, 0, store.length - 5);
-			return new ECKeyPair (key, false);
-		}
-		else if ( store.length == 38 )
-		{
-			checkChecksum (store);
-			byte[] key = new byte[store.length - 6];
-			System.arraycopy (store, 1, key, 0, store.length - 6);
-			return new ECKeyPair (key, true);
-		}
-		throw new ValidationException ("Invalid key length");
-	}
-
-	private static void checkChecksum (byte[] store) throws ValidationException
-	{
-		byte[] checksum = new byte[4];
-		System.arraycopy (store, store.length - 4, checksum, 0, 4);
-		byte[] ekey = new byte[store.length - 4];
-		System.arraycopy (store, 0, ekey, 0, store.length - 4);
-		byte[] hash = Hash.hash (ekey);
-		for ( int i = 0; i < 4; ++i )
-		{
-			if ( hash[i] != checksum[i] )
-			{
-				throw new ValidationException ("checksum mismatch");
-			}
-		}
 	}
 
 	public String createBIP38Request (int lot, int sequence) throws ValidationException
@@ -308,7 +195,18 @@ public class KeyFormatter
 			throw new ValidationException ("invalid key");
 		}
 
-		checkChecksum (store);
+		byte[] checksum = new byte[4];
+		System.arraycopy (store, store.length - 4, checksum, 0, 4);
+		byte[] ekey = new byte[store.length - 4];
+		System.arraycopy (store, 0, ekey, 0, store.length - 4);
+		byte[] hash = Hash.hash (ekey);
+		for ( int i = 0; i < 4; ++i )
+		{
+			if ( hash[i] != checksum[i] )
+			{
+				throw new ValidationException ("checksum mismatch");
+			}
+		}
 
 		if ( ec == false )
 		{

@@ -40,8 +40,7 @@ public class KeySerializerTest
 	private static final String WIF = "WIF.json";
 	private static final String BIP38NoEC = "BIP38NoEC.json";
 	private static final String BIP38EC = "BIP38EC.json";
-	private static final String Extended = "ExtendedKey.json";
-	private static final String KeyGen = "KeyGenerator.json";
+	private static final String ExtendedKeyTest = "ExtendedKey.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
@@ -85,7 +84,7 @@ public class KeySerializerTest
 			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
-			String decrypted = KeyFormatter.serializeWIF (kp);
+			String decrypted = ECKeyPair.serializeWIF (kp);
 			assertTrue (test.getString (1).equals (decrypted));
 			ECKeyPair kp2 = formatter.parseSerializedKey (decrypted);
 			assertTrue (formatter.serializeKey (kp2).equals (test.getString (0)));
@@ -102,7 +101,7 @@ public class KeySerializerTest
 
 			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
-			String decrypted = KeyFormatter.serializeWIF (kp);
+			String decrypted = ECKeyPair.serializeWIF (kp);
 			assertTrue (test.getString (1).equals (decrypted));
 		}
 	}
@@ -131,36 +130,32 @@ public class KeySerializerTest
 	}
 
 	@Test
-	public void extendedKeySerializationTest () throws ValidationException, IOException, JSONException
+	public void extendedKeyTest () throws ValidationException, IOException, JSONException
 	{
-		JSONArray testData = readObjectArray (Extended);
+		JSONArray testData = readObjectArray (ExtendedKeyTest);
+		int[] seq = new int[] { 0x80000000, 0x80000001, 0, 1 };
 		for ( int i = 0; i < testData.length (); ++i )
 		{
 			final JSONArray test = testData.getJSONArray (i);
-
-			KeyFormatter formatter = new KeyFormatter (test.getString (3), 0x0);
-			ExtendedKey ek = formatter.parseSerializedExtendedKey (test.getString (0));
-			assertTrue (test.getString (1).equals (KeyFormatter.serializeWIF (ek.getKey ())));
-			assertTrue (test.getString (2).equals (ByteUtils.toBase58 (ek.getChainCode ())));
-			assertTrue (test.getString (0).equals (formatter.serializeExtendedKey (ek)));
+			ExtendedKey root = ExtendedKey.parse (test.getString (0));
+			assertTrue (root.getDepth () == 0);
+			assertTrue (root.getParent () == 0);
+			assertTrue (root.getSequence () == 0);
+			JSONArray seqs = test.getJSONArray (1);
+			for ( int j = 0; i < seqs.length (); ++i )
+			{
+				ECKeyPair kp = ECKeyPair.parseWIF (seqs.getJSONArray (j).getString (0));
+				ExtendedKey s = ExtendedKey.parse (seqs.getJSONArray (j).getString (1));
+				assertTrue (Arrays.equals (kp.getPrivate (), root.getKey (seq[j]).getPrivate ()));
+				assertTrue (s.getParent () == root.getChild (seq[j]).getFingerPrint ());
+				assertTrue (s.getDepth () == 1);
+				JSONArray subs = seqs.getJSONArray (j).getJSONArray (2);
+				for ( int k = 0; k < 4; ++k )
+				{
+					assertTrue (Arrays.equals (ECKeyPair.parseWIF (subs.getString (k)).getPrivate (), s.getKey (seq[k]).getPrivate ()));
+				}
+			}
 		}
 	}
 
-	@Test
-	public void keyGeneratorSerializationTest () throws ValidationException, IOException, JSONException
-	{
-		JSONArray testData = readObjectArray (KeyGen);
-		for ( int i = 0; i < testData.length (); ++i )
-		{
-			final JSONArray test = testData.getJSONArray (i);
-
-			KeyFormatter formatter = new KeyFormatter (test.getString (5), i);
-			KeyGenerator kg = formatter.parseSerializedKeyGenerator (test.getString (0));
-			assertTrue (Integer.valueOf (test.getString (1)).intValue () == kg.getAddressFlag ());
-			assertTrue (Integer.valueOf (test.getString (2)).intValue () == kg.getSize ());
-			assertTrue (test.getString (3).equals (KeyFormatter.serializeWIF (kg.getMaster ().getKey ())));
-			assertTrue (test.getString (4).equals (ByteUtils.toBase58 (kg.getMaster ().getChainCode ())));
-			assertTrue (test.getString (0).equals (formatter.serializeKeyGenerator (kg)));
-		}
-	}
 }

@@ -27,18 +27,6 @@ public class TransactionInput implements Serializable, Cloneable
 	private long ix;
 	private long sequence = 0xFFFFFFFFL;
 	private byte[] script;
-	private String transactionHash;
-	private long selfIx;
-
-	public String getTransactionHash ()
-	{
-		return transactionHash;
-	}
-
-	public void setTransactionHash (String transactionHash)
-	{
-		this.transactionHash = transactionHash;
-	}
 
 	public String getSourceHash ()
 	{
@@ -58,16 +46,6 @@ public class TransactionInput implements Serializable, Cloneable
 	public void setIx (long ix)
 	{
 		this.ix = ix;
-	}
-
-	public long getSelfIx ()
-	{
-		return selfIx;
-	}
-
-	public void setSelfIx (long selfIx)
-	{
-		this.selfIx = selfIx;
 	}
 
 	public long getSequence ()
@@ -140,7 +118,6 @@ public class TransactionInput implements Serializable, Cloneable
 		i.sourceHash = sourceHash;
 		i.ix = ix;
 		i.sequence = sequence;
-		i.transactionHash = transactionHash;
 		if ( script != null )
 		{
 			i.script = new byte[script.length];
@@ -157,11 +134,6 @@ public class TransactionInput implements Serializable, Cloneable
 		builder.setSequence ((int) sequence);
 		builder.setSource (ByteString.copyFrom (new Hash (sourceHash).toByteArray ()));
 		builder.setSourceix ((int) ix);
-		if ( transactionHash != null )
-		{
-			builder.setSelfix ((int) selfIx);
-			builder.setTransaction (ByteString.copyFrom (new Hash (transactionHash).toByteArray ()));
-		}
 		return builder.build ();
 	}
 
@@ -172,11 +144,6 @@ public class TransactionInput implements Serializable, Cloneable
 		input.setScript (pi.getScript ().toByteArray ());
 		input.setSequence (pi.getSequence ());
 		input.setSourceHash (new Hash (pi.getSource ().toByteArray ()).toString ());
-		if ( pi.hasTransaction () )
-		{
-			input.setSelfIx (pi.getSelfix ());
-			input.setTransactionHash (new Hash (pi.getTransaction ().toByteArray ()).toString ());
-		}
 		return input;
 	}
 }

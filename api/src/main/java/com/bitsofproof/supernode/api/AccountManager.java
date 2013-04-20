@@ -19,7 +19,7 @@ import java.util.List;
 
 public interface AccountManager
 {
-	public void track (KeyGenerator generator);
+	public void track (List<String> addresses);
 
 	public Transaction pay (String receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
