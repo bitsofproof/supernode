@@ -134,8 +134,17 @@ public class Blk implements Serializable
 		builder.setNonce ((int) nonce);
 		builder.setChainWork (chainWork);
 		builder.setHeadId (headId);
-		builder.setFilterMap (ByteString.copyFrom (filterMap));
-		builder.setFilterFunctions (filterFunctions);
+		if ( filterMap != null )
+		{
+			builder.setFilterMap (ByteString.copyFrom (filterMap));
+			builder.setFilterFunctions (filterFunctions);
+		}
+		else
+		{
+			// genesis
+			builder.setFilterMap (ByteString.copyFrom (new byte[0]));
+			builder.setFilterFunctions (0);
+		}
 		if ( transactions != null )
 		{
 			for ( Tx t : transactions )
