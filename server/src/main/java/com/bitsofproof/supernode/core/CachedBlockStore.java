@@ -258,7 +258,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected static class CachedBlock
 	{
-		public CachedBlock (String hash, Long id, CachedBlock previous, long time, int height, int version)
+		public CachedBlock (String hash, Long id, CachedBlock previous, long time, int height, int version, byte[] filterMap, int filterFunctions)
 		{
 			this.hash = hash;
 			this.id = id;
@@ -266,6 +266,8 @@ public abstract class CachedBlockStore implements BlockStore
 			this.time = time;
 			this.height = height;
 			this.version = version;
+			this.filterMap = filterMap;
+			this.filterFunctions = filterFunctions;
 		}
 
 		private final String hash;
@@ -274,6 +276,8 @@ public abstract class CachedBlockStore implements BlockStore
 		private final long time;
 		private final int height;
 		private final int version;
+		private final byte[] filterMap;
+		private final int filterFunctions;
 
 		public Long getId ()
 		{
@@ -361,6 +365,32 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			lock.writeLock ().unlock ();
 		}
+	}
+
+	protected List<CachedBlock> filterBlocks (byte[] data)
+	{
+		List<CachedBlock> result = new ArrayList<CachedBlock> ();
+		try
+		{
+			lock.readLock ().lock ();
+			CachedBlock q = currentHead.getLast ();
+			CachedBlock p = q.previous;
+			while ( p != null )
+			{
+				BloomFilter filter = new BloomFilter (p.filterMap, p.filterFunctions, 0, UpdateMode.none);
+				if ( filter.contains (data) )
+				{
+					result.add (p);
+				}
+				q = p;
+				p = q.previous;
+			}
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+		return result;
 	}
 
 	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch, int untilHeight)
@@ -870,7 +900,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
-		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000.0, UpdateMode.none);
+		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000.0, 0, UpdateMode.none);
 		List<String> colors = new ArrayList<String> ();
 		List<Long> colorQuantities = new ArrayList<Long> ();
 
@@ -982,7 +1012,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 		// modify transient caches only after persistent changes
 		CachedBlock m =
-				new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (), (int) b.getVersion ());
+				new CachedBlock (b.getHash (), b.getId (), cachedBlocks.get (b.getPreviousHash ()), b.getCreateTime (), b.getHeight (), (int) b.getVersion (),
+						b.getFilterMap (), b.getFilterFunctions ());
 		cachedBlocks.put (b.getHash (), m);
 
 		CachedHead usingHead = cachedHeads.get (head.getId ());

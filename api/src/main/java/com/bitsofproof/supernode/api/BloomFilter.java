@@ -18,8 +18,6 @@ package com.bitsofproof.supernode.api;
 import java.security.SecureRandom;
 
 import org.bouncycastle.util.Arrays;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BloomFilter
 {
@@ -27,8 +25,6 @@ public class BloomFilter
 	{
 		none, all, keys
 	}
-
-	private static final Logger log = LoggerFactory.getLogger (BloomFilter.class);
 
 	private final byte[] filter;
 	private final long hashFunctions;
@@ -40,12 +36,15 @@ public class BloomFilter
 
 	public static BloomFilter createOptimalFilter (int n, double falsePositiveProbability, UpdateMode update)
 	{
-		long tweak = Math.abs (new SecureRandom ().nextInt ());
+		return createOptimalFilter (n, falsePositiveProbability, Math.abs (new SecureRandom ().nextInt ()), update);
+	}
+
+	public static BloomFilter createOptimalFilter (int n, double falsePositiveProbability, long tweak, UpdateMode update)
+	{
 		// http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives
 		double ln2 = Math.log (2.0);
 		int mod = Math.max (1, (int) Math.min ((-n * Math.log (falsePositiveProbability) / (ln2 * ln2)) / 8.0, MAX_FILTER_SIZE));
 		long hashFunctions = Math.max (1, Math.min ((int) (mod * 8.0 / n * ln2), MAX_HASH_FUNCS));
-		log.debug ("create filter of size " + mod);
 		return new BloomFilter (new byte[mod], hashFunctions, tweak, update);
 	}
 
