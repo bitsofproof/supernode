@@ -120,6 +120,11 @@ public class Blk implements Serializable
 		}
 	}
 
+	public void setTxHashes (ArrayList<String> txHashes)
+	{
+		this.txHashes = txHashes;
+	}
+
 	public byte[] toLevelDB ()
 	{
 		LevelDBStore.BLOCK.Builder builder = LevelDBStore.BLOCK.newBuilder ();
