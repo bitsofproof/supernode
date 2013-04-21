@@ -69,5 +69,5 @@ public interface BlockStore extends ColorStore
 
 	public void scan (BloomFilter filter, TransactionProcessor processor) throws ValidationException;
 
-	public void filterTransactions (List<byte[]> data, UpdateMode update, TransactionProcessor processor) throws ValidationException;
+	public void filterTransactions (List<byte[]> data, UpdateMode update, int after, TransactionProcessor processor) throws ValidationException;
 }

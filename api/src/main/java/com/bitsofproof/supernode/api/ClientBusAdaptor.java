@@ -227,7 +227,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, final TransactionListener listener) throws BCSAPIException
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, int after, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -239,6 +239,10 @@ public class ClientBusAdaptor implements BCSAPI
 			for ( byte[] d : match )
 			{
 				builder.addMatch (ByteString.copyFrom (d));
+			}
+			if ( after != 0 )
+			{
+				builder.setAfter (after);
 			}
 			m.writeBytes (builder.build ().toByteArray ());
 			final TemporaryQueue answerQueue = session.createTemporaryQueue ();

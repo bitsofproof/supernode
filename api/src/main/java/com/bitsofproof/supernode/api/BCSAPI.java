@@ -97,7 +97,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, TransactionListener listener) throws BCSAPIException;
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, int after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * scan transactions matching the filter

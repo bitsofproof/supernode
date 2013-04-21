@@ -93,6 +93,7 @@ message ExactMatchRequest
 	required uint32 bcsapiversion = 1;
 	required uint32 mode = 2;
 	repeated bytes match = 3;
+	optional uint32 after = 4;
 }
 
 message Wallet {
@@ -102,6 +103,7 @@ message Wallet {
 		required string key = 1;
 		optional uint32 maxSequence = 2;
 		optional string name = 3;
+		optional uint32 created = 4;
 	}
 	message PublicAddress
 	{

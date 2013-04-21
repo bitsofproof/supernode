@@ -394,74 +394,107 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
-	public void filterTransactions (List<byte[]> data, UpdateMode update, TransactionProcessor processor) throws ValidationException
+	public void filterTransactions (List<byte[]> data, UpdateMode update, int after, TransactionProcessor processor) throws ValidationException
 	{
+		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
 		{
 			lock.readLock ().lock ();
 
-			List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 			CachedBlock q = currentHead.getLast ();
 			CachedBlock p = q.previous;
 			while ( p != null )
 			{
-				blocks.add (q);
+				if ( after == 0 || q.time > after )
+				{
+					blocks.add (q);
+				}
 				q = p;
 				p = q.previous;
 			}
 			Collections.reverse (blocks);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
 
-			Set<ByteVector> matchSet = new HashSet<ByteVector> ();
-			for ( byte[] d : data )
+		Set<ByteVector> matchSet = new HashSet<ByteVector> ();
+		for ( byte[] d : data )
+		{
+			matchSet.add (new ByteVector (d));
+		}
+
+		for ( CachedBlock cb : blocks )
+		{
+			if ( matchSet.size () > MAX_MATCH_SET )
 			{
-				matchSet.add (new ByteVector (d));
+				throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
 			}
-
-			for ( CachedBlock cb : blocks )
+			boolean found = false;
+			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
+			for ( ByteVector v : matchSet )
 			{
-				if ( matchSet.size () > MAX_MATCH_SET )
+				if ( filter.contains (v.bytes) )
 				{
-					throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
+					found = true;
+					break;
 				}
-				boolean found = false;
-				BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
-				for ( ByteVector v : matchSet )
+			}
+			if ( !found )
+			{
+				continue;
+			}
+			try
+			{
+				Blk b = retrieveBlock (cb);
+				for ( Tx t : b.getTransactions () )
 				{
-					if ( filter.contains (v.bytes) )
+					found = false;
+					for ( TxOut o : t.getOutputs () )
 					{
-						found = true;
-						break;
-					}
-				}
-				if ( !found )
-				{
-					continue;
-				}
-				try
-				{
-					Blk b = retrieveBlock (cb);
-					for ( Tx t : b.getTransactions () )
-					{
-						found = false;
-						for ( TxOut o : t.getOutputs () )
+						try
 						{
-							try
+							for ( Token token : ScriptFormat.parse (o.getScript ()) )
 							{
-								for ( Token token : ScriptFormat.parse (o.getScript ()) )
+								if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
 								{
-									if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+									if ( update == UpdateMode.all )
 									{
-										if ( update == UpdateMode.all )
+										matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (t.getHash (), o.getIx ())));
+									}
+									else if ( update == UpdateMode.keys )
+									{
+										if ( ScriptFormat.isPayToKey (o.getScript ()) || ScriptFormat.isMultiSig (o.getScript ()) )
 										{
 											matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (t.getHash (), o.getIx ())));
 										}
-										else if ( update == UpdateMode.keys )
-										{
-											if ( ScriptFormat.isPayToKey (o.getScript ()) || ScriptFormat.isMultiSig (o.getScript ()) )
-											{
-												matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (t.getHash (), o.getIx ())));
-											}
-										}
+									}
+									found = true;
+									break;
+								}
+							}
+						}
+						catch ( Exception e )
+						{
+							// best effort
+						}
+					}
+					for ( TxIn i : t.getInputs () )
+					{
+						if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+						{
+							if ( matchSet.contains (new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()))) )
+							{
+								found = true;
+								break;
+							}
+							try
+							{
+								for ( Token token : ScriptFormat.parse (i.getScript ()) )
+								{
+									if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+									{
 										found = true;
 										break;
 									}
@@ -472,49 +505,19 @@ public abstract class CachedBlockStore implements BlockStore
 								// best effort
 							}
 						}
-						for ( TxIn i : t.getInputs () )
-						{
-							if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-							{
-								if ( matchSet.contains (new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()))) )
-								{
-									found = true;
-									break;
-								}
-								try
-								{
-									for ( Token token : ScriptFormat.parse (i.getScript ()) )
-									{
-										if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
-										{
-											found = true;
-											break;
-										}
-									}
-								}
-								catch ( Exception e )
-								{
-									// best effort
-								}
-							}
-						}
-						if ( found )
-						{
-							processor.process (t);
-						}
+					}
+					if ( found )
+					{
+						processor.process (t);
 					}
 				}
-				catch ( ValidationException e )
-				{
-					log.error ("Error while scanning blocks", e);
-				}
 			}
-			processor.process (null);
+			catch ( ValidationException e )
+			{
+				log.error ("Error while scanning blocks", e);
+			}
 		}
-		finally
-		{
-			lock.readLock ().unlock ();
-		}
+		processor.process (null);
 	}
 
 	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch, int untilHeight)
