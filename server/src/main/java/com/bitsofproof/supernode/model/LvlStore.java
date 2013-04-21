@@ -194,8 +194,11 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 				return arg0.getHeight () - arg1.getHeight ();
 			}
 		});
+		int n = 0;
 		for ( Blk b : blocks )
 		{
+			n += b.getFilterMap ().length;
+			log.info ("filterMap " + b.getHeight () + " " + b.getFilterMap ().length + " " + n);
 			CachedBlock cb = null;
 			if ( !b.getPreviousHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
