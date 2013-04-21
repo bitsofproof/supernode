@@ -437,6 +437,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					continue;
 				}
+				log.info ("hit at " + cb.getHeight ());
 				try
 				{
 					Blk b = retrieveBlock (cb);
