@@ -437,7 +437,6 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					continue;
 				}
-				log.info ("hit at " + cb.getHeight ());
 				try
 				{
 					Blk b = retrieveBlock (cb);
@@ -1025,7 +1024,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
-		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000.0, 0, UpdateMode.none);
+		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 10000000.0, 0, UpdateMode.none);
 		List<String> colors = new ArrayList<String> ();
 		List<Long> colorQuantities = new ArrayList<Long> ();
 
