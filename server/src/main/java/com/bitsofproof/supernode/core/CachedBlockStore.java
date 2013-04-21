@@ -439,7 +439,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				try
 				{
-					Blk b = retrieveBlock (q);
+					Blk b = retrieveBlock (cb);
 					for ( Tx t : b.getTransactions () )
 					{
 						found = false;
