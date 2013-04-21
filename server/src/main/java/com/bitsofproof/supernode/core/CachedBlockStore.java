@@ -509,6 +509,7 @@ public abstract class CachedBlockStore implements BlockStore
 					log.error ("Error while scanning blocks", e);
 				}
 			}
+			processor.process (null);
 		}
 		finally
 		{
