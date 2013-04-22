@@ -279,6 +279,16 @@ public abstract class CachedBlockStore implements BlockStore
 		private final byte[] filterMap;
 		private final int filterFunctions;
 
+		public byte[] getFilterMap ()
+		{
+			return filterMap;
+		}
+
+		public int getFilterFunctions ()
+		{
+			return filterFunctions;
+		}
+
 		public Long getId ()
 		{
 			return id;
@@ -447,6 +457,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			try
 			{
+				log.info ("possible match in block " + cb.getHeight () + " with " + cb.getFilterFunctions () + " " + cb.getFilterMap ().length);
 				Blk b = retrieveBlock (cb);
 				for ( Tx t : b.getTransactions () )
 				{
@@ -1027,7 +1038,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
-		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 10000000.0, 0, UpdateMode.none);
+		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000000.0, 0, UpdateMode.none);
 		List<String> colors = new ArrayList<String> ();
 		List<Long> colorQuantities = new ArrayList<Long> ();
 
