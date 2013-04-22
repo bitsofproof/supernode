@@ -46,7 +46,7 @@
 		<derby.version>10.9.1.0</derby.version>
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<postgresql.version>9.1-901.jdbc4</postgresql.version>
-		<leveldbjni.version>1.6</leveldbjni.version>
+		<leveldbjni.version>1.6.1</leveldbjni.version>
 		<stomp.version>1.13</stomp.version>
 	</properties>
 	<build>
