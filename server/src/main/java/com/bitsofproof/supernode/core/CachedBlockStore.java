@@ -457,7 +457,6 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			try
 			{
-				log.info ("possible match in block " + cb.getHeight () + " with " + cb.getFilterFunctions () + " " + cb.getFilterMap ().length);
 				Blk b = retrieveBlock (cb);
 				for ( Tx t : b.getTransactions () )
 				{
@@ -491,29 +490,32 @@ public abstract class CachedBlockStore implements BlockStore
 							// best effort
 						}
 					}
-					for ( TxIn i : t.getInputs () )
+					if ( !found )
 					{
-						if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+						for ( TxIn i : t.getInputs () )
 						{
-							if ( matchSet.contains (new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()))) )
+							if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 							{
-								found = true;
-								break;
-							}
-							try
-							{
-								for ( Token token : ScriptFormat.parse (i.getScript ()) )
+								if ( matchSet.contains (new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()))) )
 								{
-									if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+									found = true;
+									break;
+								}
+								try
+								{
+									for ( Token token : ScriptFormat.parse (i.getScript ()) )
 									{
-										found = true;
-										break;
+										if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+										{
+											found = true;
+											break;
+										}
 									}
 								}
-							}
-							catch ( Exception e )
-							{
-								// best effort
+								catch ( Exception e )
+								{
+									// best effort
+								}
 							}
 						}
 					}
