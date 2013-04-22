@@ -1038,7 +1038,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
-		BloomFilter filter = BloomFilter.createOptimalFilter (2 * numberOfOutputs, 1.0 / 100000000.0, 0, UpdateMode.none);
+		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (2 * numberOfOutputs, 100), 1.0e-8, 0, UpdateMode.none);
 		List<String> colors = new ArrayList<String> ();
 		List<Long> colorQuantities = new ArrayList<Long> ();
 
