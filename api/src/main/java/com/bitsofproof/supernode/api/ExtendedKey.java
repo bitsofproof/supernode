@@ -279,7 +279,7 @@ public class ExtendedKey
 		Key key;
 		if ( hasPrivate )
 		{
-			key = new ECKeyPair (new BigInteger (pubOrPriv), true);
+			key = new ECKeyPair (new BigInteger (1, pubOrPriv), true);
 		}
 		else
 		{
