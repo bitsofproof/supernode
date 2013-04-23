@@ -496,9 +496,12 @@ public abstract class CachedBlockStore implements BlockStore
 						{
 							if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 							{
-								if ( matchSet.contains (new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()))) )
+								ByteVector outpoint = new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()));
+								if ( matchSet.contains (outpoint) )
 								{
 									found = true;
+									// it would be a double spend if it were there again.
+									matchSet.remove (outpoint);
 									break;
 								}
 								try
