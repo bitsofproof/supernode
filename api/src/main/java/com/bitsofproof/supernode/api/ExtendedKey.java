@@ -46,7 +46,7 @@ public class ExtendedKey
 	private final int parent;
 	private final int sequence;
 
-	public static ExtendedKey createNew (int size)
+	public static ExtendedKey createNew ()
 	{
 		Key key = ECKeyPair.createNew (true);
 		byte[] chainCode = new byte[32];

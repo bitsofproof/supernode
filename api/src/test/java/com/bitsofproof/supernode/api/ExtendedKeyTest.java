@@ -42,7 +42,7 @@ public class ExtendedKeyTest
 	@Test
 	public void testGenerator () throws ValidationException
 	{
-		ExtendedKey ekprivate = ExtendedKey.createNew (20);
+		ExtendedKey ekprivate = ExtendedKey.createNew ();
 		ExtendedKey ekpublic = new ExtendedKey (new ECPublicKey (ekprivate.getMaster ().getPublic (), true), ekprivate.getChainCode (), 0, 0, 0);
 
 		for ( int i = 0; i < 20; ++i )
