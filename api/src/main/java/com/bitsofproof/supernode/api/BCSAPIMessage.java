@@ -6268,9 +6268,9 @@ public final class BCSAPIMessage {
     int getMatchCount();
     com.google.protobuf.ByteString getMatch(int index);
     
-    // optional uint32 after = 4;
+    // optional uint64 after = 4;
     boolean hasAfter();
-    int getAfter();
+    long getAfter();
   }
   public static final class ExactMatchRequest extends
       com.google.protobuf.GeneratedMessage
@@ -6335,13 +6335,13 @@ public final class BCSAPIMessage {
       return match_.get(index);
     }
     
-    // optional uint32 after = 4;
+    // optional uint64 after = 4;
     public static final int AFTER_FIELD_NUMBER = 4;
-    private int after_;
+    private long after_;
     public boolean hasAfter() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public int getAfter() {
+    public long getAfter() {
       return after_;
     }
     
@@ -6349,7 +6349,7 @@ public final class BCSAPIMessage {
       bcsapiversion_ = 0;
       mode_ = 0;
       match_ = java.util.Collections.emptyList();;
-      after_ = 0;
+      after_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6381,7 +6381,7 @@ public final class BCSAPIMessage {
         output.writeBytes(3, match_.get(i));
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(4, after_);
+        output.writeUInt64(4, after_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -6411,7 +6411,7 @@ public final class BCSAPIMessage {
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, after_);
+          .computeUInt64Size(4, after_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6543,7 +6543,7 @@ public final class BCSAPIMessage {
         bitField0_ = (bitField0_ & ~0x00000002);
         match_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000004);
-        after_ = 0;
+        after_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
@@ -6691,7 +6691,7 @@ public final class BCSAPIMessage {
             }
             case 32: {
               bitField0_ |= 0x00000008;
-              after_ = input.readUInt32();
+              after_ = input.readUInt64();
               break;
             }
           }
@@ -6793,15 +6793,15 @@ public final class BCSAPIMessage {
         return this;
       }
       
-      // optional uint32 after = 4;
-      private int after_ ;
+      // optional uint64 after = 4;
+      private long after_ ;
       public boolean hasAfter() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public int getAfter() {
+      public long getAfter() {
         return after_;
       }
-      public Builder setAfter(int value) {
+      public Builder setAfter(long value) {
         bitField0_ |= 0x00000008;
         after_ = value;
         onChanged();
@@ -6809,7 +6809,7 @@ public final class BCSAPIMessage {
       }
       public Builder clearAfter() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        after_ = 0;
+        after_ = 0L;
         onChanged();
         return this;
       }
@@ -6897,17 +6897,17 @@ public final class BCSAPIMessage {
       boolean hasKey();
       String getKey();
       
-      // optional uint32 maxSequence = 2;
-      boolean hasMaxSequence();
-      int getMaxSequence();
+      // required uint32 nextSequence = 2;
+      boolean hasNextSequence();
+      int getNextSequence();
       
       // optional string name = 3;
       boolean hasName();
       String getName();
       
-      // optional uint32 created = 4;
+      // optional uint64 created = 4;
       boolean hasCreated();
-      int getCreated();
+      long getCreated();
     }
     public static final class Key extends
         com.google.protobuf.GeneratedMessage
@@ -6970,14 +6970,14 @@ public final class BCSAPIMessage {
         }
       }
       
-      // optional uint32 maxSequence = 2;
-      public static final int MAXSEQUENCE_FIELD_NUMBER = 2;
-      private int maxSequence_;
-      public boolean hasMaxSequence() {
+      // required uint32 nextSequence = 2;
+      public static final int NEXTSEQUENCE_FIELD_NUMBER = 2;
+      private int nextSequence_;
+      public boolean hasNextSequence() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public int getMaxSequence() {
-        return maxSequence_;
+      public int getNextSequence() {
+        return nextSequence_;
       }
       
       // optional string name = 3;
@@ -7012,21 +7012,21 @@ public final class BCSAPIMessage {
         }
       }
       
-      // optional uint32 created = 4;
+      // optional uint64 created = 4;
       public static final int CREATED_FIELD_NUMBER = 4;
-      private int created_;
+      private long created_;
       public boolean hasCreated() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public int getCreated() {
+      public long getCreated() {
         return created_;
       }
       
       private void initFields() {
         key_ = "";
-        maxSequence_ = 0;
+        nextSequence_ = 0;
         name_ = "";
-        created_ = 0;
+        created_ = 0L;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -7034,6 +7034,10 @@ public final class BCSAPIMessage {
         if (isInitialized != -1) return isInitialized == 1;
         
         if (!hasKey()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasNextSequence()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -7048,13 +7052,13 @@ public final class BCSAPIMessage {
           output.writeBytes(1, getKeyBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeUInt32(2, maxSequence_);
+          output.writeUInt32(2, nextSequence_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           output.writeBytes(3, getNameBytes());
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          output.writeUInt32(4, created_);
+          output.writeUInt64(4, created_);
         }
         getUnknownFields().writeTo(output);
       }
@@ -7071,7 +7075,7 @@ public final class BCSAPIMessage {
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(2, maxSequence_);
+            .computeUInt32Size(2, nextSequence_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
@@ -7079,7 +7083,7 @@ public final class BCSAPIMessage {
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(4, created_);
+            .computeUInt64Size(4, created_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -7207,11 +7211,11 @@ public final class BCSAPIMessage {
           super.clear();
           key_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
-          maxSequence_ = 0;
+          nextSequence_ = 0;
           bitField0_ = (bitField0_ & ~0x00000002);
           name_ = "";
           bitField0_ = (bitField0_ & ~0x00000004);
-          created_ = 0;
+          created_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000008);
           return this;
         }
@@ -7258,7 +7262,7 @@ public final class BCSAPIMessage {
           if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
             to_bitField0_ |= 0x00000002;
           }
-          result.maxSequence_ = maxSequence_;
+          result.nextSequence_ = nextSequence_;
           if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
             to_bitField0_ |= 0x00000004;
           }
@@ -7286,8 +7290,8 @@ public final class BCSAPIMessage {
           if (other.hasKey()) {
             setKey(other.getKey());
           }
-          if (other.hasMaxSequence()) {
-            setMaxSequence(other.getMaxSequence());
+          if (other.hasNextSequence()) {
+            setNextSequence(other.getNextSequence());
           }
           if (other.hasName()) {
             setName(other.getName());
@@ -7301,6 +7305,10 @@ public final class BCSAPIMessage {
         
         public final boolean isInitialized() {
           if (!hasKey()) {
+            
+            return false;
+          }
+          if (!hasNextSequence()) {
             
             return false;
           }
@@ -7337,7 +7345,7 @@ public final class BCSAPIMessage {
               }
               case 16: {
                 bitField0_ |= 0x00000002;
-                maxSequence_ = input.readUInt32();
+                nextSequence_ = input.readUInt32();
                 break;
               }
               case 26: {
@@ -7347,7 +7355,7 @@ public final class BCSAPIMessage {
               }
               case 32: {
                 bitField0_ |= 0x00000008;
-                created_ = input.readUInt32();
+                created_ = input.readUInt64();
                 break;
               }
             }
@@ -7392,23 +7400,23 @@ public final class BCSAPIMessage {
           onChanged();
         }
         
-        // optional uint32 maxSequence = 2;
-        private int maxSequence_ ;
-        public boolean hasMaxSequence() {
+        // required uint32 nextSequence = 2;
+        private int nextSequence_ ;
+        public boolean hasNextSequence() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
-        public int getMaxSequence() {
-          return maxSequence_;
+        public int getNextSequence() {
+          return nextSequence_;
         }
-        public Builder setMaxSequence(int value) {
+        public Builder setNextSequence(int value) {
           bitField0_ |= 0x00000002;
-          maxSequence_ = value;
+          nextSequence_ = value;
           onChanged();
           return this;
         }
-        public Builder clearMaxSequence() {
+        public Builder clearNextSequence() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          maxSequence_ = 0;
+          nextSequence_ = 0;
           onChanged();
           return this;
         }
@@ -7449,15 +7457,15 @@ public final class BCSAPIMessage {
           onChanged();
         }
         
-        // optional uint32 created = 4;
-        private int created_ ;
+        // optional uint64 created = 4;
+        private long created_ ;
         public boolean hasCreated() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
-        public int getCreated() {
+        public long getCreated() {
           return created_;
         }
-        public Builder setCreated(int value) {
+        public Builder setCreated(long value) {
           bitField0_ |= 0x00000008;
           created_ = value;
           onChanged();
@@ -7465,7 +7473,7 @@ public final class BCSAPIMessage {
         }
         public Builder clearCreated() {
           bitField0_ = (bitField0_ & ~0x00000008);
-          created_ = 0;
+          created_ = 0L;
           onChanged();
           return this;
         }
@@ -9206,15 +9214,15 @@ public final class BCSAPIMessage {
       "s\030\003 \002(\r\022\r\n\005tweak\030\004 \002(\r\022\014\n\004mode\030\005 \002(\r\"V\n\021" +
       "ExactMatchRequest\022\025\n\rbcsapiversion\030\001 \002(\r" +
       "\022\014\n\004mode\030\002 \002(\r\022\r\n\005match\030\003 \003(\014\022\r\n\005after\030\004",
-      " \001(\r\"\340\002\n\006Wallet\022\025\n\rbcsapiversion\030\001 \002(\r\0227" +
+      " \001(\004\"\341\002\n\006Wallet\022\025\n\rbcsapiversion\030\001 \002(\r\0227" +
       "\n\004keys\030\002 \003(\0132).com.bitsofproof.supernode" +
       ".api.Wallet.Key\022L\n\017publicAddresses\030\003 \003(\013" +
       "23.com.bitsofproof.supernode.api.Wallet." +
       "PublicAddress\022@\n\014transactions\030\004 \003(\0132*.co" +
       "m.bitsofproof.supernode.api.Transaction\032" +
-      "F\n\003Key\022\013\n\003key\030\001 \002(\t\022\023\n\013maxSequence\030\002 \001(\r" +
-      "\022\014\n\004name\030\003 \001(\t\022\017\n\007created\030\004 \001(\r\032.\n\rPubli" +
-      "cAddress\022\017\n\007address\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
+      "G\n\003Key\022\013\n\003key\030\001 \002(\t\022\024\n\014nextSequence\030\002 \002(" +
+      "\r\022\014\n\004name\030\003 \001(\t\022\017\n\007created\030\004 \001(\004\032.\n\rPubl" +
+      "icAddress\022\017\n\007address\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9314,7 +9322,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_Wallet_Key_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor,
-              new java.lang.String[] { "Key", "MaxSequence", "Name", "Created", },
+              new java.lang.String[] { "Key", "NextSequence", "Name", "Created", },
               com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder.class);
           internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor =

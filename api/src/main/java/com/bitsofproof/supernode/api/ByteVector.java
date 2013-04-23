@@ -13,16 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.bitsofproof.supernode.api;
 
-import java.util.Collection;
+import java.util.Arrays;
 
-public interface Wallet
+public class ByteVector
 {
-	public void persist () throws ValidationException;
+	private final byte[] bytes;
 
-	public long getTimeStamp ();
+	public ByteVector (byte[] a)
+	{
+		bytes = a;
+	}
 
-	public Collection<Account> getAccounts ();
+	@Override
+	public boolean equals (Object obj)
+	{
+		ByteVector other = (ByteVector) obj;
+		return Arrays.equals (bytes, other.bytes);
+	}
+
+	@Override
+	public int hashCode ()
+	{
+		return Arrays.hashCode (bytes);
+	}
+
+	public byte[] toByteArray ()
+	{
+		return bytes;
+	}
 }

@@ -46,6 +46,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ByteVector;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ScriptFormat.Token;
@@ -377,34 +378,11 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	private static class ByteVector
-	{
-		private final byte[] bytes;
-
-		public ByteVector (byte[] a)
-		{
-			bytes = a;
-		}
-
-		@Override
-		public boolean equals (Object obj)
-		{
-			ByteVector other = (ByteVector) obj;
-			return Arrays.equals (bytes, other.bytes);
-		}
-
-		@Override
-		public int hashCode ()
-		{
-			return Arrays.hashCode (bytes);
-		}
-	}
-
 	private static final int MAX_MATCH_SET = 1000;
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
-	public void filterTransactions (List<byte[]> data, UpdateMode update, int after, TransactionProcessor processor) throws ValidationException
+	public void filterTransactions (List<byte[]> data, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
 	{
 		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
@@ -445,7 +423,7 @@ public abstract class CachedBlockStore implements BlockStore
 			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
 			for ( ByteVector v : matchSet )
 			{
-				if ( filter.contains (v.bytes) )
+				if ( filter.contains (v.toByteArray ()) )
 				{
 					found = true;
 					break;

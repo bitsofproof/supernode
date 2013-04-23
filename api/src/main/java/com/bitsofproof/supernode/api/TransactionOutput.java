@@ -16,7 +16,9 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
+import java.util.List;
 
+import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.google.protobuf.ByteString;
 
 public class TransactionOutput implements Serializable, Cloneable
@@ -73,6 +75,23 @@ public class TransactionOutput implements Serializable, Cloneable
 		o.value = reader.readUint64 ();
 		o.script = reader.readVarBytes ();
 		return o;
+	}
+
+	public byte[] getOutputAddress ()
+	{
+		if ( ScriptFormat.isPayToAddress (script) )
+		{
+			List<Token> tokens;
+			try
+			{
+				tokens = ScriptFormat.parse (script);
+				return tokens.get (2).data;
+			}
+			catch ( ValidationException e )
+			{
+			}
+		}
+		return null;
 	}
 
 	@Override

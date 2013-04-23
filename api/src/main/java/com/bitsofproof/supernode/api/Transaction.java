@@ -72,14 +72,15 @@ public class Transaction implements Serializable, Cloneable
 
 	public static class TransactionSource
 	{
+		private final String source;
+		private final long ix;
 		private final TransactionOutput output;
-		private final Key key;
 
-		public TransactionSource (TransactionOutput output, Key key)
+		public TransactionSource (String source, long ix, TransactionOutput output)
 		{
-			super ();
+			this.source = source;
+			this.ix = ix;
 			this.output = output;
-			this.key = key;
 		}
 
 		public TransactionOutput getOutput ()
@@ -87,9 +88,14 @@ public class Transaction implements Serializable, Cloneable
 			return output;
 		}
 
-		public Key getKey ()
+		public String getSource ()
 		{
-			return key;
+			return source;
+		}
+
+		public long getIx ()
+		{
+			return ix;
 		}
 	}
 
@@ -116,7 +122,7 @@ public class Transaction implements Serializable, Cloneable
 		}
 	}
 
-	public static Transaction createSpend (List<TransactionSource> sources, List<TransactionSink> sinks, long fee) throws ValidationException
+	public static Transaction createSpend (Account account, List<TransactionSource> sources, List<TransactionSink> sinks, long fee) throws ValidationException
 	{
 		if ( fee < 0 || fee > 1000000 )
 		{
@@ -149,6 +155,8 @@ public class Transaction implements Serializable, Cloneable
 		{
 			TransactionOutput o = s.getOutput ();
 			TransactionInput i = new TransactionInput ();
+			i.setSourceHash (s.getSource ());
+			i.setIx (s.getIx ());
 			sumInput += o.getValue ();
 
 			transaction.getInputs ().add (i);
@@ -163,12 +171,22 @@ public class Transaction implements Serializable, Cloneable
 		{
 			TransactionInput i = transaction.getInputs ().get (j);
 			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
-			byte[] sig = s.getKey ().sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, s.getOutput ().getScript ()));
+			byte[] address = s.getOutput ().getOutputAddress ();
+			if ( address == null )
+			{
+				throw new ValidationException ("Can only spend pay to address outputs");
+			}
+			Key key = account.getKeyForAddress (address);
+			if ( key == null )
+			{
+				throw new ValidationException ("Have no key to spend this output");
+			}
+			byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, s.getOutput ().getScript ()));
 			byte[] sigPlusType = new byte[sig.length + 1];
 			System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
 			sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
 			sw.writeData (sigPlusType);
-			sw.writeData (s.getKey ().getPublic ());
+			sw.writeData (key.getPublic ());
 			i.setScript (sw.toByteArray ());
 			++j;
 		}

@@ -269,7 +269,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					}
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
-					final int after = request.hasAfter () ? request.getAfter () : 0;
+					final long after = request.hasAfter () ? request.getAfter () : 0;
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
