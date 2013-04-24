@@ -32,7 +32,7 @@ public abstract class DefaultWallet implements Wallet
 
 	private final Map<String, AccountManager> accountManager = new HashMap<String, AccountManager> ();
 
-	protected SerializedWallet serializedWallet;
+	protected SerializedWallet serializedWallet = new SerializedWallet ();
 	protected long timeStamp;
 
 	private BCSAPI api;

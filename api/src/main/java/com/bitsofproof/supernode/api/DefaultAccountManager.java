@@ -50,6 +50,12 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 
 	private Account account;
 
+	@Override
+	public Account getAccount ()
+	{
+		return account;
+	}
+
 	public void setApi (BCSAPI api)
 	{
 		this.api = api;

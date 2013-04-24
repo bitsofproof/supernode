@@ -38,4 +38,6 @@ public interface AccountManager
 	public void addAccountListener (AccountListener listener);
 
 	public void removeAccountListener (AccountListener listener);
+
+	public Account getAccount ();
 }
