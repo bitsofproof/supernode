@@ -97,7 +97,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, int after, TransactionListener listener) throws BCSAPIException;
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * scan transactions matching the filter
@@ -141,4 +141,14 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public Color getColor (String digest) throws BCSAPIException;
+
+	/**
+	 * get a wallet
+	 * 
+	 * @param name
+	 * @param passphrase
+	 * @return
+	 * @throws BCSAPIException
+	 */
+	public Wallet getWallet (String name, String passphrase) throws BCSAPIException;
 }

@@ -16,13 +16,19 @@
 
 package com.bitsofproof.supernode.api;
 
-import java.util.Collection;
+import java.util.List;
 
 public interface Wallet
 {
-	public void persist () throws ValidationException;
+	public void read (String fileName, String passphrase) throws BCSAPIException;
+
+	public void persist () throws BCSAPIException;
+
+	public void addAccount (Account account) throws BCSAPIException;
+
+	public AccountManager getAccountManager (String accountName);
+
+	public List<Transaction> getTransactions ();
 
 	public long getTimeStamp ();
-
-	public Collection<Account> getAccounts ();
 }

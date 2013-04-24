@@ -1,3 +1,18 @@
+/*
+ * Copyright 2013 bits of proof zrt.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.bitsofproof.supernode.api;
 
 import java.io.File;
@@ -5,107 +20,53 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-public class FileWallet implements Wallet
+public class FileWallet extends DefaultWallet
 {
-	private final Map<String, Account> accounts = new HashMap<String, Account> ();
-
 	private SerializedWallet storedWallet;
 	private String passphrase;
-	private String file;
+	private String fileName;
 	private long timeStamp;
-	private boolean production = true;
 
-	public static FileWallet read (String fileName, String passphrase) throws ValidationException
+	@Override
+	public void read (String fileName, String passphrase) throws BCSAPIException
 	{
 		try
 		{
-			FileWallet dw = new FileWallet ();
+			this.fileName = fileName;
+			this.passphrase = passphrase;
 			File f = new File (fileName);
-			dw.timeStamp = f.lastModified () / 1000;
+			timeStamp = f.lastModified () / 1000;
 			FileInputStream in = new FileInputStream (f);
-			dw.storedWallet = SerializedWallet.readWallet (in, passphrase);
+			storedWallet = SerializedWallet.readWallet (in, passphrase);
 			in.close ();
-			dw.passphrase = passphrase;
-			for ( Account a : dw.storedWallet.getAccounts () )
+			for ( Account a : storedWallet.getAccounts () )
 			{
-				dw.addAccount (a);
+				addAccount (a);
 			}
-			return dw;
 		}
 		catch ( FileNotFoundException e )
 		{
-			throw new ValidationException (e);
+			throw new BCSAPIException (e);
 		}
 		catch ( IOException e )
 		{
-			throw new ValidationException (e);
+			throw new BCSAPIException (e);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
 		}
 	}
 
-	public void setProduction (boolean production)
-	{
-		this.production = production;
-	}
-
 	@Override
-	public long getTimeStamp ()
-	{
-		return timeStamp;
-	}
-
-	public String getNamedAddress (String name)
-	{
-		return storedWallet.getAddresses ().get (name);
-	}
-
-	public void setNamedAddress (String name, String account, int ix) throws ValidationException
-	{
-		storedWallet.addAddress (name, AddressConverter.toSatoshiStyle (accounts.get (account).getKey (ix).getAddress (), production ? 0x0 : 0x05));
-	}
-
-	public void addTransaction (Transaction t)
-	{
-		storedWallet.getTransactions ().add (t);
-	}
-
-	public List<Transaction> getTransactions ()
-	{
-		return storedWallet.getTransactions ();
-	}
-
-	public void setPassphrase (String passphrase)
-	{
-		this.passphrase = passphrase;
-	}
-
-	public String getFile ()
-	{
-		return file;
-	}
-
-	public void setFile (String file)
-	{
-		this.file = file;
-	}
-
-	public void addAccount (Account account)
-	{
-		accounts.put (account.getName (), account);
-	}
-
-	@Override
-	public void persist () throws ValidationException
+	public void persist () throws BCSAPIException
 	{
 		try
 		{
-			if ( file != null )
+			if ( fileName != null )
 			{
-				File f = new File (file);
+				File f = new File (fileName);
 				File tmp = File.createTempFile ("tmp", ".wallet", f.getParentFile ());
 				tmp.setReadable (true, true);
 				tmp.setWritable (true, true);
@@ -119,13 +80,18 @@ public class FileWallet implements Wallet
 		}
 		catch ( IOException e )
 		{
-			throw new ValidationException (e);
+			throw new BCSAPIException (e);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
 		}
 	}
 
 	@Override
-	public Collection<Account> getAccounts ()
+	public long getTimeStamp ()
 	{
-		return accounts.values ();
+		return timeStamp;
 	}
+
 }

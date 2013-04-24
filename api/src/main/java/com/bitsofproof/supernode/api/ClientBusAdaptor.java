@@ -227,7 +227,7 @@ public class ClientBusAdaptor implements BCSAPI
 	}
 
 	@Override
-	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, int after, final TransactionListener listener) throws BCSAPIException
+	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener) throws BCSAPIException
 	{
 		try
 		{
@@ -820,4 +820,11 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
+	@Override
+	public Wallet getWallet (String name, String passphrase) throws BCSAPIException
+	{
+		FileWallet wallet = new FileWallet ();
+		wallet.read (name, passphrase);
+		return wallet;
+	}
 }

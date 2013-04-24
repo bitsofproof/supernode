@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 
@@ -47,10 +49,35 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final Map<String, Transaction> received = new HashMap<String, Transaction> ();
 
 	private Account account;
+	private Wallet wallet;
 
 	public void setApi (BCSAPI api)
 	{
 		this.api = api;
+	}
+
+	public void setWallet (Wallet wallet)
+	{
+		this.wallet = wallet;
+	}
+
+	public void setAccount (Account account) throws BCSAPIException
+	{
+		this.account = account;
+
+		for ( Transaction t : wallet.getTransactions () )
+		{
+			updateWithTransaction (t);
+		}
+		Collection<byte[]> addresses = account.getAddresses ();
+		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (addresses.size (), 100), 1.0 / 1000000.0, UpdateMode.all);
+		for ( byte[] a : addresses )
+		{
+			filter.add (a);
+		}
+		api.registerTrunkListener (this);
+		api.registerFilteredListener (filter, this);
+		api.scanTransactions (addresses, UpdateMode.all, wallet.getTimeStamp (), this);
 	}
 
 	private boolean updateWithTransaction (Transaction t)

@@ -4,7 +4,6 @@ import java.util.Collection;
 
 public interface Account
 {
-
 	public String getName ();
 
 	public Collection<byte[]> getAddresses ();
