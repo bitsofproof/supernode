@@ -49,26 +49,16 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final Set<String> processedTransaction = new HashSet<String> ();
 
 	private Account account;
-	private Wallet wallet;
 
 	public void setApi (BCSAPI api)
 	{
 		this.api = api;
 	}
 
-	public void setWallet (Wallet wallet)
-	{
-		this.wallet = wallet;
-	}
-
 	public void setAccount (Account account) throws BCSAPIException
 	{
 		this.account = account;
 
-		for ( Transaction t : wallet.getTransactions () )
-		{
-			updateWithTransaction (t);
-		}
 		Collection<byte[]> addresses = account.getAddresses ();
 		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (addresses.size (), 100), 1.0 / 1000000.0, UpdateMode.all);
 		for ( byte[] a : addresses )
@@ -77,10 +67,9 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		}
 		api.registerTrunkListener (this);
 		api.registerFilteredListener (filter, this);
-		api.scanTransactions (addresses, UpdateMode.all, wallet.getTimeStamp (), this);
 	}
 
-	private boolean updateWithTransaction (Transaction t)
+	public boolean updateWithTransaction (Transaction t)
 	{
 		synchronized ( utxo )
 		{
@@ -131,7 +120,6 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			if ( modified )
 			{
 				log.trace ("Updated account " + account.getName () + " with " + t.getHash () + " balance " + balance);
-				wallet.addTransaction (t);
 			}
 
 			return modified;

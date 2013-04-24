@@ -26,7 +26,7 @@ public interface Wallet
 
 	public void persist () throws BCSAPIException;
 
-	public void importAccount (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException;
+	public AccountManager createAcountManager (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException;
 
 	public AccountManager getAccountManager (String accountName);
 

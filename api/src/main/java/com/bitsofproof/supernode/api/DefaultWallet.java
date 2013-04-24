@@ -23,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.SerializedWallet.WalletKey;
 
 public abstract class DefaultWallet implements Wallet
@@ -67,19 +68,16 @@ public abstract class DefaultWallet implements Wallet
 	}
 
 	@Override
-	public void importAccount (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException
+	public AccountManager createAcountManager (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException
 	{
+		if ( accountManager.containsKey (name) )
+		{
+			return accountManager.get (name);
+		}
 		try
 		{
 			WalletKey key = new WalletKey ();
 			key.key = master.serialize (production);
-			for ( WalletKey k : serializedWallet.getKeys () )
-			{
-				if ( k.key.equals (key.key) )
-				{
-					return;
-				}
-			}
 			Account account = new DefaultAccount (name, master, nextSequence);
 			key.created = created;
 			key.name = name;
@@ -87,6 +85,7 @@ public abstract class DefaultWallet implements Wallet
 			serializedWallet.addKey (key);
 			setTimeStamp (created);
 			addAccount (account);
+			return accountManager.get (name);
 		}
 		catch ( ValidationException e )
 		{
@@ -98,11 +97,25 @@ public abstract class DefaultWallet implements Wallet
 	{
 		if ( !accountManager.containsKey (account.getName ()) )
 		{
-			DefaultAccountManager manager = new DefaultAccountManager ();
+			final DefaultAccountManager manager = new DefaultAccountManager ();
 			accountManager.put (account.getName (), manager);
-			manager.setWallet (this);
 			manager.setApi (api);
 			manager.setAccount (account);
+			for ( Transaction t : getTransactions () )
+			{
+				manager.updateWithTransaction (t);
+			}
+			api.scanTransactions (account.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
+			{
+				@Override
+				public void process (Transaction t)
+				{
+					if ( manager.updateWithTransaction (t) )
+					{
+						serializedWallet.addTransaction (t);
+					}
+				}
+			});
 		}
 	}
 
