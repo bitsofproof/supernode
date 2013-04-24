@@ -269,7 +269,6 @@ public class ClientBusAdaptor implements BCSAPI
 						}
 						else
 						{
-							listener.process (null);
 							consumer.close ();
 							answerQueue.delete ();
 							ready.release ();
