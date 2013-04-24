@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
+import java.util.concurrent.Semaphore;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -248,6 +249,7 @@ public class ClientBusAdaptor implements BCSAPI
 			final TemporaryQueue answerQueue = session.createTemporaryQueue ();
 			final MessageConsumer consumer = session.createConsumer (answerQueue);
 			m.setJMSReplyTo (answerQueue);
+			final Semaphore ready = new Semaphore (0);
 			consumer.setMessageListener (new MessageListener ()
 			{
 				@Override
@@ -270,6 +272,7 @@ public class ClientBusAdaptor implements BCSAPI
 							listener.process (null);
 							consumer.close ();
 							answerQueue.delete ();
+							ready.release ();
 						}
 					}
 					catch ( JMSException e )
@@ -284,6 +287,7 @@ public class ClientBusAdaptor implements BCSAPI
 			});
 
 			exactMatchProducer.send (m);
+			ready.acquireUninterruptibly ();
 		}
 		catch ( JMSException e )
 		{
@@ -824,7 +828,22 @@ public class ClientBusAdaptor implements BCSAPI
 	public Wallet getWallet (String name, String passphrase) throws BCSAPIException
 	{
 		FileWallet wallet = new FileWallet ();
+		wallet.setApi (this);
 		wallet.read (name, passphrase);
 		return wallet;
 	}
+
+	@Override
+	public Account createAccount (String name, ExtendedKey master, int nextSequence) throws BCSAPIException
+	{
+		try
+		{
+			return new DefaultAccount (name, master, nextSequence);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
 }

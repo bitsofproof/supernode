@@ -29,7 +29,7 @@ public abstract class DefaultWallet implements Wallet
 
 	private final Map<String, AccountManager> accountManager = new HashMap<String, AccountManager> ();
 
-	private SerializedWallet storedWallet;
+	protected SerializedWallet storedWallet;
 	private BCSAPI api;
 
 	@Override
@@ -47,6 +47,7 @@ public abstract class DefaultWallet implements Wallet
 		if ( !accountManager.containsKey (account.getName ()) )
 		{
 			DefaultAccountManager manager = new DefaultAccountManager ();
+			manager.setWallet (this);
 			manager.setApi (api);
 			manager.setAccount (account);
 		}
@@ -62,5 +63,11 @@ public abstract class DefaultWallet implements Wallet
 	public List<Transaction> getTransactions ()
 	{
 		return Collections.unmodifiableList (storedWallet.getTransactions ());
+	}
+
+	@Override
+	public void setApi (BCSAPI api)
+	{
+		this.api = api;
 	}
 }

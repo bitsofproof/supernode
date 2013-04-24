@@ -23,7 +23,6 @@ import java.io.IOException;
 
 public class FileWallet extends DefaultWallet
 {
-	private SerializedWallet storedWallet;
 	private String passphrase;
 	private String fileName;
 	private long timeStamp;
@@ -36,13 +35,21 @@ public class FileWallet extends DefaultWallet
 			this.fileName = fileName;
 			this.passphrase = passphrase;
 			File f = new File (fileName);
-			timeStamp = f.lastModified () / 1000;
-			FileInputStream in = new FileInputStream (f);
-			storedWallet = SerializedWallet.readWallet (in, passphrase);
-			in.close ();
-			for ( Account a : storedWallet.getAccounts () )
+			if ( f.exists () )
 			{
-				addAccount (a);
+				timeStamp = f.lastModified () / 1000;
+				FileInputStream in = new FileInputStream (f);
+				storedWallet = SerializedWallet.readWallet (in, passphrase);
+				in.close ();
+				for ( Account a : storedWallet.getAccounts () )
+				{
+					addAccount (a);
+				}
+			}
+			else
+			{
+				timeStamp = System.currentTimeMillis () / 1000;
+				storedWallet = new SerializedWallet ();
 			}
 		}
 		catch ( FileNotFoundException e )

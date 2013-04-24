@@ -128,6 +128,11 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 					++ix;
 				}
 			}
+			if ( modified )
+			{
+				log.trace ("Updated account " + account.getName () + " with " + t.getHash () + " balance " + balance);
+			}
+
 			return modified;
 		}
 	}

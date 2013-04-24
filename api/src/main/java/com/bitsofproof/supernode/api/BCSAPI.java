@@ -151,4 +151,15 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public Wallet getWallet (String name, String passphrase) throws BCSAPIException;
+
+	/**
+	 * create an account
+	 * 
+	 * @param name
+	 * @param master
+	 * @param nextSequence
+	 * @return
+	 * @throws BCSAPIException
+	 */
+	public Account createAccount (String name, ExtendedKey master, int nextSequence) throws BCSAPIException;
 }

@@ -20,6 +20,8 @@ import java.util.List;
 
 public interface Wallet
 {
+	public void setApi (BCSAPI api);
+
 	public void read (String fileName, String passphrase) throws BCSAPIException;
 
 	public void persist () throws BCSAPIException;
