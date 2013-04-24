@@ -26,11 +26,15 @@ public interface Wallet
 
 	public void persist () throws BCSAPIException;
 
-	public void addAccount (Account account) throws BCSAPIException;
+	public void importAccount (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException;
 
 	public AccountManager getAccountManager (String accountName);
 
 	public List<Transaction> getTransactions ();
 
+	public void addTransaction (Transaction t);
+
 	public long getTimeStamp ();
+
+	public void setTimeStamp (long timestamp);
 }

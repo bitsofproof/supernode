@@ -20,8 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +46,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private long balance = 0;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
-
-	private final Map<String, Transaction> received = new HashMap<String, Transaction> ();
+	private final Set<String> processedTransaction = new HashSet<String> ();
 
 	private Account account;
 	private Wallet wallet;
@@ -85,9 +85,9 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		synchronized ( utxo )
 		{
 			boolean modified = false;
-			if ( !received.containsKey (t.getHash ()) )
+			if ( !processedTransaction.contains (t.getHash ()) )
 			{
-				received.put (t.getHash (), t);
+				processedTransaction.add (t.getHash ());
 				for ( TransactionInput in : t.getInputs () )
 				{
 					TransactionOutput o = utxo.get (in.getSourceHash (), in.getIx ());
@@ -131,6 +131,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			if ( modified )
 			{
 				log.trace ("Updated account " + account.getName () + " with " + t.getHash () + " balance " + balance);
+				wallet.addTransaction (t);
 			}
 
 			return modified;

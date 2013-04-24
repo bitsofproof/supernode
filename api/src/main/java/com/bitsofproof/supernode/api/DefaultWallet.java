@@ -23,14 +23,30 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.SerializedWallet.WalletKey;
+
 public abstract class DefaultWallet implements Wallet
 {
 	private static final Logger log = LoggerFactory.getLogger (DefaultWallet.class);
 
 	private final Map<String, AccountManager> accountManager = new HashMap<String, AccountManager> ();
 
-	protected SerializedWallet storedWallet;
+	protected SerializedWallet serializedWallet;
+	protected long timeStamp;
+
 	private BCSAPI api;
+
+	private boolean production;
+
+	public boolean isProduction ()
+	{
+		return production;
+	}
+
+	public void setProduction (boolean production)
+	{
+		this.production = production;
+	}
 
 	@Override
 	public abstract void read (String fileName, String passphrase) throws BCSAPIException;
@@ -39,14 +55,51 @@ public abstract class DefaultWallet implements Wallet
 	public abstract void persist () throws BCSAPIException;
 
 	@Override
-	public abstract long getTimeStamp ();
+	public long getTimeStamp ()
+	{
+		return timeStamp;
+	}
 
 	@Override
-	public void addAccount (Account account) throws BCSAPIException
+	public void setTimeStamp (long timeStamp)
+	{
+		this.timeStamp = timeStamp;
+	}
+
+	@Override
+	public void importAccount (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException
+	{
+		try
+		{
+			WalletKey key = new WalletKey ();
+			key.key = master.serialize (production);
+			for ( WalletKey k : serializedWallet.getKeys () )
+			{
+				if ( k.key.equals (key.key) )
+				{
+					return;
+				}
+			}
+			Account account = new DefaultAccount (name, master, nextSequence);
+			key.created = created;
+			key.name = name;
+			key.nextSequence = nextSequence;
+			serializedWallet.addKey (key);
+			setTimeStamp (created);
+			addAccount (account);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	protected void addAccount (Account account) throws BCSAPIException
 	{
 		if ( !accountManager.containsKey (account.getName ()) )
 		{
 			DefaultAccountManager manager = new DefaultAccountManager ();
+			accountManager.put (account.getName (), manager);
 			manager.setWallet (this);
 			manager.setApi (api);
 			manager.setAccount (account);
@@ -62,7 +115,7 @@ public abstract class DefaultWallet implements Wallet
 	@Override
 	public List<Transaction> getTransactions ()
 	{
-		return Collections.unmodifiableList (storedWallet.getTransactions ());
+		return Collections.unmodifiableList (serializedWallet.getTransactions ());
 	}
 
 	@Override
@@ -70,4 +123,11 @@ public abstract class DefaultWallet implements Wallet
 	{
 		this.api = api;
 	}
+
+	@Override
+	public void addTransaction (Transaction t)
+	{
+		serializedWallet.addTransaction (t);
+	}
+
 }

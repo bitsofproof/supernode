@@ -21,11 +21,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import com.bitsofproof.supernode.api.SerializedWallet.WalletKey;
+
 public class FileWallet extends DefaultWallet
 {
 	private String passphrase;
 	private String fileName;
-	private long timeStamp;
 
 	@Override
 	public void read (String fileName, String passphrase) throws BCSAPIException
@@ -39,17 +40,26 @@ public class FileWallet extends DefaultWallet
 			{
 				timeStamp = f.lastModified () / 1000;
 				FileInputStream in = new FileInputStream (f);
-				storedWallet = SerializedWallet.readWallet (in, passphrase);
+				serializedWallet = SerializedWallet.readWallet (in, passphrase);
 				in.close ();
-				for ( Account a : storedWallet.getAccounts () )
-				{
-					addAccount (a);
-				}
 			}
 			else
 			{
 				timeStamp = System.currentTimeMillis () / 1000;
-				storedWallet = new SerializedWallet ();
+				serializedWallet = new SerializedWallet ();
+			}
+			for ( WalletKey k : serializedWallet.getKeys () )
+			{
+				Account a;
+				try
+				{
+					a = new DefaultAccount (k.name, ExtendedKey.parse (k.key), k.nextSequence);
+				}
+				catch ( ValidationException e )
+				{
+					throw new BCSAPIException (e);
+				}
+				addAccount (a);
 			}
 		}
 		catch ( FileNotFoundException e )
@@ -78,7 +88,7 @@ public class FileWallet extends DefaultWallet
 				tmp.setReadable (true, true);
 				tmp.setWritable (true, true);
 				FileOutputStream out = new FileOutputStream (tmp);
-				storedWallet.writeWallet (out, passphrase);
+				serializedWallet.writeWallet (out, passphrase);
 				out.close ();
 				f.delete ();
 				tmp.renameTo (f);
@@ -94,11 +104,4 @@ public class FileWallet extends DefaultWallet
 			throw new BCSAPIException (e);
 		}
 	}
-
-	@Override
-	public long getTimeStamp ()
-	{
-		return timeStamp;
-	}
-
 }

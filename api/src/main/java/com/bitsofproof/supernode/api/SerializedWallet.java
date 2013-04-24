@@ -26,9 +26,12 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -52,22 +55,13 @@ public class SerializedWallet
 	}
 
 	private List<WalletKey> keys = new ArrayList<WalletKey> ();
+	private final Set<String> hasTransaction = new HashSet<String> ();
 	private List<Transaction> transactions = new ArrayList<Transaction> ();
 	private Map<String, String> addresses = new HashMap<String, String> ();
 
 	private static final String MAGIC = "bopwallet";
 
 	private static SecureRandom rnd = new SecureRandom ();
-
-	public List<Account> getAccounts () throws ValidationException
-	{
-		List<Account> accounts = new ArrayList<Account> ();
-		for ( WalletKey k : keys )
-		{
-			accounts.add (new DefaultAccount (k.name, ExtendedKey.parse (k.key), k.nextSequence));
-		}
-		return accounts;
-	}
 
 	public void addKey (WalletKey key)
 	{
@@ -76,7 +70,11 @@ public class SerializedWallet
 
 	public void addTransaction (Transaction t)
 	{
-		transactions.add (t);
+		if ( !hasTransaction.contains (t.getHash ()) )
+		{
+			transactions.add (t);
+			hasTransaction.add (t.getHash ());
+		}
 	}
 
 	public void addAddress (String name, String address)
@@ -91,7 +89,7 @@ public class SerializedWallet
 
 	public List<Transaction> getTransactions ()
 	{
-		return transactions;
+		return Collections.unmodifiableList (transactions);
 	}
 
 	public Map<String, String> getAddresses ()
@@ -219,7 +217,9 @@ public class SerializedWallet
 			wallet.transactions = new ArrayList<Transaction> ();
 			for ( BCSAPIMessage.Transaction t : walletMessage.getTransactionsList () )
 			{
-				wallet.transactions.add (Transaction.fromProtobuf (t));
+				Transaction transaction = Transaction.fromProtobuf (t);
+				transaction.computeHash ();
+				wallet.addTransaction (transaction);
 			}
 			wallet.addresses = new HashMap<String, String> ();
 			for ( BCSAPIMessage.Wallet.PublicAddress p : walletMessage.getPublicAddressesList () )
