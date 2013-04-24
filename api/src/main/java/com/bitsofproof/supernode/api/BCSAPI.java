@@ -143,7 +143,7 @@ public interface BCSAPI
 	public Color getColor (String digest) throws BCSAPIException;
 
 	/**
-	 * get a wallet
+	 * retrieve or create a wallet
 	 * 
 	 * @param name
 	 * @param passphrase
@@ -151,15 +151,4 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public Wallet getWallet (String name, String passphrase) throws BCSAPIException;
-
-	/**
-	 * create an account
-	 * 
-	 * @param name
-	 * @param master
-	 * @param nextSequence
-	 * @return
-	 * @throws BCSAPIException
-	 */
-	public Account createAccount (String name, ExtendedKey master, int nextSequence) throws BCSAPIException;
 }

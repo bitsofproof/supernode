@@ -122,7 +122,8 @@ public class Transaction implements Serializable, Cloneable
 		}
 	}
 
-	public static Transaction createSpend (Account account, List<TransactionSource> sources, List<TransactionSink> sinks, long fee) throws ValidationException
+	public static Transaction createSpend (AccountManager am, List<TransactionSource> sources, List<TransactionSink> sinks, long fee)
+			throws ValidationException
 	{
 		if ( fee < 0 || fee > 1000000 )
 		{
@@ -176,7 +177,7 @@ public class Transaction implements Serializable, Cloneable
 			{
 				throw new ValidationException ("Can only spend pay to address outputs");
 			}
-			Key key = account.getKeyForAddress (address);
+			Key key = am.getKeyForAddress (address);
 			if ( key == null )
 			{
 				throw new ValidationException ("Have no key to spend this output");

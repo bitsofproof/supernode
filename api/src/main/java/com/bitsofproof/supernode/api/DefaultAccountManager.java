@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -48,31 +49,80 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Set<String> processedTransaction = new HashSet<String> ();
 
-	private Account account;
-
-	@Override
-	public Account getAccount ()
-	{
-		return account;
-	}
+	private final String name;
+	private final ExtendedKey extended;
+	private final Map<ByteVector, Key> keyForAddress = new HashMap<ByteVector, Key> ();
+	private final BloomFilter filter = BloomFilter.createOptimalFilter (1000, 1.0 / 1000000.0, UpdateMode.all);
 
 	public void setApi (BCSAPI api)
 	{
 		this.api = api;
 	}
 
-	public void setAccount (Account account) throws BCSAPIException
+	public DefaultAccountManager (String name, ExtendedKey extended, int nextSequence) throws ValidationException
 	{
-		this.account = account;
-
-		Collection<byte[]> addresses = account.getAddresses ();
-		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (addresses.size (), 100), 1.0 / 1000000.0, UpdateMode.all);
-		for ( byte[] a : addresses )
+		this.name = name;
+		this.extended = extended;
+		for ( int i = 0; i < nextSequence; ++i )
 		{
-			filter.add (a);
+			Key key = extended.getKey (i);
+			keyForAddress.put (new ByteVector (key.getAddress ()), key);
+			filter.add (key.getAddress ());
 		}
+	}
+
+	public void registerFilter () throws BCSAPIException
+	{
 		api.registerTrunkListener (this);
 		api.registerFilteredListener (filter, this);
+	}
+
+	@Override
+	public String getName ()
+	{
+		return name;
+	}
+
+	@Override
+	public BloomFilter getFilter ()
+	{
+		return filter;
+	}
+
+	@Override
+	public Collection<byte[]> getAddresses ()
+	{
+		List<byte[]> addresses = new ArrayList<byte[]> ();
+		for ( ByteVector v : keyForAddress.keySet () )
+		{
+			addresses.add (v.toByteArray ());
+		}
+		return addresses;
+	}
+
+	@Override
+	public Key getKeyForAddress (byte[] address)
+	{
+		return keyForAddress.get (new ByteVector (address));
+	}
+
+	@Override
+	public Key getNextKey () throws ValidationException
+	{
+		Key key = extended.getKey (keyForAddress.size () + 1);
+		keyForAddress.put (new ByteVector (key.getAddress ()), key);
+		filter.add (key.getAddress ());
+		return key;
+	}
+
+	@Override
+	public Key getKey (int ix) throws ValidationException
+	{
+		if ( ix >= keyForAddress.size () )
+		{
+			throw new ValidationException ("Use consequtive keys");
+		}
+		return extended.getKey (ix);
 	}
 
 	public boolean updateWithTransaction (Transaction t)
@@ -102,7 +152,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 				for ( TransactionOutput o : t.getOutputs () )
 				{
 					byte[] address = o.getOutputAddress ();
-					if ( address != null && account.getKeyForAddress (address) != null )
+					if ( address != null && getKeyForAddress (address) != null )
 					{
 						modified = true;
 						balance += o.getValue ();
@@ -125,7 +175,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			}
 			if ( modified )
 			{
-				log.trace ("Updated account " + account.getName () + " with " + t.getHash () + " balance " + balance);
+				log.trace ("Updated account " + name + " with " + t.getHash () + " balance " + balance);
 			}
 
 			return modified;
@@ -181,7 +231,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			TransactionSink target = new TransactionSink (receiver, amount);
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (account.getNextKey ().getAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - amount - fee);
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
@@ -197,7 +247,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			{
 				sinks.add (target);
 			}
-			return Transaction.createSpend (account, sources, sinks, fee);
+			return Transaction.createSpend (this, sources, sinks, fee);
 		}
 	}
 
@@ -225,16 +275,16 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			}
 			for ( long a : amounts )
 			{
-				TransactionSink target = new TransactionSink (account.getNextKey ().getAddress (), a);
+				TransactionSink target = new TransactionSink (getNextKey ().getAddress (), a);
 				sinks.add (target);
 			}
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (account.getNextKey ().getAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - amount - fee);
 				sinks.add (change);
 			}
 			Collections.shuffle (sinks);
-			return Transaction.createSpend (account, sources, sinks, fee);
+			return Transaction.createSpend (this, sources, sinks, fee);
 		}
 	}
 
@@ -264,7 +314,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			TransactionSink target = new TransactionSink (receiver, amount);
 			if ( colorIn > amount )
 			{
-				TransactionSink colorChange = new TransactionSink (account.getNextKey ().getAddress (), colorIn - amount);
+				TransactionSink colorChange = new TransactionSink (getNextKey ().getAddress (), colorIn - amount);
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
@@ -280,8 +330,8 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			{
 				sinks.add (target);
 			}
-			sinks.add (new TransactionSink (account.getNextKey ().getAddress (), in - amount - fee));
-			return Transaction.createSpend (account, sources, sinks, fee);
+			sinks.add (new TransactionSink (getNextKey ().getAddress (), in - amount - fee));
+			return Transaction.createSpend (this, sources, sinks, fee);
 		}
 	}
 
@@ -302,12 +352,12 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			{
 				in += o.getOutput ().getValue ();
 			}
-			Key issuerKey = account.getNextKey ();
+			Key issuerKey = getNextKey ();
 			TransactionSink target = new TransactionSink (issuerKey.getAddress (), quantity * unitSize);
-			TransactionSink change = new TransactionSink (account.getNextKey ().getAddress (), in - quantity * unitSize - fee);
+			TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - quantity * unitSize - fee);
 			sinks.add (target);
 			sinks.add (change);
-			return Transaction.createSpend (account, sources, sinks, fee);
+			return Transaction.createSpend (this, sources, sinks, fee);
 		}
 	}
 

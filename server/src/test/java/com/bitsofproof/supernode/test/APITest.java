@@ -23,13 +23,11 @@ import com.bitsofproof.supernode.api.AccountManager;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.DefaultWallet;
-import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.api.SerializedWallet;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkListener;
 import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.Wallet;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.Chain;
 import com.bitsofproof.supernode.core.Difficulty;
@@ -49,7 +47,7 @@ public class APITest
 
 	private static final long COIN = 100000000L;
 
-	private static Wallet wallet;
+	private static SerializedWallet wallet;
 	private static AccountManager alice;
 	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
 
@@ -64,20 +62,9 @@ public class APITest
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
-		wallet = new DefaultWallet ()
-		{
-			@Override
-			public void read (String fileName, String passphrase) throws BCSAPIException
-			{
-			}
-
-			@Override
-			public void persist () throws BCSAPIException
-			{
-			}
-		};
+		wallet = new SerializedWallet ();
 		wallet.setApi (api);
-		alice = wallet.createAcountManager ("Alice", ExtendedKey.createNew (), 0, System.currentTimeMillis () / 1000);
+		alice = wallet.getAccountManager ("Alice");
 	}
 
 	@Test
@@ -90,7 +77,7 @@ public class APITest
 	@Test
 	public void send1Block () throws BCSAPIException, ValidationException
 	{
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (alice.getAccount ().getNextKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (alice.getNextKey (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 
@@ -143,7 +130,7 @@ public class APITest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			Block block = createBlock (hash, Transaction.createCoinbase (alice.getAccount ().getNextKey (), 5000000000L, i + 2));
+			Block block = createBlock (hash, Transaction.createCoinbase (alice.getNextKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -164,8 +151,8 @@ public class APITest
 	@Test
 	public void spendSome () throws BCSAPIException, ValidationException
 	{
-		AccountManager bob = wallet.createAcountManager ("Bob", ExtendedKey.createNew (), 0, System.currentTimeMillis () / 1000);
-		Transaction spend = alice.pay (bob.getAccount ().getNextKey ().getAddress (), 50 * COIN, 10000);
+		AccountManager bob = wallet.getAccountManager ("Bob");
+		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, 10000);
 		api.sendTransaction (spend);
 		try
 		{

@@ -77,7 +77,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private MessageProducer transactionProducer;
 	private MessageProducer trunkProducer;
-	private final Map<BloomFilter, MessageProducer> bloomFilterProducer = Collections.synchronizedMap (new HashMap<BloomFilter, MessageProducer> ());
+	private final Map<String, MessageProducer> correlationProducer = new HashMap<String, MessageProducer> ();
+	private final Map<String, BloomFilter> correlationBloomFilter = Collections.synchronizedMap (new HashMap<String, BloomFilter> ());
 
 	private final ExecutorService requestProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
@@ -153,8 +154,15 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					long tweak = request.getTweak ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
-					MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
-					bloomFilterProducer.put (filter, producer);
+					synchronized ( correlationBloomFilter )
+					{
+						if ( !correlationProducer.containsKey (o.getJMSCorrelationID ()) )
+						{
+							MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+							correlationProducer.put (o.getJMSCorrelationID (), producer);
+						}
+						correlationBloomFilter.put (o.getJMSCorrelationID (), filter);
+					}
 				}
 				catch ( JMSException e )
 				{
@@ -697,13 +705,13 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
 
-			synchronized ( bloomFilterProducer )
+			synchronized ( correlationBloomFilter )
 			{
-				for ( BloomFilter filter : bloomFilterProducer.keySet () )
+				for ( Map.Entry<String, BloomFilter> e : correlationBloomFilter.entrySet () )
 				{
-					if ( tx.passesFilter (filter) )
+					if ( tx.passesFilter (e.getValue ()) )
 					{
-						bloomFilterProducer.get (filter).send (m);
+						correlationProducer.get (e.getKey ()).send (m);
 					}
 				}
 			}

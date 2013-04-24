@@ -1,40 +1,8 @@
-/*
- * Copyright 2013 bits of proof zrt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.bitsofproof.supernode.api;
-
-import java.util.List;
 
 public interface Wallet
 {
-	public void setApi (BCSAPI api);
 
-	public void read (String fileName, String passphrase) throws BCSAPIException;
+	public AccountManager getAccountManager (String name) throws BCSAPIException;
 
-	public void persist () throws BCSAPIException;
-
-	public AccountManager createAcountManager (String name, ExtendedKey master, int nextSequence, long created) throws BCSAPIException;
-
-	public AccountManager getAccountManager (String accountName);
-
-	public List<Transaction> getTransactions ();
-
-	public void addTransaction (Transaction t);
-
-	public long getTimeStamp ();
-
-	public void setTimeStamp (long timestamp);
 }

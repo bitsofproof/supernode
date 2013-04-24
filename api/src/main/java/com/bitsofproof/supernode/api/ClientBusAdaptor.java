@@ -40,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -346,41 +345,41 @@ public class ClientBusAdaptor implements BCSAPI
 				dispatcher = new MessageDispatcher (consumer);
 				dispatcher.setTemporaryQueue (answerQueue);
 				messageDispatcher.put (filter.toString (), dispatcher);
-			}
-			m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
-			dispatcher.addListener (listener, new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message message)
+				dispatcher.addListener (listener, new MessageListener ()
 				{
-					BytesMessage m = (BytesMessage) message;
-					byte[] body;
-					try
+					@Override
+					public void onMessage (Message message)
 					{
-						if ( m.getBodyLength () > 0 )
+						BytesMessage m = (BytesMessage) message;
+						byte[] body;
+						try
 						{
-							body = new byte[(int) m.getBodyLength ()];
-							m.readBytes (body);
-							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-							t.computeHash ();
-							updateFilter (filter, t);
-							listener.process (t);
+							if ( m.getBodyLength () > 0 )
+							{
+								body = new byte[(int) m.getBodyLength ()];
+								m.readBytes (body);
+								Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+								t.computeHash ();
+								listener.process (t);
+							}
+							else
+							{
+								listener.process (null);
+							}
 						}
-						else
+						catch ( JMSException e )
 						{
-							listener.process (null);
+							log.error ("Malformed message received for filter", e);
+						}
+						catch ( InvalidProtocolBufferException e )
+						{
+							log.error ("Malformed message received for filter", e);
 						}
 					}
-					catch ( JMSException e )
-					{
-						log.error ("Malformed message received for filter", e);
-					}
-					catch ( InvalidProtocolBufferException e )
-					{
-						log.error ("Malformed message received for filter", e);
-					}
-				}
-			});
+				});
+			}
+			m.setJMSCorrelationID (listener.toString ());
+			m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
 		}
 		return m;
 	}
@@ -785,64 +784,12 @@ public class ClientBusAdaptor implements BCSAPI
 		return null;
 	}
 
-	private void updateFilter (final BloomFilter filter, Transaction t)
-	{
-		if ( filter.getUpdateMode () != UpdateMode.none )
-		{
-			// amend filter for what is received
-			int ix = 0;
-			for ( TransactionOutput out : t.getOutputs () )
-			{
-				List<Token> tokens;
-				try
-				{
-					tokens = ScriptFormat.parse (out.getScript ());
-					for ( Token k : tokens )
-					{
-						if ( k.data != null && filter.contains (k.data) )
-						{
-							if ( filter.getUpdateMode () == UpdateMode.all )
-							{
-								filter.addOutpoint (t.getHash (), ix);
-							}
-							else if ( filter.getUpdateMode () == UpdateMode.keys )
-							{
-								if ( ScriptFormat.isPayToKey (out.getScript ()) || ScriptFormat.isMultiSig (out.getScript ()) )
-								{
-									filter.addOutpoint (t.getHash (), ix);
-								}
-							}
-						}
-					}
-				}
-				catch ( ValidationException e )
-				{
-				}
-				++ix;
-			}
-		}
-	}
-
 	@Override
-	public Wallet getWallet (String name, String passphrase) throws BCSAPIException
+	public Wallet getWallet (String fileName, String passphrase) throws BCSAPIException
 	{
-		FileWallet wallet = new FileWallet ();
+		SerializedWallet wallet = SerializedWallet.read (fileName, passphrase);
 		wallet.setApi (this);
-		wallet.read (name, passphrase);
 		return wallet;
-	}
-
-	@Override
-	public Account createAccount (String name, ExtendedKey master, int nextSequence) throws BCSAPIException
-	{
-		try
-		{
-			return new DefaultAccount (name, master, nextSequence);
-		}
-		catch ( ValidationException e )
-		{
-			throw new BCSAPIException (e);
-		}
 	}
 
 }

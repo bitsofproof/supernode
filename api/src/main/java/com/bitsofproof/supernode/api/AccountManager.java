@@ -15,10 +15,23 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface AccountManager
 {
+	public BloomFilter getFilter ();
+
+	public String getName ();
+
+	public Collection<byte[]> getAddresses ();
+
+	public Key getKeyForAddress (byte[] address);
+
+	public Key getKey (int ix) throws ValidationException;
+
+	public Key getNextKey () throws ValidationException;
+
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;
@@ -39,5 +52,4 @@ public interface AccountManager
 
 	public void removeAccountListener (AccountListener listener);
 
-	public Account getAccount ();
 }

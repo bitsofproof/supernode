@@ -15,6 +15,10 @@
  */
 package com.bitsofproof.supernode.api;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -44,8 +48,146 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.crypto.generators.SCrypt;
 
-public class SerializedWallet
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+
+public class SerializedWallet implements Wallet
 {
+	private String passphrase;
+	private String fileName;
+	private long timeStamp;
+
+	private BCSAPI api;
+
+	public void setApi (BCSAPI api)
+	{
+		this.api = api;
+	}
+
+	public long getTimeStamp ()
+	{
+		return timeStamp;
+	}
+
+	@Override
+	public AccountManager getAccountManager (String name) throws BCSAPIException
+	{
+		try
+		{
+			int nextSequence = 0;
+			ExtendedKey extended = null;
+			for ( WalletKey key : getKeys () )
+			{
+				if ( key.name.equals (name) )
+				{
+					extended = ExtendedKey.parse (key.key);
+					nextSequence = key.nextSequence;
+					break;
+				}
+			}
+			if ( extended == null )
+			{
+				extended = ExtendedKey.createNew ();
+			}
+			final DefaultAccountManager am = new DefaultAccountManager (name, extended, nextSequence);
+			am.setApi (api);
+			am.registerFilter ();
+			for ( Transaction t : getTransactions () )
+			{
+				am.updateWithTransaction (t);
+			}
+			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
+			{
+				@Override
+				public void process (Transaction t)
+				{
+					if ( am.updateWithTransaction (t) )
+					{
+						addTransaction (t);
+					}
+				}
+			});
+			return am;
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	public static SerializedWallet read (String fileName, String passphrase) throws BCSAPIException
+	{
+		try
+		{
+			File f = new File (fileName);
+			if ( f.exists () )
+			{
+				long timeStamp = f.lastModified () / 1000;
+				FileInputStream in = null;
+				try
+				{
+					in = new FileInputStream (f);
+					SerializedWallet wallet = readWallet (in, passphrase);
+					wallet.fileName = fileName;
+					wallet.passphrase = passphrase;
+					wallet.timeStamp = timeStamp;
+					return wallet;
+				}
+				finally
+				{
+					in.close ();
+				}
+			}
+			else
+			{
+				SerializedWallet wallet = new SerializedWallet ();
+				wallet.timeStamp = System.currentTimeMillis () / 1000;
+				wallet.fileName = fileName;
+				wallet.passphrase = passphrase;
+				return wallet;
+			}
+		}
+		catch ( FileNotFoundException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( IOException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	public void persist () throws BCSAPIException
+	{
+		try
+		{
+			if ( fileName != null )
+			{
+				File f = new File (fileName);
+				File tmp = File.createTempFile ("tmp", ".wallet", f.getParentFile ());
+				tmp.setReadable (true, true);
+				tmp.setWritable (true, true);
+				FileOutputStream out = new FileOutputStream (tmp);
+				writeWallet (out, passphrase);
+				out.close ();
+				f.delete ();
+				tmp.renameTo (f);
+				timeStamp = f.lastModified ();
+			}
+		}
+		catch ( IOException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( ValidationException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
 	public static class WalletKey
 	{
 		String key;
