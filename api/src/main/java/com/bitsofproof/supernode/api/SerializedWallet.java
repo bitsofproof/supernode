@@ -160,6 +160,7 @@ public class SerializedWallet implements Wallet
 		}
 	}
 
+	@Override
 	public void persist () throws BCSAPIException
 	{
 		try
