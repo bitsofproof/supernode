@@ -15,11 +15,6 @@
  */
 package com.bitsofproof.supernode.main;
 
-import java.io.BufferedReader;
-import java.io.Console;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,18 +40,6 @@ public class Main
 		{
 			System.err.println ("Usage: java com.bitsofproof.main.Main profile [profile...] -- [args...] [options...]");
 			return;
-		}
-
-		String password = getPassword ();
-		System.setProperty ("javax.net.ssl.keyStorePassword", password);
-		System.setProperty ("javax.net.ssl.trustStorePassword", password);
-		if ( System.getProperty ("javax.net.ssl.keyStore") == null )
-		{
-			System.setProperty ("javax.net.ssl.keyStore", "bcsapi_server.keystore");
-		}
-		if ( System.getProperty ("javax.net.ssl.trustStore") == null )
-		{
-			System.setProperty ("javax.net.ssl.trustStore", "bcsapi_server.keystore");
 		}
 
 		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
@@ -85,35 +68,5 @@ public class Main
 		ctx.load ("classpath:context/*-profile.xml");
 		ctx.refresh ();
 		ctx.getBean (App.class).start (a.toArray (new String[0]));
-	}
-
-	static String getPassword () throws IOException
-	{
-		String password = null;
-		File master = new File ("BCSAPIPASSWORD");
-		if ( master.exists () )
-		{
-			FileReader reader = null;
-			try
-			{
-				reader = new FileReader (master);
-				password = new BufferedReader (reader).readLine ();
-			}
-			finally
-			{
-				reader.close ();
-			}
-		}
-		if ( password == null )
-		{
-			Console console = System.console ();
-			if ( console == null )
-			{
-				throw new IOException ("unable to obtain console");
-			}
-
-			password = new String (console.readPassword ("BCSAPI PASSWORD: "));
-		}
-		return password;
 	}
 }
