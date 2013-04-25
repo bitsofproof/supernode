@@ -154,15 +154,6 @@ public class APITest
 		AccountManager bob = wallet.getAccountManager ("Bob");
 		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, 10000);
 		api.sendTransaction (spend);
-		try
-		{
-			Thread.sleep (1000);
-		}
-		catch ( InterruptedException e )
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace ();
-		}
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

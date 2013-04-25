@@ -52,7 +52,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final String name;
 	private final ExtendedKey extended;
 	private final Map<ByteVector, Key> keyForAddress = new HashMap<ByteVector, Key> ();
-	private final BloomFilter filter = BloomFilter.createOptimalFilter (1000, 1.0 / 1000000.0, UpdateMode.all);
+	private final BloomFilter filter = BloomFilter.createOptimalFilter (100, 1.0 / 1000000.0, UpdateMode.all);
 
 	public void setApi (BCSAPI api)
 	{
@@ -109,9 +109,16 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	@Override
 	public Key getNextKey () throws ValidationException
 	{
-		Key key = extended.getKey (keyForAddress.size () + 1);
+		Key key = extended.getKey (keyForAddress.size ());
 		keyForAddress.put (new ByteVector (key.getAddress ()), key);
 		filter.add (key.getAddress ());
+		try
+		{
+			api.registerFilteredListener (filter, this);
+		}
+		catch ( BCSAPIException e )
+		{
+		}
 		return key;
 	}
 
@@ -157,6 +164,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 						modified = true;
 						balance += o.getValue ();
 						utxo.add (t.getHash (), ix, o);
+						filter.addOutpoint (t.getHash (), ix);
 						if ( o.getColor () != null )
 						{
 							Long balance = colorBalances.get (o.getColor ());

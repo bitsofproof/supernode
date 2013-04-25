@@ -61,6 +61,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		Destination destination;
 		Destination replyTo;
 		private byte[] bytes;
+		String correlationID;
 
 		@Override
 		public String getJMSMessageID () throws JMSException
@@ -98,12 +99,13 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void setJMSCorrelationID (String correlationID) throws JMSException
 		{
+			this.correlationID = correlationID;
 		}
 
 		@Override
 		public String getJMSCorrelationID () throws JMSException
 		{
-			return null;
+			return correlationID;
 		}
 
 		@Override
