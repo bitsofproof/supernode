@@ -132,6 +132,8 @@ public class APITest
 							}
 						}
 					}
+
+					blockValidated.release ();
 				}
 			}
 			if ( removed != null )
@@ -142,8 +144,6 @@ public class APITest
 					unconfirmed.addAll (b.getTransactions ());
 				}
 			}
-
-			blockValidated.release ();
 		}
 
 		public List<Transaction> getUnconfirmed ()
