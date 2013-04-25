@@ -289,6 +289,7 @@ public class APITest
 		color.setPubkey (key.getPublic ());
 		color.sign (key);
 		api.issueColor (color);
+		assertTrue (api.getColor (color.getFungibleName ()).getFungibleName ().equals (color.getFungibleName ()));
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

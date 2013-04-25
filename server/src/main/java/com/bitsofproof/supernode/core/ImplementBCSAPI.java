@@ -405,7 +405,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				}
 				catch ( Exception e )
 				{
-					log.trace ("Rejected invalid transaction request ", e);
+					log.trace ("Rejected invalid color request ", e);
 				}
 			}
 		});
@@ -627,46 +627,81 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	public Block getBlock (final String hash)
 	{
-		try
+		log.trace ("get block " + hash);
+		final WireFormat.Writer writer = new WireFormat.Writer ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
-			log.trace ("get block " + hash);
-			final WireFormat.Writer writer = new WireFormat.Writer ();
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
 			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
+				status.setRollbackOnly ();
+				String h = hash;
+				if ( h.equals (Hash.ZERO_HASH_STRING) )
 				{
-					status.setRollbackOnly ();
-					String h = hash;
-					if ( h.equals (Hash.ZERO_HASH_STRING) )
+					h = store.getHeadHash ();
+				}
+				Blk b;
+				try
+				{
+					b = store.getBlock (h);
+					if ( b != null )
 					{
-						h = store.getHeadHash ();
-					}
-					Blk b;
-					try
-					{
-						b = store.getBlock (h);
-						if ( b != null )
-						{
-							b.toWire (writer);
-						}
-					}
-					catch ( ValidationException e )
-					{
+						b.toWire (writer);
 					}
 				}
-			});
-			byte[] blockdump = writer.toByteArray ();
-			if ( blockdump != null && blockdump.length > 0 )
-			{
-				return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+				catch ( ValidationException e )
+				{
+				}
 			}
-			return null;
-		}
-		finally
+		});
+		byte[] blockdump = writer.toByteArray ();
+		if ( blockdump != null && blockdump.length > 0 )
 		{
 			log.trace ("get block returned " + hash);
+			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		}
+		log.trace ("get block failed ");
+		return null;
+	}
+
+	private Color getColor (final String hash)
+	{
+		log.trace ("get color " + hash);
+		final Color color = new Color ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				StoredColor c;
+				try
+				{
+					c = ((ColorStore) store).findColor (hash);
+					if ( c != null )
+					{
+						color.setExpiryHeight (c.getExpiryHeight ());
+						color.setSignature (c.getSignature ());
+						color.setTerms (c.getTerms ());
+						color.setUnit (c.getUnit ());
+						color.setPubkey (c.getPubkey ());
+						color.setTransaction (c.getTxHash ());
+					}
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("can not get color " + hash, e);
+				}
+
+			}
+		});
+		if ( color.getTerms () != null )
+		{
+			log.trace ("get color returned " + hash);
+			return color;
+		}
+		log.trace ("get color failed ");
+		return null;
 	}
 
 	private void sendTransaction (Transaction transaction) throws ValidationException
@@ -760,47 +795,4 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 	}
 
-	private Color getColor (final String hash)
-	{
-		try
-		{
-			log.trace ("get color " + hash);
-			final Color color = new Color ();
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
-				{
-					status.setRollbackOnly ();
-					StoredColor c;
-					try
-					{
-						c = ((ColorStore) store).findColor (hash);
-						if ( c != null )
-						{
-							color.setExpiryHeight (c.getExpiryHeight ());
-							color.setSignature (c.getSignature ());
-							color.setTerms (c.getTerms ());
-							color.setUnit (c.getUnit ());
-							color.setTransaction (c.getTxHash ());
-						}
-					}
-					catch ( ValidationException e )
-					{
-						log.error ("can not get color " + hash, e);
-					}
-
-				}
-			});
-			if ( color.getTerms () != null )
-			{
-				return color;
-			}
-			return null;
-		}
-		finally
-		{
-			log.trace ("get block returned " + hash);
-		}
-	}
 }

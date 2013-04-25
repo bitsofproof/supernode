@@ -66,7 +66,7 @@ public class Color
 		writer.writeUint64 (unit);
 		writer.writeUint32 (expiryHeight);
 		byte[] content = writer.toByteArray ();
-		return Hash.hash (content).toString ();
+		return new Hash (Hash.hash (content)).toString ();
 	}
 
 	private byte[] hashContent ()

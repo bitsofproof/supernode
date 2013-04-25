@@ -577,7 +577,7 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 		builder.setExpiryHeight (color.getExpiryHeight ());
 		builder.setSignature (ByteString.copyFrom (color.getSignature ()));
 		builder.setPubkey (ByteString.copyFrom (color.getPubkey ()));
-		store.put (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (color.getTxHash ()).toByteArray ()), builder.build ().toByteArray ());
+		store.put (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (color.getFungibleName ()).toByteArray ()), builder.build ().toByteArray ());
 	}
 
 	@Override
