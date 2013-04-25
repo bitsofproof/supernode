@@ -47,6 +47,8 @@ import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ByteUtils;
 import com.bitsofproof.supernode.api.ByteVector;
+import com.bitsofproof.supernode.api.ColorRules;
+import com.bitsofproof.supernode.api.ColorRules.ColoredCoin;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ScriptFormat.Token;
@@ -1022,12 +1024,11 @@ public abstract class CachedBlockStore implements BlockStore
 		// this is last loop before persist since modifying the entities.
 
 		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (5 * numberOfOutputs, 500), 1.0e-8, 0, UpdateMode.none);
-		List<String> colors = new ArrayList<String> ();
-		List<Long> colorQuantities = new ArrayList<Long> ();
 
 		for ( Tx t : b.getTransactions () )
 		{
 			t.setBlock (b);
+			List<ColoredCoin> inputCoins = new ArrayList<ColoredCoin> ();
 			for ( TxIn i : t.getInputs () )
 			{
 				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -1056,30 +1057,28 @@ public abstract class CachedBlockStore implements BlockStore
 					{
 						i.setSource (getSourceReference (source));
 					}
-					if ( source.getColor () != null )
-					{
-						StoredColor sc = cachedColors.get (source.getColor ());
-						if ( sc != null && sc.getExpiryHeight () < b.getHeight () )
-						{
-							colors.add (source.getColor ());
-							colorQuantities.add (source.getValue ());
-						}
-					}
+
+					ColoredCoin c = new ColoredCoin ();
+					c.color = source.getColor ();
+					c.value = source.getValue ();
+					inputCoins.add (c);
 				}
 			}
 
-			Iterator<String> ci = colors.iterator ();
-			Iterator<Long> qi = colorQuantities.iterator ();
-			long residual = 0;
-			String color = null;
-			if ( ci.hasNext () )
-			{
-				color = ci.next ();
-				residual = qi.next ();
-			}
-			boolean colorPreserving = true;
+			List<ColoredCoin> outputCoins = new ArrayList<ColoredCoin> ();
 			for ( TxOut o : t.getOutputs () )
 			{
+				ColoredCoin c = new ColoredCoin ();
+				c.color = null;
+				c.value = o.getValue ();
+				outputCoins.add (c);
+			}
+			ColorRules.colorOutput (inputCoins, outputCoins);
+			Iterator<ColoredCoin> i = outputCoins.iterator ();
+
+			for ( TxOut o : t.getOutputs () )
+			{
+				o.setColor (i.next ().color);
 				try
 				{
 					for ( Token token : ScriptFormat.parse (o.getScript ()) )
@@ -1097,32 +1096,6 @@ public abstract class CachedBlockStore implements BlockStore
 
 				o.setTxHash (t.getHash ());
 				o.setHeight (b.getHeight ());
-
-				if ( color != null )
-				{
-					if ( o.getValue () > residual )
-					{
-						colorPreserving = false;
-					}
-					if ( colorPreserving )
-					{
-						o.setColor (color);
-
-						residual -= Math.min (o.getValue (), residual);
-						if ( residual == 0 )
-						{
-							if ( ci.hasNext () )
-							{
-								color = ci.next ();
-								residual = qi.next ();
-							}
-							else
-							{
-								color = null;
-							}
-						}
-					}
-				}
 			}
 		}
 		b.setFilterFunctions ((int) filter.getHashFunctions ());
