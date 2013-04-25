@@ -143,6 +143,10 @@ public class Transaction implements Serializable, Cloneable
 			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			if ( s.getAddress ().length != 20 )
+			{
+				throw new ValidationException ("Sink is not an address");
+			}
 			writer.writeData (s.getAddress ());
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
