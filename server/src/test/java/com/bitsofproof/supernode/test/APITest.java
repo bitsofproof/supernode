@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.test;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.math.BigInteger;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import com.bitsofproof.supernode.api.AccountListener;
 import com.bitsofproof.supernode.api.AccountManager;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
@@ -46,10 +48,45 @@ public class APITest
 	BCSAPI api;
 
 	private static final long COIN = 100000000L;
+	private static final long FEE = COIN / 1000L;
+	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
 
 	private static SerializedWallet wallet;
 	private static AccountManager alice;
-	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
+	private static AccountManager bob;
+
+	private static class AccountMonitor implements AccountListener
+	{
+		private final Semaphore ready = new Semaphore (0);
+		private final String name;
+
+		public AccountMonitor (String name)
+		{
+			this.name = name;
+		}
+
+		@Override
+		public synchronized void accountChanged (AccountManager account)
+		{
+			assertTrue (account.getName ().equals (name));
+			ready.release ();
+		}
+
+		public void expectUpdates (int n)
+		{
+			try
+			{
+				assertTrue (ready.tryAcquire (n, 1, TimeUnit.SECONDS));
+				assertFalse (ready.tryAcquire ());
+			}
+			catch ( InterruptedException e )
+			{
+			}
+		}
+	}
+
+	private static final AccountMonitor bobMonitor = new AccountMonitor ("Bob");
+	private static final AccountMonitor aliceMonitor = new AccountMonitor ("Alice");
 
 	@BeforeClass
 	public static void provider ()
@@ -65,6 +102,10 @@ public class APITest
 		wallet = new SerializedWallet ();
 		wallet.setApi (api);
 		alice = wallet.getAccountManager ("Alice");
+		bob = wallet.getAccountManager ("Bob");
+
+		alice.addAccountListener (aliceMonitor);
+		bob.addAccountListener (bobMonitor);
 	}
 
 	@Test
@@ -109,6 +150,7 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+		aliceMonitor.expectUpdates (1);
 	}
 
 	@Test
@@ -146,14 +188,19 @@ public class APITest
 		catch ( InterruptedException e )
 		{
 		}
+		aliceMonitor.expectUpdates (10);
 	}
 
 	@Test
 	public void spendSome () throws BCSAPIException, ValidationException
 	{
-		AccountManager bob = wallet.getAccountManager ("Bob");
-		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, 10000);
+		long aliceStartingBalance = alice.getBalance ();
+		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, FEE);
 		api.sendTransaction (spend);
+		aliceMonitor.expectUpdates (1);
+		bobMonitor.expectUpdates (1);
+		assertTrue (bob.getBalance () == 50 * COIN);
+		assertTrue (alice.getBalance () == aliceStartingBalance - bob.getBalance () - FEE);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)
