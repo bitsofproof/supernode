@@ -1,0 +1,80 @@
+[
+{
+	"inputs" : [{"value": 10}],
+	"outputs" : [{"value": 9}],
+	"valid": true,
+	"comment" : "ordinary transaction"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "blue", "value": 10},{"value": 9}],
+	"valid": true,
+	"comment" : "simplest coloring"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "blue", "value": 11},{"value": 9}],
+	"valid": false,
+	"comment" : "too much color output"
+},
+{
+	"inputs" : [{"value": 10},{"color": "blue", "value": 10}],
+	"outputs" : [{"value": 10},{"color": "blue", "value": 10}],
+	"valid": false,
+	"comment" : "does not start with color"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"value": 10},{"color": "blue", "value": 10}],
+	"outputs" : [{"color": "blue", "value": 10},{"value": 10},{"color": "blue", "value": 10}],
+	"valid": false,
+	"comment" : "color band not consecutive"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"color": "red", "value": 10},{"color": "blue", "value": 10}],
+	"outputs" : [{"color": "blue", "value": 10},{"color": "red", "value": 10},{"color": "blue", "value": 10}],
+	"valid": false,
+	"comment" : "same color not consecutive"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"color": "red", "value": 10},{"color": "yellow", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "blue", "value": 10},{"color": "red", "value": 10},{"color": "yellow", "value": 10},{"value": 10}],
+	"valid": true,
+	"comment" : "simple more color"
+},
+{
+	"inputs" : [{"color": "blue", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 9}],
+	"valid": true,
+	"comment" : "split a color"
+},
+{
+	"inputs" : [{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 10}],
+	"outputs" : [{"color": "blue", "value": 10},{"value": 10}],
+	"valid": true,
+	"comment" : "merge a color"
+},
+{
+	"inputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 9}],
+	"valid": true,
+	"comment" : "split second color"
+},
+{
+	"inputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 10}],
+	"outputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 10},{"value": 10}],
+	"valid": true,
+	"comment" : "merge second color"
+},
+{
+	"inputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 10},{"value": 10}],
+	"outputs" : [{"color": "red", "value": 8},{"color": "red", "value": 2},{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 9}],
+	"valid": true,
+	"comment" : "split more color"
+},
+{
+	"inputs" : [{"color": "red", "value": 8},{"color": "red", "value": 2},{"color": "blue", "value": 5},{"color": "blue", "value": 5},{"value": 10}],
+	"outputs" : [{"color": "red", "value": 10},{"color": "blue", "value": 10},{"value": 10}],
+	"valid": true,
+	"comment" : "merge more color"
+}
+]
