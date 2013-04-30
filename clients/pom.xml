@@ -2,9 +2,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bitsofproof</groupId>
-	<artifactId>supernode</artifactId>
+	<artifactId>supernode-clients</artifactId>
 	<version>0.9-SNAPSHOT</version>
-	<name>supernode</name>
+	<name>supernode-clients</name>
 	<description>The bitsofproof supernode implementation of the Bitcoin protocol</description>
 	<packaging>pom</packaging>
 	<url>https://github.com/bitsofproof/supernode</url>
@@ -21,8 +21,6 @@
 		</license>
 	</licenses>
 
-	<inceptionYear>2012</inceptionYear>
-
 	<developers>
 		<developer>
 			<id>bitsofproof</id>
@@ -33,20 +31,11 @@
 
 	<contributors>
 		<contributor>
-			<name>Tamás Bártfai</name>
-			<email>bartfaitamas@gmail.com</email>
 		</contributor>
 	</contributors>
 
 	
 	<modules>
-		<module>api</module>
-		<module>server</module>
-		<module>clients</module>
+		<module>bccapi</module>
 	</modules>
-
-	<scm>
-		<connection>scm:git:git://github.com/bitsofproof/supernode.git</connection>
-		<url>https://github.com/bitsofproof/supernode</url>
-	</scm>
 </project>
