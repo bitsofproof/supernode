@@ -384,7 +384,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
-	public void filterTransactions (List<byte[]> data, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
+	public void filterTransactions (Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
 	{
 		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
@@ -407,12 +407,6 @@ public abstract class CachedBlockStore implements BlockStore
 		finally
 		{
 			lock.readLock ().unlock ();
-		}
-
-		Set<ByteVector> matchSet = new HashSet<ByteVector> ();
-		for ( byte[] d : data )
-		{
-			matchSet.add (new ByteVector (d));
 		}
 
 		for ( CachedBlock cb : blocks )
@@ -440,69 +434,7 @@ public abstract class CachedBlockStore implements BlockStore
 				Blk b = retrieveBlock (cb);
 				for ( Tx t : b.getTransactions () )
 				{
-					found = false;
-					for ( TxOut o : t.getOutputs () )
-					{
-						try
-						{
-							for ( Token token : ScriptFormat.parse (o.getScript ()) )
-							{
-								if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
-								{
-									if ( update == UpdateMode.all )
-									{
-										matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (t.getHash (), o.getIx ())));
-									}
-									else if ( update == UpdateMode.keys )
-									{
-										if ( ScriptFormat.isPayToKey (o.getScript ()) || ScriptFormat.isMultiSig (o.getScript ()) )
-										{
-											matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (t.getHash (), o.getIx ())));
-										}
-									}
-									found = true;
-									break;
-								}
-							}
-						}
-						catch ( Exception e )
-						{
-							// best effort
-						}
-					}
-					if ( !found )
-					{
-						for ( TxIn i : t.getInputs () )
-						{
-							if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
-							{
-								ByteVector outpoint = new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()));
-								if ( matchSet.contains (outpoint) )
-								{
-									found = true;
-									// it would be a double spend if it were there again.
-									matchSet.remove (outpoint);
-									break;
-								}
-								try
-								{
-									for ( Token token : ScriptFormat.parse (i.getScript ()) )
-									{
-										if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
-										{
-											found = true;
-											break;
-										}
-									}
-								}
-								catch ( Exception e )
-								{
-									// best effort
-								}
-							}
-						}
-					}
-					if ( found )
+					if ( t.matches (matchSet, update) )
 					{
 						processor.process (t);
 					}

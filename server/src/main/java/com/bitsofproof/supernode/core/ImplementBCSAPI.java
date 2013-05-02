@@ -18,8 +18,10 @@ package com.bitsofproof.supernode.core;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,6 +48,7 @@ import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.api.ByteVector;
 import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.Transaction;
@@ -270,10 +273,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
 					BCSAPIMessage.ExactMatchRequest request = BCSAPIMessage.ExactMatchRequest.parseFrom (body);
-					final List<byte[]> match = new ArrayList<byte[]> ();
+					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					for ( ByteString bs : request.getMatchList () )
 					{
-						match.add (bs.toByteArray ());
+						match.add (new ByteVector (bs.toByteArray ()));
 					}
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
@@ -285,7 +288,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						{
 							try
 							{
-								store.filterTransactions (match, mode, after, new TransactionProcessor ()
+								TransactionProcessor processor = new TransactionProcessor ()
 								{
 									@Override
 									public void process (Tx tx)
@@ -304,20 +307,19 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 											{
 											}
 										}
-										else
-										{
-											try
-											{
-												BytesMessage m = session.createBytesMessage ();
-												producer.send (m); // indicate EOF
-												producer.close ();
-											}
-											catch ( JMSException e )
-											{
-											}
-										}
 									}
-								});
+								};
+								store.filterTransactions (match, mode, after, processor);
+								txhandler.scanUnconfirmedPool (match, mode, processor);
+								try
+								{
+									BytesMessage m = session.createBytesMessage ();
+									producer.send (m); // indicate EOF
+									producer.close ();
+								}
+								catch ( JMSException e )
+								{
+								}
 							}
 							catch ( ValidationException e )
 							{

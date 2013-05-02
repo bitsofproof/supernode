@@ -31,8 +31,11 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.api.ByteVector;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
 import com.bitsofproof.supernode.messages.InvMessage;
@@ -239,25 +242,6 @@ public class TxHandler implements TrunkListener
 		return unconfirmed.get (hash);
 	}
 
-	public List<Tx> getUnconfirmedForHashes (Set<String> hashes)
-	{
-		List<Tx> result = new ArrayList<Tx> ();
-		synchronized ( unconfirmed )
-		{
-			for ( Tx t : unconfirmed.values () )
-			{
-				for ( TxIn i : t.getInputs () )
-				{
-					if ( hashes.contains (i.getSourceHash ()) )
-					{
-						result.add (t);
-					}
-				}
-			}
-		}
-		return result;
-	}
-
 	private void cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
@@ -297,6 +281,20 @@ public class TxHandler implements TrunkListener
 		{
 			// This further extends transaction and cache context
 			l.process (tx);
+		}
+	}
+
+	public void scanUnconfirmedPool (Set<ByteVector> matchSet, UpdateMode update, TransactionProcessor processor)
+	{
+		synchronized ( unconfirmed )
+		{
+			for ( Tx t : unconfirmed.values () )
+			{
+				if ( t.matches (matchSet, update) )
+				{
+					processor.process (t);
+				}
+			}
 		}
 	}
 

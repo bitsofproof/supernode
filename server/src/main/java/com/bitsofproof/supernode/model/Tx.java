@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -36,6 +37,7 @@ import org.json.JSONObject;
 import com.bitsofproof.supernode.api.BloomFilter;
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.api.ByteVector;
 import com.bitsofproof.supernode.api.Hash;
 import com.bitsofproof.supernode.api.ScriptFormat;
 import com.bitsofproof.supernode.api.ScriptFormat.Token;
@@ -346,6 +348,74 @@ public class Tx implements Serializable
 			}
 		}
 		return false;
+	}
+
+	public boolean matches (Set<ByteVector> matchSet, UpdateMode update)
+	{
+		boolean found;
+		found = false;
+		for ( TxOut o : outputs )
+		{
+			try
+			{
+				for ( Token token : ScriptFormat.parse (o.getScript ()) )
+				{
+					if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+					{
+						if ( update == UpdateMode.all )
+						{
+							matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (hash, o.getIx ())));
+						}
+						else if ( update == UpdateMode.keys )
+						{
+							if ( ScriptFormat.isPayToKey (o.getScript ()) || ScriptFormat.isMultiSig (o.getScript ()) )
+							{
+								matchSet.add (new ByteVector (BloomFilter.serializedOutpoint (hash, o.getIx ())));
+							}
+						}
+						found = true;
+						break;
+					}
+				}
+			}
+			catch ( Exception e )
+			{
+				// best effort
+			}
+		}
+		if ( !found )
+		{
+			for ( TxIn i : inputs )
+			{
+				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
+				{
+					ByteVector outpoint = new ByteVector (BloomFilter.serializedOutpoint (i.getSourceHash (), i.getIx ()));
+					if ( matchSet.contains (outpoint) )
+					{
+						found = true;
+						// it would be a double spend if it were there again.
+						matchSet.remove (outpoint);
+						break;
+					}
+					try
+					{
+						for ( Token token : ScriptFormat.parse (i.getScript ()) )
+						{
+							if ( token.data != null && matchSet.contains (new ByteVector (token.data)) )
+							{
+								found = true;
+								break;
+							}
+						}
+					}
+					catch ( Exception e )
+					{
+						// best effort
+					}
+				}
+			}
+		}
+		return found;
 	}
 
 	public JSONObject toJSON ()
