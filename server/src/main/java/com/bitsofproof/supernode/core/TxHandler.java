@@ -264,7 +264,7 @@ public class TxHandler implements TrunkListener
 		{
 			if ( p != peer )
 			{
-				if ( peer.isRelay () || peer.getFilter () == null || tx.passesFilter (peer.getFilter ()) )
+				if ( peer == null || peer.isRelay () || peer.getFilter () == null || tx.passesFilter (peer.getFilter ()) )
 				{
 					InvMessage tm = (InvMessage) p.createMessage ("inv");
 					tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
