@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans profile="testnet3"  
-    xmlns="http://www.springframework.org/schema/beans"
+<beans profile="testnet3" xmlns="http://www.springframework.org/schema/beans"
 	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
 	xmlns:p="http://www.springframework.org/schema/p"
@@ -10,20 +9,28 @@
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
 
 	<bean id="chain" class="com.bitsofproof.supernode.core.Testnet3Chain" />
-	
-	<bean id="discovery" class="com.bitsofproof.supernode.core.IRCDiscovery">
-		<property name="server" value="irc.lfnet.org"/>
-		<property name="port" value="6667"/>
-		<property name="channel" value="#bitcoinTEST3"/>
+
+	<bean id="IRCdiscovery" class="com.bitsofproof.supernode.core.IRCDiscovery">
+		<property name="server" value="irc.lfnet.org" />
+		<property name="port" value="6667" />
+		<property name="channel" value="#bitcoinTEST3" />
 	</bean>
-	
+
+	<bean id="DNSdiscovery" class="com.bitsofproof.supernode.core.DNSDiscovery">
+		<property name="seedHosts">
+			<list>
+				<value>testnet-seed.bitcoin.petertodd.org</value>
+			</list>
+		</property>
+	</bean>
+
 	<bean id="bitcoinNetwork" class="com.bitsofproof.supernode.core.BitcoinNetwork">
 		<constructor-arg>
 			<value>10</value>
 		</constructor-arg> <!-- Number of connections desired -->
-		<property name="discovery" ref="discovery" />
+		<property name="discovery" ref="DNSdiscovery" />
 		<property name="chain" ref="chain" />
 		<property name="store" ref="store" />
 	</bean>
-	
+
 </beans>
