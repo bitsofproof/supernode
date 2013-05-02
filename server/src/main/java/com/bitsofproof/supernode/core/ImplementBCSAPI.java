@@ -762,6 +762,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		tx.toWire (writer);
 		Transaction transaction = Transaction.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		if ( tx.getBlockHash () != null )
+		{
+			transaction.setBlockHash (tx.getBlockHash ());
+		}
 		return transaction;
 	}
 
