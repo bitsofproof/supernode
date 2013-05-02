@@ -63,6 +63,8 @@ public interface BlockStore extends ColorStore
 
 	public long getChainHeight ();
 
+	public int getBlockHeight (String hash);
+
 	public boolean isEmpty ();
 
 	public List<String> getInventory (List<String> locator, String last, int limit);

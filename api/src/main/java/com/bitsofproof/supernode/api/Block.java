@@ -35,6 +35,7 @@ public class Block implements Serializable, Cloneable
 	private long difficultyTarget;
 	private long nonce;
 	List<Transaction> transactions;
+	private int height;
 
 	@Override
 	public Block clone () throws CloneNotSupportedException
@@ -187,6 +188,16 @@ public class Block implements Serializable, Cloneable
 		this.transactions = transactions;
 	}
 
+	public int getHeight ()
+	{
+		return height;
+	}
+
+	public void setHeight (int height)
+	{
+		this.height = height;
+	}
+
 	public void toWireHeaderOnly (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);
@@ -268,6 +279,10 @@ public class Block implements Serializable, Cloneable
 				builder.addTransactions (t.toProtobuf ());
 			}
 		}
+		if ( height != 0 )
+		{
+			builder.setHeight (height);
+		}
 		return builder.build ();
 	}
 
@@ -287,6 +302,10 @@ public class Block implements Serializable, Cloneable
 			{
 				block.getTransactions ().add (Transaction.fromProtobuf (t));
 			}
+		}
+		if ( pb.hasHeight () )
+		{
+			block.height = pb.getHeight ();
 		}
 		return block;
 	}

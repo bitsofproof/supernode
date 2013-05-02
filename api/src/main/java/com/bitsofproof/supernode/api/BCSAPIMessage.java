@@ -2175,6 +2175,10 @@ public final class BCSAPIMessage {
         getTransactionsOrBuilderList();
     com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
         int index);
+    
+    // optional uint32 height = 9;
+    boolean hasHeight();
+    int getHeight();
   }
   public static final class Block extends
       com.google.protobuf.GeneratedMessage
@@ -2296,6 +2300,16 @@ public final class BCSAPIMessage {
       return transactions_.get(index);
     }
     
+    // optional uint32 height = 9;
+    public static final int HEIGHT_FIELD_NUMBER = 9;
+    private int height_;
+    public boolean hasHeight() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public int getHeight() {
+      return height_;
+    }
+    
     private void initFields() {
       bcsapiversion_ = 0;
       version_ = 0;
@@ -2305,6 +2319,7 @@ public final class BCSAPIMessage {
       difficulty_ = 0;
       nonce_ = 0;
       transactions_ = java.util.Collections.emptyList();
+      height_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2376,6 +2391,9 @@ public final class BCSAPIMessage {
       for (int i = 0; i < transactions_.size(); i++) {
         output.writeMessage(8, transactions_.get(i));
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeUInt32(9, height_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -2416,6 +2434,10 @@ public final class BCSAPIMessage {
       for (int i = 0; i < transactions_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(8, transactions_.get(i));
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(9, height_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2562,6 +2584,8 @@ public final class BCSAPIMessage {
         } else {
           transactionsBuilder_.clear();
         }
+        height_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -2637,6 +2661,10 @@ public final class BCSAPIMessage {
         } else {
           result.transactions_ = transactionsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.height_ = height_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2699,6 +2727,9 @@ public final class BCSAPIMessage {
               transactionsBuilder_.addAllMessages(other.transactions_);
             }
           }
+        }
+        if (other.hasHeight()) {
+          setHeight(other.getHeight());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -2804,6 +2835,11 @@ public final class BCSAPIMessage {
               com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addTransactions(subBuilder.buildPartial());
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              height_ = input.readUInt32();
               break;
             }
           }
@@ -3149,6 +3185,27 @@ public final class BCSAPIMessage {
           transactions_ = null;
         }
         return transactionsBuilder_;
+      }
+      
+      // optional uint32 height = 9;
+      private int height_ ;
+      public boolean hasHeight() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public int getHeight() {
+        return height_;
+      }
+      public Builder setHeight(int value) {
+        bitField0_ |= 0x00000100;
+        height_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearHeight() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        height_ = 0;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Block)
@@ -9255,35 +9312,35 @@ public final class BCSAPIMessage {
       "tsofproof.supernode.api.TransactionInput" +
       "\022A\n\007outputs\030\006 \003(\01320.com.bitsofproof.supe",
       "rnode.api.TransactionOutput\022\r\n\005block\030\007 \001" +
-      "(\014\"\322\001\n\005Block\022\025\n\rbcsapiversion\030\001 \002(\r\022\017\n\007v" +
+      "(\014\"\342\001\n\005Block\022\025\n\rbcsapiversion\030\001 \002(\r\022\017\n\007v" +
       "ersion\030\002 \002(\r\022\025\n\rpreviousBlock\030\003 \002(\014\022\022\n\nm" +
       "erkleRoot\030\004 \002(\014\022\021\n\ttimestamp\030\005 \002(\r\022\022\n\ndi" +
       "fficulty\030\006 \002(\r\022\r\n\005nonce\030\007 \002(\r\022@\n\014transac" +
       "tions\030\010 \003(\0132*.com.bitsofproof.supernode." +
-      "api.Transaction\"\220\001\n\013TrunkUpdate\022\025\n\rbcsap" +
-      "iversion\030\001 \002(\r\0223\n\005added\030\002 \003(\0132$.com.bits" +
-      "ofproof.supernode.api.Block\0225\n\007removed\030\003" +
-      " \003(\0132$.com.bitsofproof.supernode.api.Blo",
-      "ck\"+\n\004Hash\022\025\n\rbcsapiversion\030\001 \002(\r\022\014\n\004has" +
-      "h\030\002 \003(\014\":\n\020ExceptionMessage\022\025\n\rbcsapiver" +
-      "sion\030\001 \002(\r\022\017\n\007message\030\002 \003(\t\"r\n\005Color\022\023\n\013" +
-      "transaction\030\001 \002(\014\022\r\n\005terms\030\002 \002(\t\022\014\n\004unit" +
-      "\030\003 \002(\004\022\024\n\014expiryHeight\030\004 \002(\r\022\016\n\006pubkey\030\005" +
-      " \002(\014\022\021\n\tsignature\030\006 \002(\014\"j\n\rFilterRequest" +
-      "\022\025\n\rbcsapiversion\030\001 \002(\r\022\016\n\006filter\030\002 \002(\014\022" +
-      "\025\n\rhashFunctions\030\003 \002(\r\022\r\n\005tweak\030\004 \002(\r\022\014\n" +
-      "\004mode\030\005 \002(\r\"V\n\021ExactMatchRequest\022\025\n\rbcsa" +
-      "piversion\030\001 \002(\r\022\014\n\004mode\030\002 \002(\r\022\r\n\005match\030\003",
-      " \003(\014\022\r\n\005after\030\004 \001(\004\"\341\002\n\006Wallet\022\025\n\rbcsapi" +
-      "version\030\001 \002(\r\0227\n\004keys\030\002 \003(\0132).com.bitsof" +
-      "proof.supernode.api.Wallet.Key\022L\n\017public" +
-      "Addresses\030\003 \003(\01323.com.bitsofproof.supern" +
-      "ode.api.Wallet.PublicAddress\022@\n\014transact" +
-      "ions\030\004 \003(\0132*.com.bitsofproof.supernode.a" +
-      "pi.Transaction\032G\n\003Key\022\013\n\003key\030\001 \002(\t\022\024\n\014ne" +
-      "xtSequence\030\002 \002(\r\022\014\n\004name\030\003 \001(\t\022\017\n\007create" +
-      "d\030\004 \001(\004\032.\n\rPublicAddress\022\017\n\007address\030\001 \002(" +
-      "\t\022\014\n\004name\030\002 \002(\t"
+      "api.Transaction\022\016\n\006height\030\t \001(\r\"\220\001\n\013Trun" +
+      "kUpdate\022\025\n\rbcsapiversion\030\001 \002(\r\0223\n\005added\030" +
+      "\002 \003(\0132$.com.bitsofproof.supernode.api.Bl" +
+      "ock\0225\n\007removed\030\003 \003(\0132$.com.bitsofproof.s",
+      "upernode.api.Block\"+\n\004Hash\022\025\n\rbcsapivers" +
+      "ion\030\001 \002(\r\022\014\n\004hash\030\002 \003(\014\":\n\020ExceptionMess" +
+      "age\022\025\n\rbcsapiversion\030\001 \002(\r\022\017\n\007message\030\002 " +
+      "\003(\t\"r\n\005Color\022\023\n\013transaction\030\001 \002(\014\022\r\n\005ter" +
+      "ms\030\002 \002(\t\022\014\n\004unit\030\003 \002(\004\022\024\n\014expiryHeight\030\004" +
+      " \002(\r\022\016\n\006pubkey\030\005 \002(\014\022\021\n\tsignature\030\006 \002(\014\"" +
+      "j\n\rFilterRequest\022\025\n\rbcsapiversion\030\001 \002(\r\022" +
+      "\016\n\006filter\030\002 \002(\014\022\025\n\rhashFunctions\030\003 \002(\r\022\r" +
+      "\n\005tweak\030\004 \002(\r\022\014\n\004mode\030\005 \002(\r\"V\n\021ExactMatc" +
+      "hRequest\022\025\n\rbcsapiversion\030\001 \002(\r\022\014\n\004mode\030",
+      "\002 \002(\r\022\r\n\005match\030\003 \003(\014\022\r\n\005after\030\004 \001(\004\"\341\002\n\006" +
+      "Wallet\022\025\n\rbcsapiversion\030\001 \002(\r\0227\n\004keys\030\002 " +
+      "\003(\0132).com.bitsofproof.supernode.api.Wall" +
+      "et.Key\022L\n\017publicAddresses\030\003 \003(\01323.com.bi" +
+      "tsofproof.supernode.api.Wallet.PublicAdd" +
+      "ress\022@\n\014transactions\030\004 \003(\0132*.com.bitsofp" +
+      "roof.supernode.api.Transaction\032G\n\003Key\022\013\n" +
+      "\003key\030\001 \002(\t\022\024\n\014nextSequence\030\002 \002(\r\022\014\n\004name" +
+      "\030\003 \001(\t\022\017\n\007created\030\004 \001(\004\032.\n\rPublicAddress" +
+      "\022\017\n\007address\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9319,7 +9376,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_Block_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_Block_descriptor,
-              new java.lang.String[] { "Bcsapiversion", "Version", "PreviousBlock", "MerkleRoot", "Timestamp", "Difficulty", "Nonce", "Transactions", },
+              new java.lang.String[] { "Bcsapiversion", "Version", "PreviousBlock", "MerkleRoot", "Timestamp", "Difficulty", "Nonce", "Transactions", "Height", },
               com.bitsofproof.supernode.api.BCSAPIMessage.Block.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.Block.Builder.class);
           internal_static_com_bitsofproof_supernode_api_TrunkUpdate_descriptor =

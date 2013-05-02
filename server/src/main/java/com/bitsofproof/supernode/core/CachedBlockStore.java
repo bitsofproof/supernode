@@ -589,6 +589,22 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
+	public int getBlockHeight (String hash)
+	{
+		try
+		{
+			lock.readLock ().lock ();
+
+			CachedBlock b = cachedBlocks.get (hash);
+			return b != null ? b.height : -1;
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+	}
+
+	@Override
 	public List<String> getInventory (List<String> locator, String last, int limit)
 	{
 		try

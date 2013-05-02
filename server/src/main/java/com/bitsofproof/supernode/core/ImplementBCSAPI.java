@@ -458,6 +458,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					Block b = getBlock (hash);
 					if ( b != null )
 					{
+						b.setHeight (store.getBlockHeight (hash));
 						reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
 					}
 					else

@@ -52,6 +52,7 @@ message Block {
 	required uint32 difficulty = 6;			// encoded difficulty for POW
 	required uint32 nonce = 7;				// parameter of POW
 	repeated Transaction transactions = 8;
+	optional uint32 height = 9;
 }
 
 
