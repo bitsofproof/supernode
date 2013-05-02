@@ -24,6 +24,7 @@ import java.util.List;
 import org.bouncycastle.util.Arrays;
 
 import com.bitsofproof.supernode.api.ScriptFormat.Opcode;
+import com.google.protobuf.ByteString;
 
 public class Transaction implements Serializable, Cloneable
 {
@@ -499,6 +500,10 @@ public class Transaction implements Serializable, Cloneable
 				builder.addOutputs (o.toProtobuf ());
 			}
 		}
+		if ( blockHash != null )
+		{
+			builder.setBlock (ByteString.copyFrom (new Hash (blockHash).toByteArray ()));
+		}
 		return builder.build ();
 	}
 
@@ -523,6 +528,10 @@ public class Transaction implements Serializable, Cloneable
 			{
 				transaction.getOutputs ().add (TransactionOutput.fromProtobuf (o));
 			}
+		}
+		if ( pt.hasBlock () )
+		{
+			transaction.blockHash = new Hash (pt.getBlock ().toByteArray ()).toString ();
 		}
 		return transaction;
 	}

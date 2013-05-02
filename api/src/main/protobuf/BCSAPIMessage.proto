@@ -38,6 +38,7 @@ message Transaction {
 	required uint32 locktime = 4;   		// block number or time this is valid from
 	repeated TransactionInput inputs = 5;
 	repeated TransactionOutput outputs = 6;
+	optional bytes block = 7;
 }
 
 // a block. 
