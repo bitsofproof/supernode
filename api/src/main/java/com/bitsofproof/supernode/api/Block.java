@@ -279,7 +279,7 @@ public class Block implements Serializable, Cloneable
 				builder.addTransactions (t.toProtobuf ());
 			}
 		}
-		if ( height != 0 )
+		if ( height >= 0 )
 		{
 			builder.setHeight (height);
 		}
