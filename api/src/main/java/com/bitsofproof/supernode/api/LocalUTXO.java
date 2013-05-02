@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,14 +37,9 @@ public class LocalUTXO
 		outs.put (ix, out);
 	}
 
-	public Collection<TransactionOutput> getOutputs ()
+	public Map<String, HashMap<Long, TransactionOutput>> getUTXO ()
 	{
-		List<TransactionOutput> outs = new ArrayList<TransactionOutput> ();
-		for ( HashMap<Long, TransactionOutput> o : utxo.values () )
-		{
-			outs.addAll (o.values ());
-		}
-		return outs;
+		return utxo;
 	}
 
 	public TransactionOutput get (String tx, long ix)
