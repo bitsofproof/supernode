@@ -309,6 +309,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										}
 									}
 								};
+
 								store.filterTransactions (match, mode, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
 								try
@@ -460,7 +461,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					Block b = getBlock (hash);
 					if ( b != null )
 					{
-						b.setHeight (store.getBlockHeight (hash));
+						b.setHeight (store.getBlockHeight (b.getHash ()));
 						reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
 					}
 					else
