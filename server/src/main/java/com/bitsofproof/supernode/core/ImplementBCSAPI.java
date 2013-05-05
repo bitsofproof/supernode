@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -667,7 +666,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	{
 		log.trace ("get block " + hash);
 		final WireFormat.Writer writer = new WireFormat.Writer ();
-		final AtomicInteger height = new AtomicInteger ();
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
 			@Override
@@ -686,7 +684,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					if ( b != null )
 					{
 						b.toWire (writer);
-						height.set (b.getHeight ());
 					}
 				}
 				catch ( ValidationException e )
@@ -698,9 +695,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		if ( blockdump != null && blockdump.length > 0 )
 		{
 			log.trace ("get block returned " + hash);
-			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			b.setHeight (height.get ());
-			return b;
+			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		}
 		log.trace ("get block failed ");
 		return null;
@@ -710,7 +705,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	{
 		log.trace ("get block header " + hash);
 		final WireFormat.Writer writer = new WireFormat.Writer ();
-		final AtomicInteger height = new AtomicInteger ();
 		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
 		{
 			@Override
@@ -730,7 +724,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						b.toWire (writer);
 						writer.writeVarInt (0);
-						height.set (b.getHeight ());
 					}
 				}
 				catch ( ValidationException e )
@@ -742,9 +735,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		if ( blockdump != null && blockdump.length > 0 )
 		{
 			log.trace ("get block header returned " + hash);
-			Block b = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-			b.setHeight (height.get ());
-			return b;
+			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		}
 		log.trace ("get block header failed ");
 		return null;
