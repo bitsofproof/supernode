@@ -25,6 +25,15 @@ import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 public interface BCSAPI
 {
 	/**
+	 * get block header for the hash
+	 * 
+	 * @param hash
+	 * @return block header or null if hash is unknown
+	 * @throws BCSAPIException
+	 */
+	public Block getBlockHeader (String hash) throws BCSAPIException;
+
+	/**
 	 * get block for the hash
 	 * 
 	 * @param hash

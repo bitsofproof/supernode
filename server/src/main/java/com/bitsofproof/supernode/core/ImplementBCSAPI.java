@@ -125,6 +125,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addNewTransactionListener ();
 			addNewBlockListener ();
 			addBlockrequestListener ();
+			addBlockHeaderRequestListener ();
 			addTransactionRequestListener ();
 			addColorRequestListener ();
 			addNewColorListener ();
@@ -477,6 +478,38 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		});
 	}
 
+	private void addBlockHeaderRequestListener () throws JMSException
+	{
+		addMessageListener ("headerRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					Block b = getBlockHeader (hash);
+					if ( b != null )
+					{
+						b.setHeight (store.getBlockHeight (b.getHash ()));
+						reply (o.getJMSReplyTo (), b.toProtobuf ().toByteArray ());
+					}
+					else
+					{
+						reply (o.getJMSReplyTo (), null);
+					}
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid header block request ", e);
+				}
+			}
+		});
+	}
+
 	private void addNewBlockListener () throws JMSException
 	{
 		addMessageListener ("newBlock", new MessageListener ()
@@ -665,6 +698,46 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
 		}
 		log.trace ("get block failed ");
+		return null;
+	}
+
+	public Block getBlockHeader (final String hash)
+	{
+		log.trace ("get block header " + hash);
+		final WireFormat.Writer writer = new WireFormat.Writer ();
+		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		{
+			@Override
+			protected void doInTransactionWithoutResult (TransactionStatus status)
+			{
+				status.setRollbackOnly ();
+				String h = hash;
+				if ( h.equals (Hash.ZERO_HASH_STRING) )
+				{
+					h = store.getHeadHash ();
+				}
+				Blk b;
+				try
+				{
+					b = store.getBlockHeader (h);
+					if ( b != null )
+					{
+						b.toWire (writer);
+						writer.writeVarInt (0);
+					}
+				}
+				catch ( ValidationException e )
+				{
+				}
+			}
+		});
+		byte[] blockdump = writer.toByteArray ();
+		if ( blockdump != null && blockdump.length > 0 )
+		{
+			log.trace ("get block header returned " + hash);
+			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		}
+		log.trace ("get block header failed ");
 		return null;
 	}
 

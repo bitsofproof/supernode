@@ -56,6 +56,7 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
 	private MessageProducer blockRequestProducer;
+	private MessageProducer blockHeaderRequestProducer;
 	private MessageProducer transactionRequestProducer;
 	private MessageProducer colorProducer;
 	private MessageProducer colorRequestProducer;
@@ -201,6 +202,7 @@ public class ClientBusAdaptor implements BCSAPI
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
+			blockHeaderRequestProducer = session.createProducer (session.createTopic ("headerRequest"));
 			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
 			colorProducer = session.createProducer (session.createTopic ("newColor"));
 			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
@@ -649,6 +651,36 @@ public class ClientBusAdaptor implements BCSAPI
 			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
 			m.writeBytes (builder.build ().toByteArray ());
 			byte[] response = synchronousRequest (blockRequestProducer, m);
+			if ( response != null )
+			{
+				Block b = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (response));
+				b.computeHash ();
+				return b;
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		return null;
+	}
+
+	@Override
+	public Block getBlockHeader (String hash) throws BCSAPIException
+	{
+		try
+		{
+			log.trace ("get block header" + hash);
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (blockHeaderRequestProducer, m);
 			if ( response != null )
 			{
 				Block b = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (response));

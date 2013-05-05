@@ -55,6 +55,8 @@ public interface BlockStore extends ColorStore
 
 	public Blk getBlock (String hash) throws ValidationException;
 
+	public Blk getBlockHeader (String hash) throws ValidationException;
+
 	public Tx getTransaction (String hash) throws ValidationException;
 
 	public boolean isStoredBlock (String hash);

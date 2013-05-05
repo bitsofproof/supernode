@@ -1517,6 +1517,28 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
+	public Blk getBlockHeader (String hash) throws ValidationException
+	{
+
+		CachedBlock cached = null;
+		try
+		{
+			lock.readLock ().lock ();
+			cached = cachedBlocks.get (hash);
+			if ( cached == null )
+			{
+				return null;
+			}
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+		return retrieveBlockHeader (cached);
+	}
+
+	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
+	@Override
 	public void resolveTransactionInputs (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
 		try
