@@ -8,9 +8,11 @@ The server process handles peer-to-peer communication, protocol validation and b
 
 The validation engine passes most important unit tests of the Satoshi implementation and the block chain integration test cases of BitcoinJ that are also used in pull testing of the Satoshi implementation.
 
-This implementation supports colored Bitcoins out-of-the-box enabling uses of the protocol that go beyond payments in Bitcoin offered by the Satoshi implementation.
+Clients or extensions communicate with the server process through an asynchrounous message bus. The bus is provided by a separate broker process. The messages are in protobuf format hence interoperable with modules in other languages e.g. python. 
 
-Clients or extensions communicate with the server process through an asynchrounous message bus. The bus is provided by a separate broker process. The messages are in protobuf format hence interoperable with modules in other languages. A library is provided to implement wallets using deterministic and hierarchical key generation (BIP32) and password encrypted private key storage (BIP38) as well as convinient account manager that enables the assembly of multi wallet or multiple client environments.
+A Java cient API library provides convinient access to the message bus, deterministic and hierarchical key generation (BIP32) and password encrypted private key storage (BIP38) for multi wallet or multiple client environments.
+
+Adaptors are available for server trusting mobile clients (BCCAPI) and REST API for web site integration. See example Android application and primitive block explorer in bop-bccapi and bop-explorer projects of bits of proof zrt.
 
 STATUS
 
