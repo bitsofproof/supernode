@@ -194,6 +194,7 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
+			log.debug ("Initialize BCSAPI Bus adaptor");
 			connection = connectionFactory.createConnection ();
 			connection.setClientID (clientId);
 			connection.start ();
@@ -210,7 +211,7 @@ public class ClientBusAdaptor implements BCSAPI
 			scanRequestProducer = session.createProducer (session.createTopic ("scanRequest"));
 			exactMatchProducer = session.createProducer (session.createTopic ("matchRequest"));
 		}
-		catch ( JMSException e )
+		catch ( Exception e )
 		{
 			log.error ("Can not create JMS connection", e);
 		}
