@@ -367,10 +367,17 @@ public class Blk implements Serializable
 		}
 		else
 		{
-			writer.writeVarInt (transactions.size ());
-			for ( Tx t : transactions )
+			if ( transactions != null )
 			{
-				t.toWire (writer);
+				writer.writeVarInt (transactions.size ());
+				for ( Tx t : transactions )
+				{
+					t.toWire (writer);
+				}
+			}
+			else
+			{
+				writer.writeVarInt (0);
 			}
 		}
 	}

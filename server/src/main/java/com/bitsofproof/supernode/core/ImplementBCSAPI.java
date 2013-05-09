@@ -723,7 +723,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					if ( b != null )
 					{
 						b.toWire (writer);
-						writer.writeVarInt (0);
 					}
 				}
 				catch ( ValidationException e )
