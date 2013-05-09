@@ -13,6 +13,17 @@
 		<url>bitsofproof.com</url>
 	</organization>
 
+	<distributionManagement>
+		<downloadUrl>http://maven.bitsofproof.com/maven</downloadUrl>
+		<repository>
+			<id>bitsofproof</id>
+		    <uniqueVersion>false</uniqueVersion>
+			<name>BOP Enterprise Bitcoin Server Repository</name>
+			<url>scp://maven@maven.bitsofproof.com/home/maven/repository</url>
+			<layout>default</layout>
+		</repository>
+	</distributionManagement>
+	
 	<licenses>
 		<license>
 			<name>Apache License 2.0</name>
@@ -156,6 +167,13 @@
 				</plugin>
 			</plugins>
 		</pluginManagement>
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.4</version>
+			</extension>
+		</extensions>
 	</build>
 
 	<repositories>

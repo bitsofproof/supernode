@@ -9,9 +9,20 @@
 	<packaging>jar</packaging>
 
 	<organization>
-	    <name>bits of proof zrt.</name>
+		<name>bits of proof zrt.</name>
 		<url>bitsofproof.com</url>
 	</organization>
+
+	<distributionManagement>
+		<downloadUrl>http://maven.bitsofproof.com/maven</downloadUrl>
+		<repository>
+			<id>bitsofproof</id>
+			<uniqueVersion>false</uniqueVersion>
+			<name>BOP Enterprise Bitcoin Server Repository</name>
+			<url>scp://maven@maven.bitsofproof.com/home/maven/repository</url>
+			<layout>default</layout>
+		</repository>
+	</distributionManagement>
 
 	<licenses>
 		<license>
@@ -66,6 +77,13 @@
 				</executions>
 			</plugin>
 		</plugins>
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.4</version>
+			</extension>
+		</extensions>
 	</build>
 
 	<dependencies>

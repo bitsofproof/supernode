@@ -10,7 +10,7 @@
 	<url>https://github.com/bitsofproof/supernode</url>
 
 	<organization>
-	    <name>bits of proof zrt.</name>
+		<name>bits of proof zrt.</name>
 		<url>bitsofproof.com</url>
 	</organization>
 
@@ -38,14 +38,33 @@
 		</contributor>
 	</contributors>
 
-	
+
 	<modules>
 		<module>api</module>
 		<module>server</module>
 	</modules>
 
+	<distributionManagement>
+		<downloadUrl>http://maven.bitsofproof.com/maven</downloadUrl>
+		<repository>
+			<id>bitsofproof</id>
+			<uniqueVersion>false</uniqueVersion>
+			<name>BOP Enterprise Bitcoin Server Repository</name>
+			<url>scp://maven@maven.bitsofproof.com/home/maven/repository</url>
+			<layout>default</layout>
+		</repository>
+	</distributionManagement>
 	<scm>
 		<connection>scm:git:git://github.com/bitsofproof/supernode.git</connection>
 		<url>https://github.com/bitsofproof/supernode</url>
 	</scm>
+	<build>
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.4</version>
+			</extension>
+		</extensions>
+	</build>
 </project>
