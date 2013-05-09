@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -65,6 +67,14 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer exactMatchProducer;
 
 	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
+
+	private long timeout = 10 * 1000; // 10 sec
+
+	@Override
+	public void setTimeout (long timeout)
+	{
+		this.timeout = timeout;
+	}
 
 	private class MessageDispatcher
 	{
@@ -288,13 +298,90 @@ public class ClientBusAdaptor implements BCSAPI
 			});
 
 			exactMatchProducer.send (m);
-			ready.acquireUninterruptibly ();
+			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
+			{
+				throw new BCSAPIException ("timeout");
+			}
 		}
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
 		}
+		catch ( InterruptedException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
 
+	@Override
+	public void scanTransactions (BloomFilter filter, final TransactionListener listener) throws BCSAPIException
+	{
+		try
+		{
+			BytesMessage m = session.createBytesMessage ();
+
+			BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
+			builder.setHashFunctions ((int) filter.getHashFunctions ());
+			builder.setTweak ((int) filter.getTweak ());
+			builder.setMode (filter.getUpdateMode ().ordinal ());
+
+			m.writeBytes (builder.build ().toByteArray ());
+
+			final TemporaryQueue answerQueue = session.createTemporaryQueue ();
+			final MessageConsumer consumer = session.createConsumer (answerQueue);
+			m.setJMSReplyTo (answerQueue);
+			final Semaphore ready = new Semaphore (0);
+			consumer.setMessageListener (new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message message)
+				{
+					BytesMessage m = (BytesMessage) message;
+					byte[] body;
+					try
+					{
+						if ( m.getBodyLength () > 0 )
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+							t.computeHash ();
+							listener.process (t);
+						}
+						else
+						{
+							consumer.close ();
+							answerQueue.delete ();
+							ready.release ();
+						}
+					}
+					catch ( JMSException e )
+					{
+						log.error ("Malformed message received for filter scan transactions", e);
+					}
+					catch ( InvalidProtocolBufferException e )
+					{
+						log.error ("Malformed message received for filter scan transactions", e);
+					}
+				}
+			});
+
+			scanRequestProducer.send (m);
+			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
+			{
+				throw new BCSAPIException ("timeout");
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InterruptedException e )
+		{
+			throw new BCSAPIException (e);
+		}
 	}
 
 	@Override
@@ -302,7 +389,61 @@ public class ClientBusAdaptor implements BCSAPI
 	{
 		try
 		{
-			BytesMessage m = compileFilterFeedRequest (filter, listener);
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
+			builder.setHashFunctions ((int) filter.getHashFunctions ());
+			builder.setTweak ((int) filter.getTweak ());
+			builder.setMode (filter.getUpdateMode ().ordinal ());
+
+			m.writeBytes (builder.build ().toByteArray ());
+			synchronized ( messageDispatcher )
+			{
+				MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
+				if ( dispatcher == null )
+				{
+					TemporaryQueue answerQueue = session.createTemporaryQueue ();
+					MessageConsumer consumer = session.createConsumer (answerQueue);
+					dispatcher = new MessageDispatcher (consumer);
+					dispatcher.setTemporaryQueue (answerQueue);
+					messageDispatcher.put (filter.toString (), dispatcher);
+					dispatcher.addListener (listener, new MessageListener ()
+					{
+						@Override
+						public void onMessage (Message message)
+						{
+							BytesMessage m = (BytesMessage) message;
+							byte[] body;
+							try
+							{
+								if ( m.getBodyLength () > 0 )
+								{
+									body = new byte[(int) m.getBodyLength ()];
+									m.readBytes (body);
+									Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+									t.computeHash ();
+									listener.process (t);
+								}
+								else
+								{
+									listener.process (null);
+								}
+							}
+							catch ( JMSException e )
+							{
+								log.error ("Malformed message received for filter", e);
+							}
+							catch ( InvalidProtocolBufferException e )
+							{
+								log.error ("Malformed message received for filter", e);
+							}
+						}
+					});
+				}
+				m.setJMSCorrelationID (listener.toString ());
+				m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
+			}
 
 			filterRequestProducer.send (m);
 		}
@@ -310,81 +451,6 @@ public class ClientBusAdaptor implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
-	}
-
-	@Override
-	public void scanTransactions (BloomFilter filter, TransactionListener listener) throws BCSAPIException
-	{
-		try
-		{
-			BytesMessage m = compileFilterFeedRequest (filter, listener);
-
-			scanRequestProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-	}
-
-	private BytesMessage compileFilterFeedRequest (final BloomFilter filter, final TransactionListener listener) throws JMSException
-	{
-		BytesMessage m = session.createBytesMessage ();
-		BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
-		builder.setBcsapiversion (1);
-		builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
-		builder.setHashFunctions ((int) filter.getHashFunctions ());
-		builder.setTweak ((int) filter.getTweak ());
-		builder.setMode (filter.getUpdateMode ().ordinal ());
-
-		m.writeBytes (builder.build ().toByteArray ());
-		synchronized ( messageDispatcher )
-		{
-			MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
-			if ( dispatcher == null )
-			{
-				TemporaryQueue answerQueue = session.createTemporaryQueue ();
-				MessageConsumer consumer = session.createConsumer (answerQueue);
-				dispatcher = new MessageDispatcher (consumer);
-				dispatcher.setTemporaryQueue (answerQueue);
-				messageDispatcher.put (filter.toString (), dispatcher);
-				dispatcher.addListener (listener, new MessageListener ()
-				{
-					@Override
-					public void onMessage (Message message)
-					{
-						BytesMessage m = (BytesMessage) message;
-						byte[] body;
-						try
-						{
-							if ( m.getBodyLength () > 0 )
-							{
-								body = new byte[(int) m.getBodyLength ()];
-								m.readBytes (body);
-								Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-								t.computeHash ();
-								listener.process (t);
-							}
-							else
-							{
-								listener.process (null);
-							}
-						}
-						catch ( JMSException e )
-						{
-							log.error ("Malformed message received for filter", e);
-						}
-						catch ( InvalidProtocolBufferException e )
-						{
-							log.error ("Malformed message received for filter", e);
-						}
-					}
-				});
-			}
-			m.setJMSCorrelationID (listener.toString ());
-			m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
-		}
-		return m;
 	}
 
 	@Override
@@ -581,11 +647,15 @@ public class ClientBusAdaptor implements BCSAPI
 			producer.send (m);
 			try
 			{
-				result = exchanger.exchange (null);
+				result = exchanger.exchange (null, timeout, TimeUnit.MILLISECONDS);
 				consumer.close ();
 			}
 			catch ( InterruptedException e )
 			{
+			}
+			catch ( TimeoutException e )
+			{
+				throw new BCSAPIException ("timeout");
 			}
 		}
 		catch ( JMSException e )

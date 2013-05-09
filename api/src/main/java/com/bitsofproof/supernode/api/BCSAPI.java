@@ -24,6 +24,8 @@ import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
  */
 public interface BCSAPI
 {
+	public void setTimeout (long miliseconds);
+
 	/**
 	 * get block header for the hash
 	 * 
