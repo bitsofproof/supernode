@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bitsofproof</groupId>
 	<artifactId>bitsofproof-server</artifactId>
-	<version>0.9-SNAPSHOT</version>
+	<version>1.0</version>
 	<name>bitsofproof-server</name>
 	<description>The bitsofproof implementation of the Bitcoin protocol</description>
 	<packaging>jar</packaging>
@@ -58,7 +58,9 @@
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<postgresql.version>9.1-901.jdbc4</postgresql.version>
 		<leveldbjni.version>1.6.1</leveldbjni.version>
+		<protobuf.version>2.4.1</protobuf.version>
 		<stomp.version>1.13</stomp.version>
+		<bop.api.version>1.0</bop.api.version>
 	</properties>
 	<build>
 		<plugins>
@@ -188,7 +190,7 @@
 		<dependency>
 			<groupId>com.bitsofproof</groupId>
 			<artifactId>bitsofproof-server-api</artifactId>
-			<version>${project.version}</version>
+			<version>${bop.api.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
@@ -203,7 +205,7 @@
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
-			<version>2.4.1</version>
+			<version>${protobuf.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.derby</groupId>
