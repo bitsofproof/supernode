@@ -70,7 +70,6 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private long timeout = 10 * 1000; // 10 sec
 
-	@Override
 	public void setTimeout (long timeout)
 	{
 		this.timeout = timeout;
