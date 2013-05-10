@@ -130,7 +130,7 @@ public class LvlDiskStore implements OrderedMapStore
 		}
 	}
 
-	public LvlDiskStore ()
+	public void open ()
 	{
 		org.iq80.leveldb.Logger logger = new org.iq80.leveldb.Logger ()
 		{
