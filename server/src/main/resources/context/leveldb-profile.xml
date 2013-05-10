@@ -17,7 +17,7 @@
 
 <!-- 	<tx:annotation-driven transaction-manager="transactionManager" />  -->
 
-	<bean id="diskstore" class="com.bitsofproof.supernode.model.LvlDiskStore">
+	<bean id="diskstore" class="com.bitsofproof.supernode.model.LvlDiskStore" init-method="open">
 		<property name="database" value="data"/>
 		<property name="cacheSize" value="100"/>
 	</bean>
