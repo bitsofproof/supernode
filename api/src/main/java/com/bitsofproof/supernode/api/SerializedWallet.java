@@ -278,7 +278,7 @@ public class SerializedWallet implements Wallet
 			{
 				BCSAPIMessage.Wallet.Key.Builder kb = BCSAPIMessage.Wallet.Key.newBuilder ();
 				kb.setKey (key.key);
-				kb.setNextSequence (key.am.getNextSequence ());
+				kb.setNextSequence (key.am != null ? key.am.getNextSequence () : 0);
 				if ( key.name != null )
 				{
 					kb.setName (key.name);
