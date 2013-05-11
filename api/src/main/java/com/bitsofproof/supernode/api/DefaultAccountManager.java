@@ -78,6 +78,12 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	}
 
 	@Override
+	public int getNextSequence ()
+	{
+		return keyForAddress.size ();
+	}
+
+	@Override
 	public String getName ()
 	{
 		return name;

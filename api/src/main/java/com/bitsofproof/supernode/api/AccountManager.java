@@ -32,6 +32,8 @@ public interface AccountManager
 
 	public Key getNextKey () throws ValidationException;
 
+	public int getNextSequence ();
+
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;

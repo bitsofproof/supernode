@@ -76,39 +76,47 @@ public class SerializedWallet implements Wallet
 		{
 			int nextSequence = 0;
 			ExtendedKey extended = null;
+
+			DefaultAccountManager am = null;
 			for ( WalletKey key : getKeys () )
 			{
 				if ( key.name.equals (name) )
 				{
+					if ( key.am != null )
+					{
+						return key.am;
+					}
 					extended = ExtendedKey.parse (key.key);
 					nextSequence = key.nextSequence;
+					key.am = am = new DefaultAccountManager (name, extended, nextSequence);
 					break;
 				}
 			}
 			if ( extended == null )
 			{
+				WalletKey wk = new WalletKey ();
 				extended = ExtendedKey.createNew ();
 
-				WalletKey wk = new WalletKey ();
 				wk.created = System.currentTimeMillis () / 1000;
 				wk.name = name;
 				wk.key = extended.serialize (production);
 				nextSequence = wk.nextSequence = 0;
 				addKey (wk);
+				wk.am = am = new DefaultAccountManager (name, extended, nextSequence);
 			}
-			final DefaultAccountManager am = new DefaultAccountManager (name, extended, nextSequence);
 			am.setApi (api);
 			am.registerFilter ();
 			for ( Transaction t : getTransactions () )
 			{
 				am.updateWithTransaction (t);
 			}
+			final DefaultAccountManager fam = am;
 			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
 			{
 				@Override
 				public void process (Transaction t)
 				{
-					if ( am.updateWithTransaction (t) )
+					if ( fam.updateWithTransaction (t) )
 					{
 						addTransaction (t);
 					}
@@ -204,6 +212,7 @@ public class SerializedWallet implements Wallet
 		String name;
 		long created;
 		int nextSequence;
+		AccountManager am;
 	}
 
 	private List<WalletKey> keys = new ArrayList<WalletKey> ();
@@ -269,7 +278,7 @@ public class SerializedWallet implements Wallet
 			{
 				BCSAPIMessage.Wallet.Key.Builder kb = BCSAPIMessage.Wallet.Key.newBuilder ();
 				kb.setKey (key.key);
-				kb.setNextSequence (key.nextSequence);
+				kb.setNextSequence (key.am.getNextSequence ());
 				if ( key.name != null )
 				{
 					kb.setName (key.name);
