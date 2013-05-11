@@ -55,6 +55,7 @@ public class SerializedWallet implements Wallet
 	private String passphrase;
 	private String fileName;
 	private long timeStamp;
+	private boolean production;
 
 	private BCSAPI api;
 
@@ -87,6 +88,11 @@ public class SerializedWallet implements Wallet
 			if ( extended == null )
 			{
 				extended = ExtendedKey.createNew ();
+
+				WalletKey wk = new WalletKey ();
+				wk.created = System.currentTimeMillis () / 1000;
+				wk.name = name;
+				wk.key = extended.serialize (production);
 			}
 			final DefaultAccountManager am = new DefaultAccountManager (name, extended, nextSequence);
 			am.setApi (api);
@@ -114,7 +120,7 @@ public class SerializedWallet implements Wallet
 		}
 	}
 
-	public static SerializedWallet read (String fileName, String passphrase) throws BCSAPIException
+	public static SerializedWallet read (String fileName, String passphrase, boolean production) throws BCSAPIException
 	{
 		try
 		{
@@ -126,10 +132,11 @@ public class SerializedWallet implements Wallet
 				try
 				{
 					in = new FileInputStream (f);
-					SerializedWallet wallet = readWallet (in, passphrase);
+					SerializedWallet wallet = readWallet (in, passphrase, production);
 					wallet.fileName = fileName;
 					wallet.passphrase = passphrase;
 					wallet.timeStamp = timeStamp;
+					wallet.production = production;
 					return wallet;
 				}
 				finally
@@ -316,7 +323,7 @@ public class SerializedWallet implements Wallet
 		}
 	}
 
-	public static SerializedWallet readWallet (InputStream input, String passphrase) throws ValidationException
+	public static SerializedWallet readWallet (InputStream input, String passphrase, boolean production) throws ValidationException
 	{
 		SerializedWallet wallet = new SerializedWallet ();
 
@@ -346,6 +353,10 @@ public class SerializedWallet implements Wallet
 			{
 				WalletKey key = new WalletKey ();
 				key.key = k.getKey ();
+				if ( production && !key.key.startsWith ("x") )
+				{
+					throw new ValidationException ("Expected production keys");
+				}
 				key.nextSequence = k.getNextSequence ();
 				if ( k.hasName () )
 				{

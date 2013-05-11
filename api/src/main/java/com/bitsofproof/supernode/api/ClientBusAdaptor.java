@@ -66,6 +66,8 @@ public class ClientBusAdaptor implements BCSAPI
 	private MessageProducer scanRequestProducer;
 	private MessageProducer exactMatchProducer;
 
+	private Boolean production = null;
+
 	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
 
 	private long timeout = 10 * 1000; // 10 sec
@@ -236,6 +238,16 @@ public class ClientBusAdaptor implements BCSAPI
 		catch ( JMSException e )
 		{
 		}
+	}
+
+	@Override
+	public boolean isProduction () throws BCSAPIException
+	{
+		if ( production != null )
+		{
+			return production;
+		}
+		return production = getBlockHeader ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f") != null;
 	}
 
 	@Override
@@ -889,7 +901,7 @@ public class ClientBusAdaptor implements BCSAPI
 	@Override
 	public Wallet getWallet (String fileName, String passphrase) throws BCSAPIException
 	{
-		SerializedWallet wallet = SerializedWallet.read (fileName, passphrase);
+		SerializedWallet wallet = SerializedWallet.read (fileName, passphrase, isProduction ());
 		wallet.setApi (this);
 		return wallet;
 	}

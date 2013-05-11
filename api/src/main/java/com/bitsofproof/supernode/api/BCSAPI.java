@@ -25,6 +25,14 @@ import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 public interface BCSAPI
 {
 	/**
+	 * Are we talking to production?
+	 * 
+	 * @return
+	 * @throws BCSAPIException
+	 */
+	public boolean isProduction () throws BCSAPIException;
+
+	/**
 	 * get block header for the hash
 	 * 
 	 * @param hash
