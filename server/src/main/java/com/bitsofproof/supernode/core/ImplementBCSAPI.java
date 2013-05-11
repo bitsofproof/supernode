@@ -15,8 +15,6 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +35,6 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
-import javax.net.ssl.SSLContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,22 +110,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		Destination destination = session.createTopic (topic);
 		MessageConsumer consumer = session.createConsumer (destination);
 		consumer.setMessageListener (listener);
-	}
-
-	public void setTransport (String transport)
-	{
-		try
-		{
-			SSLContext.getInstance (transport).init (null, null, null);
-		}
-		catch ( KeyManagementException e )
-		{
-			log.error ("Can not initialize " + transport, e);
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-			log.error ("Can not initialize " + transport, e);
-		}
 	}
 
 	public void init ()
