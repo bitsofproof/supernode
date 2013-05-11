@@ -93,6 +93,8 @@ public class SerializedWallet implements Wallet
 				wk.created = System.currentTimeMillis () / 1000;
 				wk.name = name;
 				wk.key = extended.serialize (production);
+				nextSequence = wk.nextSequence = 0;
+				addKey (wk);
 			}
 			final DefaultAccountManager am = new DefaultAccountManager (name, extended, nextSequence);
 			am.setApi (api);
