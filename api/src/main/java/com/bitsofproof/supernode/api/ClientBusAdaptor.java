@@ -72,7 +72,7 @@ public class ClientBusAdaptor implements BCSAPI
 
 	private final Map<String, MessageDispatcher> messageDispatcher = new HashMap<String, MessageDispatcher> ();
 
-	private long timeout = 10 * 1000; // 10 sec
+	private long timeout = 2 * 60 * 1000; // 2 min
 
 	public void setTimeout (long timeout)
 	{
