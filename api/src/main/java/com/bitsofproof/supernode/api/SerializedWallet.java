@@ -160,6 +160,7 @@ public class SerializedWallet implements Wallet
 				wallet.timeStamp = System.currentTimeMillis () / 1000;
 				wallet.fileName = fileName;
 				wallet.passphrase = passphrase;
+				wallet.production = production;
 				return wallet;
 			}
 		}
