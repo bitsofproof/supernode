@@ -188,11 +188,13 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 						}
 					}
 				}
+				modified = spend != null;
 				long ix = 0;
 				for ( TransactionOutput o : t.getOutputs () )
 				{
 					if ( addressSet.contains (new ByteVector (o.getOutputAddress ())) )
 					{
+						modified = true;
 						if ( t.getBlockHash () != null )
 						{
 							confirmed.add (t.getHash (), ix, o);
@@ -213,6 +215,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 					{
 						if ( t.getBlockHash () == null && spend != null )
 						{
+							modified = true;
 							sending.add (t.getHash (), ix, o);
 						}
 					}
