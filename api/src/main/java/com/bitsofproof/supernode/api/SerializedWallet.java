@@ -116,7 +116,7 @@ public class SerializedWallet implements Wallet
 				@Override
 				public void process (Transaction t)
 				{
-					if ( fam.updateWithTransaction (t, true, false) )
+					if ( fam.updateWithTransaction (t, t.getBlockHash () != null, false) )
 					{
 						addTransaction (t);
 					}

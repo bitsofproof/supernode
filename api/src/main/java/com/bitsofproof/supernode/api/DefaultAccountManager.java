@@ -181,7 +181,10 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 						}
 						else
 						{
-							sending -= o.getValue ();
+							if ( !unwind )
+							{
+								sending += o.getValue ();
+							}
 						}
 						if ( !unwind )
 						{
@@ -215,7 +218,10 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 						}
 						else
 						{
-							sending += o.getValue ();
+							if ( !unwind )
+							{
+								receiving += o.getValue ();
+							}
 						}
 						if ( !unwind )
 						{
