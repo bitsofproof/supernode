@@ -108,7 +108,7 @@ public class SerializedWallet implements Wallet
 			am.registerFilter ();
 			for ( Transaction t : getTransactions () )
 			{
-				am.updateWithTransaction (t, false, false);
+				am.updateWithTransaction (t, t.getBlockHash () != null, false);
 			}
 			final DefaultAccountManager fam = am;
 			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()

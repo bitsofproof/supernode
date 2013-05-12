@@ -35,6 +35,8 @@ public interface AccountManager
 
 	public Collection<Transaction> getTransactions ();
 
+	public Transaction getTransaction (String hash);
+
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;

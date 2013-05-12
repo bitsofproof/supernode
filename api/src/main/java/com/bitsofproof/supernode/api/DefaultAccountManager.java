@@ -148,6 +148,12 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		return Collections.unmodifiableCollection (processedTransaction.values ());
 	}
 
+	@Override
+	public Transaction getTransaction (String hash)
+	{
+		return processedTransaction.get (hash);
+	}
+
 	public boolean updateWithTransaction (Transaction t, boolean inBlock, boolean unwind)
 	{
 		synchronized ( utxo )
