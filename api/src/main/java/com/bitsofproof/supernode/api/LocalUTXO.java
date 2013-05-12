@@ -65,6 +65,19 @@ public class LocalUTXO
 		}
 	}
 
+	public long getTotal ()
+	{
+		long s = 0;
+		for ( HashMap<Long, TransactionOutput> entry : utxo.values () )
+		{
+			for ( TransactionOutput o : entry.values () )
+			{
+				s += o.getValue ();
+			}
+		}
+		return s;
+	}
+
 	public List<TransactionSource> getSufficientSources (long amount, long fee, String color)
 	{
 		List<TransactionSource> result = new ArrayList<TransactionSource> ();

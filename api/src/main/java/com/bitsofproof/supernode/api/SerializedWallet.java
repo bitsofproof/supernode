@@ -70,6 +70,12 @@ public class SerializedWallet implements Wallet
 	}
 
 	@Override
+	public void setTimeStamp (long time)
+	{
+		timeStamp = time;
+	}
+
+	@Override
 	public AccountManager getAccountManager (String name) throws BCSAPIException
 	{
 		try
@@ -106,9 +112,16 @@ public class SerializedWallet implements Wallet
 			}
 			am.setApi (api);
 			am.registerFilter ();
-			for ( Transaction t : getTransactions () )
+			if ( getTimeStamp () > 0 )
 			{
-				am.updateWithTransaction (t, t.getBlockHash () != null, false);
+				for ( Transaction t : getTransactions () )
+				{
+					am.updateWithTransaction (t);
+				}
+			}
+			else
+			{
+				transactions.clear ();
 			}
 			final DefaultAccountManager fam = am;
 			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
@@ -116,7 +129,7 @@ public class SerializedWallet implements Wallet
 				@Override
 				public void process (Transaction t)
 				{
-					if ( fam.updateWithTransaction (t, t.getBlockHash () != null, false) )
+					if ( fam.updateWithTransaction (t) )
 					{
 						addTransaction (t);
 					}

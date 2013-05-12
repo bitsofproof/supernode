@@ -8,4 +8,6 @@ public interface Wallet
 	public void addTransaction (Transaction t);
 
 	public void persist () throws BCSAPIException;
+
+	public void setTimeStamp (long time);
 }

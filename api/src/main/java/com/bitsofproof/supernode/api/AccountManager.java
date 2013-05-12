@@ -41,12 +41,6 @@ public interface AccountManager
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;
 
-	public Transaction transfer (byte[] receiver, long units, long fee, Color color) throws ValidationException, BCSAPIException;
-
-	public Transaction createColorGenesis (long quantity, long unitSize, long fee) throws ValidationException, BCSAPIException;
-
-	public Transaction cashIn (ECKeyPair key, long fee) throws ValidationException, BCSAPIException;
-
 	public long getBalance ();
 
 	public long getSettled ();
@@ -54,6 +48,8 @@ public interface AccountManager
 	public long getSending ();
 
 	public long getReceiving ();
+
+	public long getChange ();
 
 	public void addAccountListener (AccountListener listener);
 

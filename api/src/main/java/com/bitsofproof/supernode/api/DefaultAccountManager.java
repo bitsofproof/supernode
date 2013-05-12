@@ -20,8 +20,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,20 +36,16 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 {
 	private static final Logger log = LoggerFactory.getLogger (DefaultAccountManager.class);
 
-	private static final long DUST = 10000;
-
 	private BCSAPI api;
 
 	private final Wallet wallet;
 
-	private final LocalUTXO utxo = new LocalUTXO ();
-
-	private final HashMap<String, Long> colorBalances = new HashMap<String, Long> ();
+	private final LocalUTXO confirmed = new LocalUTXO ();
+	private final LocalUTXO change = new LocalUTXO ();
+	private final LocalUTXO receiving = new LocalUTXO ();
+	private final LocalUTXO sending = new LocalUTXO ();
 
 	private long balance;
-	private long settled;
-	private long sending;
-	private long receiving;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> processedTransaction = new HashMap<String, Transaction> ();
@@ -56,6 +54,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final ExtendedKey extended;
 	private final Map<ByteVector, Key> keyForAddress = new HashMap<ByteVector, Key> ();
 	private final BloomFilter filter = BloomFilter.createOptimalFilter (100, 1.0 / 1000000.0, UpdateMode.all);
+	private final Set<ByteVector> addressSet = new HashSet<ByteVector> ();
 
 	public void setApi (BCSAPI api)
 	{
@@ -72,6 +71,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			Key key = extended.getKey (i);
 			keyForAddress.put (new ByteVector (key.getAddress ()), key);
 			filter.add (key.getAddress ());
+			addressSet.add (new ByteVector (key.getAddress ()));
 		}
 	}
 
@@ -122,6 +122,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		Key key = extended.getKey (keyForAddress.size ());
 		keyForAddress.put (new ByteVector (key.getAddress ()), key);
 		filter.add (key.getAddress ());
+		addressSet.add (new ByteVector (key.getAddress ()));
 		try
 		{
 			api.registerFilteredListener (filter, this);
@@ -154,92 +155,65 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		return processedTransaction.get (hash);
 	}
 
-	public boolean updateWithTransaction (Transaction t, boolean inBlock, boolean unwind)
+	public boolean updateWithTransaction (Transaction t)
 	{
-		synchronized ( utxo )
+		synchronized ( confirmed )
 		{
 			boolean modified = false;
-			if ( (!unwind && !processedTransaction.containsKey (t.getHash ())) || (unwind && processedTransaction.containsKey (t.getHash ())) )
+			if ( !processedTransaction.containsKey (t.getHash ()) )
 			{
 				processedTransaction.put (t.getHash (), t);
-				for ( TransactionInput in : t.getInputs () )
+				TransactionOutput spend = null;
+				for ( TransactionInput i : t.getInputs () )
 				{
-					TransactionOutput o = utxo.get (in.getSourceHash (), in.getIx ());
-					if ( o != null )
+					spend = confirmed.get (i.getSourceHash (), i.getIx ());
+					if ( spend != null )
 					{
-						modified = true;
-						if ( inBlock )
+						confirmed.remove (i.getSourceHash (), i.getIx ());
+					}
+					else
+					{
+						spend = change.get (i.getSourceHash (), i.getIx ());
+						if ( spend != null )
 						{
-							if ( unwind )
-							{
-								settled += o.getValue ();
-							}
-							else
-							{
-								settled -= o.getValue ();
-							}
+							change.remove (i.getSourceHash (), i.getIx ());
 						}
 						else
 						{
-							if ( !unwind )
+							spend = receiving.get (i.getSourceHash (), i.getIx ());
+							if ( spend != null )
 							{
-								sending += o.getValue ();
-							}
-						}
-						if ( !unwind )
-						{
-							balance -= o.getValue ();
-							utxo.remove (in.getSourceHash (), in.getIx ());
-							if ( o.getColor () != null )
-							{
-								Long balance = colorBalances.get (o.getColor ());
-								colorBalances.put (o.getColor (), balance.longValue () - o.getValue ());
+								receiving.remove (i.getSourceHash (), i.getIx ());
 							}
 						}
 					}
 				}
-				int ix = 0;
+				long ix = 0;
 				for ( TransactionOutput o : t.getOutputs () )
 				{
-					byte[] address = o.getOutputAddress ();
-					if ( address != null && getKeyForAddress (address) != null )
+					if ( addressSet.contains (new ByteVector (o.getOutputAddress ())) )
 					{
-						modified = true;
-						if ( inBlock )
+						if ( t.getBlockHash () != null )
 						{
-							if ( unwind )
-							{
-								settled -= o.getValue ();
-							}
-							else
-							{
-								settled += o.getValue ();
-							}
+							confirmed.add (t.getHash (), ix, o);
 						}
 						else
 						{
-							if ( !unwind )
+							if ( spend != null )
 							{
-								receiving += o.getValue ();
+								change.add (t.getHash (), ix, o);
+							}
+							else
+							{
+								receiving.add (t.getHash (), ix, o);
 							}
 						}
-						if ( !unwind )
+					}
+					else
+					{
+						if ( t.getBlockHash () == null && spend != null )
 						{
-							balance += o.getValue ();
-							utxo.add (t.getHash (), ix, o);
-							filter.addOutpoint (t.getHash (), ix);
-							if ( o.getColor () != null )
-							{
-								Long balance = colorBalances.get (o.getColor ());
-								if ( balance != null )
-								{
-									colorBalances.put (o.getColor (), balance.longValue () + o.getValue ());
-								}
-								else
-								{
-									colorBalances.put (o.getColor (), o.getValue ());
-								}
-							}
+							sending.add (t.getHash (), ix, o);
 						}
 					}
 					++ix;
@@ -259,29 +233,15 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
 		List<Transaction> newTransactions = new ArrayList<Transaction> ();
-		synchronized ( utxo )
+		synchronized ( confirmed )
 		{
-			if ( removed != null )
-			{
-				for ( Block b : removed )
-				{
-					for ( Transaction t : b.getTransactions () )
-					{
-						if ( updateWithTransaction (t, true, true) )
-						{
-							t.setBlockHash (null);
-							newTransactions.add (t);
-						}
-					}
-				}
-			}
 			if ( added != null )
 			{
 				for ( Block b : added )
 				{
 					for ( Transaction t : b.getTransactions () )
 					{
-						if ( updateWithTransaction (t, true, false) )
+						if ( updateWithTransaction (t) )
 						{
 							t.setBlockHash (b.getHash ());
 							newTransactions.add (t);
@@ -299,7 +259,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	@Override
 	public void process (Transaction t)
 	{
-		if ( updateWithTransaction (t, false, false) )
+		if ( updateWithTransaction (t) )
 		{
 			notifyListener (t);
 		}
@@ -308,9 +268,9 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	@Override
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException
 	{
-		synchronized ( utxo )
+		synchronized ( confirmed )
 		{
-			List<TransactionSource> sources = utxo.getSufficientSources (amount, fee, null);
+			List<TransactionSource> sources = confirmed.getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
@@ -348,7 +308,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	@Override
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException
 	{
-		synchronized ( utxo )
+		synchronized ( confirmed )
 		{
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 
@@ -357,7 +317,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			{
 				amount += a;
 			}
-			List<TransactionSource> sources = utxo.getSufficientSources (amount, fee, null);
+			List<TransactionSource> sources = confirmed.getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
@@ -383,153 +343,48 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	}
 
 	@Override
-	public Transaction transfer (byte[] receiver, long units, long fee, Color color) throws ValidationException, BCSAPIException
-	{
-		synchronized ( utxo )
-		{
-			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-
-			long amount = units * color.getUnit ();
-			List<TransactionSource> sources = utxo.getSufficientSources (amount, fee, color.getTransaction ());
-			if ( sources == null )
-			{
-				throw new ValidationException ("Insufficient holdings to transfer " + units + " of " + color.getTransaction ());
-			}
-			long in = 0;
-			long colorIn = 0;
-			for ( TransactionSource o : sources )
-			{
-				in += o.getOutput ().getValue ();
-				if ( color != null && o.getOutput ().getColor ().equals (color) )
-				{
-					colorIn += o.getOutput ().getValue ();
-				}
-			}
-			TransactionSink target = new TransactionSink (receiver, amount);
-			if ( colorIn > amount )
-			{
-				TransactionSink colorChange = new TransactionSink (getNextKey ().getAddress (), colorIn - amount);
-				if ( new SecureRandom ().nextBoolean () )
-				{
-					sinks.add (target);
-					sinks.add (colorChange);
-				}
-				else
-				{
-					sinks.add (colorChange);
-					sinks.add (target);
-				}
-			}
-			else
-			{
-				sinks.add (target);
-			}
-			sinks.add (new TransactionSink (getNextKey ().getAddress (), in - amount - fee));
-			return Transaction.createSpend (this, sources, sinks, fee);
-		}
-	}
-
-	@Override
-	public Transaction createColorGenesis (long quantity, long unitSize, long fee) throws ValidationException, BCSAPIException
-	{
-		synchronized ( utxo )
-		{
-			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-
-			List<TransactionSource> sources = utxo.getSufficientSources (quantity * unitSize, fee, null);
-			if ( sources == null )
-			{
-				throw new ValidationException ("Insufficient funds to issue color ");
-			}
-			long in = 0;
-			for ( TransactionSource o : sources )
-			{
-				in += o.getOutput ().getValue ();
-			}
-			Key issuerKey = getNextKey ();
-			TransactionSink target = new TransactionSink (issuerKey.getAddress (), quantity * unitSize);
-			TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - quantity * unitSize - fee);
-			sinks.add (target);
-			sinks.add (change);
-			return Transaction.createSpend (this, sources, sinks, fee);
-		}
-	}
-
-	@Override
-	public Transaction cashIn (ECKeyPair key, long fee) throws ValidationException, BCSAPIException
-	{
-		synchronized ( utxo )
-		{
-			// KeyFormatter formatter = new KeyFormatter (passpharse, wallet.getAddressFlag ());
-			// Key key = formatter.parseSerializedKey (serialized);
-			// String inAddress = AddressConverter.toSatoshiStyle (key.getAddress (), wallet.getAddressFlag ());
-			// List<TransactionOutput> available = utxo.getAddressSources (inAddress);
-			// if ( available.size () > 0 )
-			// {
-			// long sum = 0;
-			// List<TransactionSource> sources = new ArrayList<TransactionSource> ();
-			// for ( TransactionOutput o : available )
-			// {
-			// sources.add (new TransactionSource (o, key));
-			// sum += o.getValue ();
-			// }
-			// List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-			// // make it look like a spend
-			// long a = Math.max ((((sum - fee) - Math.abs ((new SecureRandom ().nextLong () % (sum - fee)))) / DUST) * DUST, DUST);
-			// long b = (sum - fee) - a;
-			// sinks.add (new TransactionSink (wallet.getRandomKey ().getAddress (), a));
-			// sinks.add (new TransactionSink (wallet.getRandomKey ().getAddress (), b));
-			// return Transaction.createSpend (sources, sinks, fee);
-			// }
-			throw new ValidationException ("No input available on this key");
-		}
-	}
-
-	@Override
 	public long getBalance ()
 	{
-		synchronized ( utxo )
+		synchronized ( confirmed )
 		{
-			return balance;
+			return confirmed.getTotal () + change.getTotal () + receiving.getTotal ();
 		}
-	}
-
-	public long getBalance (Color color)
-	{
-		synchronized ( utxo )
-		{
-			Long balance = colorBalances.get (color.getFungibleName ());
-			if ( balance != null )
-			{
-				return balance.longValue () / color.getUnit ();
-			}
-		}
-		return 0;
 	}
 
 	@Override
 	public long getSettled ()
 	{
-		return settled;
+		synchronized ( confirmed )
+		{
+			return confirmed.getTotal ();
+		}
 	}
 
 	@Override
 	public long getSending ()
 	{
-		return sending;
+		synchronized ( confirmed )
+		{
+			return sending.getTotal ();
+		}
 	}
 
 	@Override
 	public long getReceiving ()
 	{
-		return receiving;
+		synchronized ( confirmed )
+		{
+			return receiving.getTotal ();
+		}
 	}
 
-	public List<String> getColors ()
+	@Override
+	public long getChange ()
 	{
-		List<String> cols = new ArrayList<String> ();
-		cols.addAll (colorBalances.keySet ());
-		return cols;
+		synchronized ( confirmed )
+		{
+			return change.getTotal ();
+		}
 	}
 
 	@Override
