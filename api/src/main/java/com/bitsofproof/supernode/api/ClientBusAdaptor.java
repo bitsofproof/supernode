@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -53,8 +54,9 @@ public class ClientBusAdaptor implements BCSAPI
 	private Connection connection;
 	private Session session;
 
-	private String clientId;
+	private String clientId = UUID.randomUUID ().toString ();
 
+	private MessageProducer pingProducer;
 	private MessageProducer transactionProducer;
 	private MessageProducer blockProducer;
 	private MessageProducer blockRequestProducer;
@@ -211,6 +213,7 @@ public class ClientBusAdaptor implements BCSAPI
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 
+			pingProducer = session.createProducer (session.createTopic ("ping"));
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
 			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
@@ -238,6 +241,77 @@ public class ClientBusAdaptor implements BCSAPI
 		catch ( JMSException e )
 		{
 		}
+	}
+
+	@Override
+	public long ping (long nonce) throws BCSAPIException
+	{
+		try
+		{
+			log.trace ("ping " + nonce);
+			BytesMessage m = session.createBytesMessage ();
+			BCSAPIMessage.Ping.Builder builder = BCSAPIMessage.Ping.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.setNonce (nonce);
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (pingProducer, m);
+			if ( response != null )
+			{
+				BCSAPIMessage.Ping echo = BCSAPIMessage.Ping.parseFrom (response);
+				if ( echo.getNonce () != nonce )
+				{
+					throw new BCSAPIException ("Incorrect echo nonce from ping");
+				}
+				return echo.getNonce ();
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		return 0;
+	}
+
+	@Override
+	public void addAlertListener (final AlertListener alertListener) throws BCSAPIException
+	{
+		try
+		{
+			addTopicListener ("alert", alertListener, new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message arg0)
+				{
+					BytesMessage o = (BytesMessage) arg0;
+					try
+					{
+						byte[] body = new byte[(int) o.getBodyLength ()];
+						o.readBytes (body);
+						BCSAPIMessage.Alert alert = BCSAPIMessage.Alert.parseFrom (body);
+						alertListener.alert (alert.getAlert (), alert.getSeverity ());
+					}
+					catch ( Exception e )
+					{
+						log.error ("Alert message error", e);
+					}
+
+				}
+			});
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+	}
+
+	@Override
+	public void removeAlertListener (AlertListener listener)
+	{
+		removeTopicListener ("alert", listener);
 	}
 
 	@Override

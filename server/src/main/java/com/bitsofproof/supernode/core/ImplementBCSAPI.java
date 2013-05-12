@@ -132,6 +132,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addBloomFilterListener ();
 			addBloomScanListener ();
 			addMatchScanListener ();
+			addPingListener ();
 		}
 		catch ( JMSException e )
 		{
@@ -540,6 +541,27 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						log.error ("Can not send reply ", e1);
 					}
+				}
+			}
+		});
+	}
+
+	private void addPingListener () throws JMSException
+	{
+		addMessageListener ("ping", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					reply (o.getJMSReplyTo (), body);
+				}
+				catch ( Exception e )
+				{
+					log.error ("Exception in ping", e);
 				}
 			}
 		});

@@ -25,6 +25,25 @@ import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 public interface BCSAPI
 {
 	/**
+	 * returns nounce while doing a full roundtrip to the server
+	 * 
+	 * @param nonce
+	 * @return
+	 * @throws BCSAPIException
+	 */
+	public long ping (long nonce) throws BCSAPIException;
+
+	/**
+	 * sets the alert listener for the connections
+	 * 
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void addAlertListener (AlertListener listener) throws BCSAPIException;
+
+	public void removeAlertListener (AlertListener listener);
+
+	/**
 	 * Are we talking to production?
 	 * 
 	 * @return
