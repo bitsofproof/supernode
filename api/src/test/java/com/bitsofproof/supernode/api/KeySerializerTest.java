@@ -128,34 +128,4 @@ public class KeySerializerTest
 			assertTrue (Arrays.equals (kp.getPrivate (), kp2.getPrivate ()));
 		}
 	}
-
-	@Test
-	public void extendedKeyTest () throws ValidationException, IOException, JSONException
-	{
-		JSONArray testData = readObjectArray (ExtendedKeyTest);
-		int[] seq = new int[] { 0x80000000, 0x80000001, 0, 1 };
-		for ( int i = 0; i < testData.length (); ++i )
-		{
-			final JSONArray test = testData.getJSONArray (i);
-			ExtendedKey root = ExtendedKey.parse (test.getString (0));
-			assertTrue (root.getDepth () == 0);
-			assertTrue (root.getParent () == 0);
-			assertTrue (root.getSequence () == 0);
-			JSONArray seqs = test.getJSONArray (1);
-			for ( int j = 0; i < seqs.length (); ++i )
-			{
-				ECKeyPair kp = ECKeyPair.parseWIF (seqs.getJSONArray (j).getString (0));
-				ExtendedKey s = ExtendedKey.parse (seqs.getJSONArray (j).getString (1));
-				assertTrue (Arrays.equals (kp.getPrivate (), root.getKey (seq[j]).getPrivate ()));
-				assertTrue (s.getParent () == root.getChild (seq[j]).getFingerPrint ());
-				assertTrue (s.getDepth () == 1);
-				JSONArray subs = seqs.getJSONArray (j).getJSONArray (2);
-				for ( int k = 0; k < 4; ++k )
-				{
-					assertTrue (Arrays.equals (ECKeyPair.parseWIF (subs.getString (k)).getPrivate (), s.getKey (seq[k]).getPrivate ()));
-				}
-			}
-		}
-	}
-
 }

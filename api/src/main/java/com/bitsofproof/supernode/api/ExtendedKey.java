@@ -149,16 +149,27 @@ public class ExtendedKey
 			byte[] r = Arrays.copyOfRange (lr, 32, 64);
 
 			BigInteger m = new BigInteger (1, l);
+			if ( m.compareTo (curve.getN ()) >= 0 )
+			{
+				throw new ValidationException ("This is rather unlikely, but it did just happen");
+			}
 			if ( master.getPrivate () != null )
 			{
-				BigInteger k = m.multiply (new BigInteger (1, master.getPrivate ())).mod (curve.getN ());
+				BigInteger k = m.add (new BigInteger (1, master.getPrivate ())).mod (curve.getN ());
+				if ( k.equals (BigInteger.ZERO) )
+				{
+					throw new ValidationException ("This is rather unlikely, but it did just happen");
+				}
 				return new ExtendedKey (new ECKeyPair (k, true), r, depth, parent, sequence);
 			}
 			else
 			{
-				ECPoint q = curve.getCurve ().decodePoint (pub).multiply (m);
+				ECPoint q = curve.getG ().multiply (m).add (curve.getCurve ().decodePoint (pub));
+				if ( q.isInfinity () )
+				{
+					throw new ValidationException ("This is rather unlikely, but it did just happen");
+				}
 				pub = new ECPoint.Fp (curve.getCurve (), q.getX (), q.getY (), true).getEncoded ();
-
 				return new ExtendedKey (new ECPublicKey (pub, true), r, depth, parent, sequence);
 			}
 		}
