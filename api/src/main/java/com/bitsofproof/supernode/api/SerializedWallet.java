@@ -88,7 +88,7 @@ public class SerializedWallet implements Wallet
 					}
 					extended = ExtendedKey.parse (key.key);
 					nextSequence = key.nextSequence;
-					key.am = am = new DefaultAccountManager (name, extended, nextSequence);
+					key.am = am = new DefaultAccountManager (this, name, extended, nextSequence);
 					break;
 				}
 			}
@@ -102,13 +102,13 @@ public class SerializedWallet implements Wallet
 				wk.key = extended.serialize (production);
 				nextSequence = wk.nextSequence = 0;
 				addKey (wk);
-				wk.am = am = new DefaultAccountManager (name, extended, nextSequence);
+				wk.am = am = new DefaultAccountManager (this, name, extended, nextSequence);
 			}
 			am.setApi (api);
 			am.registerFilter ();
 			for ( Transaction t : getTransactions () )
 			{
-				am.updateWithTransaction (t);
+				am.updateWithTransaction (t, false, false);
 			}
 			final DefaultAccountManager fam = am;
 			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
@@ -116,7 +116,7 @@ public class SerializedWallet implements Wallet
 				@Override
 				public void process (Transaction t)
 				{
-					if ( fam.updateWithTransaction (t) )
+					if ( fam.updateWithTransaction (t, true, false) )
 					{
 						addTransaction (t);
 					}
@@ -229,12 +229,23 @@ public class SerializedWallet implements Wallet
 		keys.add (key);
 	}
 
+	@Override
 	public void addTransaction (Transaction t)
 	{
 		if ( !hasTransaction.contains (t.getHash ()) )
 		{
 			transactions.add (t);
 			hasTransaction.add (t.getHash ());
+		}
+		else
+		{
+			for ( Transaction s : transactions )
+			{
+				if ( s.getHash ().equals (t.getHash ()) )
+				{
+					s.setBlockHash (t.getBlockHash ());
+				}
+			}
 		}
 	}
 

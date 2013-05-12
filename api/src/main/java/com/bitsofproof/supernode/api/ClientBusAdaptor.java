@@ -913,7 +913,6 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
-	@Override
 	public void issueColor (Color color) throws BCSAPIException
 	{
 		try
@@ -941,7 +940,6 @@ public class ClientBusAdaptor implements BCSAPI
 		}
 	}
 
-	@Override
 	public Color getColor (String digest) throws BCSAPIException
 	{
 		log.trace ("get color " + digest);

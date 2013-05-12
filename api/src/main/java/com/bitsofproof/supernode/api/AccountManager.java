@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
-import java.util.List;
 
 public interface AccountManager
 {
@@ -34,6 +33,8 @@ public interface AccountManager
 
 	public int getNextSequence ();
 
+	public Collection<Transaction> getTransactions ();
+
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;
@@ -46,9 +47,11 @@ public interface AccountManager
 
 	public long getBalance ();
 
-	public long getBalance (Color color);
+	public long getSettled ();
 
-	public List<String> getColors ();
+	public long getSending ();
+
+	public long getReceiving ();
 
 	public void addAccountListener (AccountListener listener);
 

@@ -20,10 +20,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +38,19 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 
 	private BCSAPI api;
 
+	private final Wallet wallet;
+
 	private final LocalUTXO utxo = new LocalUTXO ();
 
 	private final HashMap<String, Long> colorBalances = new HashMap<String, Long> ();
 
-	private long balance = 0;
+	private long balance;
+	private long settled;
+	private long sending;
+	private long receiving;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
-	private final Set<String> processedTransaction = new HashSet<String> ();
+	private final Map<String, Transaction> processedTransaction = new HashMap<String, Transaction> ();
 
 	private final String name;
 	private final ExtendedKey extended;
@@ -59,8 +62,9 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		this.api = api;
 	}
 
-	public DefaultAccountManager (String name, ExtendedKey extended, int nextSequence) throws ValidationException
+	public DefaultAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextSequence) throws ValidationException
 	{
+		this.wallet = wallet;
 		this.name = name;
 		this.extended = extended;
 		for ( int i = 0; i < nextSequence; ++i )
@@ -138,26 +142,50 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		return extended.getKey (ix);
 	}
 
-	public boolean updateWithTransaction (Transaction t)
+	@Override
+	public Collection<Transaction> getTransactions ()
+	{
+		return Collections.unmodifiableCollection (processedTransaction.values ());
+	}
+
+	public boolean updateWithTransaction (Transaction t, boolean inBlock, boolean unwind)
 	{
 		synchronized ( utxo )
 		{
 			boolean modified = false;
-			if ( !processedTransaction.contains (t.getHash ()) )
+			if ( (!unwind && !processedTransaction.containsKey (t.getHash ())) || (unwind && processedTransaction.containsKey (t.getHash ())) )
 			{
-				processedTransaction.add (t.getHash ());
+				processedTransaction.put (t.getHash (), t);
 				for ( TransactionInput in : t.getInputs () )
 				{
 					TransactionOutput o = utxo.get (in.getSourceHash (), in.getIx ());
 					if ( o != null )
 					{
 						modified = true;
-						balance -= o.getValue ();
-						utxo.remove (in.getSourceHash (), in.getIx ());
-						if ( o.getColor () != null )
+						if ( inBlock )
 						{
-							Long balance = colorBalances.get (o.getColor ());
-							colorBalances.put (o.getColor (), balance.longValue () - o.getValue ());
+							if ( unwind )
+							{
+								settled += o.getValue ();
+							}
+							else
+							{
+								settled -= o.getValue ();
+							}
+						}
+						else
+						{
+							sending -= o.getValue ();
+						}
+						if ( !unwind )
+						{
+							balance -= o.getValue ();
+							utxo.remove (in.getSourceHash (), in.getIx ());
+							if ( o.getColor () != null )
+							{
+								Long balance = colorBalances.get (o.getColor ());
+								colorBalances.put (o.getColor (), balance.longValue () - o.getValue ());
+							}
 						}
 					}
 				}
@@ -168,19 +196,37 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 					if ( address != null && getKeyForAddress (address) != null )
 					{
 						modified = true;
-						balance += o.getValue ();
-						utxo.add (t.getHash (), ix, o);
-						filter.addOutpoint (t.getHash (), ix);
-						if ( o.getColor () != null )
+						if ( inBlock )
 						{
-							Long balance = colorBalances.get (o.getColor ());
-							if ( balance != null )
+							if ( unwind )
 							{
-								colorBalances.put (o.getColor (), balance.longValue () + o.getValue ());
+								settled -= o.getValue ();
 							}
 							else
 							{
-								colorBalances.put (o.getColor (), o.getValue ());
+								settled += o.getValue ();
+							}
+						}
+						else
+						{
+							sending += o.getValue ();
+						}
+						if ( !unwind )
+						{
+							balance += o.getValue ();
+							utxo.add (t.getHash (), ix, o);
+							filter.addOutpoint (t.getHash (), ix);
+							if ( o.getColor () != null )
+							{
+								Long balance = colorBalances.get (o.getColor ());
+								if ( balance != null )
+								{
+									colorBalances.put (o.getColor (), balance.longValue () + o.getValue ());
+								}
+								else
+								{
+									colorBalances.put (o.getColor (), o.getValue ());
+								}
 							}
 						}
 					}
@@ -189,6 +235,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			}
 			if ( modified )
 			{
+				wallet.addTransaction (t);
 				log.trace ("Updated account " + name + " with " + t.getHash () + " balance " + balance);
 			}
 
@@ -199,29 +246,50 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	@Override
 	public void trunkUpdate (List<Block> removed, List<Block> added)
 	{
-		if ( added != null )
+		List<Transaction> newTransactions = new ArrayList<Transaction> ();
+		synchronized ( utxo )
 		{
-			boolean modified = false;
-			for ( Block b : added )
+			if ( removed != null )
 			{
-				for ( Transaction t : b.getTransactions () )
+				for ( Block b : removed )
 				{
-					modified |= updateWithTransaction (t);
+					for ( Transaction t : b.getTransactions () )
+					{
+						if ( updateWithTransaction (t, true, true) )
+						{
+							t.setBlockHash (null);
+							newTransactions.add (t);
+						}
+					}
 				}
 			}
-			if ( modified )
+			if ( added != null )
 			{
-				notifyListener ();
+				for ( Block b : added )
+				{
+					for ( Transaction t : b.getTransactions () )
+					{
+						if ( updateWithTransaction (t, true, false) )
+						{
+							t.setBlockHash (b.getHash ());
+							newTransactions.add (t);
+						}
+					}
+				}
 			}
+		}
+		for ( Transaction t : newTransactions )
+		{
+			notifyListener (t);
 		}
 	}
 
 	@Override
 	public void process (Transaction t)
 	{
-		if ( updateWithTransaction (t) )
+		if ( updateWithTransaction (t, false, false) )
 		{
-			notifyListener ();
+			notifyListener (t);
 		}
 	}
 
@@ -414,7 +482,6 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		}
 	}
 
-	@Override
 	public long getBalance (Color color)
 	{
 		synchronized ( utxo )
@@ -429,6 +496,23 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	}
 
 	@Override
+	public long getSettled ()
+	{
+		return settled;
+	}
+
+	@Override
+	public long getSending ()
+	{
+		return sending;
+	}
+
+	@Override
+	public long getReceiving ()
+	{
+		return receiving;
+	}
+
 	public List<String> getColors ()
 	{
 		List<String> cols = new ArrayList<String> ();
@@ -448,7 +532,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		accountListener.remove (listener);
 	}
 
-	private void notifyListener ()
+	private void notifyListener (Transaction t)
 	{
 		synchronized ( accountListener )
 		{
@@ -456,7 +540,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			{
 				try
 				{
-					l.accountChanged (this);
+					l.accountChanged (this, t);
 				}
 				catch ( Exception e )
 				{

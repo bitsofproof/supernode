@@ -163,22 +163,6 @@ public interface BCSAPI
 	public void removeFilteredListener (BloomFilter filter, TransactionListener listener);
 
 	/**
-	 * Issue a color
-	 * 
-	 * @param color
-	 */
-	public void issueColor (Color color) throws BCSAPIException;
-
-	/**
-	 * retrieve color definition
-	 * 
-	 * @param digest
-	 * @return
-	 * @throws BCSAPIException
-	 */
-	public Color getColor (String digest) throws BCSAPIException;
-
-	/**
 	 * retrieve or create a wallet
 	 * 
 	 * @param name

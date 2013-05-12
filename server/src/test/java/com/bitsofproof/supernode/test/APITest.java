@@ -41,9 +41,7 @@ import com.bitsofproof.supernode.api.AccountManager;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.Key;
 import com.bitsofproof.supernode.api.SerializedWallet;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
@@ -85,7 +83,7 @@ public class APITest
 		}
 
 		@Override
-		public void accountChanged (AccountManager account)
+		public void accountChanged (AccountManager account, Transaction t)
 		{
 			assertTrue (account.getName ().equals (name));
 			ready.release ();
@@ -277,34 +275,6 @@ public class APITest
 		aliceMonitor.expectUpdates (1);
 		validationMonitor.expectTransactionValidations (1);
 		assertTrue (alice.getBalance () == aliceStartingBalance - FEE);
-	}
-
-	@Test
-	public void createColor () throws BCSAPIException, ValidationException
-	{
-		long aliceStartingBalance = alice.getBalance ();
-		Transaction genesis = alice.createColorGenesis (10, COIN, FEE);
-		api.sendTransaction (genesis);
-		aliceMonitor.expectUpdates (1);
-		validationMonitor.expectTransactionValidations (1);
-		assertTrue (alice.getBalance () == aliceStartingBalance - FEE);
-
-		Block block = createBlock (blocks.get (11).getHash (), Transaction.createCoinbase (alice.getNextKey (), COIN, 12));
-		block.setCreateTime (block.getCreateTime () + 11 * 1000); // avoid clash of timestamp with median
-		block.getTransactions ().addAll (validationMonitor.getUnconfirmed ());
-		mineBlock (block);
-		blocks.put (12, block);
-		api.sendBlock (block);
-
-		Color color = new Color ();
-		color.setTransaction (genesis.getHash ());
-		color.setTerms ("I will deliver you blue");
-		color.setUnit (COIN);
-		Key key = alice.getKeyForAddress (genesis.getOutputs ().get (0).getOutputAddress ());
-		color.setPubkey (key.getPublic ());
-		color.sign (key);
-		api.issueColor (color);
-		assertTrue (api.getColor (color.getFungibleName ()).getFungibleName ().equals (color.getFungibleName ()));
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)
