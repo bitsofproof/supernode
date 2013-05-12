@@ -557,6 +557,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				try
 				{
 					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
 					reply (o.getJMSReplyTo (), body);
 				}
 				catch ( Exception e )
