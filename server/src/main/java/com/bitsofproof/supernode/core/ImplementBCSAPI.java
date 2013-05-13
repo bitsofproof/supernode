@@ -105,9 +105,16 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addMessageListener (String topic, MessageListener listener) throws JMSException
+	private void addTopicListener (String topic, MessageListener listener) throws JMSException
 	{
 		Destination destination = session.createTopic (topic);
+		MessageConsumer consumer = session.createConsumer (destination);
+		consumer.setMessageListener (listener);
+	}
+
+	private void addQueueListener (String queue, MessageListener listener) throws JMSException
+	{
+		Destination destination = session.createQueue (queue);
 		MessageConsumer consumer = session.createConsumer (destination);
 		consumer.setMessageListener (listener);
 	}
@@ -127,8 +134,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addBlockrequestListener ();
 			addBlockHeaderRequestListener ();
 			addTransactionRequestListener ();
-			addColorRequestListener ();
-			addNewColorListener ();
 			addBloomFilterListener ();
 			addBloomScanListener ();
 			addMatchScanListener ();
@@ -142,7 +147,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBloomFilterListener () throws JMSException
 	{
-		addMessageListener ("filterRequest", new MessageListener ()
+		addQueueListener ("filterRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
@@ -183,7 +188,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBloomScanListener () throws JMSException
 	{
-		addMessageListener ("scanRequest", new MessageListener ()
+		addQueueListener ("scanRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
@@ -263,7 +268,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addMatchScanListener () throws JMSException
 	{
-		addMessageListener ("matchRequest", new MessageListener ()
+		addQueueListener ("matchRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
@@ -345,7 +350,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addNewColorListener () throws JMSException
 	{
-		addMessageListener ("newColor", new MessageListener ()
+		addTopicListener ("newColor", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -387,7 +392,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addColorRequestListener () throws JMSException
 	{
-		addMessageListener ("colorRequest", new MessageListener ()
+		addTopicListener ("colorRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message message)
@@ -418,7 +423,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addTransactionRequestListener () throws JMSException
 	{
-		addMessageListener ("transactionRequest", new MessageListener ()
+		addQueueListener ("transactionRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -449,7 +454,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBlockrequestListener () throws JMSException
 	{
-		addMessageListener ("blockRequest", new MessageListener ()
+		addQueueListener ("blockRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -481,7 +486,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBlockHeaderRequestListener () throws JMSException
 	{
-		addMessageListener ("headerRequest", new MessageListener ()
+		addQueueListener ("headerRequest", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -513,7 +518,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addNewBlockListener () throws JMSException
 	{
-		addMessageListener ("newBlock", new MessageListener ()
+		addTopicListener ("newBlock", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -548,7 +553,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addPingListener () throws JMSException
 	{
-		addMessageListener ("ping", new MessageListener ()
+		addQueueListener ("ping", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -570,7 +575,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addNewTransactionListener () throws JMSException
 	{
-		addMessageListener ("newTransaction", new MessageListener ()
+		addTopicListener ("newTransaction", new MessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)

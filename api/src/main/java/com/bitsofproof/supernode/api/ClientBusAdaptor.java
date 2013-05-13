@@ -216,14 +216,12 @@ public class ClientBusAdaptor implements BCSAPI
 			pingProducer = session.createProducer (session.createTopic ("ping"));
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
-			blockRequestProducer = session.createProducer (session.createTopic ("blockRequest"));
-			blockHeaderRequestProducer = session.createProducer (session.createTopic ("headerRequest"));
-			transactionRequestProducer = session.createProducer (session.createTopic ("transactionRequest"));
-			colorProducer = session.createProducer (session.createTopic ("newColor"));
-			colorRequestProducer = session.createProducer (session.createTopic ("colorRequest"));
-			filterRequestProducer = session.createProducer (session.createTopic ("filterRequest"));
-			scanRequestProducer = session.createProducer (session.createTopic ("scanRequest"));
-			exactMatchProducer = session.createProducer (session.createTopic ("matchRequest"));
+			blockRequestProducer = session.createProducer (session.createQueue ("blockRequest"));
+			blockHeaderRequestProducer = session.createProducer (session.createQueue ("headerRequest"));
+			transactionRequestProducer = session.createProducer (session.createQueue ("transactionRequest"));
+			filterRequestProducer = session.createProducer (session.createQueue ("filterRequest"));
+			scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
+			exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
 		}
 		catch ( Exception e )
 		{
