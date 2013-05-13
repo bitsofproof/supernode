@@ -213,9 +213,9 @@ public class ClientBusAdaptor implements BCSAPI
 			connection.start ();
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 
-			pingProducer = session.createProducer (session.createTopic ("ping"));
 			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
 			blockProducer = session.createProducer (session.createTopic ("newBlock"));
+			pingProducer = session.createProducer (session.createQueue ("ping"));
 			blockRequestProducer = session.createProducer (session.createQueue ("blockRequest"));
 			blockHeaderRequestProducer = session.createProducer (session.createQueue ("headerRequest"));
 			transactionRequestProducer = session.createProducer (session.createQueue ("transactionRequest"));
