@@ -1,8 +1,8 @@
 INTRODUCTION
 
-Welcome to bits of proof zrt.'s implementation of the Bitcoin protocol.
+Welcome to the Bits of Proof implementation of the Bitcoin protocol.
 
-bits of proof is a modern, modular, enterprise implementation of the Bitcoin protocol targeted to merchants and system integrators.
+This is a modern, modular, enterprise implementation of the Bitcoin protocol targeted to developer of Bitcoin applications and system integrators.
 
 The server process handles peer-to-peer communication, protocol validation and block chain store. The data store can be configured to use a relational database or LevelDB.
 
@@ -16,21 +16,19 @@ Adapters are available for server trusting mobile clients (BCCAPI) and REST API 
 
 STATUS
 
-This is beta quality software, it already passed lots of testing and run months in parallel with the network.
+The implementation passed lots of testing and run months in parallel with the network. It is community reviewed, see: https://bitcointalk.org/index.php?topic=122013.0
 
-SUPPORT
+SUPPORT AND HOSTING
 
-http://bitsofproof.com
-
-bits of proof zrt. offers custom extensions commercial support and services for this implementation.
+Bits of Proof offers commercial support and hosts BOP Enterprise Bitcoin Servicer instances that run this open source code. BOP servers offer the fastest time to market for your Bitcoin application development. Visit http://bitsofproof.com for more details. 
 
 LICENCE
 
 Apache License, Version 2.0. See LICENSE file.
 
 DONATIONS
-In case you do not require professional services of bits of proof zrt., but would like to honor its contribution to the community, please donate to:
+In case you do not require professional services of Bits of Proof, but would like to honor its contribution to the community, please donate to:
 
 1EuamejAs2Lcz1ZPNrEhLsFTLnEY29BYKU
 
-Donations will finance social events of bits of proof developer.
+Donations will finance social events of Bits of Proof developer.
