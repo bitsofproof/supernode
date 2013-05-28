@@ -108,7 +108,7 @@ public class ExtendedKey
 	public ExtendedKey getChild (int sequence) throws ValidationException
 	{
 		ExtendedKey sub = generateKey (sequence);
-		return new ExtendedKey (sub.getMaster (), sub.getChainCode (), sub.getDepth () + 1, sub.getFingerPrint (), 0);
+		return new ExtendedKey (sub.getMaster (), sub.getChainCode (), sub.getDepth () + 1, getFingerPrint (), sequence);
 	}
 
 	private ExtendedKey generateKey (int sequence) throws ValidationException
@@ -129,9 +129,9 @@ public class ExtendedKey
 			{
 				extended = new byte[pub.length + 4];
 				System.arraycopy (pub, 0, extended, 0, pub.length);
-				extended[pub.length] = (byte) ((sequence >> 24) & 0xff);
-				extended[pub.length + 1] = (byte) ((sequence >> 16) & 0xff);
-				extended[pub.length + 2] = (byte) ((sequence >> 8) & 0xff);
+				extended[pub.length] = (byte) ((sequence >>> 24) & 0xff);
+				extended[pub.length + 1] = (byte) ((sequence >>> 16) & 0xff);
+				extended[pub.length + 2] = (byte) ((sequence >>> 8) & 0xff);
 				extended[pub.length + 3] = (byte) (sequence & 0xff);
 			}
 			else
@@ -139,9 +139,9 @@ public class ExtendedKey
 				byte[] priv = master.getPrivate ();
 				extended = new byte[priv.length + 5];
 				System.arraycopy (priv, 0, extended, 1, priv.length);
-				extended[priv.length + 1] = (byte) ((sequence >> 24) & 0xff);
-				extended[priv.length + 2] = (byte) ((sequence >> 16) & 0xff);
-				extended[priv.length + 3] = (byte) ((sequence >> 8) & 0xff);
+				extended[priv.length + 1] = (byte) ((sequence >>> 24) & 0xff);
+				extended[priv.length + 2] = (byte) ((sequence >>> 16) & 0xff);
+				extended[priv.length + 3] = (byte) ((sequence >>> 8) & 0xff);
 				extended[priv.length + 4] = (byte) (sequence & 0xff);
 			}
 			byte[] lr = mac.doFinal (extended);

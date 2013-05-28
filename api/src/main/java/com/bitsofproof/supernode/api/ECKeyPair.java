@@ -127,7 +127,7 @@ public class ECKeyPair implements Key
 		{
 			throw new ValidationException ("Invalid private key");
 		}
-		this.priv = new BigInteger (1, p);
+		this.priv = new BigInteger (1, p).mod (curve.getN ());
 		this.compressed = compressed;
 		if ( compressed )
 		{

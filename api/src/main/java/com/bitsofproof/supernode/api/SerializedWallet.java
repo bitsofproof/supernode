@@ -56,6 +56,8 @@ public class SerializedWallet implements Wallet
 	private String fileName;
 	private long timeStamp;
 	private boolean production;
+	private SecretKeySpec keyspec = null;
+	private final byte[] iv = new byte[16];
 
 	private BCSAPI api;
 
@@ -288,11 +290,14 @@ public class SerializedWallet implements Wallet
 		try
 		{
 			output.write (MAGIC.getBytes ("US-ASCII"));
-			byte[] iv = new byte[16];
-			rnd.nextBytes (iv);
-			output.write (iv);
-			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), iv, 16384, 8, 8, 32);
-			SecretKeySpec keyspec = new SecretKeySpec (derived, "AES");
+			if ( keyspec == null || !passphrase.equals (this.passphrase) )
+			{
+				this.passphrase = passphrase;
+				rnd.nextBytes (iv);
+				output.write (iv);
+				byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), iv, 16384, 8, 8, 32);
+				keyspec = new SecretKeySpec (derived, "AES");
+			}
 			Cipher cipher = Cipher.getInstance ("AES/CBC/PKCS5Padding", "BC");
 			cipher.init (Cipher.ENCRYPT_MODE, keyspec, new IvParameterSpec (iv));
 			CipherOutputStream cip = new CipherOutputStream (output, cipher);
@@ -372,12 +377,11 @@ public class SerializedWallet implements Wallet
 			{
 				throw new ValidationException ("Not a wallet");
 			}
-			byte[] iv = new byte[16];
-			input.read (iv);
-			derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), iv, 16384, 8, 8, 32);
-			SecretKeySpec keyspec = new SecretKeySpec (derived, "AES");
+			input.read (wallet.iv);
+			derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), wallet.iv, 16384, 8, 8, 32);
+			wallet.keyspec = new SecretKeySpec (derived, "AES");
 			Cipher cipher = Cipher.getInstance ("AES/CBC/PKCS5Padding", "BC");
-			cipher.init (Cipher.DECRYPT_MODE, keyspec, new IvParameterSpec (iv));
+			cipher.init (Cipher.DECRYPT_MODE, wallet.keyspec, new IvParameterSpec (wallet.iv));
 
 			CipherInputStream cis = new CipherInputStream (input, cipher);
 			GZIPInputStream unzip = new GZIPInputStream (cis);
@@ -392,6 +396,10 @@ public class SerializedWallet implements Wallet
 				if ( production && !key.key.startsWith ("x") )
 				{
 					throw new ValidationException ("Expected production keys");
+				}
+				if ( !production && !key.key.startsWith ("t") )
+				{
+					throw new ValidationException ("Expected test keys");
 				}
 				key.nextSequence = k.getNextSequence ();
 				if ( k.hasName () )
