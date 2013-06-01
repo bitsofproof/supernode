@@ -47,11 +47,15 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.crypto.generators.SCrypt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 
 public class SerializedWallet implements Wallet
 {
+	private static final Logger log = LoggerFactory.getLogger (SerializedWallet.class);
+
 	private String passphrase;
 	private String fileName;
 	private long timeStamp;
@@ -126,7 +130,13 @@ public class SerializedWallet implements Wallet
 				transactions.clear ();
 			}
 			final DefaultAccountManager fam = am;
-			api.scanTransactions (am.getAddresses (), UpdateMode.all, getTimeStamp (), new TransactionListener ()
+			long ts = getTimeStamp ();
+			if ( ts > 0 )
+			{
+				// go back a day to ensure possible re-orgs are included.
+				ts -= 60 * 60 * 24;
+			}
+			api.scanTransactions (am.getAddresses (), UpdateMode.all, ts, new TransactionListener ()
 			{
 				@Override
 				public void process (Transaction t)
@@ -134,6 +144,22 @@ public class SerializedWallet implements Wallet
 					if ( fam.updateWithTransaction (t) )
 					{
 						addTransaction (t);
+					}
+				}
+			});
+			persist ();
+			am.addAccountListener (new AccountListener ()
+			{
+				@Override
+				public void accountChanged (AccountManager account, Transaction t)
+				{
+					try
+					{
+						persist ();
+					}
+					catch ( BCSAPIException e )
+					{
+						log.error ("Failed to persist wallet", e);
 					}
 				}
 			});
@@ -209,7 +235,7 @@ public class SerializedWallet implements Wallet
 				out.close ();
 				f.delete ();
 				tmp.renameTo (f);
-				timeStamp = f.lastModified ();
+				timeStamp = f.lastModified () / 1000;
 			}
 		}
 		catch ( IOException e )
