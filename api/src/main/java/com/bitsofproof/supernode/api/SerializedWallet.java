@@ -294,10 +294,10 @@ public class SerializedWallet implements Wallet
 			{
 				this.passphrase = passphrase;
 				rnd.nextBytes (iv);
-				output.write (iv);
 				byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), iv, 16384, 8, 8, 32);
 				keyspec = new SecretKeySpec (derived, "AES");
 			}
+			output.write (iv);
 			Cipher cipher = Cipher.getInstance ("AES/CBC/PKCS5Padding", "BC");
 			cipher.init (Cipher.ENCRYPT_MODE, keyspec, new IvParameterSpec (iv));
 			CipherOutputStream cip = new CipherOutputStream (output, cipher);
