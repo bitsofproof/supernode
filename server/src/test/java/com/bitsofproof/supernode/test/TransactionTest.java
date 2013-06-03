@@ -34,10 +34,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.core.ScriptEvaluation;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;

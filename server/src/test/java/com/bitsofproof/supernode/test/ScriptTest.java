@@ -25,8 +25,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.core.ScriptEvaluation;
 
 public class ScriptTest

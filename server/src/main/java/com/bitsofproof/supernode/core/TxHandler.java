@@ -31,10 +31,10 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.api.ByteVector;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;

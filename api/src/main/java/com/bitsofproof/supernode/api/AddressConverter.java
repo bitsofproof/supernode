@@ -15,6 +15,10 @@
  */
 package com.bitsofproof.supernode.api;
 
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+
 public class AddressConverter
 {
 	public static byte[] fromSatoshiStyle (String s, int addressFlag) throws ValidationException

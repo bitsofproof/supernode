@@ -27,9 +27,9 @@ import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.Table;
 
-import com.bitsofproof.supernode.api.ECKeyPair;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.WireFormat;
 
 @Entity
 @Table (name = "color")

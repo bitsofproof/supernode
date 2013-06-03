@@ -17,8 +17,8 @@ package com.bitsofproof.supernode.messages;
 
 import java.security.SecureRandom;
 
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
 public class PingMessage extends BitcoinPeer.Message

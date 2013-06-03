@@ -13,21 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.common;
 
-public interface Key extends Cloneable
+import java.util.Arrays;
+
+public class ByteVector
 {
-	public byte[] getPrivate ();
+	private final byte[] bytes;
 
-	public byte[] getPublic ();
+	public ByteVector (byte[] a)
+	{
+		bytes = a;
+	}
 
-	public byte[] getAddress ();
+	@Override
+	public boolean equals (Object obj)
+	{
+		ByteVector other = (ByteVector) obj;
+		return Arrays.equals (bytes, other.bytes);
+	}
 
-	public boolean isCompressed ();
+	@Override
+	public int hashCode ()
+	{
+		return Arrays.hashCode (bytes);
+	}
 
-	public Key clone () throws CloneNotSupportedException;
-
-	public byte[] sign (byte[] data) throws ValidationException;
-
-	public boolean verify (byte[] data, byte[] signature);
+	public byte[] toByteArray ()
+	{
+		return bytes;
+	}
 }

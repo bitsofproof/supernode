@@ -50,7 +50,8 @@ import org.bouncycastle.crypto.generators.SCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 public class SerializedWallet implements Wallet
 {

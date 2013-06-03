@@ -29,6 +29,10 @@ import org.json.JSONException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+
 public class KeySerializerTest
 {
 	@BeforeClass

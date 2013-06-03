@@ -30,10 +30,10 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.ColorStore;
 import com.bitsofproof.supernode.core.Discovery;

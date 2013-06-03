@@ -17,10 +17,10 @@ package com.bitsofproof.supernode.messages;
 
 import java.io.UnsupportedEncodingException;
 
-import com.bitsofproof.supernode.api.ECKeyPair;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
 public class AlertMessage extends BitcoinPeer.Message

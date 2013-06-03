@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;

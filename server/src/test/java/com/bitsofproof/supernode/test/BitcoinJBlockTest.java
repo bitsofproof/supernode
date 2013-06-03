@@ -33,7 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.core.BlockStore;
 import com.bitsofproof.supernode.core.BlocktesterChain;
 import com.bitsofproof.supernode.model.Blk;

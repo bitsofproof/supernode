@@ -36,9 +36,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.core.CachedBlockStore;
 import com.bitsofproof.supernode.core.ColorStore;
 import com.bitsofproof.supernode.core.Discovery;

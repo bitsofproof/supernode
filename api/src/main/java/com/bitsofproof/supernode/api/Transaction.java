@@ -23,7 +23,13 @@ import java.util.List;
 
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.api.ScriptFormat.Opcode;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.google.protobuf.ByteString;
 
 public class Transaction implements Serializable, Cloneable

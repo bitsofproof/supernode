@@ -13,24 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.common;
 
-public class ValidationException extends Exception
+import java.util.List;
+
+public abstract class BinaryAggregator<T>
 {
-	private static final long serialVersionUID = 1L;
+	public abstract T merge (T a, T b);
 
-	public ValidationException (Throwable cause)
+	public T aggregate (List<T> list)
 	{
-		super (cause);
-	}
-
-	public ValidationException (String message, Throwable cause)
-	{
-		super (message, cause);
-	}
-
-	public ValidationException (String message)
-	{
-		super (message);
+		int offset = 0;
+		for ( int size = list.size (); size > 1; size = (size + 1) / 2 )
+		{
+			for ( int left = 0; left < size; left += 2 )
+			{
+				int right = Math.min (left + 1, size - 1);
+				T a = list.get (offset + left);
+				T b = list.get (offset + right);
+				list.add (merge (a, b));
+			}
+			offset += size;
+		}
+		return list.get (list.size () - 1);
 	}
 }

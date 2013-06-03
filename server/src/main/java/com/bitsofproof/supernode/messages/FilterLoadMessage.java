@@ -15,9 +15,9 @@
  */
 package com.bitsofproof.supernode.messages;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
 public class FilterLoadMessage extends BitcoinPeer.Message

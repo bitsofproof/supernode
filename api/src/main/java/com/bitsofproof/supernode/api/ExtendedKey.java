@@ -32,6 +32,13 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.ECPublicKey;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+
+
 /**
  * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032
  */

@@ -18,6 +18,11 @@ package com.bitsofproof.supernode.api;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 
 public class Color

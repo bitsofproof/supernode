@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.common;
 
 import java.security.SecureRandom;
 
 import org.bouncycastle.util.Arrays;
+
+import com.bitsofproof.supernode.api.AddressConverter;
 
 public class BloomFilter
 {

@@ -31,11 +31,11 @@ import javax.persistence.Table;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 
 @Entity
 @Table (name = "txin")

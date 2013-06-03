@@ -17,6 +17,10 @@ package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
 
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+
 public interface AccountManager
 {
 	public BloomFilter getFilter ();

@@ -17,7 +17,8 @@ package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
 
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 /**
  * This is the API extensions to the bitsofproof supernode should build on

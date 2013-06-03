@@ -35,11 +35,11 @@ import javax.persistence.Table;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bitsofproof.supernode.api.BinaryAggregator;
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.BinaryAggregator;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 

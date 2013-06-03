@@ -23,7 +23,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 @Entity

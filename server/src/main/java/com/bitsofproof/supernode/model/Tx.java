@@ -34,15 +34,15 @@ import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.ByteVector;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ScriptFormat;
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 

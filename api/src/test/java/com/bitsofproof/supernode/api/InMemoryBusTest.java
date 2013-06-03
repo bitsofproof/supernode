@@ -32,6 +32,8 @@ import javax.jms.Session;
 
 import org.junit.Test;
 
+import com.bitsofproof.supernode.common.InMemoryBusConnectionFactory;
+
 public class InMemoryBusTest
 {
 	private final Semaphore ready = new Semaphore (0);

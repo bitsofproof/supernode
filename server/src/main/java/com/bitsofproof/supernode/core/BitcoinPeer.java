@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.ValidationException;
-import com.bitsofproof.supernode.api.WireFormat;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.messages.AddrMessage;
 import com.bitsofproof.supernode.messages.AlertMessage;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;

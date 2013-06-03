@@ -32,6 +32,12 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.crypto.generators.SCrypt;
 
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+
 /**
  * Key serializer following BIP38 https://en.bitcoin.it/wiki/BIP_0038 and WIF https://en.bitcoin.it/wiki/Wallet_import_format
  */

@@ -29,7 +29,7 @@ import org.iq80.leveldb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.ByteUtils;
+import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.model.OrderedMapStoreKey.KeyType;
 
 public class LvlDiskStore implements OrderedMapStore

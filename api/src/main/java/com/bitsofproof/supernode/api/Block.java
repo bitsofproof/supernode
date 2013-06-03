@@ -21,6 +21,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.bitsofproof.supernode.common.BinaryAggregator;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 
 public class Block implements Serializable, Cloneable

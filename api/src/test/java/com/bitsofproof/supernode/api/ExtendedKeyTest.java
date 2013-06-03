@@ -29,6 +29,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.common.ECKeyPair;
+import com.bitsofproof.supernode.common.ECPublicKey;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+
 public class ExtendedKeyTest
 {
 	private final SecureRandom random = new SecureRandom ();

@@ -9,7 +9,7 @@
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
 
 	<bean id="embeddedBus"
-		class="com.bitsofproof.supernode.api.InMemoryBusConnectionFactory" />
+		class="com.bitsofproof.supernode.common.InMemoryBusConnectionFactory" />
 
 	<bean id="chain" class="com.bitsofproof.supernode.core.UnitTestChain"/>
 	

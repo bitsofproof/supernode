@@ -24,8 +24,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ValidationException;
 
 /**
  * These are the unit tests from bitcoind that are supported with test data in json format

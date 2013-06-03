@@ -21,12 +21,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.bitsofproof.supernode.api.BinaryAggregator;
-import com.bitsofproof.supernode.api.BloomFilter;
-import com.bitsofproof.supernode.api.ByteUtils;
-import com.bitsofproof.supernode.api.Hash;
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.BinaryAggregator;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;

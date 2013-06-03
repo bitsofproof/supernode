@@ -28,9 +28,13 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 class DefaultAccountManager implements TransactionListener, TrunkListener, AccountManager
 {

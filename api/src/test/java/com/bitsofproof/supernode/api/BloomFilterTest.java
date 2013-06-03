@@ -23,7 +23,8 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 public class BloomFilterTest
 {

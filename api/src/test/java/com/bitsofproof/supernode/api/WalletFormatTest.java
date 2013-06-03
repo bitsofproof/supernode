@@ -26,7 +26,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.ScriptFormat.Token;
+import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.common.ScriptFormat.Token;
 
 public class WalletFormatTest
 {

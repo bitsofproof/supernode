@@ -21,7 +21,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.Hash;
+import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetBlocksMessage;
 import com.bitsofproof.supernode.messages.InvMessage;

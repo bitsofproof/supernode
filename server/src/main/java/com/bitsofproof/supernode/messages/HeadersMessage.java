@@ -18,8 +18,8 @@ package com.bitsofproof.supernode.messages;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
 public class HeadersMessage extends BitcoinPeer.Message

@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
 
+import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 
 public class TransactionInput implements Serializable, Cloneable

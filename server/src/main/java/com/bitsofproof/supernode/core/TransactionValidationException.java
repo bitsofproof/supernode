@@ -15,7 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
-import com.bitsofproof.supernode.api.ValidationException;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.model.Tx;
 
 public class TransactionValidationException extends ValidationException

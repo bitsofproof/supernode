@@ -18,9 +18,9 @@ package com.bitsofproof.supernode.messages;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import com.bitsofproof.supernode.api.WireFormat;
-import com.bitsofproof.supernode.api.WireFormat.Reader;
-import com.bitsofproof.supernode.api.WireFormat.Writer;
+import com.bitsofproof.supernode.common.WireFormat;
+import com.bitsofproof.supernode.common.WireFormat.Reader;
+import com.bitsofproof.supernode.common.WireFormat.Writer;
 import com.bitsofproof.supernode.core.BitcoinPeer;
 
 public class VersionMessage extends BitcoinPeer.Message
