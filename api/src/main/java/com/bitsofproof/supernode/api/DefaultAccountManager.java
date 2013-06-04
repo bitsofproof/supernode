@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 class DefaultAccountManager implements TransactionListener, TrunkListener, AccountManager
 {
@@ -48,8 +48,6 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final LocalUTXO change = new LocalUTXO ();
 	private final LocalUTXO receiving = new LocalUTXO ();
 	private final LocalUTXO sending = new LocalUTXO ();
-
-	private long balance;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> processedTransaction = new HashMap<String, Transaction> ();
@@ -229,7 +227,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 			if ( modified )
 			{
 				wallet.addTransaction (t);
-				log.trace ("Updated account " + name + " with " + t.getHash () + " balance " + balance);
+				log.trace ("Updated account " + name + " with " + t.getHash ());
 			}
 
 			return modified;

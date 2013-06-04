@@ -26,6 +26,10 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.AddressConverter;
+import com.bitsofproof.supernode.api.ExtendedKey;
+import com.bitsofproof.supernode.api.SerializedWallet;
+import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;

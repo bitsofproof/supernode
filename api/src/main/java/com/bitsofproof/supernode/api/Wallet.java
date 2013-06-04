@@ -1,5 +1,6 @@
 package com.bitsofproof.supernode.api;
 
+
 public interface Wallet
 {
 

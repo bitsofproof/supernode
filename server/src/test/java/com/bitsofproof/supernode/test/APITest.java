@@ -45,6 +45,7 @@ import com.bitsofproof.supernode.api.SerializedWallet;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TrunkListener;
+import com.bitsofproof.supernode.api.Wallet;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.core.BlockStore;
@@ -68,7 +69,7 @@ public class APITest
 	private static final long FEE = COIN / 1000L;
 	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
 
-	private static SerializedWallet wallet;
+	private static Wallet wallet;
 	private static AccountManager alice;
 	private static AccountManager bob;
 
@@ -203,7 +204,7 @@ public class APITest
 		store.resetStore (chain);
 		store.cache (chain, 0);
 		wallet = new SerializedWallet ();
-		wallet.setApi (api);
+		((SerializedWallet) wallet).setApi (api);
 		alice = wallet.getAccountManager ("Alice");
 		bob = wallet.getAccountManager ("Bob");
 

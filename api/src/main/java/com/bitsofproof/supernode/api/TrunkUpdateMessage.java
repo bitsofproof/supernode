@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class TrunkUpdateMessage implements Serializable
 {
 	private static final long serialVersionUID = 6012842751107958147L;

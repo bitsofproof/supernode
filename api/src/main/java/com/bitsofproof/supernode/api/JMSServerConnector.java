@@ -43,14 +43,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.common.BloomFilter;
-import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.Hash;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-public class ClientBusAdaptor implements BCSAPI
+public class JMSServerConnector implements BCSAPI
 {
-	private static final Logger log = LoggerFactory.getLogger (ClientBusAdaptor.class);
+	private static final Logger log = LoggerFactory.getLogger (JMSServerConnector.class);
 
 	private ConnectionFactory connectionFactory;
 	private Connection connection;
@@ -968,14 +968,6 @@ public class ClientBusAdaptor implements BCSAPI
 			throw new BCSAPIException (e);
 		}
 		return null;
-	}
-
-	@Override
-	public Wallet getWallet (String fileName, String passphrase) throws BCSAPIException
-	{
-		SerializedWallet wallet = SerializedWallet.read (fileName, passphrase, isProduction ());
-		wallet.setApi (this);
-		return wallet;
 	}
 
 }
