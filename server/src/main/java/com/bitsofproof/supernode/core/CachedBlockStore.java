@@ -46,14 +46,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.ColorRules;
 import com.bitsofproof.supernode.api.ColorRules.ColoredCoin;
 import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
 import com.bitsofproof.supernode.model.StoredColor;
@@ -409,6 +409,12 @@ public abstract class CachedBlockStore implements BlockStore
 			lock.readLock ().unlock ();
 		}
 
+		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
+		for ( ByteVector b : matchSet )
+		{
+			hashes.put (b, BloomFilter.precomputeHashes (b.toByteArray (), 0));
+		}
+
 		for ( CachedBlock cb : blocks )
 		{
 			if ( matchSet.size () > MAX_MATCH_SET )
@@ -419,7 +425,7 @@ public abstract class CachedBlockStore implements BlockStore
 			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
 			for ( ByteVector v : matchSet )
 			{
-				if ( filter.contains (v.toByteArray ()) )
+				if ( filter.contains (hashes.get (v)) )
 				{
 					found = true;
 					break;

@@ -16,6 +16,9 @@
 package com.bitsofproof.supernode.common;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import org.bouncycastle.util.Arrays;
 
@@ -105,7 +108,7 @@ public class BloomFilter
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			setBit (murmurhash3bit (i, data));
+			setBit (murmurhash3bit (i, data, tweak) % (filter.length * 8));
 		}
 	}
 
@@ -113,7 +116,7 @@ public class BloomFilter
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			if ( !testBit (murmurhash3bit (i, data)) )
+			if ( !testBit (murmurhash3bit (i, data, tweak) % (filter.length * 8)) )
 			{
 				return false;
 			}
@@ -121,9 +124,32 @@ public class BloomFilter
 		return true;
 	}
 
-	private int murmurhash3bit (int hashNum, byte[] data)
+	public static List<Integer> precomputeHashes (byte[] data, long tweak)
 	{
-		return (int) ((murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL) % (filter.length * 8));
+		ArrayList<Integer> list = new ArrayList<Integer> (MAX_HASH_FUNCS);
+		for ( int i = 0; i < MAX_HASH_FUNCS; ++i )
+		{
+			list.add (murmurhash3bit (i, data, tweak));
+		}
+		return list;
+	}
+
+	public boolean contains (List<Integer> hashes)
+	{
+		Iterator<Integer> ni = hashes.iterator ();
+		for ( int i = 0; i < hashFunctions; ++i )
+		{
+			if ( !testBit (ni.next () % (filter.length * 8)) )
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static int murmurhash3bit (int hashNum, byte[] data, long tweak)
+	{
+		return (int) (murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL);
 	}
 
 	public void toWire (WireFormat.Writer writer)
