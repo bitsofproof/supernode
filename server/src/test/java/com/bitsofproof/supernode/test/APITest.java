@@ -199,7 +199,7 @@ public class APITest
 	}
 
 	@Test
-	public void init () throws BCSAPIException, ValidationException
+	public void test () throws BCSAPIException, ValidationException
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
@@ -213,18 +213,12 @@ public class APITest
 
 		api.registerTrunkListener (validationMonitor);
 		api.registerTransactionListener (validationMonitor);
-	}
 
-	@Test
-	public void checkGenesis () throws BCSAPIException
-	{
+		// check genesis
 		String genesisHash = chain.getGenesis ().getHash ();
 		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
-	}
 
-	@Test
-	public void send1Block () throws BCSAPIException, ValidationException
-	{
+		// send 1 block
 		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (alice.getNextKey (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
@@ -234,15 +228,12 @@ public class APITest
 		validationMonitor.expectBlockValidations (1);
 		assertTrue (validationMonitor.getLast ().equals (block.getHash ()));
 		aliceMonitor.expectUpdates (1);
-	}
 
-	@Test
-	public void send10Blocks () throws ValidationException, BCSAPIException
-	{
+		// send 10 blocks
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			Block block = createBlock (hash, Transaction.createCoinbase (alice.getNextKey (), 5000000000L, i + 2));
+			block = createBlock (hash, Transaction.createCoinbase (alice.getNextKey (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);
@@ -252,11 +243,8 @@ public class APITest
 		validationMonitor.expectBlockValidations (10);
 		assertTrue (validationMonitor.getLast ().equals (hash));
 		aliceMonitor.expectUpdates (10);
-	}
 
-	@Test
-	public void spendSome () throws BCSAPIException, ValidationException
-	{
+		// spend some
 		long aliceStartingBalance = alice.getBalance ();
 		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, FEE);
 		api.sendTransaction (spend);
@@ -265,13 +253,10 @@ public class APITest
 		validationMonitor.expectTransactionValidations (1);
 		assertTrue (bob.getBalance () == 50 * COIN);
 		assertTrue (alice.getBalance () == aliceStartingBalance - bob.getBalance () - FEE);
-	}
 
-	@Test
-	public void splitSome () throws BCSAPIException, ValidationException
-	{
-		long aliceStartingBalance = alice.getBalance ();
-		Transaction spend = alice.split (new long[] { 1 * COIN, 2 * COIN }, FEE);
+		// split
+		aliceStartingBalance = alice.getBalance ();
+		spend = alice.split (new long[] { 1 * COIN, 2 * COIN }, FEE);
 		api.sendTransaction (spend);
 		aliceMonitor.expectUpdates (1);
 		validationMonitor.expectTransactionValidations (1);
