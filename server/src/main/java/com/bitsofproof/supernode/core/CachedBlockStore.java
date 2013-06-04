@@ -409,7 +409,7 @@ public abstract class CachedBlockStore implements BlockStore
 			lock.readLock ().unlock ();
 		}
 
-		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
+		Map<ByteVector, List<Long>> hashes = new HashMap<ByteVector, List<Long>> ();
 		for ( ByteVector b : matchSet )
 		{
 			hashes.put (b, BloomFilter.precomputeHashes (b.toByteArray (), 0));
