@@ -102,8 +102,8 @@ public class ExtendedKeyTest
 		for ( int i = 0; i < tests.length (); ++i )
 		{
 			JSONObject test = tests.getJSONObject (i);
-			byte[] seed = ByteUtils.fromHex (test.getString ("master"));
-			ExtendedKey ekprivate = ExtendedKey.createFromSeed ("Bitcoin seed".getBytes (), seed);
+			byte[] seed = ByteUtils.fromHex (test.getString ("seed"));
+			ExtendedKey ekprivate = ExtendedKey.createFromPassphrase ("Bitcoin seed", seed);
 			ExtendedKey ekpublic = ekprivate.getReadOnly ();
 			assertTrue (ekprivate.serialize (true).equals (test.get ("private")));
 			assertTrue (ekpublic.serialize (true).equals (test.get ("public")));

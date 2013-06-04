@@ -57,7 +57,7 @@ public class ExtendedKey
 	{
 		try
 		{
-			return createFromSeed (passphrase.getBytes ("UTF-8"), seed);
+			return createFromKey (passphrase.getBytes ("UTF-8"), seed);
 		}
 		catch ( UnsupportedEncodingException e )
 		{
@@ -65,7 +65,7 @@ public class ExtendedKey
 		}
 	}
 
-	public static ExtendedKey createFromSeed (byte[] key, byte[] seed) throws ValidationException
+	public static ExtendedKey createFromKey (byte[] key, byte[] seed) throws ValidationException
 	{
 		Mac mac;
 		try
