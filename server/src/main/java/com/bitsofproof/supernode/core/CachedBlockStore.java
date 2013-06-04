@@ -390,6 +390,7 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
 		}
+		log.trace ("Match request for " + matchSet.size ());
 		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
 		{
@@ -412,12 +413,14 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			lock.readLock ().unlock ();
 		}
+		log.trace ("Sorted chain");
 
 		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
 		for ( ByteVector b : matchSet )
 		{
 			hashes.put (b, BloomFilter.precomputeHashes (b.toByteArray (), 0));
 		}
+		log.trace ("Precomputed murmur hashes chain");
 
 		for ( CachedBlock cb : blocks )
 		{
@@ -428,6 +431,7 @@ public abstract class CachedBlockStore implements BlockStore
 				if ( filter.contains (hashes.get (v)) )
 				{
 					found = true;
+					log.trace ("Match in block " + cb.height);
 					break;
 				}
 			}
@@ -437,14 +441,17 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 			try
 			{
+				int n = 0;
 				Blk b = retrieveBlock (cb);
 				for ( Tx t : b.getTransactions () )
 				{
 					if ( t.matches (matchSet, update) )
 					{
 						processor.process (t);
+						++n;
 					}
 				}
+				log.trace ("Matched transactions in block: " + n);
 			}
 			catch ( ValidationException e )
 			{
@@ -452,6 +459,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 		}
 		processor.process (null);
+		log.trace ("Done with Match request");
 	}
 
 	private boolean isBlockOnBranch (CachedBlock block, CachedHead branch, int untilHeight)
