@@ -22,7 +22,7 @@ import java.util.Map;
 
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 
-public class LocalUTXO
+public class InMemoryUTXO
 {
 	private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
 

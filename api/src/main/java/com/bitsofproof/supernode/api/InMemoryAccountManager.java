@@ -36,18 +36,18 @@ import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
-class DefaultAccountManager implements TransactionListener, TrunkListener, AccountManager
+class InMemoryAccountManager implements TransactionListener, TrunkListener, AccountManager
 {
-	private static final Logger log = LoggerFactory.getLogger (DefaultAccountManager.class);
+	private static final Logger log = LoggerFactory.getLogger (InMemoryAccountManager.class);
 
 	private BCSAPI api;
 
 	private final Wallet wallet;
 
-	private final LocalUTXO confirmed = new LocalUTXO ();
-	private final LocalUTXO change = new LocalUTXO ();
-	private final LocalUTXO receiving = new LocalUTXO ();
-	private final LocalUTXO sending = new LocalUTXO ();
+	private final InMemoryUTXO confirmed = new InMemoryUTXO ();
+	private final InMemoryUTXO change = new InMemoryUTXO ();
+	private final InMemoryUTXO receiving = new InMemoryUTXO ();
+	private final InMemoryUTXO sending = new InMemoryUTXO ();
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> processedTransaction = new HashMap<String, Transaction> ();
@@ -55,7 +55,7 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 	private final String name;
 	private final ExtendedKey extended;
 	private final Map<ByteVector, Key> keyForAddress = new HashMap<ByteVector, Key> ();
-	private final BloomFilter filter = BloomFilter.createOptimalFilter (100, 1.0 / 1000000.0, UpdateMode.all);
+	private final BloomFilter filter = BloomFilter.createOptimalFilter (500, 1e-10, UpdateMode.all);
 	private final Set<ByteVector> addressSet = new HashSet<ByteVector> ();
 
 	public void setApi (BCSAPI api)
@@ -63,12 +63,12 @@ class DefaultAccountManager implements TransactionListener, TrunkListener, Accou
 		this.api = api;
 	}
 
-	public DefaultAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextSequence) throws ValidationException
+	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextKey) throws ValidationException
 	{
 		this.wallet = wallet;
 		this.name = name;
 		this.extended = extended;
-		for ( int i = 0; i < nextSequence; ++i )
+		for ( int i = 0; i < nextKey; ++i )
 		{
 			Key key = extended.getKey (i);
 			keyForAddress.put (new ByteVector (key.getAddress ()), key);

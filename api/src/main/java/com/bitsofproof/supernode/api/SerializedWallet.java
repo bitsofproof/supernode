@@ -90,7 +90,7 @@ public class SerializedWallet implements Wallet
 			int nextSequence = 0;
 			ExtendedKey extended = null;
 
-			DefaultAccountManager am = null;
+			InMemoryAccountManager am = null;
 			for ( WalletKey key : getKeys () )
 			{
 				if ( key.name.equals (name) )
@@ -101,7 +101,7 @@ public class SerializedWallet implements Wallet
 					}
 					extended = ExtendedKey.parse (key.key);
 					nextSequence = key.nextSequence;
-					key.am = am = new DefaultAccountManager (this, name, extended, nextSequence);
+					key.am = am = new InMemoryAccountManager (this, name, extended, nextSequence);
 					break;
 				}
 			}
@@ -115,7 +115,7 @@ public class SerializedWallet implements Wallet
 				wk.key = extended.serialize (production);
 				nextSequence = wk.nextSequence = 0;
 				addKey (wk);
-				wk.am = am = new DefaultAccountManager (this, name, extended, nextSequence);
+				wk.am = am = new InMemoryAccountManager (this, name, extended, nextSequence);
 			}
 			am.setApi (api);
 			am.registerFilter ();
@@ -130,7 +130,7 @@ public class SerializedWallet implements Wallet
 			{
 				transactions.clear ();
 			}
-			final DefaultAccountManager fam = am;
+			final InMemoryAccountManager fam = am;
 			long ts = getTimeStamp ();
 			if ( ts > 0 )
 			{
