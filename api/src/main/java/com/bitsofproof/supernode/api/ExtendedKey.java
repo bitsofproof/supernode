@@ -53,11 +53,11 @@ public class ExtendedKey
 	private final int parent;
 	private final int sequence;
 
-	public static ExtendedKey createFromPassphrase (String passphrase) throws ValidationException
+	public static ExtendedKey createFromPassphrase (String passphrase, byte[] seed) throws ValidationException
 	{
 		try
 		{
-			return createFromSeed (passphrase.getBytes ("UTF-8"));
+			return createFromSeed (passphrase.getBytes ("UTF-8"), seed);
 		}
 		catch ( UnsupportedEncodingException e )
 		{
@@ -65,13 +65,13 @@ public class ExtendedKey
 		}
 	}
 
-	public static ExtendedKey createFromSeed (byte[] seed) throws ValidationException
+	public static ExtendedKey createFromSeed (byte[] key, byte[] seed) throws ValidationException
 	{
 		Mac mac;
 		try
 		{
 			mac = Mac.getInstance ("HmacSHA512", "BC");
-			SecretKey seedkey = new SecretKeySpec ("Bitcoin seed".getBytes (), "HmacSHA512");
+			SecretKey seedkey = new SecretKeySpec (key, "HmacSHA512");
 			mac.init (seedkey);
 			byte[] lr = mac.doFinal (seed);
 			byte[] l = Arrays.copyOfRange (lr, 0, 32);
