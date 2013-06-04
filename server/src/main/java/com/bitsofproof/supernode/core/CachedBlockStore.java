@@ -391,7 +391,7 @@ public abstract class CachedBlockStore implements BlockStore
 		CachedBlock p = q.previous;
 		while ( p != null )
 		{
-			if ( blockChain.getLast () != p )
+			if ( blockChain.isEmpty () || blockChain.getLast () != p )
 			{
 				blockChain.removeLast ();
 				appendList.add (q);
