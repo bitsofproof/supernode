@@ -416,19 +416,19 @@ public abstract class CachedBlockStore implements BlockStore
 		log.trace ("Sorted chain");
 
 		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
-		for ( ByteVector b : matchSet )
-		{
-			hashes.put (b, BloomFilter.precomputeHashes (b.toByteArray (), 0));
-		}
-		log.trace ("Precomputed murmur hashes chain");
-
 		for ( CachedBlock cb : blocks )
 		{
 			boolean found = false;
 			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
 			for ( ByteVector v : matchSet )
 			{
-				if ( filter.contains (hashes.get (v)) )
+				List<Integer> hashList = hashes.get (v);
+				if ( hashList == null )
+				{
+					hashList = BloomFilter.precomputeHashes (v.toByteArray (), 0);
+					hashes.put (v, hashList);
+				}
+				if ( filter.contains (hashList) )
 				{
 					found = true;
 					log.trace ("Match in block " + cb.height);
