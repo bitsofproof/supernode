@@ -38,7 +38,6 @@ import com.bitsofproof.supernode.common.ECPublicKey;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
-
 /**
  * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032
  */
@@ -116,6 +115,16 @@ public class ExtendedKey
 	{
 		ExtendedKey sub = generateKey (sequence);
 		return new ExtendedKey (sub.getMaster (), sub.getChainCode (), sub.getDepth () + 1, getFingerPrint (), sequence);
+	}
+
+	public ExtendedKey getReadOnly ()
+	{
+		return new ExtendedKey (new ECPublicKey (master.getPublic (), true), chainCode, depth, parent, sequence);
+	}
+
+	public boolean isReadOnly ()
+	{
+		return master.getPrivate () == null;
 	}
 
 	private ExtendedKey generateKey (int sequence) throws ValidationException

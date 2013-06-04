@@ -44,7 +44,6 @@ public class KeySerializerTest
 	private static final String WIF = "WIF.json";
 	private static final String BIP38NoEC = "BIP38NoEC.json";
 	private static final String BIP38EC = "BIP38EC.json";
-	private static final String ExtendedKeyTest = "ExtendedKey.json";
 
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
