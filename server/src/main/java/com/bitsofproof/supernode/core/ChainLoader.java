@@ -201,7 +201,7 @@ public class ChainLoader
 						for ( byte[] h : m.getBlockHashes () )
 						{
 							String hash = new Hash (h).toString ();
-							if ( !havePending.containsKey (hash) && !store.isStoredBlock (hash) )
+							if ( !havePending.containsKey (hash) )
 							{
 								KnownBlock kn = new KnownBlock ();
 								kn.nr = n++;
