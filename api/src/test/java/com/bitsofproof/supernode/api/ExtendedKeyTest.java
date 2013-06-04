@@ -28,10 +28,6 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
 
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -107,14 +103,7 @@ public class ExtendedKeyTest
 		{
 			JSONObject test = tests.getJSONObject (i);
 			byte[] seed = ByteUtils.fromHex (test.getString ("master"));
-			Mac mac = Mac.getInstance ("HmacSHA512", "BC");
-			SecretKey seedkey = new SecretKeySpec ("Bitcoin seed".getBytes (), "HmacSHA512");
-			mac.init (seedkey);
-			byte[] lr = mac.doFinal (seed);
-			byte[] l = Arrays.copyOfRange (lr, 0, 32);
-			byte[] r = Arrays.copyOfRange (lr, 32, 64);
-			ECKeyPair keyPair = new ECKeyPair (l, true);
-			ExtendedKey ekprivate = new ExtendedKey (keyPair, r, 0, 0, 0);
+			ExtendedKey ekprivate = ExtendedKey.createFromSeed (seed);
 			ExtendedKey ekpublic = ekprivate.getReadOnly ();
 			assertTrue (ekprivate.serialize (true).equals (test.get ("private")));
 			assertTrue (ekpublic.serialize (true).equals (test.get ("public")));

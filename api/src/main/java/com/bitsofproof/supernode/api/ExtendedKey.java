@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -51,6 +52,46 @@ public class ExtendedKey
 	private final int depth;
 	private final int parent;
 	private final int sequence;
+
+	public static ExtendedKey createFromPassphrase (String passphrase) throws ValidationException
+	{
+		try
+		{
+			return createFromSeed (passphrase.getBytes ("UTF-8"));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+			throw new ValidationException (e);
+		}
+	}
+
+	public static ExtendedKey createFromSeed (byte[] seed) throws ValidationException
+	{
+		Mac mac;
+		try
+		{
+			mac = Mac.getInstance ("HmacSHA512", "BC");
+			SecretKey seedkey = new SecretKeySpec ("Bitcoin seed".getBytes (), "HmacSHA512");
+			mac.init (seedkey);
+			byte[] lr = mac.doFinal (seed);
+			byte[] l = Arrays.copyOfRange (lr, 0, 32);
+			byte[] r = Arrays.copyOfRange (lr, 32, 64);
+			ECKeyPair keyPair = new ECKeyPair (l, true);
+			return new ExtendedKey (keyPair, r, 0, 0, 0);
+		}
+		catch ( NoSuchAlgorithmException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( NoSuchProviderException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( InvalidKeyException e )
+		{
+			throw new ValidationException (e);
+		}
+	}
 
 	public static ExtendedKey createNew ()
 	{
