@@ -63,7 +63,12 @@ public class ExtendedKey
 			byte[] lr = mac.doFinal (seed);
 			byte[] l = Arrays.copyOfRange (lr, 0, 32);
 			byte[] r = Arrays.copyOfRange (lr, 32, 64);
-			ECKeyPair keyPair = new ECKeyPair (l, true);
+			BigInteger m = new BigInteger (1, l);
+			if ( m.compareTo (curve.getN ()) >= 0 )
+			{
+				throw new ValidationException ("This is rather unlikely, but it did just happen");
+			}
+			ECKeyPair keyPair = new ECKeyPair (m, true);
 			return new ExtendedKey (keyPair, r, 0, 0, 0);
 		}
 		catch ( NoSuchAlgorithmException e )
