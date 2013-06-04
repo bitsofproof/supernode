@@ -985,7 +985,7 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 		// this is last loop before persist since modifying the entities.
 
-		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (5 * numberOfOutputs, 500), 1.0e-8, 0, UpdateMode.none);
+		BloomFilter filter = BloomFilter.createOptimalFilter (Math.max (5 * numberOfOutputs, 500), 1.0e-10, 0, UpdateMode.none);
 
 		for ( Tx t : b.getTransactions () )
 		{
