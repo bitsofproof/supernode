@@ -386,6 +386,10 @@ public abstract class CachedBlockStore implements BlockStore
 	@Override
 	public void filterTransactions (Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
 	{
+		if ( matchSet.size () > MAX_MATCH_SET )
+		{
+			throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
+		}
 		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
 		{
@@ -409,7 +413,7 @@ public abstract class CachedBlockStore implements BlockStore
 			lock.readLock ().unlock ();
 		}
 
-		Map<ByteVector, List<Long>> hashes = new HashMap<ByteVector, List<Long>> ();
+		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
 		for ( ByteVector b : matchSet )
 		{
 			hashes.put (b, BloomFilter.precomputeHashes (b.toByteArray (), 0));
@@ -417,10 +421,6 @@ public abstract class CachedBlockStore implements BlockStore
 
 		for ( CachedBlock cb : blocks )
 		{
-			if ( matchSet.size () > MAX_MATCH_SET )
-			{
-				throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
-			}
 			boolean found = false;
 			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
 			for ( ByteVector v : matchSet )

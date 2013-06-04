@@ -108,7 +108,7 @@ public class BloomFilter
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			setBit ((int) (murmurhash3bit (i, data, tweak) % (filter.length * 8)));
+			setBit ((int) ((murmurhash3bit (i, data, tweak) & 0xFFFFFFFFL) % (filter.length * 8)));
 		}
 	}
 
@@ -116,7 +116,7 @@ public class BloomFilter
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			if ( !testBit ((int) (murmurhash3bit (i, data, tweak) % (filter.length * 8))) )
+			if ( !testBit ((int) ((murmurhash3bit (i, data, tweak) & 0xFFFFFFFFL) % (filter.length * 8))) )
 			{
 				return false;
 			}
@@ -124,9 +124,9 @@ public class BloomFilter
 		return true;
 	}
 
-	public static List<Long> precomputeHashes (byte[] data, long tweak)
+	public static List<Integer> precomputeHashes (byte[] data, long tweak)
 	{
-		ArrayList<Long> list = new ArrayList<Long> (MAX_HASH_FUNCS);
+		ArrayList<Integer> list = new ArrayList<Integer> (MAX_HASH_FUNCS);
 		for ( int i = 0; i < MAX_HASH_FUNCS; ++i )
 		{
 			list.add (murmurhash3bit (i, data, tweak));
@@ -134,12 +134,12 @@ public class BloomFilter
 		return list;
 	}
 
-	public boolean contains (List<Long> hashes)
+	public boolean contains (List<Integer> hashes)
 	{
-		Iterator<Long> ni = hashes.iterator ();
+		Iterator<Integer> ni = hashes.iterator ();
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
-			if ( !testBit ((int) (ni.next () % (filter.length * 8))) )
+			if ( !testBit ((int) ((ni.next () & 0xFFFFFFFFL) % (filter.length * 8))) )
 			{
 				return false;
 			}
@@ -147,9 +147,9 @@ public class BloomFilter
 		return true;
 	}
 
-	private static long murmurhash3bit (int hashNum, byte[] data, long tweak)
+	private static int murmurhash3bit (int hashNum, byte[] data, long tweak)
 	{
-		return murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak)) & 0xFFFFFFFFL;
+		return murmurhash3 (data, 0, data.length, (int) (hashNum * 0xFBA4C795L + tweak));
 	}
 
 	public void toWire (WireFormat.Writer writer)
