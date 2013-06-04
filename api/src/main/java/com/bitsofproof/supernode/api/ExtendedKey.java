@@ -57,21 +57,8 @@ public class ExtendedKey
 	{
 		try
 		{
-			return createFromKey (passphrase.getBytes ("UTF-8"), seed);
-		}
-		catch ( UnsupportedEncodingException e )
-		{
-			throw new ValidationException (e);
-		}
-	}
-
-	public static ExtendedKey createFromKey (byte[] key, byte[] seed) throws ValidationException
-	{
-		Mac mac;
-		try
-		{
-			mac = Mac.getInstance ("HmacSHA512", "BC");
-			SecretKey seedkey = new SecretKeySpec (key, "HmacSHA512");
+			Mac mac = Mac.getInstance ("HmacSHA512", "BC");
+			SecretKey seedkey = new SecretKeySpec (passphrase.getBytes ("UTF-8"), "HmacSHA512");
 			mac.init (seedkey);
 			byte[] lr = mac.doFinal (seed);
 			byte[] l = Arrays.copyOfRange (lr, 0, 32);
@@ -88,6 +75,10 @@ public class ExtendedKey
 			throw new ValidationException (e);
 		}
 		catch ( InvalidKeyException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( UnsupportedEncodingException e )
 		{
 			throw new ValidationException (e);
 		}
