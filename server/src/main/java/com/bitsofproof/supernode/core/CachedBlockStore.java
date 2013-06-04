@@ -106,6 +106,8 @@ public abstract class CachedBlockStore implements BlockStore
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
 	protected final Map<String, StoredColor> cachedColors = new HashMap<String, StoredColor> ();
 
+	private final LinkedList<CachedBlock> blockChain = new LinkedList<CachedBlock> ();
+
 	private final ImplementTxOutCache cachedUTXO = new ImplementTxOutCache ();
 	private final List<TrunkListener> trunkListener = new ArrayList<TrunkListener> ();
 
@@ -366,6 +368,8 @@ public abstract class CachedBlockStore implements BlockStore
 			log.trace ("Cache chain...");
 			cacheChain ();
 
+			updateBlockChainCache ();
+
 			if ( size > 0 )
 			{
 				log.trace ("Cache UTXO set ...");
@@ -380,6 +384,25 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
+	private void updateBlockChainCache ()
+	{
+		List<CachedBlock> appendList = new ArrayList<CachedBlock> ();
+		CachedBlock q = currentHead.getLast ();
+		CachedBlock p = q.previous;
+		while ( p != null )
+		{
+			if ( blockChain.getLast () != p )
+			{
+				blockChain.removeLast ();
+				appendList.add (q);
+			}
+			q = p;
+			p = q.previous;
+		}
+		Collections.reverse (appendList);
+		blockChain.addAll (appendList);
+	}
+
 	private static final int MAX_MATCH_SET = 1000;
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
@@ -390,73 +413,62 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
 		}
-		log.trace ("Match request for " + matchSet.size ());
-		List<CachedBlock> blocks = new ArrayList<CachedBlock> ();
 		try
 		{
+			Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
+
 			lock.readLock ().lock ();
 
-			CachedBlock q = currentHead.getLast ();
-			CachedBlock p = q.previous;
-			while ( p != null )
+			for ( CachedBlock cb : blockChain )
 			{
-				if ( after == 0 || q.time > after )
+				if ( cb.time <= after )
 				{
-					blocks.add (q);
+					continue;
 				}
-				q = p;
-				p = q.previous;
+				boolean found = false;
+				BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
+				for ( ByteVector v : matchSet )
+				{
+					List<Integer> hashList = hashes.get (v);
+					if ( hashList == null )
+					{
+						hashList = BloomFilter.precomputeHashes (v.toByteArray (), 0);
+						hashes.put (v, hashList);
+					}
+					if ( filter.contains (hashList) )
+					{
+						found = true;
+						log.trace ("Match in block " + cb.height);
+						break;
+					}
+				}
+				if ( !found )
+				{
+					continue;
+				}
+				try
+				{
+					int n = 0;
+					Blk b = retrieveBlock (cb);
+					for ( Tx t : b.getTransactions () )
+					{
+						if ( t.matches (matchSet, update) )
+						{
+							processor.process (t);
+							++n;
+						}
+					}
+					log.trace ("Matched transactions in block: " + n);
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Error while scanning blocks", e);
+				}
 			}
-			Collections.reverse (blocks);
 		}
 		finally
 		{
 			lock.readLock ().unlock ();
-		}
-		log.trace ("Sorted chain");
-
-		Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
-		for ( CachedBlock cb : blocks )
-		{
-			boolean found = false;
-			BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
-			for ( ByteVector v : matchSet )
-			{
-				List<Integer> hashList = hashes.get (v);
-				if ( hashList == null )
-				{
-					hashList = BloomFilter.precomputeHashes (v.toByteArray (), 0);
-					hashes.put (v, hashList);
-				}
-				if ( filter.contains (hashList) )
-				{
-					found = true;
-					log.trace ("Match in block " + cb.height);
-					break;
-				}
-			}
-			if ( !found )
-			{
-				continue;
-			}
-			try
-			{
-				int n = 0;
-				Blk b = retrieveBlock (cb);
-				for ( Tx t : b.getTransactions () )
-				{
-					if ( t.matches (matchSet, update) )
-					{
-						processor.process (t);
-						++n;
-					}
-				}
-				log.trace ("Matched transactions in block: " + n);
-			}
-			catch ( ValidationException e )
-			{
-				log.error ("Error while scanning blocks", e);
-			}
 		}
 		processor.process (null);
 		log.trace ("Done with Match request");
@@ -1128,6 +1140,7 @@ public abstract class CachedBlockStore implements BlockStore
 			addedBlocks.add (b);
 			currentHead = usingHead;
 		}
+		updateBlockChainCache ();
 
 		usingHead.setLast (m);
 
