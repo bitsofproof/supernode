@@ -78,8 +78,6 @@ public class ExtendedKeyTest
 	private static final ThreadMXBean mxb = ManagementFactory.getThreadMXBean ();
 	private static final Logger log = LoggerFactory.getLogger (ExtendedKeyTest.class);
 
-	private static final String BIP32 = "BIP32.json";
-
 	private JSONArray readObjectArray (String resource) throws IOException, JSONException
 	{
 		InputStream input = this.getClass ().getResource ("/" + resource).openStream ();
@@ -98,12 +96,11 @@ public class ExtendedKeyTest
 	@Test
 	public void bip32Test () throws IOException, JSONException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, ValidationException
 	{
-		JSONArray tests = readObjectArray (BIP32);
+		JSONArray tests = readObjectArray ("BIP32.json");
 		for ( int i = 0; i < tests.length (); ++i )
 		{
 			JSONObject test = tests.getJSONObject (i);
-			byte[] seed = ByteUtils.fromHex (test.getString ("seed"));
-			ExtendedKey ekprivate = ExtendedKey.createFromPassphrase ("Bitcoin seed", seed);
+			ExtendedKey ekprivate = ExtendedKey.create (ByteUtils.fromHex (test.getString ("seed")));
 			ExtendedKey ekpublic = ekprivate.getReadOnly ();
 			assertTrue (ekprivate.serialize (true).equals (test.get ("private")));
 			assertTrue (ekpublic.serialize (true).equals (test.get ("public")));
@@ -130,6 +127,18 @@ public class ExtendedKeyTest
 				assertTrue (ek.serialize (true).equals (derivedTest.getString ("private")));
 				assertTrue (ep.serialize (true).equals (derivedTest.getString ("public")));
 			}
+		}
+	}
+
+	@Test
+	public void bip32PassphraseTest () throws ValidationException, JSONException, IOException
+	{
+		JSONArray tests = readObjectArray ("PassphraseKey.json");
+		for ( int i = 0; i < tests.length (); ++i )
+		{
+			JSONObject test = tests.getJSONObject (i);
+			ExtendedKey key = ExtendedKey.createFromPassphrase (test.getString ("passphrase"), ByteUtils.fromHex (test.getString ("seed")));
+			assertTrue (key.serialize (true).equals (test.get ("key")));
 		}
 	}
 

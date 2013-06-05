@@ -1,0 +1,52 @@
+[
+    {
+        "key": "xprv9s21ZrQH143K4CVgC3KYNDJDtmWyoFhUGrBDo7zFWAndVKNCTQfMv1ySjRMSJtt8ucH841DzSrj5BRA37ZR5tHuZP3C1SchStNkGM4zxHQw",
+        "passphrase": "45mFZcmYWVJKfoHsD",
+        "seed": "6b94a469f3c146e3a3936d87f1229276999afa6c79bcb4bda6a2fd8def1ee67e"
+    },
+    {
+        "key": "xprv9s21ZrQH143K47Cpy2x4XStsdbLc6BeLCX16ogh48z5ErSfRZngqVzCF8cpqPyZMC5iVhH7EsshojkeztCjBhdVDwYc6CwRHvELbs5vRD7c",
+        "passphrase": "2Gu8kmY2rDhW54B2Q",
+        "seed": "4bf09adce269d5fffd9a3f07e7d9565f7bbc4ad4dd18f73874218343363b1c13"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2tUA9LGdeweo2kgbQjiKbrxbZCTrEDQwXnC9K6sV9Xw4P1iPB9BHjaksC1inHHwxtbn9dUWEXZy1xmXsAkn5usU3Xtmuc7G",
+        "passphrase": "WvHcPkjX3Arc2WaK",
+        "seed": "2a6f8a531d2db27c6721c127e97e69e8c0248a01af533e648ef132940139b68e"
+    },
+    {
+        "key": "xprv9s21ZrQH143K3oqQ2fnyQV1y2zxcpbZnVEd6z56WGdN7geSqxLNCCc6hQF4b8RoeBNQqrPUa8521fLE7RiRgRKyRu1UefQaCz82WGTgS5vn",
+        "passphrase": "29kajEskBs5m92x8C",
+        "seed": "a4ef84ae76e1af87fc7544a79613bb484197f340e3ba150dede339597f9b2711"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2XPdnZ6oAbchJptFGcFdXWFANuLyVvJ6rTffVeUkJgM8P1ihucCJNqCSvqjURhynFyrVSHm7HNd4tsTHZEYrvX7A4XY8jfB",
+        "passphrase": "2DVqFEiq6bjitEsGG",
+        "seed": "09ec671b4eb0e841b79b01e9489a240676c75533cd3d16761832593ada950b6f"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2ujFZxbsYk1eD1ZZAzF3wr3tzo7tjx2DWHTknzc8MDR2pV63uZZjPYCg5vTV11y1KnpPgBVcmAeDVyuXPo8Fe151K3ATWgh",
+        "passphrase": "Jo4d6xisTTy2Qq9i",
+        "seed": "bb2a00047b87ade62982c38475c323b74f15beae311d911bad9c43a9d754acdb"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2PTfBtmSjRMUrwpTwt4f2qMcM1NXScKwoiTSRfzKbJygM6dyTSfiV9MLLu1W7PwYJwSPw1ayujm7ArJJ7cZ1bLDBFy9Nbf1",
+        "passphrase": "412dbDryAKsXSH3mp",
+        "seed": "445a220f55fa67ebe7f8dafceaae81d8dea00e727fc78f0c3979072bfa8dee0b"
+    },
+    {
+        "key": "xprv9s21ZrQH143K3zGPVAK4CmYb65P7EjhE6NtfaXvBCvjfMCHvmKP2vLwGwr29ds9qHYtvp5cKidqv6eLFKFjq5nsX4TBmXMWPXbqDraw3PTe",
+        "passphrase": "YMz3UG7CVNHDFW2j",
+        "seed": "1f757dd1a4353e1a2189eccf00ee11bbc3869e0cd0a8ec24484f79be93661459"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2orh3kfWgMvzfjkDhDabcrEhbzqgc5d9EwVZEgjhkX78fva61dcgUPrvdxKayYZFa7WMTUTUDSK5WpGMEhMBaTC9WuMs8mY",
+        "passphrase": "5MufM8DjsrssV7XER",
+        "seed": "39065f43879a8f760ddb97c766c62e4e49b9d6b78b12cc5140f2a1fb078aa493"
+    },
+    {
+        "key": "xprv9s21ZrQH143K2FrtAkGLQbnbhjpYCSYm9tLjbrMcAC7ze7vUX9MP1BPqxWzG4rVHTDujYiyVZKrcHRZDs83mhfJpPLetM1Y1qBxZyHxPbRS",
+        "passphrase": "5hhcS4ytxbWPQaiFi",
+        "seed": "7a2186bae34519911217fcf657973008f868dd189e5e258b1455dd9f00530c76"
+    }
+]

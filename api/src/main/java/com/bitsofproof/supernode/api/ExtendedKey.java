@@ -24,12 +24,17 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.Mac;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
@@ -53,12 +58,54 @@ public class ExtendedKey
 	private final int parent;
 	private final int sequence;
 
-	public static ExtendedKey createFromPassphrase (String passphrase, byte[] seed) throws ValidationException
+	private static final byte[] BITCOIN_SEED = "Bitcoin seed".getBytes ();
+
+	public static ExtendedKey createFromPassphrase (String passphrase, byte[] encryptedSeed) throws ValidationException
+	{
+		try
+		{
+			byte[] key = SCrypt.generate (passphrase.getBytes ("UTF-8"), BITCOIN_SEED, 16384, 8, 8, 32);
+			Cipher cipher = Cipher.getInstance ("AES/ECB/NoPadding", "BC");
+			SecretKeySpec keyspec = new SecretKeySpec (key, "AES");
+			cipher.init (Cipher.DECRYPT_MODE, keyspec);
+			return create (cipher.doFinal (encryptedSeed));
+		}
+		catch ( UnsupportedEncodingException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( IllegalBlockSizeException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( BadPaddingException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( InvalidKeyException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( NoSuchAlgorithmException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( NoSuchProviderException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( NoSuchPaddingException e )
+		{
+			throw new ValidationException (e);
+		}
+	}
+
+	public static ExtendedKey create (byte[] seed) throws ValidationException
 	{
 		try
 		{
 			Mac mac = Mac.getInstance ("HmacSHA512", "BC");
-			SecretKey seedkey = new SecretKeySpec (passphrase.getBytes ("UTF-8"), "HmacSHA512");
+			SecretKey seedkey = new SecretKeySpec (BITCOIN_SEED, "HmacSHA512");
 			mac.init (seedkey);
 			byte[] lr = mac.doFinal (seed);
 			byte[] l = Arrays.copyOfRange (lr, 0, 32);
@@ -68,7 +115,7 @@ public class ExtendedKey
 			{
 				throw new ValidationException ("This is rather unlikely, but it did just happen");
 			}
-			ECKeyPair keyPair = new ECKeyPair (m, true);
+			ECKeyPair keyPair = new ECKeyPair (l, true);
 			return new ExtendedKey (keyPair, r, 0, 0, 0);
 		}
 		catch ( NoSuchAlgorithmException e )
@@ -80,10 +127,6 @@ public class ExtendedKey
 			throw new ValidationException (e);
 		}
 		catch ( InvalidKeyException e )
-		{
-			throw new ValidationException (e);
-		}
-		catch ( UnsupportedEncodingException e )
 		{
 			throw new ValidationException (e);
 		}
