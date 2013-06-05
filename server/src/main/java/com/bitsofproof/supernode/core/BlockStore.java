@@ -78,5 +78,6 @@ public interface BlockStore extends ColorStore
 
 	public void filterTransactions (Set<ByteVector> match, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException;
 
-	public void filterTransactions (Set<ByteVector> match, ExtendedKey ek, int lookAhead, TransactionProcessor processor) throws ValidationException;
+	public void filterTransactions (Set<ByteVector> match, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
+			throws ValidationException;
 }

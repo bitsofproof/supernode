@@ -412,7 +412,8 @@ public abstract class CachedBlockStore implements BlockStore
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
-	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, TransactionProcessor processor) throws ValidationException
+	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
+			throws ValidationException
 	{
 		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
 		lookAhead = Math.min (Math.max (10, lookAhead), MAX_MATCH_SET);
@@ -429,6 +430,10 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( CachedBlock cb : blockChain )
 			{
+				if ( cb.time <= after )
+				{
+					continue;
+				}
 				boolean found = false;
 				BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
 				for ( ByteVector v : matchSet )

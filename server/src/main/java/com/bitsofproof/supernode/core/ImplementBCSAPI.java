@@ -366,6 +366,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					BCSAPIMessage.AccountRequest request = BCSAPIMessage.AccountRequest.parseFrom (body);
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
 					final int lookAhead = request.getLookAhead ();
+					final long after = request.getAfter ();
 					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					final UpdateMode mode = UpdateMode.all;
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
@@ -398,7 +399,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									}
 								};
 
-								store.filterTransactions (match, ek, lookAhead, processor);
+								store.filterTransactions (match, ek, lookAhead, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
 								try
 								{

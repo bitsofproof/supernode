@@ -7880,6 +7880,10 @@ public final class BCSAPIMessage {
     // required uint32 lookAhead = 3;
     boolean hasLookAhead();
     int getLookAhead();
+    
+    // optional uint64 after = 4;
+    boolean hasAfter();
+    long getAfter();
   }
   public static final class AccountRequest extends
       com.google.protobuf.GeneratedMessage
@@ -7962,10 +7966,21 @@ public final class BCSAPIMessage {
       return lookAhead_;
     }
     
+    // optional uint64 after = 4;
+    public static final int AFTER_FIELD_NUMBER = 4;
+    private long after_;
+    public boolean hasAfter() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public long getAfter() {
+      return after_;
+    }
+    
     private void initFields() {
       bcsapiversion_ = 0;
       publicKey_ = "";
       lookAhead_ = 0;
+      after_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8000,6 +8015,9 @@ public final class BCSAPIMessage {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeUInt32(3, lookAhead_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, after_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -8020,6 +8038,10 @@ public final class BCSAPIMessage {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(3, lookAhead_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, after_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8151,6 +8173,8 @@ public final class BCSAPIMessage {
         bitField0_ = (bitField0_ & ~0x00000002);
         lookAhead_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
+        after_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       
@@ -8201,6 +8225,10 @@ public final class BCSAPIMessage {
           to_bitField0_ |= 0x00000004;
         }
         result.lookAhead_ = lookAhead_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.after_ = after_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8225,6 +8253,9 @@ public final class BCSAPIMessage {
         }
         if (other.hasLookAhead()) {
           setLookAhead(other.getLookAhead());
+        }
+        if (other.hasAfter()) {
+          setAfter(other.getAfter());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -8282,6 +8313,11 @@ public final class BCSAPIMessage {
             case 24: {
               bitField0_ |= 0x00000004;
               lookAhead_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              after_ = input.readUInt64();
               break;
             }
           }
@@ -8364,6 +8400,27 @@ public final class BCSAPIMessage {
       public Builder clearLookAhead() {
         bitField0_ = (bitField0_ & ~0x00000004);
         lookAhead_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint64 after = 4;
+      private long after_ ;
+      public boolean hasAfter() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public long getAfter() {
+        return after_;
+      }
+      public Builder setAfter(long value) {
+        bitField0_ |= 0x00000008;
+        after_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAfter() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        after_ = 0L;
         onChanged();
         return this;
       }
@@ -10786,18 +10843,18 @@ public final class BCSAPIMessage {
       "\030\002 \002(\014\022\025\n\rhashFunctions\030\003 \002(\r\022\r\n\005tweak\030\004" +
       " \002(\r\022\014\n\004mode\030\005 \002(\r\"V\n\021ExactMatchRequest\022" +
       "\025\n\rbcsapiversion\030\001 \002(\r\022\014\n\004mode\030\002 \002(\r\022\r\n\005" +
-      "match\030\003 \003(\014\022\r\n\005after\030\004 \001(\004\"M\n\016AccountReq" +
+      "match\030\003 \003(\014\022\r\n\005after\030\004 \001(\004\"\\\n\016AccountReq" +
       "uest\022\025\n\rbcsapiversion\030\001 \002(\r\022\021\n\tpublicKey" +
-      "\030\002 \002(\t\022\021\n\tlookAhead\030\003 \002(\r\"\341\002\n\006Wallet\022\025\n\r" +
-      "bcsapiversion\030\001 \002(\r\0227\n\004keys\030\002 \003(\0132).com." +
-      "bitsofproof.supernode.api.Wallet.Key\022L\n\017" +
-      "publicAddresses\030\003 \003(\01323.com.bitsofproof." +
-      "supernode.api.Wallet.PublicAddress\022@\n\014tr",
-      "ansactions\030\004 \003(\0132*.com.bitsofproof.super" +
-      "node.api.Transaction\032G\n\003Key\022\013\n\003key\030\001 \002(\t" +
-      "\022\024\n\014nextSequence\030\002 \002(\r\022\014\n\004name\030\003 \001(\t\022\017\n\007" +
-      "created\030\004 \001(\004\032.\n\rPublicAddress\022\017\n\007addres" +
-      "s\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
+      "\030\002 \002(\t\022\021\n\tlookAhead\030\003 \002(\r\022\r\n\005after\030\004 \001(\004" +
+      "\"\341\002\n\006Wallet\022\025\n\rbcsapiversion\030\001 \002(\r\0227\n\004ke" +
+      "ys\030\002 \003(\0132).com.bitsofproof.supernode.api" +
+      ".Wallet.Key\022L\n\017publicAddresses\030\003 \003(\01323.c" +
+      "om.bitsofproof.supernode.api.Wallet.Publ",
+      "icAddress\022@\n\014transactions\030\004 \003(\0132*.com.bi" +
+      "tsofproof.supernode.api.Transaction\032G\n\003K" +
+      "ey\022\013\n\003key\030\001 \002(\t\022\024\n\014nextSequence\030\002 \002(\r\022\014\n" +
+      "\004name\030\003 \001(\t\022\017\n\007created\030\004 \001(\004\032.\n\rPublicAd" +
+      "dress\022\017\n\007address\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10905,7 +10962,7 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_AccountRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor,
-              new java.lang.String[] { "Bcsapiversion", "PublicKey", "LookAhead", },
+              new java.lang.String[] { "Bcsapiversion", "PublicKey", "LookAhead", "After", },
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.Builder.class);
           internal_static_com_bitsofproof_supernode_api_Wallet_descriptor =
