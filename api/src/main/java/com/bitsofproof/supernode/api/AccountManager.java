@@ -17,17 +17,16 @@ package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
 
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
 public interface AccountManager
 {
-	public BloomFilter getFilter ();
-
 	public String getName ();
 
 	public Collection<byte[]> getAddresses ();
+
+	public ExtendedKey getMasterKey ();
 
 	public Key getKeyForAddress (byte[] address);
 
@@ -36,10 +35,6 @@ public interface AccountManager
 	public Key getNextKey () throws ValidationException;
 
 	public int getNextSequence ();
-
-	public Collection<Transaction> getTransactions ();
-
-	public Transaction getTransaction (String hash);
 
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
 
@@ -58,5 +53,4 @@ public interface AccountManager
 	public void addAccountListener (AccountListener listener);
 
 	public void removeAccountListener (AccountListener listener);
-
 }

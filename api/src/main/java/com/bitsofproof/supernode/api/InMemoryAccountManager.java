@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,8 @@ import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.common.ValidationException;
 
 class InMemoryAccountManager implements TransactionListener, TrunkListener, AccountManager
@@ -63,12 +66,63 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 		this.api = api;
 	}
 
-	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextKey) throws ValidationException
+	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended)
 	{
 		this.wallet = wallet;
 		this.name = name;
 		this.extended = extended;
-		for ( int i = 0; i < nextKey; ++i )
+	}
+
+	public void init (final int lookAhead, long after) throws BCSAPIException, ValidationException
+	{
+		final Map<ByteVector, Integer> addressUse = new HashMap<ByteVector, Integer> ();
+		for ( int i = 0; i < lookAhead; ++i )
+		{
+			Key key = extended.getKey (i);
+			addressUse.put (new ByteVector (key.getAddress ()), i);
+		}
+		final AtomicInteger lastUsedKey = new AtomicInteger (-1);
+		api.scanTransactions (extended, lookAhead, after, new TransactionListener ()
+		{
+			@Override
+			public void process (Transaction t)
+			{
+				for ( TransactionOutput o : t.getOutputs () )
+				{
+					try
+					{
+						for ( Token token : ScriptFormat.parse (o.getScript ()) )
+						{
+							if ( token.data != null )
+							{
+								Integer thisKey = addressUse.get (new ByteVector (token.data));
+								if ( thisKey != null )
+								{
+									lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
+								}
+								else
+								{
+									while ( thisKey == null && (addressUse.size () - lastUsedKey.get ()) < lookAhead )
+									{
+										Key key = extended.getKey (addressUse.size ());
+										addressUse.put (new ByteVector (key.getAddress ()), addressUse.size ());
+									}
+									thisKey = addressUse.get (new ByteVector (token.data));
+									if ( thisKey != null )
+									{
+										lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
+									}
+								}
+							}
+						}
+					}
+					catch ( ValidationException e )
+					{
+					}
+				}
+			}
+		});
+		for ( int i = 0; i <= lastUsedKey.get (); ++i )
 		{
 			Key key = extended.getKey (i);
 			keyForAddress.put (new ByteVector (key.getAddress ()), key);
@@ -93,12 +147,6 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 	public String getName ()
 	{
 		return name;
-	}
-
-	@Override
-	public BloomFilter getFilter ()
-	{
-		return filter;
 	}
 
 	@Override
@@ -143,18 +191,6 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 			throw new ValidationException ("Use consequtive keys");
 		}
 		return extended.getKey (ix);
-	}
-
-	@Override
-	public Collection<Transaction> getTransactions ()
-	{
-		return Collections.unmodifiableCollection (processedTransaction.values ());
-	}
-
-	@Override
-	public Transaction getTransaction (String hash)
-	{
-		return processedTransaction.get (hash);
 	}
 
 	public boolean updateWithTransaction (Transaction t)
@@ -419,5 +455,11 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 				}
 			}
 		}
+	}
+
+	@Override
+	public ExtendedKey getMasterKey ()
+	{
+		return extended;
 	}
 }

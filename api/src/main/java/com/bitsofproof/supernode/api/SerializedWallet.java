@@ -50,8 +50,8 @@ import org.bouncycastle.crypto.generators.SCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.ValidationException;
 
 public class SerializedWallet implements Wallet
 {
@@ -87,7 +87,6 @@ public class SerializedWallet implements Wallet
 	{
 		try
 		{
-			int nextSequence = 0;
 			ExtendedKey extended = null;
 
 			InMemoryAccountManager am = null;
@@ -100,8 +99,9 @@ public class SerializedWallet implements Wallet
 						return key.am;
 					}
 					extended = ExtendedKey.parse (key.key);
-					nextSequence = key.nextSequence;
-					key.am = am = new InMemoryAccountManager (this, name, extended, nextSequence);
+					key.am = am = new InMemoryAccountManager (this, name, extended);
+					am.setApi (api);
+					am.init (10, 0);
 					break;
 				}
 			}
@@ -113,11 +113,10 @@ public class SerializedWallet implements Wallet
 				wk.created = System.currentTimeMillis () / 1000;
 				wk.name = name;
 				wk.key = extended.serialize (production);
-				nextSequence = wk.nextSequence = 0;
 				addKey (wk);
-				wk.am = am = new InMemoryAccountManager (this, name, extended, nextSequence);
+				wk.am = am = new InMemoryAccountManager (this, name, extended);
+				am.setApi (api);
 			}
-			am.setApi (api);
 			am.registerFilter ();
 			if ( getTimeStamp () > 0 )
 			{
