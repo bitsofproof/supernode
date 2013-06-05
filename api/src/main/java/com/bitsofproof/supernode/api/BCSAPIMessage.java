@@ -7866,6 +7866,519 @@ public final class BCSAPIMessage {
     // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.ExactMatchRequest)
   }
   
+  public interface AccountRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required uint32 bcsapiversion = 1;
+    boolean hasBcsapiversion();
+    int getBcsapiversion();
+    
+    // required string publicKey = 2;
+    boolean hasPublicKey();
+    String getPublicKey();
+    
+    // required uint32 lookAhead = 3;
+    boolean hasLookAhead();
+    int getLookAhead();
+  }
+  public static final class AccountRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements AccountRequestOrBuilder {
+    // Use AccountRequest.newBuilder() to construct.
+    private AccountRequest(Builder builder) {
+      super(builder);
+    }
+    private AccountRequest(boolean noInit) {}
+    
+    private static final AccountRequest defaultInstance;
+    public static AccountRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public AccountRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_AccountRequest_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required uint32 bcsapiversion = 1;
+    public static final int BCSAPIVERSION_FIELD_NUMBER = 1;
+    private int bcsapiversion_;
+    public boolean hasBcsapiversion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public int getBcsapiversion() {
+      return bcsapiversion_;
+    }
+    
+    // required string publicKey = 2;
+    public static final int PUBLICKEY_FIELD_NUMBER = 2;
+    private java.lang.Object publicKey_;
+    public boolean hasPublicKey() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public String getPublicKey() {
+      java.lang.Object ref = publicKey_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          publicKey_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getPublicKeyBytes() {
+      java.lang.Object ref = publicKey_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        publicKey_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // required uint32 lookAhead = 3;
+    public static final int LOOKAHEAD_FIELD_NUMBER = 3;
+    private int lookAhead_;
+    public boolean hasLookAhead() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public int getLookAhead() {
+      return lookAhead_;
+    }
+    
+    private void initFields() {
+      bcsapiversion_ = 0;
+      publicKey_ = "";
+      lookAhead_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasBcsapiversion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasPublicKey()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasLookAhead()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, bcsapiversion_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getPublicKeyBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, lookAhead_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, bcsapiversion_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getPublicKeyBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, lookAhead_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_AccountRequest_fieldAccessorTable;
+      }
+      
+      // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        bcsapiversion_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        publicKey_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        lookAhead_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.getDescriptor();
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest getDefaultInstanceForType() {
+        return com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.getDefaultInstance();
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest build() {
+        com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest buildPartial() {
+        com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest result = new com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.bcsapiversion_ = bcsapiversion_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.publicKey_ = publicKey_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.lookAhead_ = lookAhead_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest) {
+          return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest other) {
+        if (other == com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.getDefaultInstance()) return this;
+        if (other.hasBcsapiversion()) {
+          setBcsapiversion(other.getBcsapiversion());
+        }
+        if (other.hasPublicKey()) {
+          setPublicKey(other.getPublicKey());
+        }
+        if (other.hasLookAhead()) {
+          setLookAhead(other.getLookAhead());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasBcsapiversion()) {
+          
+          return false;
+        }
+        if (!hasPublicKey()) {
+          
+          return false;
+        }
+        if (!hasLookAhead()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              bcsapiversion_ = input.readUInt32();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              publicKey_ = input.readBytes();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              lookAhead_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required uint32 bcsapiversion = 1;
+      private int bcsapiversion_ ;
+      public boolean hasBcsapiversion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public int getBcsapiversion() {
+        return bcsapiversion_;
+      }
+      public Builder setBcsapiversion(int value) {
+        bitField0_ |= 0x00000001;
+        bcsapiversion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearBcsapiversion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        bcsapiversion_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // required string publicKey = 2;
+      private java.lang.Object publicKey_ = "";
+      public boolean hasPublicKey() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public String getPublicKey() {
+        java.lang.Object ref = publicKey_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          publicKey_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setPublicKey(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        publicKey_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearPublicKey() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        publicKey_ = getDefaultInstance().getPublicKey();
+        onChanged();
+        return this;
+      }
+      void setPublicKey(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
+        publicKey_ = value;
+        onChanged();
+      }
+      
+      // required uint32 lookAhead = 3;
+      private int lookAhead_ ;
+      public boolean hasLookAhead() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public int getLookAhead() {
+        return lookAhead_;
+      }
+      public Builder setLookAhead(int value) {
+        bitField0_ |= 0x00000004;
+        lookAhead_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearLookAhead() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        lookAhead_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.AccountRequest)
+    }
+    
+    static {
+      defaultInstance = new AccountRequest(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.AccountRequest)
+  }
+  
   public interface WalletOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
@@ -10212,6 +10725,11 @@ public final class BCSAPIMessage {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_com_bitsofproof_supernode_api_ExactMatchRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_com_bitsofproof_supernode_api_AccountRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_com_bitsofproof_supernode_api_Wallet_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -10268,16 +10786,18 @@ public final class BCSAPIMessage {
       "\030\002 \002(\014\022\025\n\rhashFunctions\030\003 \002(\r\022\r\n\005tweak\030\004" +
       " \002(\r\022\014\n\004mode\030\005 \002(\r\"V\n\021ExactMatchRequest\022" +
       "\025\n\rbcsapiversion\030\001 \002(\r\022\014\n\004mode\030\002 \002(\r\022\r\n\005" +
-      "match\030\003 \003(\014\022\r\n\005after\030\004 \001(\004\"\341\002\n\006Wallet\022\025\n" +
-      "\rbcsapiversion\030\001 \002(\r\0227\n\004keys\030\002 \003(\0132).com" +
-      ".bitsofproof.supernode.api.Wallet.Key\022L\n" +
-      "\017publicAddresses\030\003 \003(\01323.com.bitsofproof" +
-      ".supernode.api.Wallet.PublicAddress\022@\n\014t" +
-      "ransactions\030\004 \003(\0132*.com.bitsofproof.supe" +
-      "rnode.api.Transaction\032G\n\003Key\022\013\n\003key\030\001 \002(",
-      "\t\022\024\n\014nextSequence\030\002 \002(\r\022\014\n\004name\030\003 \001(\t\022\017\n" +
-      "\007created\030\004 \001(\004\032.\n\rPublicAddress\022\017\n\007addre" +
-      "ss\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
+      "match\030\003 \003(\014\022\r\n\005after\030\004 \001(\004\"M\n\016AccountReq" +
+      "uest\022\025\n\rbcsapiversion\030\001 \002(\r\022\021\n\tpublicKey" +
+      "\030\002 \002(\t\022\021\n\tlookAhead\030\003 \002(\r\"\341\002\n\006Wallet\022\025\n\r" +
+      "bcsapiversion\030\001 \002(\r\0227\n\004keys\030\002 \003(\0132).com." +
+      "bitsofproof.supernode.api.Wallet.Key\022L\n\017" +
+      "publicAddresses\030\003 \003(\01323.com.bitsofproof." +
+      "supernode.api.Wallet.PublicAddress\022@\n\014tr",
+      "ansactions\030\004 \003(\0132*.com.bitsofproof.super" +
+      "node.api.Transaction\032G\n\003Key\022\013\n\003key\030\001 \002(\t" +
+      "\022\024\n\014nextSequence\030\002 \002(\r\022\014\n\004name\030\003 \001(\t\022\017\n\007" +
+      "created\030\004 \001(\004\032.\n\rPublicAddress\022\017\n\007addres" +
+      "s\030\001 \002(\t\022\014\n\004name\030\002 \002(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10380,8 +10900,16 @@ public final class BCSAPIMessage {
               new java.lang.String[] { "Bcsapiversion", "Mode", "Match", "After", },
               com.bitsofproof.supernode.api.BCSAPIMessage.ExactMatchRequest.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.ExactMatchRequest.Builder.class);
-          internal_static_com_bitsofproof_supernode_api_Wallet_descriptor =
+          internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
+          internal_static_com_bitsofproof_supernode_api_AccountRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_com_bitsofproof_supernode_api_AccountRequest_descriptor,
+              new java.lang.String[] { "Bcsapiversion", "PublicKey", "LookAhead", },
+              com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.class,
+              com.bitsofproof.supernode.api.BCSAPIMessage.AccountRequest.Builder.class);
+          internal_static_com_bitsofproof_supernode_api_Wallet_descriptor =
+            getDescriptor().getMessageTypes().get(13);
           internal_static_com_bitsofproof_supernode_api_Wallet_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_Wallet_descriptor,

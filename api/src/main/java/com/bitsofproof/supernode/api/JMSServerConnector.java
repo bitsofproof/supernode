@@ -68,6 +68,7 @@ public class JMSServerConnector implements BCSAPI
 	private MessageProducer colorRequestProducer;
 	private MessageProducer filterRequestProducer;
 	private MessageProducer scanRequestProducer;
+	private MessageProducer scanAccountProducer;
 	private MessageProducer exactMatchProducer;
 
 	private Boolean production = null;
@@ -224,6 +225,7 @@ public class JMSServerConnector implements BCSAPI
 			filterRequestProducer = session.createProducer (session.createQueue ("filterRequest"));
 			scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
 			exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
+			scanAccountProducer = session.createProducer (session.createQueue ("accountRequest"));
 		}
 		catch ( Exception e )
 		{
@@ -467,6 +469,78 @@ public class JMSServerConnector implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
+	}
+
+	@Override
+	public void scanTransactions (ExtendedKey master, final TransactionListener listener) throws BCSAPIException
+	{
+		if ( !master.isReadOnly () )
+		{
+			master = master.getReadOnly ();
+		}
+		try
+		{
+			BytesMessage m = session.createBytesMessage ();
+
+			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.setPublicKey (master.serialize (production));
+			m.writeBytes (builder.build ().toByteArray ());
+
+			final TemporaryQueue answerQueue = session.createTemporaryQueue ();
+			final MessageConsumer consumer = session.createConsumer (answerQueue);
+			m.setJMSReplyTo (answerQueue);
+			final Semaphore ready = new Semaphore (0);
+			consumer.setMessageListener (new MessageListener ()
+			{
+				@Override
+				public void onMessage (Message message)
+				{
+					BytesMessage m = (BytesMessage) message;
+					byte[] body;
+					try
+					{
+						if ( m.getBodyLength () > 0 )
+						{
+							body = new byte[(int) m.getBodyLength ()];
+							m.readBytes (body);
+							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
+							t.computeHash ();
+							listener.process (t);
+						}
+						else
+						{
+							consumer.close ();
+							answerQueue.delete ();
+							ready.release ();
+						}
+					}
+					catch ( JMSException e )
+					{
+						log.error ("Malformed message received for account scan transactions", e);
+					}
+					catch ( InvalidProtocolBufferException e )
+					{
+						log.error ("Malformed message received for account scan transactions", e);
+					}
+				}
+			});
+
+			scanAccountProducer.send (m);
+			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
+			{
+				throw new BCSAPIException ("timeout");
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InterruptedException e )
+		{
+			throw new BCSAPIException (e);
+		}
+
 	}
 
 	@Override

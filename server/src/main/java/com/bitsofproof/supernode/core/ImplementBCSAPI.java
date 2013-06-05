@@ -47,14 +47,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.Color;
+import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
 import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
@@ -138,6 +139,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addBloomScanListener ();
 			addMatchScanListener ();
 			addPingListener ();
+			addAccountScanListener ();
 		}
 		catch ( JMSException e )
 		{
@@ -343,6 +345,89 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				catch ( InvalidProtocolBufferException e )
 				{
 					log.error ("invalid filter request", e);
+				}
+			}
+		});
+	}
+
+	private void addAccountScanListener () throws JMSException
+	{
+		addQueueListener ("accountRequest", new MessageListener ()
+		{
+			@Override
+			public void onMessage (Message msg)
+			{
+				BytesMessage o = (BytesMessage) msg;
+				byte[] body;
+				try
+				{
+					body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					BCSAPIMessage.AccountRequest request = BCSAPIMessage.AccountRequest.parseFrom (body);
+					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
+					final int lookAhead = request.getLookAhead ();
+					final Set<ByteVector> match = new HashSet<ByteVector> ();
+					final UpdateMode mode = UpdateMode.all;
+					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					requestProcessor.execute (new Runnable ()
+					{
+						@Override
+						public void run ()
+						{
+							try
+							{
+								TransactionProcessor processor = new TransactionProcessor ()
+								{
+									@Override
+									public void process (Tx tx)
+									{
+										if ( tx != null )
+										{
+											Transaction transaction = toBCSAPITransaction (tx);
+											BytesMessage m;
+											try
+											{
+												m = session.createBytesMessage ();
+												m.writeBytes (transaction.toProtobuf ().toByteArray ());
+												producer.send (m);
+											}
+											catch ( JMSException e )
+											{
+											}
+										}
+									}
+								};
+
+								store.filterTransactions (match, ek, lookAhead, processor);
+								txhandler.scanUnconfirmedPool (match, mode, processor);
+								try
+								{
+									BytesMessage m = session.createBytesMessage ();
+									producer.send (m); // indicate EOF
+									producer.close ();
+								}
+								catch ( JMSException e )
+								{
+								}
+							}
+							catch ( ValidationException e )
+							{
+								log.error ("Error while scanning", e);
+							}
+						}
+					});
+				}
+				catch ( JMSException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+				catch ( InvalidProtocolBufferException e )
+				{
+					log.error ("invalid filter request", e);
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Invalid scan account request", e);
 				}
 			}
 		});

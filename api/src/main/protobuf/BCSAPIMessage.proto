@@ -109,6 +109,13 @@ message ExactMatchRequest
 	optional uint64 after = 4;
 }
 
+message AccountRequest
+{
+	required uint32 bcsapiversion = 1;
+	required string publicKey = 2;
+	required uint32 lookAhead = 3;
+}
+
 message Wallet {
 	required uint32 bcsapiversion = 1;
 	message Key

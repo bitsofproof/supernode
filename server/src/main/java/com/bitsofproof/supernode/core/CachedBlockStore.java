@@ -45,6 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.ColorRules;
 import com.bitsofproof.supernode.api.ColorRules.ColoredCoin;
+import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteUtils;
@@ -408,6 +409,93 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	private static final int MAX_MATCH_SET = 1000;
+
+	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
+	@Override
+	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, TransactionProcessor processor) throws ValidationException
+	{
+		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
+		lookAhead = Math.min (Math.max (10, lookAhead), MAX_MATCH_SET);
+		for ( int i = 0; i < lookAhead; ++i )
+		{
+			ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
+			matchSet.add (address);
+			addressSet.put (address, i);
+		}
+		try
+		{
+			Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
+			lock.readLock ().lock ();
+
+			for ( CachedBlock cb : blockChain )
+			{
+				boolean found = false;
+				BloomFilter filter = new BloomFilter (cb.filterMap, cb.filterFunctions, 0, UpdateMode.none);
+				for ( ByteVector v : matchSet )
+				{
+					List<Integer> hashList = hashes.get (v);
+					if ( hashList == null )
+					{
+						hashList = BloomFilter.precomputeHashes (v.toByteArray (), 0);
+						hashes.put (v, hashList);
+					}
+					if ( filter.contains (hashList) )
+					{
+						found = true;
+						log.trace ("Match in block " + cb.height);
+						break;
+					}
+				}
+				if ( !found )
+				{
+					continue;
+				}
+				try
+				{
+					int n = 0;
+					Blk b = retrieveBlock (cb);
+					for ( Tx t : b.getTransactions () )
+					{
+						if ( t.matches (matchSet, UpdateMode.keys) )
+						{
+							processor.process (t);
+
+							int lastUsedAddress = 0;
+							for ( TxOut o : t.getOutputs () )
+							{
+								for ( Token token : ScriptFormat.parse (o.getScript ()) )
+								{
+									Integer usedAddress;
+									if ( token.data != null && (usedAddress = addressSet.get (new ByteVector (token.data))) != null )
+									{
+										lastUsedAddress = Math.max (usedAddress, lastUsedAddress);
+									}
+								}
+							}
+							for ( int i = addressSet.size (); i < lastUsedAddress + lookAhead; ++i )
+							{
+								ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
+								matchSet.add (address);
+								addressSet.put (address, i);
+							}
+							++n;
+						}
+					}
+					log.trace ("Matched transactions in block: " + n + " using " + addressSet.size () + " addresses");
+				}
+				catch ( ValidationException e )
+				{
+					log.error ("Error while scanning blocks", e);
+				}
+			}
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+		processor.process (null);
+		log.trace ("Done with Match request");
+	}
 
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
