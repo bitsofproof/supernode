@@ -472,7 +472,7 @@ public class JMSServerConnector implements BCSAPI
 	}
 
 	@Override
-	public void scanTransactions (ExtendedKey master, final TransactionListener listener) throws BCSAPIException
+	public void scanTransactions (ExtendedKey master, int lookAhead, final TransactionListener listener) throws BCSAPIException
 	{
 		if ( !master.isReadOnly () )
 		{
@@ -485,6 +485,7 @@ public class JMSServerConnector implements BCSAPI
 			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setPublicKey (master.serialize (production));
+			builder.setLookAhead (lookAhead);
 			m.writeBytes (builder.build ().toByteArray ());
 
 			final TemporaryQueue answerQueue = session.createTemporaryQueue ();

@@ -154,7 +154,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanTransactions (ExtendedKey master, TransactionListener listener) throws BCSAPIException;
+	public void scanTransactions (ExtendedKey master, int lookAhead, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * register listener with a Bloom filter
