@@ -359,14 +359,8 @@ public class TxHandler implements TrunkListener
 				}
 				for ( Blk blk : addedBlocks )
 				{
-					boolean coinbase = true;
 					for ( Tx tx : blk.getTransactions () )
 					{
-						if ( coinbase )
-						{
-							coinbase = false;
-							continue;
-						}
 						if ( unconfirmed.containsKey (tx.getHash ()) )
 						{
 							unconfirmed.remove (tx.getHash ());
