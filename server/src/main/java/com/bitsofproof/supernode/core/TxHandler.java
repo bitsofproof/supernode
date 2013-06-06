@@ -390,7 +390,7 @@ public class TxHandler implements TrunkListener
 		}
 		catch ( Exception e )
 		{
-			log.error ("Error broadcasting trunk update");
+			log.error ("Error broadcasting trunk update", e);
 		}
 	}
 }
