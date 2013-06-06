@@ -19,7 +19,6 @@ import com.bitsofproof.supernode.model.TxOut;
 
 public interface TxOutCache
 {
-
 	public TxOut get (String hash, Long ix);
 
 	public TxOut use (String hash, Long ix);

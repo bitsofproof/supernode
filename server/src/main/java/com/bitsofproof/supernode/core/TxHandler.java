@@ -16,12 +16,14 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -55,8 +57,31 @@ public class TxHandler implements TrunkListener
 	private final Set<String> heard = new HashSet<String> ();
 	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
 	private final Set<String> own = new HashSet<String> ();
-	private TxOutCache availableOutput = null;
+	private ImplementTxOutCacheDelta availableOutput = null;
 	private PlatformTransactionManager transactionManager;
+
+	private final Set<Tx> dependencyOrderedSet = new TreeSet<Tx> (new Comparator<Tx> ()
+	{
+		@Override
+		public int compare (Tx a, Tx b)
+		{
+			for ( TxIn in : b.getInputs () )
+			{
+				if ( in.getSourceHash ().equals (a.getHash ()) )
+				{
+					return -1;
+				}
+			}
+			for ( TxIn in : a.getInputs () )
+			{
+				if ( in.getSourceHash ().equals (b.getHash ()) )
+				{
+					return 1;
+				}
+			}
+			return 0;
+		}
+	});
 
 	private final List<TxListener> transactionListener = new ArrayList<TxListener> ();
 
@@ -254,16 +279,17 @@ public class TxHandler implements TrunkListener
 		synchronized ( unconfirmed )
 		{
 			unconfirmed.put (tx.getHash (), tx);
-		}
 
-		for ( TxOut out : tx.getOutputs () )
-		{
-			availableOutput.add (out);
-		}
+			for ( TxOut out : tx.getOutputs () )
+			{
+				availableOutput.add (out);
+			}
+			for ( TxIn in : tx.getInputs () )
+			{
+				availableOutput.remove (in.getSourceHash (), in.getIx ());
+			}
 
-		for ( TxIn in : tx.getInputs () )
-		{
-			availableOutput.remove (in.getSourceHash (), in.getIx ());
+			dependencyOrderedSet.add (tx);
 		}
 	}
 
@@ -326,31 +352,37 @@ public class TxHandler implements TrunkListener
 							{
 								own.remove (tx.getHash ());
 							}
-							for ( TxOut o : tx.getOutputs () )
-							{
-								availableOutput.remove (o.getTxHash (), o.getIx ());
-							}
+							dependencyOrderedSet.remove (tx.getHash ());
 						}
 					}
 				}
-				Iterator<Tx> txi = unconfirmed.values ().iterator ();
+
+				availableOutput.reset ();
+
+				Iterator<Tx> txi = dependencyOrderedSet.iterator ();
 				while ( txi.hasNext () )
 				{
 					Tx tx = txi.next ();
 					try
 					{
 						network.getStore ().resolveTransactionInputs (tx, availableOutput);
+
+						for ( TxOut out : tx.getOutputs () )
+						{
+							availableOutput.add (out);
+						}
+						for ( TxIn in : tx.getInputs () )
+						{
+							availableOutput.remove (in.getSourceHash (), in.getIx ());
+						}
 					}
 					catch ( ValidationException e )
 					{
-						for ( TxOut o : tx.getOutputs () )
-						{
-							availableOutput.remove (o.getTxHash (), o.getIx ());
-						}
 						synchronized ( own )
 						{
 							own.remove (tx.getHash ());
 						}
+						unconfirmed.remove (tx.getHash ());
 						txi.remove ();
 					}
 				}

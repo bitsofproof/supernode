@@ -27,6 +27,12 @@ public class ImplementTxOutCache implements TxOutCache
 	private final Map<String, HashMap<Long, TxOut>> map = new HashMap<String, HashMap<Long, TxOut>> ();
 	private final Set<TxOut> used = new HashSet<TxOut> ();
 
+	public void clear ()
+	{
+		map.clear ();
+		used.clear ();
+	}
+
 	@Override
 	public TxOut get (String hash, Long ix)
 	{

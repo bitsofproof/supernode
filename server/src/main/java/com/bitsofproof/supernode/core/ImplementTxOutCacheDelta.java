@@ -34,6 +34,13 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 		delegate = cache;
 	}
 
+	public void reset ()
+	{
+		used.clear ();
+		removed.clear ();
+		added.clear ();
+	}
+
 	@Override
 	public TxOut get (String hash, Long ix)
 	{
