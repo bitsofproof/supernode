@@ -50,6 +50,7 @@ message Transaction {
 	repeated TransactionInput inputs = 5;
 	repeated TransactionOutput outputs = 6;
 	optional bytes block = 7;
+	optional bool doubleSpend = 8;			// set if this transaction IS a double spend and should be removed/ignored
 }
 
 // a block. 

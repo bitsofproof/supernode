@@ -233,7 +233,7 @@ public class TxHandler implements TrunkListener
 										network.getStore ().validateTransaction (t, availableOutput);
 										sendTransaction (t, peer);
 										cacheTransaction (t);
-										notifyListener (t);
+										notifyListener (t, false);
 										if ( peer == null )
 										{
 											synchronized ( own )
@@ -310,12 +310,12 @@ public class TxHandler implements TrunkListener
 		log.debug ("relaying transaction " + tx.getHash ());
 	}
 
-	private void notifyListener (Tx tx)
+	private void notifyListener (Tx tx, boolean doubleSpend)
 	{
 		for ( TxListener l : transactionListener )
 		{
 			// This further extends transaction and cache context
-			l.process (tx);
+			l.process (tx, doubleSpend);
 		}
 	}
 
@@ -341,10 +341,30 @@ public class TxHandler implements TrunkListener
 			// this is already running in cache and transaction context
 			synchronized ( unconfirmed )
 			{
-				for ( Blk blk : addedBlocks )
+				for ( Blk blk : removedBlocks )
 				{
+					boolean coinbase = true;
 					for ( Tx tx : blk.getTransactions () )
 					{
+						if ( coinbase )
+						{
+							coinbase = false;
+							continue;
+						}
+						unconfirmed.put (tx.getHash (), tx);
+						dependencyOrderedSet.add (tx);
+					}
+				}
+				for ( Blk blk : addedBlocks )
+				{
+					boolean coinbase = true;
+					for ( Tx tx : blk.getTransactions () )
+					{
+						if ( coinbase )
+						{
+							coinbase = false;
+							continue;
+						}
 						if ( unconfirmed.containsKey (tx.getHash ()) )
 						{
 							unconfirmed.remove (tx.getHash ());
@@ -353,6 +373,10 @@ public class TxHandler implements TrunkListener
 								own.remove (tx.getHash ());
 							}
 							dependencyOrderedSet.remove (tx);
+						}
+						else
+						{
+							notifyListener (tx, false);
 						}
 					}
 				}
@@ -384,6 +408,7 @@ public class TxHandler implements TrunkListener
 						}
 						unconfirmed.remove (tx.getHash ());
 						txi.remove ();
+						notifyListener (tx, true);
 					}
 				}
 			}

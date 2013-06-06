@@ -41,6 +41,7 @@ public class Transaction implements Serializable, Cloneable
 	private long lockTime = 0;
 	private String hash;
 	private String blockHash;
+	private boolean doubleSpend = false;
 
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
@@ -368,6 +369,16 @@ public class Transaction implements Serializable, Cloneable
 		this.outputs = outputs;
 	}
 
+	public boolean isDoubleSpend ()
+	{
+		return doubleSpend;
+	}
+
+	public void setDoubleSpend (boolean doubleSpend)
+	{
+		this.doubleSpend = doubleSpend;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);
@@ -510,6 +521,10 @@ public class Transaction implements Serializable, Cloneable
 		{
 			builder.setBlock (ByteString.copyFrom (new Hash (blockHash).toByteArray ()));
 		}
+		if ( doubleSpend )
+		{
+			builder.setDoubleSpend (true);
+		}
 		return builder.build ();
 	}
 
@@ -538,6 +553,10 @@ public class Transaction implements Serializable, Cloneable
 		if ( pt.hasBlock () )
 		{
 			transaction.blockHash = new Hash (pt.getBlock ().toByteArray ()).toString ();
+		}
+		if ( pt.hasDoubleSpend () && pt.getDoubleSpend () )
+		{
+			transaction.doubleSpend = true;
 		}
 		return transaction;
 	}

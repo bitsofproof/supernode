@@ -19,5 +19,5 @@ import com.bitsofproof.supernode.model.Tx;
 
 public interface TxListener
 {
-	public void process (Tx transaction);
+	public void process (Tx transaction, boolean doubleSpend);
 }

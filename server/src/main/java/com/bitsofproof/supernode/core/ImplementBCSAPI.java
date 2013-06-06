@@ -222,7 +222,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									{
 										if ( tx != null )
 										{
-											Transaction transaction = toBCSAPITransaction (tx);
+											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
 											try
 											{
@@ -304,7 +304,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									{
 										if ( tx != null )
 										{
-											Transaction transaction = toBCSAPITransaction (tx);
+											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
 											try
 											{
@@ -384,7 +384,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									{
 										if ( tx != null )
 										{
-											Transaction transaction = toBCSAPITransaction (tx);
+											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
 											try
 											{
@@ -755,7 +755,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 							t = store.getTransaction (hash);
 							if ( t != null )
 							{
-								return toBCSAPITransaction (t);
+								return toBCSAPITransaction (t, false);
 							}
 						}
 						catch ( ValidationException e )
@@ -767,7 +767,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			}
 			else
 			{
-				return toBCSAPITransaction (tx);
+				return toBCSAPITransaction (tx, false);
 			}
 		}
 		finally
@@ -921,11 +921,11 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	}
 
 	@Override
-	public void process (Tx tx)
+	public void process (Tx tx, boolean doubleSpend)
 	{
 		try
 		{
-			Transaction transaction = toBCSAPITransaction (tx);
+			Transaction transaction = toBCSAPITransaction (tx, doubleSpend);
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			transactionProducer.send (m);
@@ -947,7 +947,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 	}
 
-	private Transaction toBCSAPITransaction (Tx tx)
+	private Transaction toBCSAPITransaction (Tx tx, boolean doubleSpend)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
 		tx.toWire (writer);
@@ -955,6 +955,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		if ( tx.getBlockHash () != null )
 		{
 			transaction.setBlockHash (tx.getBlockHash ());
+		}
+		if ( doubleSpend )
+		{
+			transaction.setDoubleSpend (true);
 		}
 		return transaction;
 	}
