@@ -22,7 +22,6 @@ import java.math.BigInteger;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
@@ -108,7 +107,6 @@ public class APITest
 		private final Semaphore blockValidated = new Semaphore (0);
 		private final Semaphore transactionValidated = new Semaphore (0);
 		private String last;
-		private final List<Transaction> unconfirmed = new ArrayList<Transaction> ();
 
 		@Override
 		public void trunkUpdate (List<Block> removed, List<Block> added)
@@ -119,35 +117,9 @@ public class APITest
 				{
 					b.computeHash ();
 					last = b.getHash ();
-					Iterator<Transaction> i = unconfirmed.iterator ();
-					while ( i.hasNext () )
-					{
-						Transaction t = i.next ();
-						for ( Transaction tb : b.getTransactions () )
-						{
-							if ( tb.getHash ().equals (t.getHash ()) )
-							{
-								i.remove ();
-							}
-						}
-					}
-
 					blockValidated.release ();
 				}
 			}
-			if ( removed != null )
-			{
-				for ( Block b : added )
-				{
-					b.computeHash ();
-					unconfirmed.addAll (b.getTransactions ());
-				}
-			}
-		}
-
-		public List<Transaction> getUnconfirmed ()
-		{
-			return unconfirmed;
 		}
 
 		public String getLast ()
@@ -182,7 +154,6 @@ public class APITest
 		@Override
 		public void process (Transaction t)
 		{
-			unconfirmed.add (t);
 			transactionValidated.release ();
 		}
 	}
@@ -227,6 +198,7 @@ public class APITest
 
 		validationMonitor.expectBlockValidations (1);
 		assertTrue (validationMonitor.getLast ().equals (block.getHash ()));
+		validationMonitor.expectTransactionValidations (1);
 		aliceMonitor.expectUpdates (1);
 
 		// send 10 blocks
@@ -243,6 +215,7 @@ public class APITest
 		validationMonitor.expectBlockValidations (10);
 		assertTrue (validationMonitor.getLast ().equals (hash));
 		aliceMonitor.expectUpdates (10);
+		validationMonitor.expectTransactionValidations (10);
 
 		// spend some
 		long aliceStartingBalance = alice.getBalance ();
