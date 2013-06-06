@@ -39,7 +39,7 @@ import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.common.ValidationException;
 
-class InMemoryAccountManager implements TransactionListener, TrunkListener, AccountManager
+class InMemoryAccountManager implements TransactionListener, AccountManager
 {
 	private static final Logger log = LoggerFactory.getLogger (InMemoryAccountManager.class);
 
@@ -133,7 +133,6 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 
 	public void registerFilter () throws BCSAPIException
 	{
-		api.registerTrunkListener (this);
 		api.registerFilteredListener (filter, this);
 	}
 
@@ -200,6 +199,10 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 			boolean modified = false;
 			if ( !processedTransaction.containsKey (t.getHash ()) )
 			{
+				if ( t.isDoubleSpend () )
+				{
+					return false;
+				}
 				processedTransaction.put (t.getHash (), t);
 				TransactionOutput spend = null;
 				for ( TransactionInput i : t.getInputs () )
@@ -260,6 +263,17 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 					++ix;
 				}
 			}
+			else if ( t.isDoubleSpend () )
+			{
+				for ( long ix = 0; ix < t.getOutputs ().size (); ++ix )
+				{
+					modified |= confirmed.remove (t.getHash (), ix);
+					modified |= change.remove (t.getHash (), ix);
+					modified |= receiving.remove (t.getHash (), ix);
+					modified |= sending.remove (t.getHash (), ix);
+				}
+				processedTransaction.remove (t.getHash ());
+			}
 			if ( modified )
 			{
 				wallet.addTransaction (t);
@@ -267,33 +281,6 @@ class InMemoryAccountManager implements TransactionListener, TrunkListener, Acco
 			}
 
 			return modified;
-		}
-	}
-
-	@Override
-	public void trunkUpdate (List<Block> removed, List<Block> added)
-	{
-		List<Transaction> newTransactions = new ArrayList<Transaction> ();
-		synchronized ( confirmed )
-		{
-			if ( added != null )
-			{
-				for ( Block b : added )
-				{
-					for ( Transaction t : b.getTransactions () )
-					{
-						if ( updateWithTransaction (t) )
-						{
-							t.setBlockHash (b.getHash ());
-							newTransactions.add (t);
-						}
-					}
-				}
-			}
-		}
-		for ( Transaction t : newTransactions )
-		{
-			notifyListener (t);
 		}
 	}
 
