@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,10 +30,10 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.GetDataMessage;
@@ -52,9 +51,9 @@ public class TxHandler implements TrunkListener
 
 	private final BitcoinNetwork network;
 
-	private final Set<String> heard = Collections.synchronizedSet (new HashSet<String> ());
-	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
-	private final Set<String> own = Collections.synchronizedSet (new HashSet<String> ());
+	private final Set<String> heard = new HashSet<String> ();
+	private final Map<String, Tx> unconfirmed = new HashMap<String, Tx> ();
+	private final Set<String> own = new HashSet<String> ();
 	private TxOutCache availableOutput = null;
 	private PlatformTransactionManager transactionManager;
 
@@ -239,13 +238,19 @@ public class TxHandler implements TrunkListener
 
 	public Tx getTransaction (String hash)
 	{
-		return unconfirmed.get (hash);
+		synchronized ( unconfirmed )
+		{
+			return unconfirmed.get (hash);
+		}
 	}
 
 	private void cacheTransaction (Tx tx)
 	{
 		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
-		unconfirmed.put (tx.getHash (), tx);
+		synchronized ( unconfirmed )
+		{
+			unconfirmed.put (tx.getHash (), tx);
+		}
 
 		for ( TxOut out : tx.getOutputs () )
 		{
