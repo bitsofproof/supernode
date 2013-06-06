@@ -203,15 +203,18 @@ public class TxHandler implements TrunkListener
 
 								try
 								{
-									network.getStore ().validateTransaction (t, availableOutput);
-									sendTransaction (t, peer);
-									cacheTransaction (t);
-									notifyListener (t);
-									if ( peer == null )
+									if ( network.getStore ().getTransaction (t.getHash ()) == null )
 									{
-										synchronized ( own )
+										network.getStore ().validateTransaction (t, availableOutput);
+										sendTransaction (t, peer);
+										cacheTransaction (t);
+										notifyListener (t);
+										if ( peer == null )
 										{
-											own.add (t.getHash ());
+											synchronized ( own )
+											{
+												own.add (t.getHash ());
+											}
 										}
 									}
 									return null;
