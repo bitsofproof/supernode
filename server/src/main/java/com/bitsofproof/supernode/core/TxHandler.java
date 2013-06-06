@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.core;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -309,21 +310,8 @@ public class TxHandler implements TrunkListener
 		try
 		{
 			// this is already running in cache and transaction context
-			List<String> dropped = new ArrayList<String> ();
-
 			synchronized ( unconfirmed )
 			{
-				for ( Blk blk : removedBlocks )
-				{
-					for ( Tx tx : blk.getTransactions () )
-					{
-						if ( !unconfirmed.containsKey (tx.getHash ()) )
-						{
-							cacheTransaction (tx.flatCopy ());
-							dropped.add (tx.getHash ());
-						}
-					}
-				}
 				for ( Blk blk : addedBlocks )
 				{
 					for ( Tx tx : blk.getTransactions () )
@@ -342,13 +330,17 @@ public class TxHandler implements TrunkListener
 						}
 					}
 				}
-				for ( String o : dropped )
+				Iterator<Tx> txi = unconfirmed.values ().iterator ();
+				while ( txi.hasNext () )
 				{
-					Tx tx = unconfirmed.get (o);
-					if ( tx != null )
+					Tx tx = txi.next ();
+					try
 					{
-						sendTransaction (tx, null);
-						notifyListener (tx);
+						network.getStore ().resolveTransactionInputs (tx, availableOutput);
+					}
+					catch ( ValidationException e )
+					{
+						txi.remove ();
 					}
 				}
 			}
