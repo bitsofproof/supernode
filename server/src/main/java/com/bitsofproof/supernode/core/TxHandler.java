@@ -340,6 +340,14 @@ public class TxHandler implements TrunkListener
 					}
 					catch ( ValidationException e )
 					{
+						for ( TxOut o : tx.getOutputs () )
+						{
+							availableOutput.remove (o.getTxHash (), o.getIx ());
+						}
+						synchronized ( own )
+						{
+							own.remove (tx.getHash ());
+						}
 						txi.remove ();
 					}
 				}
