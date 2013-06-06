@@ -341,6 +341,8 @@ public class TxHandler implements TrunkListener
 			// this is already running in cache and transaction context
 			synchronized ( unconfirmed )
 			{
+				List<Tx> firstSeenInBlock = new ArrayList<Tx> ();
+
 				for ( Blk blk : removedBlocks )
 				{
 					boolean coinbase = true;
@@ -376,7 +378,7 @@ public class TxHandler implements TrunkListener
 						}
 						else
 						{
-							notifyListener (tx, false);
+							firstSeenInBlock.add (tx);
 						}
 					}
 				}
@@ -410,6 +412,10 @@ public class TxHandler implements TrunkListener
 						txi.remove ();
 						notifyListener (tx, true);
 					}
+				}
+				for ( Tx tx : firstSeenInBlock )
+				{
+					notifyListener (tx, false);
 				}
 			}
 		}
