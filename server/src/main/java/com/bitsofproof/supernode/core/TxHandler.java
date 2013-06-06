@@ -352,7 +352,7 @@ public class TxHandler implements TrunkListener
 							{
 								own.remove (tx.getHash ());
 							}
-							dependencyOrderedSet.remove (tx.getHash ());
+							dependencyOrderedSet.remove (tx);
 						}
 					}
 				}
