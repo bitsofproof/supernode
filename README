@@ -10,10 +10,6 @@ The validation engine passes most important unit tests of the Satoshi implementa
 
 Clients or extensions communicate with the server process through an asynchrounous message bus. The bus is provided by a separate broker process. The messages are in protobuf format hence interoperable with modules in other languages e.g. python. 
 
-A Java cient API library provides convenient access to the message bus, deterministic and hierarchical key generation (BIP32) and password encrypted private key storage (BIP38) for multi wallet or multiple client environments.
-
-Adapters are available for server trusting mobile clients (BCCAPI) and REST API for web site integration. See example Android application, command line client and primitive block explorer in bop-bccapi, bop-api-example and bop-explorer projects of Bits of Proof.
-
 STATUS
 
 The implementation passed lots of testing and runs since January 2013 in parallel with the network. It is community reviewed, see: https://bitcointalk.org/index.php?topic=122013.0
