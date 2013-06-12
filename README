@@ -18,9 +18,17 @@ STATUS
 
 The implementation passed lots of testing and runs since January 2013 in parallel with the network. It is community reviewed, see: https://bitcointalk.org/index.php?topic=122013.0
 
+BUILD THE SERVER
+See build instructions at: http://bitsofproof.com:8082/display/BPD/Build+and+run+the+Server
+
+CLIENTS
+Applications can use the Bitcoin network by embedding a very low footprint client library. The Bitcoin private keys, that are able to command Bitcoins, are generated and stored at the client side and never transmitted to the server. See the primary client API documentation here: http://bitsofproof.com:8082/display/BPD/Build+an+Application+using+BOP+Servers
+
+Further layers of API are available to support Mobile and Web applications. See more details here: http://bitsofproof.com:8082/display/BPD/Bits+of+Proof+Documentation+Home 
+
 SUPPORT AND HOSTING
 
-Bits of Proof offers commercial support and hosts BOP Enterprise Bitcoin Server instances that run this open source code. BOP servers offer the fastest time to market for your Bitcoin application development. Visit http://bitsofproof.com for more details. 
+Bits of Proof offers commercial support and hosts BOP Enterprise Bitcoin Server instances that run this open source code. BOP servers offer the fastest time to market for your Bitcoin application development. Visit http://bitsofproof.com for more details.
 
 LICENCE
 
