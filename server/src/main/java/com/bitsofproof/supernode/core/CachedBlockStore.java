@@ -401,6 +401,11 @@ public abstract class CachedBlockStore implements BlockStore
 				blockChain.removeLast ();
 				appendList.add (q);
 			}
+			else
+			{
+				appendList.add (q);
+				break;
+			}
 			q = p;
 			p = q.previous;
 		}
@@ -430,7 +435,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( CachedBlock cb : blockChain )
 			{
-				if ( cb.time <= after )
+				if ( after > 1231006505 && cb.time <= after || after < 1231006505 && cb.height <= after )
 				{
 					continue;
 				}
@@ -518,7 +523,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( CachedBlock cb : blockChain )
 			{
-				if ( cb.time <= after )
+				if ( after > 1231006505 && cb.time <= after || after < 1231006505 && cb.height <= after )
 				{
 					continue;
 				}
