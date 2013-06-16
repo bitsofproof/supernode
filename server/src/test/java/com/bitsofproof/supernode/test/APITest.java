@@ -18,6 +18,7 @@ package com.bitsofproof.supernode.test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.Security;
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ import com.bitsofproof.supernode.api.AccountManager;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.SerializedWallet;
+import com.bitsofproof.supernode.api.FileWallet;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TrunkListener;
@@ -170,14 +171,17 @@ public class APITest
 	}
 
 	@Test
-	public void test () throws BCSAPIException, ValidationException
+	public void test () throws BCSAPIException, ValidationException, IOException
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
-		wallet = new SerializedWallet ();
-		((SerializedWallet) wallet).setApi (api);
-		alice = wallet.getAccountManager ("Alice");
-		bob = wallet.getAccountManager ("Bob");
+		wallet = new FileWallet ("test.wallet");
+		wallet.init ("passphrase");
+		wallet.setApi (api);
+		wallet.unlock ("passphrase");
+
+		alice = wallet.createAccountManager ("Alice");
+		bob = wallet.createAccountManager ("Bob");
 
 		alice.addAccountListener (aliceMonitor);
 		bob.addAccountListener (bobMonitor);

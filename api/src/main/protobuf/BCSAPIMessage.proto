@@ -120,19 +120,15 @@ message AccountRequest
 
 message Wallet {
 	required uint32 bcsapiversion = 1;
-	message Key
+	required bytes encryptedSeed = 2;
+	required bytes signature = 3;
+	message Account
 	{
-		required string key = 1;
-		required uint32 nextSequence = 2;
-		optional string name = 3;
-		optional uint64 created = 4;
+		required string publicKey = 1;
+		repeated Transaction transactions = 2;
+		required uint32 nextSequence = 3;
+		required uint64 created = 4;
+		required string name = 5;
 	}
-	message PublicAddress
-	{
-		required string address = 1;
-		required string name = 2;
-	}
-	repeated Key keys = 2;
-	repeated PublicAddress publicAddresses = 3;
-	repeated Transaction transactions = 4;
+	repeated Account accounts = 4;
 }

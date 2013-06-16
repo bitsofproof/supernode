@@ -16,21 +16,28 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
 public interface AccountManager
 {
+	public void setApi (BCSAPI api);
+
 	public String getName ();
+
+	public long getCreated ();
+
+	public boolean updateWithTransaction (Transaction t);
+
+	public List<Transaction> getTransactions ();
 
 	public Collection<byte[]> getAddresses ();
 
 	public ExtendedKey getMasterKey ();
 
 	public Key getKeyForAddress (byte[] address);
-
-	public Key getKey (int ix) throws ValidationException;
 
 	public Key getNextKey () throws ValidationException;
 

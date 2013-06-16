@@ -19,6 +19,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,8 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
 import com.bitsofproof.supernode.api.Transaction.TransactionSource;
-import com.bitsofproof.supernode.common.BloomFilter;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
@@ -45,41 +44,49 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 
 	private BCSAPI api;
 
-	private final Wallet wallet;
-
 	private final InMemoryUTXO confirmed = new InMemoryUTXO ();
 	private final InMemoryUTXO change = new InMemoryUTXO ();
 	private final InMemoryUTXO receiving = new InMemoryUTXO ();
 	private final InMemoryUTXO sending = new InMemoryUTXO ();
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
-	private final Map<String, Transaction> processedTransaction = new HashMap<String, Transaction> ();
+	private final Set<String> processedTransaction = new HashSet<String> ();
+	private final Map<String, Transaction> relevantTransaction = new HashMap<String, Transaction> ();
 
 	private final String name;
 	private final ExtendedKey extended;
-	private final Map<ByteVector, Key> keyForAddress = new HashMap<ByteVector, Key> ();
-	private final BloomFilter filter = BloomFilter.createOptimalFilter (500, 1e-10, UpdateMode.all);
-	private final Set<ByteVector> addressSet = new HashSet<ByteVector> ();
+	private final Map<ByteVector, Integer> keyIDForAddress = new HashMap<ByteVector, Integer> ();
+	private int nextKey;
+	private final long created;
+	private final Wallet wallet;
 
+	@Override
 	public void setApi (BCSAPI api)
 	{
 		this.api = api;
 	}
 
-	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended)
+	@Override
+	public long getCreated ()
 	{
-		this.wallet = wallet;
-		this.name = name;
-		this.extended = extended;
+		return created;
 	}
 
-	public void init (final int lookAhead, long after) throws BCSAPIException, ValidationException
+	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextKey, long created)
 	{
-		final Map<ByteVector, Integer> addressUse = new HashMap<ByteVector, Integer> ();
-		for ( int i = 0; i < lookAhead; ++i )
+		this.name = name;
+		this.extended = extended;
+		this.nextKey = nextKey;
+		this.created = created;
+		this.wallet = wallet;
+	}
+
+	public void sync (final int lookAhead, long after) throws BCSAPIException, ValidationException
+	{
+		for ( int i = nextKey; i < nextKey + lookAhead; ++i )
 		{
 			Key key = extended.getKey (i);
-			addressUse.put (new ByteVector (key.getAddress ()), i);
+			keyIDForAddress.put (new ByteVector (key.getAddress ()), i);
 		}
 		final AtomicInteger lastUsedKey = new AtomicInteger (-1);
 		api.scanTransactions (extended, lookAhead, after, new TransactionListener ()
@@ -95,19 +102,19 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						{
 							if ( token.data != null )
 							{
-								Integer thisKey = addressUse.get (new ByteVector (token.data));
+								Integer thisKey = keyIDForAddress.get (new ByteVector (token.data));
 								if ( thisKey != null )
 								{
 									lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
 								}
 								else
 								{
-									while ( thisKey == null && (addressUse.size () - lastUsedKey.get ()) < lookAhead )
+									while ( thisKey == null && (keyIDForAddress.size () - lastUsedKey.get ()) < lookAhead )
 									{
-										Key key = extended.getKey (addressUse.size ());
-										addressUse.put (new ByteVector (key.getAddress ()), addressUse.size ());
+										Key key = extended.getKey (keyIDForAddress.size ());
+										keyIDForAddress.put (new ByteVector (key.getAddress ()), keyIDForAddress.size ());
 									}
-									thisKey = addressUse.get (new ByteVector (token.data));
+									thisKey = keyIDForAddress.get (new ByteVector (token.data));
 									if ( thisKey != null )
 									{
 										lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
@@ -119,27 +126,18 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 					catch ( ValidationException e )
 					{
 					}
+					updateWithTransaction (t);
 				}
 			}
 		});
-		for ( int i = 0; i <= lastUsedKey.get (); ++i )
-		{
-			Key key = extended.getKey (i);
-			keyForAddress.put (new ByteVector (key.getAddress ()), key);
-			filter.add (key.getAddress ());
-			addressSet.add (new ByteVector (key.getAddress ()));
-		}
-	}
-
-	public void registerFilter () throws BCSAPIException
-	{
-		api.registerFilteredListener (filter, this);
+		nextKey = Math.max (lastUsedKey.get (), nextKey);
+		api.registerTransactionListener (this);
 	}
 
 	@Override
 	public int getNextSequence ()
 	{
-		return keyForAddress.size ();
+		return nextKey;
 	}
 
 	@Override
@@ -152,7 +150,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 	public Collection<byte[]> getAddresses ()
 	{
 		List<byte[]> addresses = new ArrayList<byte[]> ();
-		for ( ByteVector v : keyForAddress.keySet () )
+		for ( ByteVector v : keyIDForAddress.keySet () )
 		{
 			addresses.add (v.toByteArray ());
 		}
@@ -162,48 +160,40 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 	@Override
 	public Key getKeyForAddress (byte[] address)
 	{
-		return keyForAddress.get (new ByteVector (address));
-	}
-
-	@Override
-	public Key getNextKey () throws ValidationException
-	{
-		Key key = extended.getKey (keyForAddress.size ());
-		keyForAddress.put (new ByteVector (key.getAddress ()), key);
-		filter.add (key.getAddress ());
-		addressSet.add (new ByteVector (key.getAddress ()));
+		Integer id = keyIDForAddress.get (new ByteVector (address));
+		Key key = null;
 		try
 		{
-			api.registerFilteredListener (filter, this);
+			key = wallet.getKey (this, id);
 		}
-		catch ( BCSAPIException e )
+		catch ( ValidationException e )
 		{
 		}
 		return key;
 	}
 
 	@Override
-	public Key getKey (int ix) throws ValidationException
+	public Key getNextKey () throws ValidationException
 	{
-		if ( ix >= keyForAddress.size () )
-		{
-			throw new ValidationException ("Use consequtive keys");
-		}
-		return extended.getKey (ix);
+		Key key = extended.getKey (nextKey);
+		keyIDForAddress.put (new ByteVector (key.getAddress ()), nextKey);
+		++nextKey;
+		return key;
 	}
 
+	@Override
 	public boolean updateWithTransaction (Transaction t)
 	{
 		synchronized ( confirmed )
 		{
 			boolean modified = false;
-			if ( !processedTransaction.containsKey (t.getHash ()) )
+			if ( !processedTransaction.contains (t.getHash ()) )
 			{
 				if ( t.isDoubleSpend () )
 				{
 					return false;
 				}
-				processedTransaction.put (t.getHash (), t);
+				processedTransaction.add (t.getHash ());
 				TransactionOutput spend = null;
 				for ( TransactionInput i : t.getInputs () )
 				{
@@ -211,6 +201,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 					if ( spend != null )
 					{
 						confirmed.remove (i.getSourceHash (), i.getIx ());
+						log.trace ("Spend settled output " + i.getSourceHash () + " " + i.getIx () + " " + spend.getValue ());
 					}
 					else
 					{
@@ -218,6 +209,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						if ( spend != null )
 						{
 							change.remove (i.getSourceHash (), i.getIx ());
+							log.trace ("Spend change output " + i.getSourceHash () + " " + i.getIx () + " " + spend.getValue ());
 						}
 						else
 						{
@@ -225,6 +217,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 							if ( spend != null )
 							{
 								receiving.remove (i.getSourceHash (), i.getIx ());
+								log.trace ("Spend receiving output " + i.getSourceHash () + " " + i.getIx () + " " + spend.getValue ());
 							}
 						}
 					}
@@ -233,22 +226,25 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 				long ix = 0;
 				for ( TransactionOutput o : t.getOutputs () )
 				{
-					if ( addressSet.contains (new ByteVector (o.getOutputAddress ())) )
+					if ( keyIDForAddress.containsKey (new ByteVector (o.getOutputAddress ())) )
 					{
 						modified = true;
 						if ( t.getBlockHash () != null )
 						{
 							confirmed.add (t.getHash (), ix, o);
+							log.trace ("Settled " + ix + " " + o.getValue ());
 						}
 						else
 						{
 							if ( spend != null )
 							{
 								change.add (t.getHash (), ix, o);
+								log.trace ("Change " + ix + " " + o.getValue ());
 							}
 							else
 							{
 								receiving.add (t.getHash (), ix, o);
+								log.trace ("Receiving " + ix + " " + o.getValue ());
 							}
 						}
 					}
@@ -258,30 +254,75 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						{
 							modified = true;
 							sending.add (t.getHash (), ix, o);
+							log.trace ("Sending " + ix + " " + o.getValue ());
 						}
 					}
 					++ix;
+				}
+				if ( modified )
+				{
+					relevantTransaction.put (t.getHash (), t);
 				}
 			}
 			else if ( t.isDoubleSpend () )
 			{
 				for ( long ix = 0; ix < t.getOutputs ().size (); ++ix )
 				{
-					modified |= confirmed.remove (t.getHash (), ix);
-					modified |= change.remove (t.getHash (), ix);
-					modified |= receiving.remove (t.getHash (), ix);
-					modified |= sending.remove (t.getHash (), ix);
+					TransactionOutput out = null;
+					out = confirmed.remove (t.getHash (), ix);
+					if ( out == null )
+					{
+						out = change.remove (t.getHash (), ix);
+					}
+					if ( out == null )
+					{
+						out = receiving.remove (t.getHash (), ix);
+					}
+					if ( out == null )
+					{
+						out = sending.remove (t.getHash (), ix);
+					}
+					if ( out != null )
+					{
+						log.trace ("Remove double spend from account " + name + " tx: " + t.getHash () + " ix " + ix + " " + out.getValue ());
+					}
+					modified |= out != null;
 				}
 				processedTransaction.remove (t.getHash ());
+				relevantTransaction.remove (t.getHash ());
 			}
-			if ( modified )
-			{
-				wallet.addTransaction (t);
-				log.trace ("Updated account " + name + " with " + t.getHash ());
-			}
-
 			return modified;
 		}
+	}
+
+	@Override
+	public List<Transaction> getTransactions ()
+	{
+		ArrayList<Transaction> tl = new ArrayList<Transaction> ();
+		tl.addAll (relevantTransaction.values ());
+		Collections.sort (tl, new Comparator<Transaction> ()
+		{
+			@Override
+			public int compare (Transaction a, Transaction b)
+			{
+				for ( TransactionInput in : b.getInputs () )
+				{
+					if ( in.getSourceHash ().equals (a.getHash ()) )
+					{
+						return -1;
+					}
+				}
+				for ( TransactionInput in : a.getInputs () )
+				{
+					if ( in.getSourceHash ().equals (b.getHash ()) )
+					{
+						return 1;
+					}
+				}
+				return 0;
+			}
+		});
+		return tl;
 	}
 
 	@Override

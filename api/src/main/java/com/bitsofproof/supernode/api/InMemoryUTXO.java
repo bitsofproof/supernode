@@ -52,19 +52,19 @@ public class InMemoryUTXO
 		return null;
 	}
 
-	public boolean remove (String tx, long ix)
+	public TransactionOutput remove (String tx, long ix)
 	{
 		HashMap<Long, TransactionOutput> outs = utxo.get (tx);
 		if ( outs != null )
 		{
-			boolean removed = outs.remove (ix) != null;
+			TransactionOutput removed = outs.remove (ix);
 			if ( outs.size () == 0 )
 			{
 				utxo.remove (tx);
 			}
 			return removed;
 		}
-		return false;
+		return null;
 	}
 
 	public long getTotal ()

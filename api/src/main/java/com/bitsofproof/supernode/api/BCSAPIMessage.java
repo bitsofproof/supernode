@@ -8500,34 +8500,22 @@ public final class BCSAPIMessage {
     boolean hasBcsapiversion();
     int getBcsapiversion();
     
-    // repeated .com.bitsofproof.supernode.api.Wallet.Key keys = 2;
-    java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> 
-        getKeysList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key getKeys(int index);
-    int getKeysCount();
-    java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder> 
-        getKeysOrBuilderList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder getKeysOrBuilder(
-        int index);
+    // required bytes encryptedSeed = 2;
+    boolean hasEncryptedSeed();
+    com.google.protobuf.ByteString getEncryptedSeed();
     
-    // repeated .com.bitsofproof.supernode.api.Wallet.PublicAddress publicAddresses = 3;
-    java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> 
-        getPublicAddressesList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress getPublicAddresses(int index);
-    int getPublicAddressesCount();
-    java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder> 
-        getPublicAddressesOrBuilderList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder getPublicAddressesOrBuilder(
-        int index);
+    // required bytes signature = 3;
+    boolean hasSignature();
+    com.google.protobuf.ByteString getSignature();
     
-    // repeated .com.bitsofproof.supernode.api.Transaction transactions = 4;
-    java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> 
-        getTransactionsList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index);
-    int getTransactionsCount();
-    java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
-        getTransactionsOrBuilderList();
-    com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+    // repeated .com.bitsofproof.supernode.api.Wallet.Account accounts = 4;
+    java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> 
+        getAccountsList();
+    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account getAccounts(int index);
+    int getAccountsCount();
+    java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder> 
+        getAccountsOrBuilderList();
+    com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder getAccountsOrBuilder(
         int index);
   }
   public static final class Wallet extends
@@ -8558,62 +8546,72 @@ public final class BCSAPIMessage {
       return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_fieldAccessorTable;
     }
     
-    public interface KeyOrBuilder
+    public interface AccountOrBuilder
         extends com.google.protobuf.MessageOrBuilder {
       
-      // required string key = 1;
-      boolean hasKey();
-      String getKey();
+      // required string publicKey = 1;
+      boolean hasPublicKey();
+      String getPublicKey();
       
-      // required uint32 nextSequence = 2;
+      // repeated .com.bitsofproof.supernode.api.Transaction transactions = 2;
+      java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> 
+          getTransactionsList();
+      com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index);
+      int getTransactionsCount();
+      java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+          getTransactionsOrBuilderList();
+      com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+          int index);
+      
+      // required uint32 nextSequence = 3;
       boolean hasNextSequence();
       int getNextSequence();
       
-      // optional string name = 3;
-      boolean hasName();
-      String getName();
-      
-      // optional uint64 created = 4;
+      // required uint64 created = 4;
       boolean hasCreated();
       long getCreated();
+      
+      // required string name = 5;
+      boolean hasName();
+      String getName();
     }
-    public static final class Key extends
+    public static final class Account extends
         com.google.protobuf.GeneratedMessage
-        implements KeyOrBuilder {
-      // Use Key.newBuilder() to construct.
-      private Key(Builder builder) {
+        implements AccountOrBuilder {
+      // Use Account.newBuilder() to construct.
+      private Account(Builder builder) {
         super(builder);
       }
-      private Key(boolean noInit) {}
+      private Account(boolean noInit) {}
       
-      private static final Key defaultInstance;
-      public static Key getDefaultInstance() {
+      private static final Account defaultInstance;
+      public static Account getDefaultInstance() {
         return defaultInstance;
       }
       
-      public Key getDefaultInstanceForType() {
+      public Account getDefaultInstanceForType() {
         return defaultInstance;
       }
       
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor;
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Account_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Key_fieldAccessorTable;
+        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Account_fieldAccessorTable;
       }
       
       private int bitField0_;
-      // required string key = 1;
-      public static final int KEY_FIELD_NUMBER = 1;
-      private java.lang.Object key_;
-      public boolean hasKey() {
+      // required string publicKey = 1;
+      public static final int PUBLICKEY_FIELD_NUMBER = 1;
+      private java.lang.Object publicKey_;
+      public boolean hasPublicKey() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public String getKey() {
-        java.lang.Object ref = key_;
+      public String getPublicKey() {
+        java.lang.Object ref = publicKey_;
         if (ref instanceof String) {
           return (String) ref;
         } else {
@@ -8621,25 +8619,46 @@ public final class BCSAPIMessage {
               (com.google.protobuf.ByteString) ref;
           String s = bs.toStringUtf8();
           if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-            key_ = s;
+            publicKey_ = s;
           }
           return s;
         }
       }
-      private com.google.protobuf.ByteString getKeyBytes() {
-        java.lang.Object ref = key_;
+      private com.google.protobuf.ByteString getPublicKeyBytes() {
+        java.lang.Object ref = publicKey_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-          key_ = b;
+          publicKey_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
         }
       }
       
-      // required uint32 nextSequence = 2;
-      public static final int NEXTSEQUENCE_FIELD_NUMBER = 2;
+      // repeated .com.bitsofproof.supernode.api.Transaction transactions = 2;
+      public static final int TRANSACTIONS_FIELD_NUMBER = 2;
+      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> transactions_;
+      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getTransactionsList() {
+        return transactions_;
+      }
+      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+          getTransactionsOrBuilderList() {
+        return transactions_;
+      }
+      public int getTransactionsCount() {
+        return transactions_.size();
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index) {
+        return transactions_.get(index);
+      }
+      public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+          int index) {
+        return transactions_.get(index);
+      }
+      
+      // required uint32 nextSequence = 3;
+      public static final int NEXTSEQUENCE_FIELD_NUMBER = 3;
       private int nextSequence_;
       public boolean hasNextSequence() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -8648,11 +8667,21 @@ public final class BCSAPIMessage {
         return nextSequence_;
       }
       
-      // optional string name = 3;
-      public static final int NAME_FIELD_NUMBER = 3;
+      // required uint64 created = 4;
+      public static final int CREATED_FIELD_NUMBER = 4;
+      private long created_;
+      public boolean hasCreated() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public long getCreated() {
+        return created_;
+      }
+      
+      // required string name = 5;
+      public static final int NAME_FIELD_NUMBER = 5;
       private java.lang.Object name_;
       public boolean hasName() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       public String getName() {
         java.lang.Object ref = name_;
@@ -8680,34 +8709,39 @@ public final class BCSAPIMessage {
         }
       }
       
-      // optional uint64 created = 4;
-      public static final int CREATED_FIELD_NUMBER = 4;
-      private long created_;
-      public boolean hasCreated() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public long getCreated() {
-        return created_;
-      }
-      
       private void initFields() {
-        key_ = "";
+        publicKey_ = "";
+        transactions_ = java.util.Collections.emptyList();
         nextSequence_ = 0;
-        name_ = "";
         created_ = 0L;
+        name_ = "";
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
         if (isInitialized != -1) return isInitialized == 1;
         
-        if (!hasKey()) {
+        if (!hasPublicKey()) {
           memoizedIsInitialized = 0;
           return false;
         }
         if (!hasNextSequence()) {
           memoizedIsInitialized = 0;
           return false;
+        }
+        if (!hasCreated()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasName()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        for (int i = 0; i < getTransactionsCount(); i++) {
+          if (!getTransactions(i).isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
         }
         memoizedIsInitialized = 1;
         return true;
@@ -8717,16 +8751,19 @@ public final class BCSAPIMessage {
                           throws java.io.IOException {
         getSerializedSize();
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeBytes(1, getKeyBytes());
+          output.writeBytes(1, getPublicKeyBytes());
+        }
+        for (int i = 0; i < transactions_.size(); i++) {
+          output.writeMessage(2, transactions_.get(i));
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeUInt32(2, nextSequence_);
+          output.writeUInt32(3, nextSequence_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeBytes(3, getNameBytes());
+          output.writeUInt64(4, created_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          output.writeUInt64(4, created_);
+          output.writeBytes(5, getNameBytes());
         }
         getUnknownFields().writeTo(output);
       }
@@ -8739,19 +8776,23 @@ public final class BCSAPIMessage {
         size = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, getKeyBytes());
+            .computeBytesSize(1, getPublicKeyBytes());
+        }
+        for (int i = 0; i < transactions_.size(); i++) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(2, transactions_.get(i));
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(2, nextSequence_);
+            .computeUInt32Size(3, nextSequence_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(3, getNameBytes());
+            .computeUInt64Size(4, created_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt64Size(4, created_);
+            .computeBytesSize(5, getNameBytes());
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -8765,41 +8806,41 @@ public final class BCSAPIMessage {
         return super.writeReplace();
       }
       
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           com.google.protobuf.ByteString data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           com.google.protobuf.ByteString data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(byte[] data)
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(byte[] data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           byte[] data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(java.io.InputStream input)
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(java.io.InputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input, extensionRegistry)
                  .buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseDelimitedFrom(java.io.InputStream input)
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseDelimitedFrom(java.io.InputStream input)
           throws java.io.IOException {
         Builder builder = newBuilder();
         if (builder.mergeDelimitedFrom(input)) {
@@ -8808,7 +8849,7 @@ public final class BCSAPIMessage {
           return null;
         }
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseDelimitedFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseDelimitedFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -8819,12 +8860,12 @@ public final class BCSAPIMessage {
           return null;
         }
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           com.google.protobuf.CodedInputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key parseFrom(
+      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account parseFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -8834,7 +8875,7 @@ public final class BCSAPIMessage {
       
       public static Builder newBuilder() { return Builder.create(); }
       public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key prototype) {
+      public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account prototype) {
         return newBuilder().mergeFrom(prototype);
       }
       public Builder toBuilder() { return newBuilder(this); }
@@ -8847,18 +8888,18 @@ public final class BCSAPIMessage {
       }
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder {
+         implements com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor;
+          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Account_descriptor;
         }
         
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Key_fieldAccessorTable;
+          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_Account_fieldAccessorTable;
         }
         
-        // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.newBuilder()
+        // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.newBuilder()
         private Builder() {
           maybeForceBuilderInitialization();
         }
@@ -8869,6 +8910,7 @@ public final class BCSAPIMessage {
         }
         private void maybeForceBuilderInitialization() {
           if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+            getTransactionsFieldBuilder();
           }
         }
         private static Builder create() {
@@ -8877,14 +8919,20 @@ public final class BCSAPIMessage {
         
         public Builder clear() {
           super.clear();
-          key_ = "";
+          publicKey_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
+          if (transactionsBuilder_ == null) {
+            transactions_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            transactionsBuilder_.clear();
+          }
           nextSequence_ = 0;
-          bitField0_ = (bitField0_ & ~0x00000002);
-          name_ = "";
           bitField0_ = (bitField0_ & ~0x00000004);
           created_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000008);
+          name_ = "";
+          bitField0_ = (bitField0_ & ~0x00000010);
           return this;
         }
         
@@ -8894,24 +8942,24 @@ public final class BCSAPIMessage {
         
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.getDescriptor();
+          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.getDescriptor();
         }
         
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key getDefaultInstanceForType() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.getDefaultInstance();
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account getDefaultInstanceForType() {
+          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.getDefaultInstance();
         }
         
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key build() {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key result = buildPartial();
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account build() {
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(result);
           }
           return result;
         }
         
-        private com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key buildParsed()
+        private com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account buildParsed()
             throws com.google.protobuf.InvalidProtocolBufferException {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key result = buildPartial();
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(
               result).asInvalidProtocolBufferException();
@@ -8919,66 +8967,115 @@ public final class BCSAPIMessage {
           return result;
         }
         
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key buildPartial() {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key result = new com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key(this);
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account buildPartial() {
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account result = new com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account(this);
           int from_bitField0_ = bitField0_;
           int to_bitField0_ = 0;
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
             to_bitField0_ |= 0x00000001;
           }
-          result.key_ = key_;
-          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          result.publicKey_ = publicKey_;
+          if (transactionsBuilder_ == null) {
+            if (((bitField0_ & 0x00000002) == 0x00000002)) {
+              transactions_ = java.util.Collections.unmodifiableList(transactions_);
+              bitField0_ = (bitField0_ & ~0x00000002);
+            }
+            result.transactions_ = transactions_;
+          } else {
+            result.transactions_ = transactionsBuilder_.build();
+          }
+          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
             to_bitField0_ |= 0x00000002;
           }
           result.nextSequence_ = nextSequence_;
-          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
             to_bitField0_ |= 0x00000004;
           }
-          result.name_ = name_;
-          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          result.created_ = created_;
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
             to_bitField0_ |= 0x00000008;
           }
-          result.created_ = created_;
+          result.name_ = name_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
         }
         
         public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key) {
-            return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key)other);
+          if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account) {
+            return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account)other);
           } else {
             super.mergeFrom(other);
             return this;
           }
         }
         
-        public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key other) {
-          if (other == com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.getDefaultInstance()) return this;
-          if (other.hasKey()) {
-            setKey(other.getKey());
+        public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account other) {
+          if (other == com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.getDefaultInstance()) return this;
+          if (other.hasPublicKey()) {
+            setPublicKey(other.getPublicKey());
+          }
+          if (transactionsBuilder_ == null) {
+            if (!other.transactions_.isEmpty()) {
+              if (transactions_.isEmpty()) {
+                transactions_ = other.transactions_;
+                bitField0_ = (bitField0_ & ~0x00000002);
+              } else {
+                ensureTransactionsIsMutable();
+                transactions_.addAll(other.transactions_);
+              }
+              onChanged();
+            }
+          } else {
+            if (!other.transactions_.isEmpty()) {
+              if (transactionsBuilder_.isEmpty()) {
+                transactionsBuilder_.dispose();
+                transactionsBuilder_ = null;
+                transactions_ = other.transactions_;
+                bitField0_ = (bitField0_ & ~0x00000002);
+                transactionsBuilder_ = 
+                  com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                     getTransactionsFieldBuilder() : null;
+              } else {
+                transactionsBuilder_.addAllMessages(other.transactions_);
+              }
+            }
           }
           if (other.hasNextSequence()) {
             setNextSequence(other.getNextSequence());
           }
-          if (other.hasName()) {
-            setName(other.getName());
-          }
           if (other.hasCreated()) {
             setCreated(other.getCreated());
+          }
+          if (other.hasName()) {
+            setName(other.getName());
           }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
         }
         
         public final boolean isInitialized() {
-          if (!hasKey()) {
+          if (!hasPublicKey()) {
             
             return false;
           }
           if (!hasNextSequence()) {
             
             return false;
+          }
+          if (!hasCreated()) {
+            
+            return false;
+          }
+          if (!hasName()) {
+            
+            return false;
+          }
+          for (int i = 0; i < getTransactionsCount(); i++) {
+            if (!getTransactions(i).isInitialized()) {
+              
+              return false;
+            }
           }
           return true;
         }
@@ -9008,22 +9105,28 @@ public final class BCSAPIMessage {
               }
               case 10: {
                 bitField0_ |= 0x00000001;
-                key_ = input.readBytes();
+                publicKey_ = input.readBytes();
                 break;
               }
-              case 16: {
-                bitField0_ |= 0x00000002;
-                nextSequence_ = input.readUInt32();
+              case 18: {
+                com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.newBuilder();
+                input.readMessage(subBuilder, extensionRegistry);
+                addTransactions(subBuilder.buildPartial());
                 break;
               }
-              case 26: {
+              case 24: {
                 bitField0_ |= 0x00000004;
-                name_ = input.readBytes();
+                nextSequence_ = input.readUInt32();
                 break;
               }
               case 32: {
                 bitField0_ |= 0x00000008;
                 created_ = input.readUInt64();
+                break;
+              }
+              case 42: {
+                bitField0_ |= 0x00000010;
+                name_ = input.readBytes();
                 break;
               }
             }
@@ -9032,100 +9135,250 @@ public final class BCSAPIMessage {
         
         private int bitField0_;
         
-        // required string key = 1;
-        private java.lang.Object key_ = "";
-        public boolean hasKey() {
+        // required string publicKey = 1;
+        private java.lang.Object publicKey_ = "";
+        public boolean hasPublicKey() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
-        public String getKey() {
-          java.lang.Object ref = key_;
+        public String getPublicKey() {
+          java.lang.Object ref = publicKey_;
           if (!(ref instanceof String)) {
             String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-            key_ = s;
+            publicKey_ = s;
             return s;
           } else {
             return (String) ref;
           }
         }
-        public Builder setKey(String value) {
+        public Builder setPublicKey(String value) {
           if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000001;
-          key_ = value;
+          publicKey_ = value;
           onChanged();
           return this;
         }
-        public Builder clearKey() {
+        public Builder clearPublicKey() {
           bitField0_ = (bitField0_ & ~0x00000001);
-          key_ = getDefaultInstance().getKey();
+          publicKey_ = getDefaultInstance().getPublicKey();
           onChanged();
           return this;
         }
-        void setKey(com.google.protobuf.ByteString value) {
+        void setPublicKey(com.google.protobuf.ByteString value) {
           bitField0_ |= 0x00000001;
-          key_ = value;
+          publicKey_ = value;
           onChanged();
         }
         
-        // required uint32 nextSequence = 2;
+        // repeated .com.bitsofproof.supernode.api.Transaction transactions = 2;
+        private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> transactions_ =
+          java.util.Collections.emptyList();
+        private void ensureTransactionsIsMutable() {
+          if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+            transactions_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction>(transactions_);
+            bitField0_ |= 0x00000002;
+           }
+        }
+        
+        private com.google.protobuf.RepeatedFieldBuilder<
+            com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> transactionsBuilder_;
+        
+        public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getTransactionsList() {
+          if (transactionsBuilder_ == null) {
+            return java.util.Collections.unmodifiableList(transactions_);
+          } else {
+            return transactionsBuilder_.getMessageList();
+          }
+        }
+        public int getTransactionsCount() {
+          if (transactionsBuilder_ == null) {
+            return transactions_.size();
+          } else {
+            return transactionsBuilder_.getCount();
+          }
+        }
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index) {
+          if (transactionsBuilder_ == null) {
+            return transactions_.get(index);
+          } else {
+            return transactionsBuilder_.getMessage(index);
+          }
+        }
+        public Builder setTransactions(
+            int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+          if (transactionsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureTransactionsIsMutable();
+            transactions_.set(index, value);
+            onChanged();
+          } else {
+            transactionsBuilder_.setMessage(index, value);
+          }
+          return this;
+        }
+        public Builder setTransactions(
+            int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+          if (transactionsBuilder_ == null) {
+            ensureTransactionsIsMutable();
+            transactions_.set(index, builderForValue.build());
+            onChanged();
+          } else {
+            transactionsBuilder_.setMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        public Builder addTransactions(com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+          if (transactionsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureTransactionsIsMutable();
+            transactions_.add(value);
+            onChanged();
+          } else {
+            transactionsBuilder_.addMessage(value);
+          }
+          return this;
+        }
+        public Builder addTransactions(
+            int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
+          if (transactionsBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ensureTransactionsIsMutable();
+            transactions_.add(index, value);
+            onChanged();
+          } else {
+            transactionsBuilder_.addMessage(index, value);
+          }
+          return this;
+        }
+        public Builder addTransactions(
+            com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+          if (transactionsBuilder_ == null) {
+            ensureTransactionsIsMutable();
+            transactions_.add(builderForValue.build());
+            onChanged();
+          } else {
+            transactionsBuilder_.addMessage(builderForValue.build());
+          }
+          return this;
+        }
+        public Builder addTransactions(
+            int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
+          if (transactionsBuilder_ == null) {
+            ensureTransactionsIsMutable();
+            transactions_.add(index, builderForValue.build());
+            onChanged();
+          } else {
+            transactionsBuilder_.addMessage(index, builderForValue.build());
+          }
+          return this;
+        }
+        public Builder addAllTransactions(
+            java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> values) {
+          if (transactionsBuilder_ == null) {
+            ensureTransactionsIsMutable();
+            super.addAll(values, transactions_);
+            onChanged();
+          } else {
+            transactionsBuilder_.addAllMessages(values);
+          }
+          return this;
+        }
+        public Builder clearTransactions() {
+          if (transactionsBuilder_ == null) {
+            transactions_ = java.util.Collections.emptyList();
+            bitField0_ = (bitField0_ & ~0x00000002);
+            onChanged();
+          } else {
+            transactionsBuilder_.clear();
+          }
+          return this;
+        }
+        public Builder removeTransactions(int index) {
+          if (transactionsBuilder_ == null) {
+            ensureTransactionsIsMutable();
+            transactions_.remove(index);
+            onChanged();
+          } else {
+            transactionsBuilder_.remove(index);
+          }
+          return this;
+        }
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder getTransactionsBuilder(
+            int index) {
+          return getTransactionsFieldBuilder().getBuilder(index);
+        }
+        public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+            int index) {
+          if (transactionsBuilder_ == null) {
+            return transactions_.get(index);  } else {
+            return transactionsBuilder_.getMessageOrBuilder(index);
+          }
+        }
+        public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+             getTransactionsOrBuilderList() {
+          if (transactionsBuilder_ != null) {
+            return transactionsBuilder_.getMessageOrBuilderList();
+          } else {
+            return java.util.Collections.unmodifiableList(transactions_);
+          }
+        }
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addTransactionsBuilder() {
+          return getTransactionsFieldBuilder().addBuilder(
+              com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+        }
+        public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addTransactionsBuilder(
+            int index) {
+          return getTransactionsFieldBuilder().addBuilder(
+              index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+        }
+        public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder> 
+             getTransactionsBuilderList() {
+          return getTransactionsFieldBuilder().getBuilderList();
+        }
+        private com.google.protobuf.RepeatedFieldBuilder<
+            com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
+            getTransactionsFieldBuilder() {
+          if (transactionsBuilder_ == null) {
+            transactionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+                com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder>(
+                    transactions_,
+                    ((bitField0_ & 0x00000002) == 0x00000002),
+                    getParentForChildren(),
+                    isClean());
+            transactions_ = null;
+          }
+          return transactionsBuilder_;
+        }
+        
+        // required uint32 nextSequence = 3;
         private int nextSequence_ ;
         public boolean hasNextSequence() {
-          return ((bitField0_ & 0x00000002) == 0x00000002);
+          return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         public int getNextSequence() {
           return nextSequence_;
         }
         public Builder setNextSequence(int value) {
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000004;
           nextSequence_ = value;
           onChanged();
           return this;
         }
         public Builder clearNextSequence() {
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000004);
           nextSequence_ = 0;
           onChanged();
           return this;
         }
         
-        // optional string name = 3;
-        private java.lang.Object name_ = "";
-        public boolean hasName() {
-          return ((bitField0_ & 0x00000004) == 0x00000004);
-        }
-        public String getName() {
-          java.lang.Object ref = name_;
-          if (!(ref instanceof String)) {
-            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-            name_ = s;
-            return s;
-          } else {
-            return (String) ref;
-          }
-        }
-        public Builder setName(String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-          name_ = value;
-          onChanged();
-          return this;
-        }
-        public Builder clearName() {
-          bitField0_ = (bitField0_ & ~0x00000004);
-          name_ = getDefaultInstance().getName();
-          onChanged();
-          return this;
-        }
-        void setName(com.google.protobuf.ByteString value) {
-          bitField0_ |= 0x00000004;
-          name_ = value;
-          onChanged();
-        }
-        
-        // optional uint64 created = 4;
+        // required uint64 created = 4;
         private long created_ ;
         public boolean hasCreated() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -9146,459 +9399,10 @@ public final class BCSAPIMessage {
           return this;
         }
         
-        // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Wallet.Key)
-      }
-      
-      static {
-        defaultInstance = new Key(true);
-        defaultInstance.initFields();
-      }
-      
-      // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.Wallet.Key)
-    }
-    
-    public interface PublicAddressOrBuilder
-        extends com.google.protobuf.MessageOrBuilder {
-      
-      // required string address = 1;
-      boolean hasAddress();
-      String getAddress();
-      
-      // required string name = 2;
-      boolean hasName();
-      String getName();
-    }
-    public static final class PublicAddress extends
-        com.google.protobuf.GeneratedMessage
-        implements PublicAddressOrBuilder {
-      // Use PublicAddress.newBuilder() to construct.
-      private PublicAddress(Builder builder) {
-        super(builder);
-      }
-      private PublicAddress(boolean noInit) {}
-      
-      private static final PublicAddress defaultInstance;
-      public static PublicAddress getDefaultInstance() {
-        return defaultInstance;
-      }
-      
-      public PublicAddress getDefaultInstanceForType() {
-        return defaultInstance;
-      }
-      
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_fieldAccessorTable;
-      }
-      
-      private int bitField0_;
-      // required string address = 1;
-      public static final int ADDRESS_FIELD_NUMBER = 1;
-      private java.lang.Object address_;
-      public boolean hasAddress() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public String getAddress() {
-        java.lang.Object ref = address_;
-        if (ref instanceof String) {
-          return (String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          String s = bs.toStringUtf8();
-          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-            address_ = s;
-          }
-          return s;
-        }
-      }
-      private com.google.protobuf.ByteString getAddressBytes() {
-        java.lang.Object ref = address_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-          address_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      
-      // required string name = 2;
-      public static final int NAME_FIELD_NUMBER = 2;
-      private java.lang.Object name_;
-      public boolean hasName() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public String getName() {
-        java.lang.Object ref = name_;
-        if (ref instanceof String) {
-          return (String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          String s = bs.toStringUtf8();
-          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-            name_ = s;
-          }
-          return s;
-        }
-      }
-      private com.google.protobuf.ByteString getNameBytes() {
-        java.lang.Object ref = name_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-          name_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      
-      private void initFields() {
-        address_ = "";
-        name_ = "";
-      }
-      private byte memoizedIsInitialized = -1;
-      public final boolean isInitialized() {
-        byte isInitialized = memoizedIsInitialized;
-        if (isInitialized != -1) return isInitialized == 1;
-        
-        if (!hasAddress()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        if (!hasName()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        memoizedIsInitialized = 1;
-        return true;
-      }
-      
-      public void writeTo(com.google.protobuf.CodedOutputStream output)
-                          throws java.io.IOException {
-        getSerializedSize();
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeBytes(1, getAddressBytes());
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeBytes(2, getNameBytes());
-        }
-        getUnknownFields().writeTo(output);
-      }
-      
-      private int memoizedSerializedSize = -1;
-      public int getSerializedSize() {
-        int size = memoizedSerializedSize;
-        if (size != -1) return size;
-      
-        size = 0;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, getAddressBytes());
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(2, getNameBytes());
-        }
-        size += getUnknownFields().getSerializedSize();
-        memoizedSerializedSize = size;
-        return size;
-      }
-      
-      private static final long serialVersionUID = 0L;
-      @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
-        return super.writeReplace();
-      }
-      
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          com.google.protobuf.ByteString data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data).buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          com.google.protobuf.ByteString data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data, extensionRegistry)
-                 .buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(byte[] data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data).buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          byte[] data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data, extensionRegistry)
-                 .buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input).buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input, extensionRegistry)
-                 .buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseDelimitedFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        Builder builder = newBuilder();
-        if (builder.mergeDelimitedFrom(input)) {
-          return builder.buildParsed();
-        } else {
-          return null;
-        }
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseDelimitedFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        Builder builder = newBuilder();
-        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-          return builder.buildParsed();
-        } else {
-          return null;
-        }
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input).buildParsed();
-      }
-      public static com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress parseFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input, extensionRegistry)
-                 .buildParsed();
-      }
-      
-      public static Builder newBuilder() { return Builder.create(); }
-      public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress prototype) {
-        return newBuilder().mergeFrom(prototype);
-      }
-      public Builder toBuilder() { return newBuilder(this); }
-      
-      @java.lang.Override
-      protected Builder newBuilderForType(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        Builder builder = new Builder(parent);
-        return builder;
-      }
-      public static final class Builder extends
-          com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder {
-        public static final com.google.protobuf.Descriptors.Descriptor
-            getDescriptor() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor;
-        }
-        
-        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-            internalGetFieldAccessorTable() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_fieldAccessorTable;
-        }
-        
-        // Construct using com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.newBuilder()
-        private Builder() {
-          maybeForceBuilderInitialization();
-        }
-        
-        private Builder(BuilderParent parent) {
-          super(parent);
-          maybeForceBuilderInitialization();
-        }
-        private void maybeForceBuilderInitialization() {
-          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          }
-        }
-        private static Builder create() {
-          return new Builder();
-        }
-        
-        public Builder clear() {
-          super.clear();
-          address_ = "";
-          bitField0_ = (bitField0_ & ~0x00000001);
-          name_ = "";
-          bitField0_ = (bitField0_ & ~0x00000002);
-          return this;
-        }
-        
-        public Builder clone() {
-          return create().mergeFrom(buildPartial());
-        }
-        
-        public com.google.protobuf.Descriptors.Descriptor
-            getDescriptorForType() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.getDescriptor();
-        }
-        
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress getDefaultInstanceForType() {
-          return com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.getDefaultInstance();
-        }
-        
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress build() {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(result);
-          }
-          return result;
-        }
-        
-        private com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress buildParsed()
-            throws com.google.protobuf.InvalidProtocolBufferException {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(
-              result).asInvalidProtocolBufferException();
-          }
-          return result;
-        }
-        
-        public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress buildPartial() {
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress result = new com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress(this);
-          int from_bitField0_ = bitField0_;
-          int to_bitField0_ = 0;
-          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-            to_bitField0_ |= 0x00000001;
-          }
-          result.address_ = address_;
-          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-            to_bitField0_ |= 0x00000002;
-          }
-          result.name_ = name_;
-          result.bitField0_ = to_bitField0_;
-          onBuilt();
-          return result;
-        }
-        
-        public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress) {
-            return mergeFrom((com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress)other);
-          } else {
-            super.mergeFrom(other);
-            return this;
-          }
-        }
-        
-        public Builder mergeFrom(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress other) {
-          if (other == com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.getDefaultInstance()) return this;
-          if (other.hasAddress()) {
-            setAddress(other.getAddress());
-          }
-          if (other.hasName()) {
-            setName(other.getName());
-          }
-          this.mergeUnknownFields(other.getUnknownFields());
-          return this;
-        }
-        
-        public final boolean isInitialized() {
-          if (!hasAddress()) {
-            
-            return false;
-          }
-          if (!hasName()) {
-            
-            return false;
-          }
-          return true;
-        }
-        
-        public Builder mergeFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws java.io.IOException {
-          com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-            com.google.protobuf.UnknownFieldSet.newBuilder(
-              this.getUnknownFields());
-          while (true) {
-            int tag = input.readTag();
-            switch (tag) {
-              case 0:
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              default: {
-                if (!parseUnknownField(input, unknownFields,
-                                       extensionRegistry, tag)) {
-                  this.setUnknownFields(unknownFields.build());
-                  onChanged();
-                  return this;
-                }
-                break;
-              }
-              case 10: {
-                bitField0_ |= 0x00000001;
-                address_ = input.readBytes();
-                break;
-              }
-              case 18: {
-                bitField0_ |= 0x00000002;
-                name_ = input.readBytes();
-                break;
-              }
-            }
-          }
-        }
-        
-        private int bitField0_;
-        
-        // required string address = 1;
-        private java.lang.Object address_ = "";
-        public boolean hasAddress() {
-          return ((bitField0_ & 0x00000001) == 0x00000001);
-        }
-        public String getAddress() {
-          java.lang.Object ref = address_;
-          if (!(ref instanceof String)) {
-            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-            address_ = s;
-            return s;
-          } else {
-            return (String) ref;
-          }
-        }
-        public Builder setAddress(String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-          address_ = value;
-          onChanged();
-          return this;
-        }
-        public Builder clearAddress() {
-          bitField0_ = (bitField0_ & ~0x00000001);
-          address_ = getDefaultInstance().getAddress();
-          onChanged();
-          return this;
-        }
-        void setAddress(com.google.protobuf.ByteString value) {
-          bitField0_ |= 0x00000001;
-          address_ = value;
-          onChanged();
-        }
-        
-        // required string name = 2;
+        // required string name = 5;
         private java.lang.Object name_ = "";
         public boolean hasName() {
-          return ((bitField0_ & 0x00000002) == 0x00000002);
+          return ((bitField0_ & 0x00000010) == 0x00000010);
         }
         public String getName() {
           java.lang.Object ref = name_;
@@ -9614,32 +9418,32 @@ public final class BCSAPIMessage {
           if (value == null) {
     throw new NullPointerException();
   }
-  bitField0_ |= 0x00000002;
+  bitField0_ |= 0x00000010;
           name_ = value;
           onChanged();
           return this;
         }
         public Builder clearName() {
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000010);
           name_ = getDefaultInstance().getName();
           onChanged();
           return this;
         }
         void setName(com.google.protobuf.ByteString value) {
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000010;
           name_ = value;
           onChanged();
         }
         
-        // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Wallet.PublicAddress)
+        // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Wallet.Account)
       }
       
       static {
-        defaultInstance = new PublicAddress(true);
+        defaultInstance = new Account(true);
         defaultInstance.initFields();
       }
       
-      // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.Wallet.PublicAddress)
+      // @@protoc_insertion_point(class_scope:com.bitsofproof.supernode.api.Wallet.Account)
     }
     
     private int bitField0_;
@@ -9653,74 +9457,52 @@ public final class BCSAPIMessage {
       return bcsapiversion_;
     }
     
-    // repeated .com.bitsofproof.supernode.api.Wallet.Key keys = 2;
-    public static final int KEYS_FIELD_NUMBER = 2;
-    private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> keys_;
-    public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> getKeysList() {
-      return keys_;
+    // required bytes encryptedSeed = 2;
+    public static final int ENCRYPTEDSEED_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString encryptedSeed_;
+    public boolean hasEncryptedSeed() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder> 
-        getKeysOrBuilderList() {
-      return keys_;
-    }
-    public int getKeysCount() {
-      return keys_.size();
-    }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key getKeys(int index) {
-      return keys_.get(index);
-    }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder getKeysOrBuilder(
-        int index) {
-      return keys_.get(index);
+    public com.google.protobuf.ByteString getEncryptedSeed() {
+      return encryptedSeed_;
     }
     
-    // repeated .com.bitsofproof.supernode.api.Wallet.PublicAddress publicAddresses = 3;
-    public static final int PUBLICADDRESSES_FIELD_NUMBER = 3;
-    private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> publicAddresses_;
-    public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> getPublicAddressesList() {
-      return publicAddresses_;
+    // required bytes signature = 3;
+    public static final int SIGNATURE_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString signature_;
+    public boolean hasSignature() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder> 
-        getPublicAddressesOrBuilderList() {
-      return publicAddresses_;
-    }
-    public int getPublicAddressesCount() {
-      return publicAddresses_.size();
-    }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress getPublicAddresses(int index) {
-      return publicAddresses_.get(index);
-    }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder getPublicAddressesOrBuilder(
-        int index) {
-      return publicAddresses_.get(index);
+    public com.google.protobuf.ByteString getSignature() {
+      return signature_;
     }
     
-    // repeated .com.bitsofproof.supernode.api.Transaction transactions = 4;
-    public static final int TRANSACTIONS_FIELD_NUMBER = 4;
-    private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> transactions_;
-    public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getTransactionsList() {
-      return transactions_;
+    // repeated .com.bitsofproof.supernode.api.Wallet.Account accounts = 4;
+    public static final int ACCOUNTS_FIELD_NUMBER = 4;
+    private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> accounts_;
+    public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> getAccountsList() {
+      return accounts_;
     }
-    public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
-        getTransactionsOrBuilderList() {
-      return transactions_;
+    public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder> 
+        getAccountsOrBuilderList() {
+      return accounts_;
     }
-    public int getTransactionsCount() {
-      return transactions_.size();
+    public int getAccountsCount() {
+      return accounts_.size();
     }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index) {
-      return transactions_.get(index);
+    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account getAccounts(int index) {
+      return accounts_.get(index);
     }
-    public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+    public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder getAccountsOrBuilder(
         int index) {
-      return transactions_.get(index);
+      return accounts_.get(index);
     }
     
     private void initFields() {
       bcsapiversion_ = 0;
-      keys_ = java.util.Collections.emptyList();
-      publicAddresses_ = java.util.Collections.emptyList();
-      transactions_ = java.util.Collections.emptyList();
+      encryptedSeed_ = com.google.protobuf.ByteString.EMPTY;
+      signature_ = com.google.protobuf.ByteString.EMPTY;
+      accounts_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9731,20 +9513,16 @@ public final class BCSAPIMessage {
         memoizedIsInitialized = 0;
         return false;
       }
-      for (int i = 0; i < getKeysCount(); i++) {
-        if (!getKeys(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
+      if (!hasEncryptedSeed()) {
+        memoizedIsInitialized = 0;
+        return false;
       }
-      for (int i = 0; i < getPublicAddressesCount(); i++) {
-        if (!getPublicAddresses(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
+      if (!hasSignature()) {
+        memoizedIsInitialized = 0;
+        return false;
       }
-      for (int i = 0; i < getTransactionsCount(); i++) {
-        if (!getTransactions(i).isInitialized()) {
+      for (int i = 0; i < getAccountsCount(); i++) {
+        if (!getAccounts(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -9759,14 +9537,14 @@ public final class BCSAPIMessage {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt32(1, bcsapiversion_);
       }
-      for (int i = 0; i < keys_.size(); i++) {
-        output.writeMessage(2, keys_.get(i));
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, encryptedSeed_);
       }
-      for (int i = 0; i < publicAddresses_.size(); i++) {
-        output.writeMessage(3, publicAddresses_.get(i));
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, signature_);
       }
-      for (int i = 0; i < transactions_.size(); i++) {
-        output.writeMessage(4, transactions_.get(i));
+      for (int i = 0; i < accounts_.size(); i++) {
+        output.writeMessage(4, accounts_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -9781,17 +9559,17 @@ public final class BCSAPIMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(1, bcsapiversion_);
       }
-      for (int i = 0; i < keys_.size(); i++) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, keys_.get(i));
+          .computeBytesSize(2, encryptedSeed_);
       }
-      for (int i = 0; i < publicAddresses_.size(); i++) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, publicAddresses_.get(i));
+          .computeBytesSize(3, signature_);
       }
-      for (int i = 0; i < transactions_.size(); i++) {
+      for (int i = 0; i < accounts_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, transactions_.get(i));
+          .computeMessageSize(4, accounts_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -9909,9 +9687,7 @@ public final class BCSAPIMessage {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getKeysFieldBuilder();
-          getPublicAddressesFieldBuilder();
-          getTransactionsFieldBuilder();
+          getAccountsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -9922,23 +9698,15 @@ public final class BCSAPIMessage {
         super.clear();
         bcsapiversion_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (keysBuilder_ == null) {
-          keys_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
-        } else {
-          keysBuilder_.clear();
-        }
-        if (publicAddressesBuilder_ == null) {
-          publicAddresses_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
-        } else {
-          publicAddressesBuilder_.clear();
-        }
-        if (transactionsBuilder_ == null) {
-          transactions_ = java.util.Collections.emptyList();
+        encryptedSeed_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        signature_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        if (accountsBuilder_ == null) {
+          accounts_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000008);
         } else {
-          transactionsBuilder_.clear();
+          accountsBuilder_.clear();
         }
         return this;
       }
@@ -9982,32 +9750,22 @@ public final class BCSAPIMessage {
           to_bitField0_ |= 0x00000001;
         }
         result.bcsapiversion_ = bcsapiversion_;
-        if (keysBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002)) {
-            keys_ = java.util.Collections.unmodifiableList(keys_);
-            bitField0_ = (bitField0_ & ~0x00000002);
-          }
-          result.keys_ = keys_;
-        } else {
-          result.keys_ = keysBuilder_.build();
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
         }
-        if (publicAddressesBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) == 0x00000004)) {
-            publicAddresses_ = java.util.Collections.unmodifiableList(publicAddresses_);
-            bitField0_ = (bitField0_ & ~0x00000004);
-          }
-          result.publicAddresses_ = publicAddresses_;
-        } else {
-          result.publicAddresses_ = publicAddressesBuilder_.build();
+        result.encryptedSeed_ = encryptedSeed_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
         }
-        if (transactionsBuilder_ == null) {
+        result.signature_ = signature_;
+        if (accountsBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008)) {
-            transactions_ = java.util.Collections.unmodifiableList(transactions_);
+            accounts_ = java.util.Collections.unmodifiableList(accounts_);
             bitField0_ = (bitField0_ & ~0x00000008);
           }
-          result.transactions_ = transactions_;
+          result.accounts_ = accounts_;
         } else {
-          result.transactions_ = transactionsBuilder_.build();
+          result.accounts_ = accountsBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -10028,81 +9786,35 @@ public final class BCSAPIMessage {
         if (other.hasBcsapiversion()) {
           setBcsapiversion(other.getBcsapiversion());
         }
-        if (keysBuilder_ == null) {
-          if (!other.keys_.isEmpty()) {
-            if (keys_.isEmpty()) {
-              keys_ = other.keys_;
-              bitField0_ = (bitField0_ & ~0x00000002);
-            } else {
-              ensureKeysIsMutable();
-              keys_.addAll(other.keys_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.keys_.isEmpty()) {
-            if (keysBuilder_.isEmpty()) {
-              keysBuilder_.dispose();
-              keysBuilder_ = null;
-              keys_ = other.keys_;
-              bitField0_ = (bitField0_ & ~0x00000002);
-              keysBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getKeysFieldBuilder() : null;
-            } else {
-              keysBuilder_.addAllMessages(other.keys_);
-            }
-          }
+        if (other.hasEncryptedSeed()) {
+          setEncryptedSeed(other.getEncryptedSeed());
         }
-        if (publicAddressesBuilder_ == null) {
-          if (!other.publicAddresses_.isEmpty()) {
-            if (publicAddresses_.isEmpty()) {
-              publicAddresses_ = other.publicAddresses_;
-              bitField0_ = (bitField0_ & ~0x00000004);
-            } else {
-              ensurePublicAddressesIsMutable();
-              publicAddresses_.addAll(other.publicAddresses_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.publicAddresses_.isEmpty()) {
-            if (publicAddressesBuilder_.isEmpty()) {
-              publicAddressesBuilder_.dispose();
-              publicAddressesBuilder_ = null;
-              publicAddresses_ = other.publicAddresses_;
-              bitField0_ = (bitField0_ & ~0x00000004);
-              publicAddressesBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getPublicAddressesFieldBuilder() : null;
-            } else {
-              publicAddressesBuilder_.addAllMessages(other.publicAddresses_);
-            }
-          }
+        if (other.hasSignature()) {
+          setSignature(other.getSignature());
         }
-        if (transactionsBuilder_ == null) {
-          if (!other.transactions_.isEmpty()) {
-            if (transactions_.isEmpty()) {
-              transactions_ = other.transactions_;
+        if (accountsBuilder_ == null) {
+          if (!other.accounts_.isEmpty()) {
+            if (accounts_.isEmpty()) {
+              accounts_ = other.accounts_;
               bitField0_ = (bitField0_ & ~0x00000008);
             } else {
-              ensureTransactionsIsMutable();
-              transactions_.addAll(other.transactions_);
+              ensureAccountsIsMutable();
+              accounts_.addAll(other.accounts_);
             }
             onChanged();
           }
         } else {
-          if (!other.transactions_.isEmpty()) {
-            if (transactionsBuilder_.isEmpty()) {
-              transactionsBuilder_.dispose();
-              transactionsBuilder_ = null;
-              transactions_ = other.transactions_;
+          if (!other.accounts_.isEmpty()) {
+            if (accountsBuilder_.isEmpty()) {
+              accountsBuilder_.dispose();
+              accountsBuilder_ = null;
+              accounts_ = other.accounts_;
               bitField0_ = (bitField0_ & ~0x00000008);
-              transactionsBuilder_ = 
+              accountsBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getTransactionsFieldBuilder() : null;
+                   getAccountsFieldBuilder() : null;
             } else {
-              transactionsBuilder_.addAllMessages(other.transactions_);
+              accountsBuilder_.addAllMessages(other.accounts_);
             }
           }
         }
@@ -10115,20 +9827,16 @@ public final class BCSAPIMessage {
           
           return false;
         }
-        for (int i = 0; i < getKeysCount(); i++) {
-          if (!getKeys(i).isInitialized()) {
-            
-            return false;
-          }
+        if (!hasEncryptedSeed()) {
+          
+          return false;
         }
-        for (int i = 0; i < getPublicAddressesCount(); i++) {
-          if (!getPublicAddresses(i).isInitialized()) {
-            
-            return false;
-          }
+        if (!hasSignature()) {
+          
+          return false;
         }
-        for (int i = 0; i < getTransactionsCount(); i++) {
-          if (!getTransactions(i).isInitialized()) {
+        for (int i = 0; i < getAccountsCount(); i++) {
+          if (!getAccounts(i).isInitialized()) {
             
             return false;
           }
@@ -10165,21 +9873,19 @@ public final class BCSAPIMessage {
               break;
             }
             case 18: {
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addKeys(subBuilder.buildPartial());
+              bitField0_ |= 0x00000002;
+              encryptedSeed_ = input.readBytes();
               break;
             }
             case 26: {
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addPublicAddresses(subBuilder.buildPartial());
+              bitField0_ |= 0x00000004;
+              signature_ = input.readBytes();
               break;
             }
             case 34: {
-              com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.newBuilder();
+              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder subBuilder = com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
-              addTransactions(subBuilder.buildPartial());
+              addAccounts(subBuilder.buildPartial());
               break;
             }
           }
@@ -10209,562 +9915,238 @@ public final class BCSAPIMessage {
         return this;
       }
       
-      // repeated .com.bitsofproof.supernode.api.Wallet.Key keys = 2;
-      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> keys_ =
+      // required bytes encryptedSeed = 2;
+      private com.google.protobuf.ByteString encryptedSeed_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasEncryptedSeed() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public com.google.protobuf.ByteString getEncryptedSeed() {
+        return encryptedSeed_;
+      }
+      public Builder setEncryptedSeed(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        encryptedSeed_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearEncryptedSeed() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        encryptedSeed_ = getDefaultInstance().getEncryptedSeed();
+        onChanged();
+        return this;
+      }
+      
+      // required bytes signature = 3;
+      private com.google.protobuf.ByteString signature_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasSignature() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getSignature() {
+        return signature_;
+      }
+      public Builder setSignature(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        signature_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearSignature() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        signature_ = getDefaultInstance().getSignature();
+        onChanged();
+        return this;
+      }
+      
+      // repeated .com.bitsofproof.supernode.api.Wallet.Account accounts = 4;
+      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> accounts_ =
         java.util.Collections.emptyList();
-      private void ensureKeysIsMutable() {
-        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
-          keys_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key>(keys_);
-          bitField0_ |= 0x00000002;
-         }
-      }
-      
-      private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder> keysBuilder_;
-      
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> getKeysList() {
-        if (keysBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(keys_);
-        } else {
-          return keysBuilder_.getMessageList();
-        }
-      }
-      public int getKeysCount() {
-        if (keysBuilder_ == null) {
-          return keys_.size();
-        } else {
-          return keysBuilder_.getCount();
-        }
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key getKeys(int index) {
-        if (keysBuilder_ == null) {
-          return keys_.get(index);
-        } else {
-          return keysBuilder_.getMessage(index);
-        }
-      }
-      public Builder setKeys(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key value) {
-        if (keysBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureKeysIsMutable();
-          keys_.set(index, value);
-          onChanged();
-        } else {
-          keysBuilder_.setMessage(index, value);
-        }
-        return this;
-      }
-      public Builder setKeys(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder builderForValue) {
-        if (keysBuilder_ == null) {
-          ensureKeysIsMutable();
-          keys_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          keysBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addKeys(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key value) {
-        if (keysBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureKeysIsMutable();
-          keys_.add(value);
-          onChanged();
-        } else {
-          keysBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      public Builder addKeys(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key value) {
-        if (keysBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureKeysIsMutable();
-          keys_.add(index, value);
-          onChanged();
-        } else {
-          keysBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      public Builder addKeys(
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder builderForValue) {
-        if (keysBuilder_ == null) {
-          ensureKeysIsMutable();
-          keys_.add(builderForValue.build());
-          onChanged();
-        } else {
-          keysBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addKeys(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder builderForValue) {
-        if (keysBuilder_ == null) {
-          ensureKeysIsMutable();
-          keys_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          keysBuilder_.addMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addAllKeys(
-          java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key> values) {
-        if (keysBuilder_ == null) {
-          ensureKeysIsMutable();
-          super.addAll(values, keys_);
-          onChanged();
-        } else {
-          keysBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      public Builder clearKeys() {
-        if (keysBuilder_ == null) {
-          keys_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
-          onChanged();
-        } else {
-          keysBuilder_.clear();
-        }
-        return this;
-      }
-      public Builder removeKeys(int index) {
-        if (keysBuilder_ == null) {
-          ensureKeysIsMutable();
-          keys_.remove(index);
-          onChanged();
-        } else {
-          keysBuilder_.remove(index);
-        }
-        return this;
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder getKeysBuilder(
-          int index) {
-        return getKeysFieldBuilder().getBuilder(index);
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder getKeysOrBuilder(
-          int index) {
-        if (keysBuilder_ == null) {
-          return keys_.get(index);  } else {
-          return keysBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder> 
-           getKeysOrBuilderList() {
-        if (keysBuilder_ != null) {
-          return keysBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(keys_);
-        }
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder addKeysBuilder() {
-        return getKeysFieldBuilder().addBuilder(
-            com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.getDefaultInstance());
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder addKeysBuilder(
-          int index) {
-        return getKeysFieldBuilder().addBuilder(
-            index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.getDefaultInstance());
-      }
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder> 
-           getKeysBuilderList() {
-        return getKeysFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder> 
-          getKeysFieldBuilder() {
-        if (keysBuilder_ == null) {
-          keysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.KeyOrBuilder>(
-                  keys_,
-                  ((bitField0_ & 0x00000002) == 0x00000002),
-                  getParentForChildren(),
-                  isClean());
-          keys_ = null;
-        }
-        return keysBuilder_;
-      }
-      
-      // repeated .com.bitsofproof.supernode.api.Wallet.PublicAddress publicAddresses = 3;
-      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> publicAddresses_ =
-        java.util.Collections.emptyList();
-      private void ensurePublicAddressesIsMutable() {
-        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-          publicAddresses_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress>(publicAddresses_);
-          bitField0_ |= 0x00000004;
-         }
-      }
-      
-      private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder> publicAddressesBuilder_;
-      
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> getPublicAddressesList() {
-        if (publicAddressesBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(publicAddresses_);
-        } else {
-          return publicAddressesBuilder_.getMessageList();
-        }
-      }
-      public int getPublicAddressesCount() {
-        if (publicAddressesBuilder_ == null) {
-          return publicAddresses_.size();
-        } else {
-          return publicAddressesBuilder_.getCount();
-        }
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress getPublicAddresses(int index) {
-        if (publicAddressesBuilder_ == null) {
-          return publicAddresses_.get(index);
-        } else {
-          return publicAddressesBuilder_.getMessage(index);
-        }
-      }
-      public Builder setPublicAddresses(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress value) {
-        if (publicAddressesBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.set(index, value);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.setMessage(index, value);
-        }
-        return this;
-      }
-      public Builder setPublicAddresses(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder builderForValue) {
-        if (publicAddressesBuilder_ == null) {
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          publicAddressesBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addPublicAddresses(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress value) {
-        if (publicAddressesBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.add(value);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      public Builder addPublicAddresses(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress value) {
-        if (publicAddressesBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.add(index, value);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      public Builder addPublicAddresses(
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder builderForValue) {
-        if (publicAddressesBuilder_ == null) {
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.add(builderForValue.build());
-          onChanged();
-        } else {
-          publicAddressesBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addPublicAddresses(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder builderForValue) {
-        if (publicAddressesBuilder_ == null) {
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          publicAddressesBuilder_.addMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addAllPublicAddresses(
-          java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress> values) {
-        if (publicAddressesBuilder_ == null) {
-          ensurePublicAddressesIsMutable();
-          super.addAll(values, publicAddresses_);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      public Builder clearPublicAddresses() {
-        if (publicAddressesBuilder_ == null) {
-          publicAddresses_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000004);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.clear();
-        }
-        return this;
-      }
-      public Builder removePublicAddresses(int index) {
-        if (publicAddressesBuilder_ == null) {
-          ensurePublicAddressesIsMutable();
-          publicAddresses_.remove(index);
-          onChanged();
-        } else {
-          publicAddressesBuilder_.remove(index);
-        }
-        return this;
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder getPublicAddressesBuilder(
-          int index) {
-        return getPublicAddressesFieldBuilder().getBuilder(index);
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder getPublicAddressesOrBuilder(
-          int index) {
-        if (publicAddressesBuilder_ == null) {
-          return publicAddresses_.get(index);  } else {
-          return publicAddressesBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder> 
-           getPublicAddressesOrBuilderList() {
-        if (publicAddressesBuilder_ != null) {
-          return publicAddressesBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(publicAddresses_);
-        }
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder addPublicAddressesBuilder() {
-        return getPublicAddressesFieldBuilder().addBuilder(
-            com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.getDefaultInstance());
-      }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder addPublicAddressesBuilder(
-          int index) {
-        return getPublicAddressesFieldBuilder().addBuilder(
-            index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.getDefaultInstance());
-      }
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder> 
-           getPublicAddressesBuilderList() {
-        return getPublicAddressesFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder> 
-          getPublicAddressesFieldBuilder() {
-        if (publicAddressesBuilder_ == null) {
-          publicAddressesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddressOrBuilder>(
-                  publicAddresses_,
-                  ((bitField0_ & 0x00000004) == 0x00000004),
-                  getParentForChildren(),
-                  isClean());
-          publicAddresses_ = null;
-        }
-        return publicAddressesBuilder_;
-      }
-      
-      // repeated .com.bitsofproof.supernode.api.Transaction transactions = 4;
-      private java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> transactions_ =
-        java.util.Collections.emptyList();
-      private void ensureTransactionsIsMutable() {
+      private void ensureAccountsIsMutable() {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
-          transactions_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction>(transactions_);
+          accounts_ = new java.util.ArrayList<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account>(accounts_);
           bitField0_ |= 0x00000008;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> transactionsBuilder_;
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder> accountsBuilder_;
       
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> getTransactionsList() {
-        if (transactionsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(transactions_);
+      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> getAccountsList() {
+        if (accountsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(accounts_);
         } else {
-          return transactionsBuilder_.getMessageList();
+          return accountsBuilder_.getMessageList();
         }
       }
-      public int getTransactionsCount() {
-        if (transactionsBuilder_ == null) {
-          return transactions_.size();
+      public int getAccountsCount() {
+        if (accountsBuilder_ == null) {
+          return accounts_.size();
         } else {
-          return transactionsBuilder_.getCount();
+          return accountsBuilder_.getCount();
         }
       }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction getTransactions(int index) {
-        if (transactionsBuilder_ == null) {
-          return transactions_.get(index);
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account getAccounts(int index) {
+        if (accountsBuilder_ == null) {
+          return accounts_.get(index);
         } else {
-          return transactionsBuilder_.getMessage(index);
+          return accountsBuilder_.getMessage(index);
         }
       }
-      public Builder setTransactions(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
-        if (transactionsBuilder_ == null) {
+      public Builder setAccounts(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account value) {
+        if (accountsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureTransactionsIsMutable();
-          transactions_.set(index, value);
+          ensureAccountsIsMutable();
+          accounts_.set(index, value);
           onChanged();
         } else {
-          transactionsBuilder_.setMessage(index, value);
+          accountsBuilder_.setMessage(index, value);
         }
         return this;
       }
-      public Builder setTransactions(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
-        if (transactionsBuilder_ == null) {
-          ensureTransactionsIsMutable();
-          transactions_.set(index, builderForValue.build());
+      public Builder setAccounts(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder builderForValue) {
+        if (accountsBuilder_ == null) {
+          ensureAccountsIsMutable();
+          accounts_.set(index, builderForValue.build());
           onChanged();
         } else {
-          transactionsBuilder_.setMessage(index, builderForValue.build());
+          accountsBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addTransactions(com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
-        if (transactionsBuilder_ == null) {
+      public Builder addAccounts(com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account value) {
+        if (accountsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureTransactionsIsMutable();
-          transactions_.add(value);
+          ensureAccountsIsMutable();
+          accounts_.add(value);
           onChanged();
         } else {
-          transactionsBuilder_.addMessage(value);
+          accountsBuilder_.addMessage(value);
         }
         return this;
       }
-      public Builder addTransactions(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction value) {
-        if (transactionsBuilder_ == null) {
+      public Builder addAccounts(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account value) {
+        if (accountsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureTransactionsIsMutable();
-          transactions_.add(index, value);
+          ensureAccountsIsMutable();
+          accounts_.add(index, value);
           onChanged();
         } else {
-          transactionsBuilder_.addMessage(index, value);
+          accountsBuilder_.addMessage(index, value);
         }
         return this;
       }
-      public Builder addTransactions(
-          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
-        if (transactionsBuilder_ == null) {
-          ensureTransactionsIsMutable();
-          transactions_.add(builderForValue.build());
+      public Builder addAccounts(
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder builderForValue) {
+        if (accountsBuilder_ == null) {
+          ensureAccountsIsMutable();
+          accounts_.add(builderForValue.build());
           onChanged();
         } else {
-          transactionsBuilder_.addMessage(builderForValue.build());
+          accountsBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
-      public Builder addTransactions(
-          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder builderForValue) {
-        if (transactionsBuilder_ == null) {
-          ensureTransactionsIsMutable();
-          transactions_.add(index, builderForValue.build());
+      public Builder addAccounts(
+          int index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder builderForValue) {
+        if (accountsBuilder_ == null) {
+          ensureAccountsIsMutable();
+          accounts_.add(index, builderForValue.build());
           onChanged();
         } else {
-          transactionsBuilder_.addMessage(index, builderForValue.build());
+          accountsBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addAllTransactions(
-          java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Transaction> values) {
-        if (transactionsBuilder_ == null) {
-          ensureTransactionsIsMutable();
-          super.addAll(values, transactions_);
+      public Builder addAllAccounts(
+          java.lang.Iterable<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account> values) {
+        if (accountsBuilder_ == null) {
+          ensureAccountsIsMutable();
+          super.addAll(values, accounts_);
           onChanged();
         } else {
-          transactionsBuilder_.addAllMessages(values);
+          accountsBuilder_.addAllMessages(values);
         }
         return this;
       }
-      public Builder clearTransactions() {
-        if (transactionsBuilder_ == null) {
-          transactions_ = java.util.Collections.emptyList();
+      public Builder clearAccounts() {
+        if (accountsBuilder_ == null) {
+          accounts_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000008);
           onChanged();
         } else {
-          transactionsBuilder_.clear();
+          accountsBuilder_.clear();
         }
         return this;
       }
-      public Builder removeTransactions(int index) {
-        if (transactionsBuilder_ == null) {
-          ensureTransactionsIsMutable();
-          transactions_.remove(index);
+      public Builder removeAccounts(int index) {
+        if (accountsBuilder_ == null) {
+          ensureAccountsIsMutable();
+          accounts_.remove(index);
           onChanged();
         } else {
-          transactionsBuilder_.remove(index);
+          accountsBuilder_.remove(index);
         }
         return this;
       }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder getTransactionsBuilder(
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder getAccountsBuilder(
           int index) {
-        return getTransactionsFieldBuilder().getBuilder(index);
+        return getAccountsFieldBuilder().getBuilder(index);
       }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder getTransactionsOrBuilder(
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder getAccountsOrBuilder(
           int index) {
-        if (transactionsBuilder_ == null) {
-          return transactions_.get(index);  } else {
-          return transactionsBuilder_.getMessageOrBuilder(index);
+        if (accountsBuilder_ == null) {
+          return accounts_.get(index);  } else {
+          return accountsBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
-           getTransactionsOrBuilderList() {
-        if (transactionsBuilder_ != null) {
-          return transactionsBuilder_.getMessageOrBuilderList();
+      public java.util.List<? extends com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder> 
+           getAccountsOrBuilderList() {
+        if (accountsBuilder_ != null) {
+          return accountsBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(transactions_);
+          return java.util.Collections.unmodifiableList(accounts_);
         }
       }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addTransactionsBuilder() {
-        return getTransactionsFieldBuilder().addBuilder(
-            com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder addAccountsBuilder() {
+        return getAccountsFieldBuilder().addBuilder(
+            com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.getDefaultInstance());
       }
-      public com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder addTransactionsBuilder(
+      public com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder addAccountsBuilder(
           int index) {
-        return getTransactionsFieldBuilder().addBuilder(
-            index, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.getDefaultInstance());
+        return getAccountsFieldBuilder().addBuilder(
+            index, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.getDefaultInstance());
       }
-      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder> 
-           getTransactionsBuilderList() {
-        return getTransactionsFieldBuilder().getBuilderList();
+      public java.util.List<com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder> 
+           getAccountsBuilderList() {
+        return getAccountsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder> 
-          getTransactionsFieldBuilder() {
-        if (transactionsBuilder_ == null) {
-          transactionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              com.bitsofproof.supernode.api.BCSAPIMessage.Transaction, com.bitsofproof.supernode.api.BCSAPIMessage.Transaction.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.TransactionOrBuilder>(
-                  transactions_,
+          com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder> 
+          getAccountsFieldBuilder() {
+        if (accountsBuilder_ == null) {
+          accountsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder, com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.AccountOrBuilder>(
+                  accounts_,
                   ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
                   isClean());
-          transactions_ = null;
+          accounts_ = null;
         }
-        return transactionsBuilder_;
+        return accountsBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:com.bitsofproof.supernode.api.Wallet)
@@ -10849,15 +10231,10 @@ public final class BCSAPIMessage {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_com_bitsofproof_supernode_api_Wallet_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor;
+    internal_static_com_bitsofproof_supernode_api_Wallet_Account_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_com_bitsofproof_supernode_api_Wallet_Key_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_fieldAccessorTable;
+      internal_static_com_bitsofproof_supernode_api_Wallet_Account_fieldAccessorTable;
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -10903,16 +10280,14 @@ public final class BCSAPIMessage {
       "\002(\r\022\014\n\004mode\030\002 \002(\r\022\r\n\005match\030\003 \003(\014\022\r\n\005afte" +
       "r\030\004 \001(\004\"\\\n\016AccountRequest\022\025\n\rbcsapiversi" +
       "on\030\001 \002(\r\022\021\n\tpublicKey\030\002 \002(\t\022\021\n\tlookAhead" +
-      "\030\003 \002(\r\022\r\n\005after\030\004 \001(\004\"\341\002\n\006Wallet\022\025\n\rbcsa" +
-      "piversion\030\001 \002(\r\0227\n\004keys\030\002 \003(\0132).com.bits" +
-      "ofproof.supernode.api.Wallet.Key\022L\n\017publ" +
-      "icAddresses\030\003 \003(\01323.com.bitsofproof.supe",
-      "rnode.api.Wallet.PublicAddress\022@\n\014transa" +
-      "ctions\030\004 \003(\0132*.com.bitsofproof.supernode" +
-      ".api.Transaction\032G\n\003Key\022\013\n\003key\030\001 \002(\t\022\024\n\014" +
-      "nextSequence\030\002 \002(\r\022\014\n\004name\030\003 \001(\t\022\017\n\007crea" +
-      "ted\030\004 \001(\004\032.\n\rPublicAddress\022\017\n\007address\030\001 " +
-      "\002(\t\022\014\n\004name\030\002 \002(\t"
+      "\030\003 \002(\r\022\r\n\005after\030\004 \001(\004\"\240\002\n\006Wallet\022\025\n\rbcsa" +
+      "piversion\030\001 \002(\r\022\025\n\rencryptedSeed\030\002 \002(\014\022\021" +
+      "\n\tsignature\030\003 \002(\014\022?\n\010accounts\030\004 \003(\0132-.co" +
+      "m.bitsofproof.supernode.api.Wallet.Accou",
+      "nt\032\223\001\n\007Account\022\021\n\tpublicKey\030\001 \002(\t\022@\n\014tra" +
+      "nsactions\030\002 \003(\0132*.com.bitsofproof.supern" +
+      "ode.api.Transaction\022\024\n\014nextSequence\030\003 \002(" +
+      "\r\022\017\n\007created\030\004 \002(\004\022\014\n\004name\030\005 \002(\t"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11028,25 +10403,17 @@ public final class BCSAPIMessage {
           internal_static_com_bitsofproof_supernode_api_Wallet_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_bitsofproof_supernode_api_Wallet_descriptor,
-              new java.lang.String[] { "Bcsapiversion", "Keys", "PublicAddresses", "Transactions", },
+              new java.lang.String[] { "Bcsapiversion", "EncryptedSeed", "Signature", "Accounts", },
               com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.class,
               com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Builder.class);
-          internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor =
+          internal_static_com_bitsofproof_supernode_api_Wallet_Account_descriptor =
             internal_static_com_bitsofproof_supernode_api_Wallet_descriptor.getNestedTypes().get(0);
-          internal_static_com_bitsofproof_supernode_api_Wallet_Key_fieldAccessorTable = new
+          internal_static_com_bitsofproof_supernode_api_Wallet_Account_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_com_bitsofproof_supernode_api_Wallet_Key_descriptor,
-              new java.lang.String[] { "Key", "NextSequence", "Name", "Created", },
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.class,
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Key.Builder.class);
-          internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor =
-            internal_static_com_bitsofproof_supernode_api_Wallet_descriptor.getNestedTypes().get(1);
-          internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_com_bitsofproof_supernode_api_Wallet_PublicAddress_descriptor,
-              new java.lang.String[] { "Address", "Name", },
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.class,
-              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.PublicAddress.Builder.class);
+              internal_static_com_bitsofproof_supernode_api_Wallet_Account_descriptor,
+              new java.lang.String[] { "PublicKey", "Transactions", "NextSequence", "Created", "Name", },
+              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.class,
+              com.bitsofproof.supernode.api.BCSAPIMessage.Wallet.Account.Builder.class);
           return null;
         }
       };
