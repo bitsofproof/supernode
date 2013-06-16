@@ -461,7 +461,7 @@ public abstract class CachedBlockStore implements BlockStore
 					Blk b = retrieveBlock (cb);
 					for ( Tx t : b.getTransactions () )
 					{
-						if ( t.matches (matchSet, UpdateMode.keys) )
+						if ( t.matches (matchSet, UpdateMode.all) )
 						{
 							processor.process (t);
 
