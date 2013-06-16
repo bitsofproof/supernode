@@ -51,6 +51,7 @@ message Transaction {
 	repeated TransactionOutput outputs = 6;
 	optional bytes block = 7;
 	optional bool doubleSpend = 8;			// set if this transaction IS a double spend and should be removed/ignored
+	optional uint32 height = 9;
 }
 
 // a block. 

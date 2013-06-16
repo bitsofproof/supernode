@@ -9,6 +9,7 @@ import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.google.protobuf.ByteString;
@@ -96,11 +97,13 @@ public class FileWallet implements Wallet
 								account.getCreated ());
 				am.setApi (api);
 				accounts.put (account.getName (), am);
+				int txHeight = 0;
 				for ( BCSAPIMessage.Transaction t : account.getTransactionsList () )
 				{
 					am.updateWithTransaction (Transaction.fromProtobuf (t));
+					txHeight = Math.max (txHeight, t.getHeight ());
 				}
-				am.sync (lookAhead, account.getCreated ());
+				am.sync (lookAhead, txHeight == 0 ? account.getCreated () : txHeight);
 			}
 		}
 		finally
@@ -152,11 +155,12 @@ public class FileWallet implements Wallet
 	}
 
 	@Override
-	public void persist () throws IOException
+	public void persist () throws IOException, BCSAPIException
 	{
 		FileOutputStream out = new FileOutputStream (fileName);
 		try
 		{
+			int headHeight = api.getBlock (Hash.ZERO_HASH_STRING).getHeight ();
 			BCSAPIMessage.Wallet.Builder builder = BCSAPIMessage.Wallet.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
@@ -170,7 +174,10 @@ public class FileWallet implements Wallet
 				ab.setPublicKey (am.getMasterKey ().getReadOnly ().serialize (true));
 				for ( Transaction t : am.getTransactions () )
 				{
-					ab.addTransactions (t.toProtobuf ());
+					if ( t.getHeight () < headHeight - 100 )
+					{
+						ab.addTransactions (t.toProtobuf ());
+					}
 				}
 				builder.addAccounts (ab.build ());
 			}

@@ -955,6 +955,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		if ( tx.getBlockHash () != null )
 		{
 			transaction.setBlockHash (tx.getBlockHash ());
+			transaction.setHeight (store.getBlockHeight (tx.getBlockHash ()));
 		}
 		if ( doubleSpend )
 		{

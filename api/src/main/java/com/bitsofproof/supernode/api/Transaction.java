@@ -42,6 +42,7 @@ public class Transaction implements Serializable, Cloneable
 	private String hash;
 	private String blockHash;
 	private boolean doubleSpend = false;
+	private int height = 0;
 
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
@@ -379,6 +380,16 @@ public class Transaction implements Serializable, Cloneable
 		this.doubleSpend = doubleSpend;
 	}
 
+	public int getHeight ()
+	{
+		return height;
+	}
+
+	public void setHeight (int height)
+	{
+		this.height = height;
+	}
+
 	public void toWire (WireFormat.Writer writer)
 	{
 		writer.writeUint32 (version);
@@ -525,6 +536,10 @@ public class Transaction implements Serializable, Cloneable
 		{
 			builder.setDoubleSpend (true);
 		}
+		if ( height != 0 )
+		{
+			builder.setHeight (height);
+		}
 		return builder.build ();
 	}
 
@@ -557,6 +572,10 @@ public class Transaction implements Serializable, Cloneable
 		if ( pt.hasDoubleSpend () && pt.getDoubleSpend () )
 		{
 			transaction.doubleSpend = true;
+		}
+		if ( pt.hasHeight () )
+		{
+			transaction.height = pt.getHeight ();
 		}
 		return transaction;
 	}

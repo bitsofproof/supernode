@@ -21,7 +21,7 @@ public interface Wallet
 
 	public void read (String name, int lookAhead) throws IOException, ValidationException, BCSAPIException;
 
-	public void persist () throws IOException;
+	public void persist () throws IOException, BCSAPIException;
 
 	public Key getKey (AccountManager am, int sequence) throws ValidationException;
 }
