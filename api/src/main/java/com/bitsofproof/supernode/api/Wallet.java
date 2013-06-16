@@ -17,7 +17,7 @@ public interface Wallet
 
 	public AccountManager getAccountManager (String name);
 
-	public AccountManager createAccountManager (String name) throws ValidationException, IOException;
+	public AccountManager createAccountManager (String name) throws ValidationException, IOException, BCSAPIException;
 
 	public void read (String name, int lookAhead) throws IOException, ValidationException, BCSAPIException;
 

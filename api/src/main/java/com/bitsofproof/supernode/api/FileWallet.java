@@ -116,7 +116,7 @@ public class FileWallet implements Wallet
 	}
 
 	@Override
-	public synchronized AccountManager createAccountManager (String name) throws ValidationException, IOException
+	public synchronized AccountManager createAccountManager (String name) throws ValidationException, IOException, BCSAPIException
 	{
 		if ( accounts.containsKey (name) )
 		{
@@ -131,6 +131,7 @@ public class FileWallet implements Wallet
 			InMemoryAccountManager account =
 					new InMemoryAccountManager (this, name, master.getChild (accounts.size () | 0x80000000), 0, System.currentTimeMillis () / 1000);
 			account.setApi (api);
+			api.registerTransactionListener (account);
 			accounts.put (name, account);
 			persist ();
 			return account;
