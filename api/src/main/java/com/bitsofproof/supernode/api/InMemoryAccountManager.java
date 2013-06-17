@@ -83,7 +83,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 
 	public void sync (final int lookAhead, long after) throws BCSAPIException, ValidationException
 	{
-		for ( int i = nextKey; i < nextKey + lookAhead; ++i )
+		for ( int i = 0; i < nextKey + lookAhead; ++i )
 		{
 			Key key = extended.getKey (i);
 			keyIDForAddress.put (new ByteVector (key.getAddress ()), i);
