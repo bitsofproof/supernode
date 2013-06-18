@@ -67,8 +67,8 @@ public class TrunkUpdateMessage implements Serializable
 
 	public static TrunkUpdateMessage fromProtobuf (BCSAPIMessage.TrunkUpdate pu)
 	{
-		List<Block> added = null;
-		List<Block> removed = null;
+		List<Block> added = new ArrayList<Block>();
+		List<Block> removed = new ArrayList<Block>();
 		if ( pu.getAddedCount () > 0 )
 		{
 			added = new ArrayList<Block> ();
