@@ -126,10 +126,8 @@ message Wallet {
 	message Account
 	{
 		required string publicKey = 1;
-		repeated Transaction transactions = 2;
-		required uint32 nextSequence = 3;
-		required uint64 created = 4;
-		required string name = 5;
+		required uint64 created = 2;
+		required string name = 3;
 	}
 	repeated Account accounts = 4;
 }

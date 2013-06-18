@@ -9,7 +9,6 @@ import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.google.protobuf.ByteString;
@@ -93,17 +92,10 @@ public class FileWallet implements Wallet
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
 				InMemoryAccountManager am =
-						new InMemoryAccountManager (this, account.getName (), ExtendedKey.parse (account.getPublicKey ()), account.getNextSequence (),
-								account.getCreated ());
+						new InMemoryAccountManager (this, account.getName (), ExtendedKey.parse (account.getPublicKey ()), account.getCreated ());
 				am.setApi (api);
 				accounts.put (account.getName (), am);
-				int txHeight = 0;
-				for ( BCSAPIMessage.Transaction t : account.getTransactionsList () )
-				{
-					am.updateWithTransaction (Transaction.fromProtobuf (t));
-					txHeight = Math.max (txHeight, t.getHeight ());
-				}
-				am.sync (lookAhead, txHeight == 0 ? account.getCreated () : txHeight);
+				am.sync (lookAhead, account.getCreated ());
 			}
 		}
 		finally
@@ -132,7 +124,7 @@ public class FileWallet implements Wallet
 				throw new ValidationException ("The wallet is locked");
 			}
 			InMemoryAccountManager account =
-					new InMemoryAccountManager (this, name, master.getChild (accounts.size () | 0x80000000), 0, System.currentTimeMillis () / 1000);
+					new InMemoryAccountManager (this, name, master.getChild (accounts.size () | 0x80000000), System.currentTimeMillis () / 1000);
 			account.setApi (api);
 			api.registerTransactionListener (account);
 			accounts.put (name, account);
@@ -160,7 +152,6 @@ public class FileWallet implements Wallet
 		FileOutputStream out = new FileOutputStream (fileName);
 		try
 		{
-			int headHeight = api.getBlock (Hash.ZERO_HASH_STRING).getHeight ();
 			BCSAPIMessage.Wallet.Builder builder = BCSAPIMessage.Wallet.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
@@ -170,15 +161,7 @@ public class FileWallet implements Wallet
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());
 				ab.setCreated (am.getCreated ());
-				ab.setNextSequence (am.getNextSequence ());
 				ab.setPublicKey (am.getMasterKey ().getReadOnly ().serialize (true));
-				for ( Transaction t : am.getTransactions () )
-				{
-					if ( t.getHeight () < headHeight - 100 )
-					{
-						ab.addTransactions (t.toProtobuf ());
-					}
-				}
 				builder.addAccounts (ab.build ());
 			}
 			builder.build ().writeTo (out);

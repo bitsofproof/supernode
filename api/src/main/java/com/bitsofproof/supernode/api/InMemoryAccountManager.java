@@ -72,11 +72,10 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 		return created;
 	}
 
-	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended, int nextKey, long created)
+	public InMemoryAccountManager (Wallet wallet, String name, ExtendedKey extended, long created)
 	{
 		this.name = name;
 		this.extended = extended;
-		this.nextKey = nextKey;
 		this.created = created;
 		this.wallet = wallet;
 	}

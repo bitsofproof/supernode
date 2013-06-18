@@ -660,7 +660,7 @@ public class JMSServerConnector implements BCSAPI
 					}
 					catch ( Exception e )
 					{
-						log.error ("Transaction message error", e);
+						log.debug ("Transaction message error", e);
 					}
 
 				}
@@ -712,7 +712,7 @@ public class JMSServerConnector implements BCSAPI
 					}
 					catch ( Exception e )
 					{
-						log.error ("Block message error", e);
+						log.debug ("Block message error", e);
 					}
 				}
 			});
@@ -801,7 +801,7 @@ public class JMSServerConnector implements BCSAPI
 					}
 					catch ( JMSException e )
 					{
-						log.error ("Can not parse reply", e);
+						log.debug ("Can not parse reply", e);
 					}
 				}
 			});
