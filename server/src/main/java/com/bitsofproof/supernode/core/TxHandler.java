@@ -275,10 +275,10 @@ public class TxHandler implements TrunkListener
 
 	private void cacheTransaction (Tx tx)
 	{
-		log.trace ("Caching unconfirmed transaction " + tx.getHash ());
 		synchronized ( unconfirmed )
 		{
 			unconfirmed.put (tx.getHash (), tx);
+			log.trace ("Caching unconfirmed transaction " + tx.getHash () + " pool size: " + unconfirmed.size ());
 
 			for ( TxOut out : tx.getOutputs () )
 			{

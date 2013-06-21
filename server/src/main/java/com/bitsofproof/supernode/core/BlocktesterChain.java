@@ -37,6 +37,12 @@ public class BlocktesterChain implements Chain
 	static final BigInteger minTarget = BigInteger.valueOf (1).shiftLeft (256).subtract (BigInteger.ONE);
 
 	@Override
+	public boolean isSlave ()
+	{
+		return false;
+	}
+
+	@Override
 	public boolean checkBeforeCheckpoint ()
 	{
 		return true;

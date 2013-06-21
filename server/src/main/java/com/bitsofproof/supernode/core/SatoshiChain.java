@@ -37,6 +37,19 @@ public class SatoshiChain implements Chain
 
 	static final BigInteger minTarget = BigInteger.valueOf (0xFFFFL).shiftLeft (8 * (0x1d - 3));
 
+	private boolean slave = false;
+
+	public void setSlave (boolean slave)
+	{
+		this.slave = slave;
+	}
+
+	@Override
+	public boolean isSlave ()
+	{
+		return slave;
+	}
+
 	@Override
 	public boolean checkBeforeCheckpoint ()
 	{

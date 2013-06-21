@@ -46,4 +46,6 @@ public interface Chain
 	public int getAddressFlag ();
 
 	public int getP2SHAddressFlag ();
+
+	public boolean isSlave ();
 }
