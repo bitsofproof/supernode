@@ -45,31 +45,38 @@ public class Main
 			return;
 		}
 
-		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
-		List<String> a = new ArrayList<String> ();
-		boolean profiles = true;
-		for ( String s : args )
+		try
 		{
-			if ( s.equals ("--") )
+			GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
+			List<String> a = new ArrayList<String> ();
+			boolean profiles = true;
+			for ( String s : args )
 			{
-				profiles = false;
-			}
-			else
-			{
-				if ( profiles )
+				if ( s.equals ("--") )
 				{
-					log.info ("Loading profile: " + s);
-					ctx.getEnvironment ().addActiveProfile (s);
+					profiles = false;
 				}
 				else
 				{
-					a.add (s);
+					if ( profiles )
+					{
+						log.info ("Loading profile: " + s);
+						ctx.getEnvironment ().addActiveProfile (s);
+					}
+					else
+					{
+						a.add (s);
+					}
 				}
 			}
+			ctx.load ("classpath:context/server.xml");
+			ctx.load ("classpath:context/*-profile.xml");
+			ctx.refresh ();
+			ctx.getBean (App.class).start (a.toArray (new String[0]));
 		}
-		ctx.load ("classpath:context/server.xml");
-		ctx.load ("classpath:context/*-profile.xml");
-		ctx.refresh ();
-		ctx.getBean (App.class).start (a.toArray (new String[0]));
+		catch ( Exception e )
+		{
+			log.error ("Error setting up spring context", e);
+		}
 	}
 }
