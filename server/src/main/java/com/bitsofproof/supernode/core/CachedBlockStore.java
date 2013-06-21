@@ -93,7 +93,7 @@ public abstract class CachedBlockStore implements BlockStore
 		lastCheckPoint = 232000;
 	}
 
-	private Chain chain;
+	protected Chain chain;
 
 	@Autowired
 	PlatformTransactionManager transactionManager;

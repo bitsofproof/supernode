@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.core;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,18 +24,22 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class DNSDiscovery implements Discovery
 {
 	private static final Logger log = LoggerFactory.getLogger (BitcoinNetwork.class);
 	private String[] seedHosts;
 
+	@Autowired
+	Chain chain;
+
 	@Override
-	public List<InetAddress> discover ()
+	public List<InetSocketAddress> discover ()
 	{
 		log.trace ("Discovering network using DNS seed");
 		int n = 0;
-		List<InetAddress> al = new ArrayList<InetAddress> ();
+		List<InetSocketAddress> al = new ArrayList<InetSocketAddress> ();
 		for ( String hostName : seedHosts )
 		{
 			log.trace ("Obtain addresses from " + hostName);
@@ -44,7 +49,7 @@ public class DNSDiscovery implements Discovery
 				hostAddresses = InetAddress.getAllByName (hostName);
 				for ( InetAddress inetAddress : hostAddresses )
 				{
-					al.add (inetAddress);
+					al.add (new InetSocketAddress (inetAddress, chain.getPort ()));
 					++n;
 				}
 			}

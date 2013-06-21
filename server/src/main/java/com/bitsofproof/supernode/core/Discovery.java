@@ -15,10 +15,10 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 public interface Discovery
 {
-	public List<InetAddress> discover ();
+	public List<InetSocketAddress> discover ();
 }

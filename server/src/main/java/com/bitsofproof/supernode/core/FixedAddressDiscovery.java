@@ -15,13 +15,13 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class FixedAddressDiscovery implements Discovery
 {
@@ -29,17 +29,28 @@ public class FixedAddressDiscovery implements Discovery
 
 	private String connectTo;
 
+	@Autowired
+	private Chain chain;
+
 	@Override
-	public List<InetAddress> discover ()
+	public List<InetSocketAddress> discover ()
 	{
-		List<InetAddress> al = new ArrayList<InetAddress> ();
+		List<InetSocketAddress> al = new ArrayList<InetSocketAddress> ();
 		try
 		{
-			al.add (InetAddress.getByName (connectTo));
+			String[] split = connectTo.split (":");
+			if ( split.length == 2 )
+			{
+				al.add (InetSocketAddress.createUnresolved (split[0], Integer.valueOf (split[1])));
+			}
+			else
+			{
+				al.add (InetSocketAddress.createUnresolved (split[0], chain.getPort ()));
+			}
 		}
-		catch ( UnknownHostException e )
+		catch ( Exception e )
 		{
-			log.error ("can not connect to " + connectTo);
+			log.error ("can not connect to " + connectTo, e);
 		}
 		return al;
 	}

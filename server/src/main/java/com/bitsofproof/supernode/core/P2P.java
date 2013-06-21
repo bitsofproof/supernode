@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.core;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
@@ -336,15 +335,11 @@ public abstract class P2P
 
 	protected abstract boolean discover ();
 
-	protected void addPeer (InetAddress addr, int port)
+	protected void addPeer (InetSocketAddress address)
 	{
-		if ( !addr.isAnyLocalAddress () )
+		if ( !runqueue.contains (address) )
 		{
-			InetSocketAddress address = new InetSocketAddress (addr, port);
-			if ( !runqueue.contains (address) )
-			{
-				runqueue.add (address);
-			}
+			runqueue.add (address);
 		}
 	}
 

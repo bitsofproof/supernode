@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
@@ -30,10 +31,10 @@ import java.util.StringTokenizer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ValidationException;
-
 
 public class IRCDiscovery implements Discovery
 {
@@ -42,10 +43,13 @@ public class IRCDiscovery implements Discovery
 	private int port;
 	private String channel;
 
+	@Autowired
+	private Chain chain;
+
 	@Override
-	public List<InetAddress> discover ()
+	public List<InetSocketAddress> discover ()
 	{
-		List<InetAddress> al = new ArrayList<InetAddress> ();
+		List<InetSocketAddress> al = new ArrayList<InetSocketAddress> ();
 
 		try
 		{
@@ -113,7 +117,7 @@ public class IRCDiscovery implements Discovery
 							byte[] m = ByteUtils.fromBase58WithChecksum (w);
 							byte[] addr = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff, 0, 0, 0, 0 };
 							System.arraycopy (m, 0, addr, 12, 4);
-							al.add (InetAddress.getByAddress (addr));
+							al.add (new InetSocketAddress (InetAddress.getByAddress (addr), chain.getPort ()));
 						}
 						catch ( ValidationException e )
 						{

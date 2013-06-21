@@ -16,7 +16,6 @@
 package com.bitsofproof.supernode.core;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -271,11 +270,11 @@ public class BitcoinNetwork extends P2P
 	@Override
 	protected boolean discover ()
 	{
-		List<InetAddress> al = discovery.discover ();
+		List<InetSocketAddress> al = discovery.discover ();
 
-		for ( InetAddress a : al )
+		for ( InetSocketAddress a : al )
 		{
-			addPeer (a, chain.getPort ());
+			addPeer (a);
 		}
 
 		return !al.isEmpty ();

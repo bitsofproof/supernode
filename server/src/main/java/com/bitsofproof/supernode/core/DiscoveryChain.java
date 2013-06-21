@@ -15,7 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,16 +29,16 @@ public class DiscoveryChain implements Discovery
 	}
 
 	@Override
-	public List<InetAddress> discover ()
+	public List<InetSocketAddress> discover ()
 	{
 		for ( Discovery discovery : discoveryChain )
 		{
-			List<InetAddress> addresses = discovery.discover ();
+			List<InetSocketAddress> addresses = discovery.discover ();
 			if ( !addresses.isEmpty () )
 			{
 				return addresses;
 			}
 		}
-		return new ArrayList<InetAddress> ();
+		return new ArrayList<InetSocketAddress> ();
 	}
 }

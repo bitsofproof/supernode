@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.model;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -379,17 +380,25 @@ public class JpaStore extends CachedBlockStore implements Discovery, PeerStore, 
 	}
 
 	@Override
-	public List<InetAddress> discover ()
+	public List<InetSocketAddress> discover ()
 	{
 		log.trace ("Discovering stored peers");
-		List<InetAddress> peers = new ArrayList<InetAddress> ();
+		List<InetSocketAddress> peers = new ArrayList<InetSocketAddress> ();
 		for ( KnownPeer kp : getConnectablePeers () )
 		{
 			try
 			{
-				peers.add (InetAddress.getByName (kp.getAddress ()));
+				String[] split = kp.getAddress ().split (":");
+				if ( split.length == 2 )
+				{
+					peers.add (InetSocketAddress.createUnresolved (split[0], Integer.valueOf (split[1])));
+				}
+				else
+				{
+					peers.add (InetSocketAddress.createUnresolved (split[0], chain.getPort ()));
+				}
 			}
-			catch ( UnknownHostException e )
+			catch ( Exception e )
 			{
 			}
 		}

@@ -65,7 +65,7 @@ public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 		for ( Address a : am.getAddresses () )
 		{
 			log.trace ("received address " + a.address + " from " + peer.getAddress ().getAddress ());
-			peer.getNetwork ().addPeer (a.address, (int) a.port);
+			peer.getNetwork ().addPeer (peer.getAddress ());
 			if ( network.getPeerStore () != null )
 			{
 				KnownPeer p;
@@ -75,7 +75,7 @@ public class AddressHandler implements BitcoinMessageListener<AddrMessage>
 					if ( p == null )
 					{
 						p = new KnownPeer ();
-						p.setAddress (a.address.getHostAddress ());
+						p.setAddress (a.address.getHostAddress () + ":" + a.port);
 						p.setResponseTime (Integer.MAX_VALUE);
 						network.getPeerStore ().store (p);
 					}
