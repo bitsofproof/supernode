@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.core;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,11 +42,11 @@ public class FixedAddressDiscovery implements Discovery
 			String[] split = connectTo.split (":");
 			if ( split.length == 2 )
 			{
-				al.add (InetSocketAddress.createUnresolved (split[0], Integer.valueOf (split[1])));
+				al.add (new InetSocketAddress (InetAddress.getByName (split[0]), Integer.valueOf (split[1])));
 			}
 			else
 			{
-				al.add (InetSocketAddress.createUnresolved (split[0], chain.getPort ()));
+				al.add (new InetSocketAddress (InetAddress.getByName (split[0]), chain.getPort ()));
 			}
 		}
 		catch ( Exception e )
