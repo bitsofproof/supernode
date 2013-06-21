@@ -8,8 +8,8 @@
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
 
-    <context:property-placeholder />
-    
+	<context:property-placeholder />
+
 	<context:component-scan base-package="com.bitsofproof.supernode" />
 
 	<bean id="application" class="com.bitsofproof.supernode.main.Supernode">
@@ -22,25 +22,7 @@
 		</constructor-arg>
 		<property name="timeout" value="180" />
 	</bean>
-
-	<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-	</bean>
 	<bean id="alert" class="com.bitsofproof.supernode.core.AlertHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-	</bean>
-	<bean id="heartbeat" class="com.bitsofproof.supernode.core.HeartbeatHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-		<property name="delay" value="180" />
-		<property name="timeout" value="180" />
-	</bean>
-	<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
@@ -51,34 +33,53 @@
 		</constructor-arg>
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
-	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-		<property name="txHandler" ref="tx" />
-		<property name="transactionManager" ref="transactionManager" />
-	</bean>
-	<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-	</bean>
-	<bean id="getheaders" class="com.bitsofproof.supernode.core.GetHeadersHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-		<property name="transactionManager" ref="transactionManager" />
-	</bean>
-	<bean id="bloom" class="com.bitsofproof.supernode.core.BloomFilterHandler">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-	</bean>
+	<beans profile="!slave">
+		<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+			<property name="txHandler" ref="tx" />
+			<property name="transactionManager" ref="transactionManager" />
+		</bean>
+		<bean id="getblocks" class="com.bitsofproof.supernode.core.GetBlocksHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+		</bean>
+		<bean id="getheaders" class="com.bitsofproof.supernode.core.GetHeadersHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+			<property name="transactionManager" ref="transactionManager" />
+		</bean>
+		<bean id="bloom" class="com.bitsofproof.supernode.core.BloomFilterHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+		</bean>
+		<bean id="heartbeat" class="com.bitsofproof.supernode.core.HeartbeatHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+			<property name="delay" value="180" />
+			<property name="timeout" value="180" />
+		</bean>
+		<bean id="pingpong" class="com.bitsofproof.supernode.core.PingPongHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+		</bean>
+		<bean id="address" class="com.bitsofproof.supernode.core.AddressHandler">
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+		</bean>
 		<bean id="addressSeeder" class="com.bitsofproof.supernode.core.AddressSeeder">
-		<constructor-arg>
-			<ref bean="bitcoinNetwork" />
-		</constructor-arg>
-		<property name="delay" value="60" />
-		<property name="startDelay" value="60" />
-	</bean>
+			<constructor-arg>
+				<ref bean="bitcoinNetwork" />
+			</constructor-arg>
+			<property name="delay" value="60" />
+			<property name="startDelay" value="60" />
+		</bean>
+	</beans>
 </beans>
