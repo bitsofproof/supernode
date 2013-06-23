@@ -217,19 +217,21 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 				long ix = 0;
 				for ( TransactionOutput o : t.getOutputs () )
 				{
+					confirmed.remove (t.getHash (), ix);
+					change.remove (t.getHash (), ix);
+					receiving.remove (t.getHash (), ix);
+					sending.remove (t.getHash (), ix);
+
 					if ( keyIDForAddress.containsKey (new ByteVector (o.getOutputAddress ())) )
 					{
 						modified = true;
 						if ( t.getBlockHash () != null )
 						{
 							confirmed.add (t.getHash (), ix, o);
-							change.remove (t.getHash (), ix);
-							receiving.remove (t.getHash (), ix);
 							log.trace ("Settled " + ix + " " + t.getHash () + " " + o.getValue ());
 						}
 						else
 						{
-							confirmed.remove (t.getHash (), ix);
 							if ( spend != null )
 							{
 								change.add (t.getHash (), ix, o);
@@ -248,7 +250,6 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						{
 							modified = true;
 							sending.add (t.getHash (), ix, o);
-							confirmed.remove (t.getHash (), ix);
 							log.trace ("Sending " + ix + " " + o.getValue ());
 						}
 					}
