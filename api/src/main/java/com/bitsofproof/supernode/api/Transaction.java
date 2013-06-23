@@ -79,35 +79,6 @@ public class Transaction implements Serializable, Cloneable
 		return cb;
 	}
 
-	public static class TransactionSource
-	{
-		private final String source;
-		private final long ix;
-		private final TransactionOutput output;
-
-		public TransactionSource (String source, long ix, TransactionOutput output)
-		{
-			this.source = source;
-			this.ix = ix;
-			this.output = output;
-		}
-
-		public TransactionOutput getOutput ()
-		{
-			return output;
-		}
-
-		public String getSource ()
-		{
-			return source;
-		}
-
-		public long getIx ()
-		{
-			return ix;
-		}
-	}
-
 	public static class TransactionSink
 	{
 		private final byte[] address;
@@ -131,7 +102,7 @@ public class Transaction implements Serializable, Cloneable
 		}
 	}
 
-	public static Transaction createSpend (AddressToKeyMap am, List<TransactionSource> sources, List<TransactionSink> sinks, long fee)
+	public static Transaction createSpend (AddressToKeyMap am, List<TransactionOutput> sources, List<TransactionSink> sinks, long fee)
 			throws ValidationException
 	{
 		if ( fee < 0 || fee > 1000000 )
@@ -165,12 +136,11 @@ public class Transaction implements Serializable, Cloneable
 		}
 
 		long sumInput = 0;
-		for ( TransactionSource s : sources )
+		for ( TransactionOutput o : sources )
 		{
-			TransactionOutput o = s.getOutput ();
 			TransactionInput i = new TransactionInput ();
-			i.setSourceHash (s.getSource ());
-			i.setIx (s.getIx ());
+			i.setSourceHash (o.getTxHash ());
+			i.setIx (o.getIx ());
 			sumInput += o.getValue ();
 
 			transaction.getInputs ().add (i);
@@ -181,11 +151,11 @@ public class Transaction implements Serializable, Cloneable
 		}
 
 		int j = 0;
-		for ( TransactionSource s : sources )
+		for ( TransactionOutput o : sources )
 		{
 			TransactionInput i = transaction.getInputs ().get (j);
 			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
-			byte[] address = s.getOutput ().getOutputAddress ();
+			byte[] address = o.getOutputAddress ();
 			if ( address == null )
 			{
 				throw new ValidationException ("Can only spend pay to address outputs");
@@ -195,7 +165,7 @@ public class Transaction implements Serializable, Cloneable
 			{
 				throw new ValidationException ("Have no key to spend this output");
 			}
-			byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, s.getOutput ().getScript ()));
+			byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
 			byte[] sigPlusType = new byte[sig.length + 1];
 			System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
 			sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
@@ -338,6 +308,14 @@ public class Transaction implements Serializable, Cloneable
 		toWire (writer);
 		WireFormat.Reader reader = new WireFormat.Reader (writer.toByteArray ());
 		hash = reader.hash ().toString ();
+
+		long ix = 0;
+		for ( TransactionOutput o : outputs )
+		{
+			o.setIx (ix);
+			o.setTxHash (hash);
+			++ix;
+		}
 	}
 
 	public String getHash ()
