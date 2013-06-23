@@ -21,10 +21,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -50,7 +48,6 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 	private final InMemoryUTXO sending = new InMemoryUTXO ();
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
-	private final Set<String> processedTransaction = new HashSet<String> ();
 	private final Map<String, Transaction> relevantTransaction = new HashMap<String, Transaction> ();
 
 	private final String name;
@@ -186,13 +183,8 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 		synchronized ( confirmed )
 		{
 			boolean modified = false;
-			if ( !processedTransaction.contains (t.getHash ()) )
+			if ( !t.isDoubleSpend () )
 			{
-				if ( t.isDoubleSpend () )
-				{
-					return false;
-				}
-				processedTransaction.add (t.getHash ());
 				TransactionOutput spend = null;
 				for ( TransactionInput i : t.getInputs () )
 				{
@@ -231,10 +223,13 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						if ( t.getBlockHash () != null )
 						{
 							confirmed.add (t.getHash (), ix, o);
-							log.trace ("Settled " + ix + " " + o.getValue ());
+							change.remove (t.getHash (), ix);
+							receiving.remove (t.getHash (), ix);
+							log.trace ("Settled " + ix + " " + t.getHash () + " " + o.getValue ());
 						}
 						else
 						{
+							confirmed.remove (t.getHash (), ix);
 							if ( spend != null )
 							{
 								change.add (t.getHash (), ix, o);
@@ -253,6 +248,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						{
 							modified = true;
 							sending.add (t.getHash (), ix, o);
+							confirmed.remove (t.getHash (), ix);
 							log.trace ("Sending " + ix + " " + o.getValue ());
 						}
 					}
@@ -263,7 +259,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 					relevantTransaction.put (t.getHash (), t);
 				}
 			}
-			else if ( t.isDoubleSpend () )
+			else
 			{
 				for ( long ix = 0; ix < t.getOutputs ().size (); ++ix )
 				{
@@ -287,7 +283,6 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 					}
 					modified |= out != null;
 				}
-				processedTransaction.remove (t.getHash ());
 				relevantTransaction.remove (t.getHash ());
 			}
 			return modified;
