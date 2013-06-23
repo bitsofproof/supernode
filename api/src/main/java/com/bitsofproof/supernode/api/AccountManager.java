@@ -21,7 +21,7 @@ import java.util.List;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
-public interface AccountManager
+public interface AccountManager extends AddressToKeyMap
 {
 	public void setApi (BCSAPI api);
 
@@ -36,8 +36,6 @@ public interface AccountManager
 	public Collection<byte[]> getAddresses ();
 
 	public ExtendedKey getMasterKey ();
-
-	public Key getKeyForAddress (byte[] address);
 
 	public Key getNextKey () throws ValidationException;
 
