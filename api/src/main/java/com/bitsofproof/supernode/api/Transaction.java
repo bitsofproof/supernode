@@ -47,6 +47,9 @@ public class Transaction implements Serializable, Cloneable
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
 
+	private static final long MINIMUM_FEE = 10000;
+	private static final long MAXIMUM_FEE = 1000000;
+
 	public static Transaction createCoinbase (Key receiver, long value, int blockHeight)
 	{
 		Transaction cb = new Transaction ();
@@ -102,10 +105,30 @@ public class Transaction implements Serializable, Cloneable
 		}
 	}
 
+	public static long estimateFee (Transaction t)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		t.toWire (writer);
+		return Math.min (MAXIMUM_FEE, Math.max (MINIMUM_FEE, writer.toByteArray ().length / 1000 * MINIMUM_FEE));
+	}
+
+	public static Transaction createSpend (AddressToKeyMap am, List<TransactionOutput> sources, List<TransactionSink> sinks) throws ValidationException
+	{
+		long fee = MINIMUM_FEE;
+		long prevfee = MINIMUM_FEE;
+		Transaction t = createSpend (am, sources, sinks, fee);
+		while ( (fee = estimateFee (t)) > prevfee )
+		{
+			t = createSpend (am, sources, sinks, fee);
+			prevfee = fee;
+		}
+		return t;
+	}
+
 	public static Transaction createSpend (AddressToKeyMap am, List<TransactionOutput> sources, List<TransactionSink> sinks, long fee)
 			throws ValidationException
 	{
-		if ( fee < 0 || fee > 1000000 )
+		if ( fee < 0 || fee > MAXIMUM_FEE )
 		{
 			throw new ValidationException ("You unlikely want to do that");
 		}

@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +85,21 @@ public class InMemoryUTXO
 
 	public List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
 	{
+		List<TransactionOutput> candidates = new ArrayList<TransactionOutput> ();
+		candidates.addAll (utxo.values ());
+		Collections.sort (candidates, new Comparator<TransactionOutput> ()
+		{
+			// prefer aggregation of UTXO
+			@Override
+			public int compare (TransactionOutput o1, TransactionOutput o2)
+			{
+				return (int) (o1.getValue () - o2.getValue ());
+			}
+		});
+
 		List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
 		long sum = 0;
-		for ( TransactionOutput o : utxo.values () )
+		for ( TransactionOutput o : candidates )
 		{
 			if ( color == null )
 			{
