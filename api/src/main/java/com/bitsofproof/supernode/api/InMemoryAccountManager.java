@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.Transaction.TransactionSink;
-import com.bitsofproof.supernode.api.Transaction.TransactionSource;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
@@ -131,12 +130,6 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 	}
 
 	@Override
-	public int getNextSequence ()
-	{
-		return nextKey;
-	}
-
-	@Override
 	public String getName ()
 	{
 		return name;
@@ -227,19 +220,19 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						modified = true;
 						if ( t.getBlockHash () != null )
 						{
-							confirmed.add (t.getHash (), ix, o);
+							confirmed.add (o);
 							log.trace ("Settled " + ix + " " + t.getHash () + " " + o.getValue ());
 						}
 						else
 						{
 							if ( spend != null )
 							{
-								change.add (t.getHash (), ix, o);
+								change.add (o);
 								log.trace ("Change " + ix + " " + o.getValue ());
 							}
 							else
 							{
-								receiving.add (t.getHash (), ix, o);
+								receiving.add (o);
 								log.trace ("Receiving " + ix + " " + o.getValue ());
 							}
 						}
@@ -249,7 +242,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 						if ( t.getBlockHash () == null && spend != null )
 						{
 							modified = true;
-							sending.add (t.getHash (), ix, o);
+							sending.add (o);
 							log.trace ("Sending " + ix + " " + o.getValue ());
 						}
 					}
@@ -334,7 +327,7 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 	{
 		synchronized ( confirmed )
 		{
-			List<TransactionSource> sources = confirmed.getSufficientSources (amount, fee, null);
+			List<TransactionOutput> sources = confirmed.getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
@@ -342,9 +335,9 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
 
 			long in = 0;
-			for ( TransactionSource o : sources )
+			for ( TransactionOutput o : sources )
 			{
-				in += o.getOutput ().getValue ();
+				in += o.getValue ();
 			}
 			TransactionSink target = new TransactionSink (receiver, amount);
 			if ( (in - amount - fee) > 0 )
@@ -381,15 +374,15 @@ class InMemoryAccountManager implements TransactionListener, AccountManager
 			{
 				amount += a;
 			}
-			List<TransactionSource> sources = confirmed.getSufficientSources (amount, fee, null);
+			List<TransactionOutput> sources = confirmed.getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
 			}
 			long in = 0;
-			for ( TransactionSource o : sources )
+			for ( TransactionOutput o : sources )
 			{
-				in += o.getOutput ().getValue ();
+				in += o.getValue ();
 			}
 			for ( long a : amounts )
 			{

@@ -16,104 +16,102 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.bitsofproof.supernode.api.Transaction.TransactionSource;
-
 public class InMemoryUTXO
 {
-	private final Map<String, HashMap<Long, TransactionOutput>> utxo = new HashMap<String, HashMap<Long, TransactionOutput>> ();
-
-	public void add (String source, long ix, TransactionOutput out)
+	private static class TxOutKey
 	{
-		HashMap<Long, TransactionOutput> outs = utxo.get (source);
-		if ( outs == null )
+		String hash;
+		long ix;
+
+		public TxOutKey (String hash, long ix)
 		{
-			outs = new HashMap<Long, TransactionOutput> ();
-			utxo.put (source, outs);
+			this.hash = hash;
+			this.ix = ix;
 		}
-		outs.put (ix, out);
+
+		@Override
+		public boolean equals (Object obj)
+		{
+			TxOutKey o = (TxOutKey) obj;
+			return o.hash.equals (hash) && o.ix == ix;
+		}
+
+		@Override
+		public int hashCode ()
+		{
+			return (int) (hash.hashCode () + ix);
+		}
+
 	}
 
-	public Map<String, HashMap<Long, TransactionOutput>> getUTXO ()
+	private final Map<TxOutKey, TransactionOutput> utxo = new HashMap<TxOutKey, TransactionOutput> ();
+
+	public void add (TransactionOutput out)
 	{
-		return utxo;
+		utxo.put (new TxOutKey (out.getTxHash (), out.getIx ()), out);
+	}
+
+	public Collection<TransactionOutput> getUTXO ()
+	{
+		return utxo.values ();
 	}
 
 	public TransactionOutput get (String tx, long ix)
 	{
-		HashMap<Long, TransactionOutput> outs = utxo.get (tx);
-		if ( outs != null )
-		{
-			return outs.get (ix);
-		}
-		return null;
+		return utxo.get (new TxOutKey (tx, ix));
 	}
 
 	public TransactionOutput remove (String tx, long ix)
 	{
-		HashMap<Long, TransactionOutput> outs = utxo.get (tx);
-		if ( outs != null )
-		{
-			TransactionOutput removed = outs.remove (ix);
-			if ( outs.size () == 0 )
-			{
-				utxo.remove (tx);
-			}
-			return removed;
-		}
-		return null;
+		return utxo.remove (new TxOutKey (tx, ix));
 	}
 
 	public long getTotal ()
 	{
 		long s = 0;
-		for ( HashMap<Long, TransactionOutput> entry : utxo.values () )
+		for ( TransactionOutput o : utxo.values () )
 		{
-			for ( TransactionOutput o : entry.values () )
-			{
-				s += o.getValue ();
-			}
+			s += o.getValue ();
 		}
 		return s;
 	}
 
-	public List<TransactionSource> getSufficientSources (long amount, long fee, String color)
+	public List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
 	{
-		List<TransactionSource> result = new ArrayList<TransactionSource> ();
+		List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
 		long sum = 0;
-		for ( Map.Entry<String, HashMap<Long, TransactionOutput>> txs : utxo.entrySet () )
+		for ( TransactionOutput o : utxo.values () )
 		{
-			for ( Map.Entry<Long, TransactionOutput> o : txs.getValue ().entrySet () )
+			if ( color == null )
 			{
-				if ( color == null )
+				if ( o.getColor () == null )
 				{
-					if ( o.getValue ().getColor () == null )
+					sum += o.getValue ();
+					result.add (o);
+					if ( sum >= (amount + fee) )
 					{
-						sum += o.getValue ().getValue ();
-						result.add (new TransactionSource (txs.getKey (), o.getKey (), o.getValue ()));
-						if ( sum >= (amount + fee) )
-						{
-							return result;
-						}
+						return result;
 					}
 				}
-				else
+			}
+			else
+			{
+				if ( o.getColor ().equals (color) )
 				{
-					if ( o.getValue ().getColor ().equals (color) )
+					sum += o.getValue ();
+					result.add (o);
+					if ( sum >= amount )
 					{
-						sum += o.getValue ().getValue ();
-						result.add (new TransactionSource (txs.getKey (), o.getKey (), o.getValue ()));
-						if ( sum >= amount )
+						if ( fee > 0 )
 						{
-							if ( fee > 0 )
-							{
-								result.addAll (getSufficientSources (0, fee, null));
-							}
-							return result;
+							result.addAll (getSufficientSources (0, fee, null));
 						}
+						return result;
 					}
 				}
 			}
