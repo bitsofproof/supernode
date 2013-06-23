@@ -131,7 +131,7 @@ public class Transaction implements Serializable, Cloneable
 		}
 	}
 
-	public static Transaction createSpend (AccountManager am, List<TransactionSource> sources, List<TransactionSink> sinks, long fee)
+	public static Transaction createSpend (AddressToKeyMap am, List<TransactionSource> sources, List<TransactionSink> sinks, long fee)
 			throws ValidationException
 	{
 		if ( fee < 0 || fee > 1000000 )
