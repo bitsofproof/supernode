@@ -66,10 +66,6 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public Key getKey (int i) throws ValidationException
 	{
-		if ( i >= nextSequence )
-		{
-			throw new ValidationException ("Use consecutive keys");
-		}
 		return master.getKey (i);
 	}
 
