@@ -4,18 +4,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.common.ByteUtils;
-import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
@@ -34,18 +30,18 @@ public abstract class BaseAccountManager implements AccountManager
 	private final InMemoryUTXO receiving = new InMemoryUTXO ();
 	private final InMemoryUTXO sending = new InMemoryUTXO ();
 
-	private final Map<ByteVector, Integer> keyIDForAddress = new HashMap<ByteVector, Integer> ();
 	private final long created;
 	private final String name;
-
-	private ExtendedKey master;
-	private int nextSequence;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 
 	public abstract void storeTransaction (Transaction t);
 
 	public abstract void removeTransaction (Transaction t);
+
+	public abstract Key getKeyForAddress (byte[] address);
+
+	public abstract Key getNextKey () throws ValidationException;
 
 	public BaseAccountManager (String name, long created)
 	{
@@ -63,76 +59,6 @@ public abstract class BaseAccountManager implements AccountManager
 	public long getCreated ()
 	{
 		return created;
-	}
-
-	@Override
-	public ExtendedKey getMaster ()
-	{
-		return master;
-	}
-
-	public void setMaster (ExtendedKey master)
-	{
-		this.master = master;
-	}
-
-	public int getNextSequence ()
-	{
-		return nextSequence;
-	}
-
-	public void setNextSequence (int nextSequence) throws ValidationException
-	{
-		while ( this.nextSequence < nextSequence )
-		{
-			getNextKey ();
-		}
-		this.nextSequence = nextSequence;
-	}
-
-	@Override
-	public Key getKey (int i) throws ValidationException
-	{
-		if ( i >= nextSequence )
-		{
-			throw new ValidationException ("Use consecutive keys");
-		}
-		return master.getKey (i);
-	}
-
-	@Override
-	public Key getNextKey () throws ValidationException
-	{
-		Key key = master.getKey (nextSequence);
-		keyIDForAddress.put (new ByteVector (key.getAddress ()), nextSequence);
-		++nextSequence;
-		return key;
-	}
-
-	public Integer getKeyIDForAddress (byte[] address) throws ValidationException
-	{
-		return keyIDForAddress.get (new ByteVector (address));
-	}
-
-	public Key getKeyForAddress (byte[] address) throws ValidationException
-	{
-		Integer keyId = getKeyIDForAddress (address);
-		if ( keyId == null )
-		{
-			return null;
-		}
-		return master.getKey (keyId);
-	}
-
-	@Override
-	public Collection<byte[]> getAddresses ()
-	{
-		List<byte[]> addresses = new ArrayList<byte[]> ();
-		for ( ByteVector v : keyIDForAddress.keySet () )
-		{
-			addresses.add (v.toByteArray ());
-		}
-		return addresses;
 	}
 
 	protected static class TransactionSink
@@ -478,7 +404,7 @@ public abstract class BaseAccountManager implements AccountManager
 					receiving.remove (o.getTxHash (), o.getIx ());
 					sending.remove (o.getTxHash (), o.getIx ());
 
-					if ( keyIDForAddress.containsKey (new ByteVector (o.getOutputAddress ())) )
+					if ( getKeyForAddress (o.getOutputAddress ()) != null )
 					{
 						modified = true;
 						if ( t.getBlockHash () != null )

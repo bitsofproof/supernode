@@ -20,7 +20,7 @@ public class FileWallet implements Wallet
 	private byte[] signature;
 	private String fileName;
 
-	private final Map<String, InMemoryAccountManager> accounts = new HashMap<String, InMemoryAccountManager> ();
+	private final Map<String, ExtendedKeyAccountManager> accounts = new HashMap<String, ExtendedKeyAccountManager> ();
 
 	public FileWallet (String fileName)
 	{
@@ -56,7 +56,7 @@ public class FileWallet implements Wallet
 			throw new ValidationException ("incorrect passphrase");
 		}
 		int i = 0;
-		for ( InMemoryAccountManager account : accounts.values () )
+		for ( ExtendedKeyAccountManager account : accounts.values () )
 		{
 			account.setMaster (master.getChild (i++ | 0x80000000));
 		}
@@ -66,7 +66,7 @@ public class FileWallet implements Wallet
 	public void lock ()
 	{
 		master = null;
-		for ( InMemoryAccountManager account : accounts.values () )
+		for ( ExtendedKeyAccountManager account : accounts.values () )
 		{
 			account.setMaster (account.getMaster ().getReadOnly ());
 		}
@@ -89,7 +89,7 @@ public class FileWallet implements Wallet
 			wallet.signature = walletMessage.getSignature ().toByteArray ();
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
-				InMemoryAccountManager am = new InMemoryAccountManager (account.getName (), account.getCreated ());
+				ExtendedKeyAccountManager am = new ExtendedKeyAccountManager (account.getName (), account.getCreated ());
 				wallet.accounts.put (account.getName (), am);
 				am.setMaster (ExtendedKey.parse (account.getPublicKey ()));
 			}
@@ -103,9 +103,9 @@ public class FileWallet implements Wallet
 
 	public void sync (BCSAPI api, int lookAhead) throws BCSAPIException, ValidationException
 	{
-		for ( InMemoryAccountManager account : accounts.values () )
+		for ( ExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.sync (api, lookAhead, account.getCreated ());
+			account.sync (api, lookAhead);
 		}
 	}
 
@@ -128,7 +128,7 @@ public class FileWallet implements Wallet
 			{
 				throw new ValidationException ("The wallet is locked");
 			}
-			InMemoryAccountManager account = new InMemoryAccountManager (name, System.currentTimeMillis () / 1000);
+			ExtendedKeyAccountManager account = new ExtendedKeyAccountManager (name, System.currentTimeMillis () / 1000);
 			account.setMaster (master.getChild (accounts.size () | 0x80000000));
 			accounts.put (name, account);
 			return account;
@@ -144,7 +144,7 @@ public class FileWallet implements Wallet
 			builder.setBcsapiversion (1);
 			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
 			builder.setSignature (ByteString.copyFrom (signature));
-			for ( InMemoryAccountManager am : accounts.values () )
+			for ( ExtendedKeyAccountManager am : accounts.values () )
 			{
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());
