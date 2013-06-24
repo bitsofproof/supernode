@@ -30,6 +30,12 @@ public class KeyListAccountManager extends BaseAccountManager
 	}
 
 	@Override
+	public int getNumberOfKeys ()
+	{
+		return keys.size ();
+	}
+
+	@Override
 	public Collection<byte[]> getAddresses ()
 	{
 		List<byte[]> a = new ArrayList<byte[]> ();

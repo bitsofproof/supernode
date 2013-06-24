@@ -26,6 +26,8 @@ public interface AccountManager extends TransactionListener
 
 	public long getCreated ();
 
+	public int getNumberOfKeys ();
+
 	public Key getNextKey () throws ValidationException;
 
 	public Collection<byte[]> getAddresses ();

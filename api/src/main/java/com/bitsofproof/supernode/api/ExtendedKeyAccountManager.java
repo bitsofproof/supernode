@@ -49,7 +49,8 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		this.master = master;
 	}
 
-	public int getNextSequence ()
+	@Override
+	public int getNumberOfKeys ()
 	{
 		return nextSequence;
 	}
@@ -122,12 +123,12 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
 	{
-		final AtomicInteger lastUsedKey = new AtomicInteger (getNextSequence ());
+		final AtomicInteger lastUsedKey = new AtomicInteger (getNumberOfKeys ());
 		for ( int i = 0; i < lookAhead; ++i )
 		{
 			getNextKey ();
 		}
-		log.trace ("Sync " + getName () + " nkeys: " + getNextSequence ());
+		log.trace ("Sync " + getName () + " nkeys: " + getNumberOfKeys ());
 		api.scanTransactions (getMaster (), lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
@@ -148,7 +149,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 								}
 								else
 								{
-									while ( thisKey == null && (getNextSequence () - lastUsedKey.get ()) < lookAhead )
+									while ( thisKey == null && (getNumberOfKeys () - lastUsedKey.get ()) < lookAhead )
 									{
 										getNextKey ();
 									}
@@ -168,8 +169,8 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 				updateWithTransaction (t);
 			}
 		});
-		setNextSequence (Math.min (lastUsedKey.get (), getNextSequence ()));
-		log.trace ("Sync " + getName () + " finished with nkeys: " + getNextSequence ());
+		setNextSequence (Math.min (lastUsedKey.get (), getNumberOfKeys ()));
+		log.trace ("Sync " + getName () + " finished with nkeys: " + getNumberOfKeys ());
 	}
 
 	@Override
