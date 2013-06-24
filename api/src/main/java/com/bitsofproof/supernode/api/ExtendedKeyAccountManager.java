@@ -123,7 +123,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
 	{
-		final AtomicInteger lastUsedKey = new AtomicInteger (getNumberOfKeys ());
+		final AtomicInteger lastUsedKey = new AtomicInteger (-1);
 		for ( int i = 0; i < lookAhead; ++i )
 		{
 			getNextKey ();
@@ -169,7 +169,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 				updateWithTransaction (t);
 			}
 		});
-		setNextSequence (Math.min (lastUsedKey.get (), getNumberOfKeys ()));
+		setNextSequence (Math.min (lastUsedKey.get () + 1, getNumberOfKeys ()));
 		log.trace ("Sync " + getName () + " finished with nkeys: " + getNumberOfKeys ());
 	}
 }
