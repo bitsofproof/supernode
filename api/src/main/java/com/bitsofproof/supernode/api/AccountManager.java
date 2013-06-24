@@ -36,7 +36,7 @@ public interface AccountManager extends TransactionListener
 
 	public long getBalance ();
 
-	public long getSettled ();
+	public long getConfirmed ();
 
 	public long getSending ();
 

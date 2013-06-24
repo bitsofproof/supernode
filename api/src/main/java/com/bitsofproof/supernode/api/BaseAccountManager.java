@@ -1,17 +1,22 @@
 package com.bitsofproof.supernode.api;
 
+import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.common.ByteUtils;
+import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
@@ -41,6 +46,7 @@ public abstract class BaseAccountManager implements AccountManager
 
 	public abstract Key getKeyForAddress (byte[] address);
 
+	@Override
 	public abstract Key getNextKey () throws ValidationException;
 
 	public BaseAccountManager (String name, long created)
@@ -484,7 +490,7 @@ public abstract class BaseAccountManager implements AccountManager
 	}
 
 	@Override
-	public long getSettled ()
+	public long getConfirmed ()
 	{
 		synchronized ( confirmed )
 		{
@@ -555,5 +561,51 @@ public abstract class BaseAccountManager implements AccountManager
 		{
 			notifyListener (t);
 		}
+	}
+
+	public void dumpOutputs (PrintStream print)
+	{
+		print.println ("Confirmed:");
+		dumpUTXO (print, confirmed);
+		print.println ("Receiving:");
+		dumpUTXO (print, receiving);
+		print.println ("Change:");
+		dumpUTXO (print, change);
+		print.println ("Sending:");
+		dumpUTXO (print, sending);
+	}
+
+	public void dumpKeys (PrintStream print)
+	{
+		Set<ByteVector> addresses = new HashSet<ByteVector> ();
+		for ( TransactionOutput o : confirmed.getUTXO () )
+		{
+			addresses.add (new ByteVector (o.getOutputAddress ()));
+		}
+		for ( TransactionOutput o : change.getUTXO () )
+		{
+			addresses.add (new ByteVector (o.getOutputAddress ()));
+		}
+		for ( TransactionOutput o : receiving.getUTXO () )
+		{
+			addresses.add (new ByteVector (o.getOutputAddress ()));
+		}
+		for ( ByteVector b : addresses )
+		{
+			Key k = getKeyForAddress (b.toByteArray ());
+			if ( k != null )
+			{
+				print.println (ECKeyPair.serializeWIF (k) + " (" + ByteUtils.toHex (b.toByteArray ()) + ")");
+			}
+		}
+	}
+
+	private void dumpUTXO (PrintStream print, InMemoryUTXO set)
+	{
+		for ( TransactionOutput o : set.getUTXO () )
+		{
+			print.println (o.getTxHash () + "[" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+		}
+		print.println ();
 	}
 }
