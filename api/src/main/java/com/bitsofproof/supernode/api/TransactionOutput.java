@@ -29,9 +29,31 @@ public class TransactionOutput implements Serializable, Cloneable
 {
 	private static final long serialVersionUID = 3028618872354766234L;
 
+	private String txHash;
+	private long ix;
 	private long value;
 	private byte[] script;
 	private String color;
+
+	public String getTxHash ()
+	{
+		return txHash;
+	}
+
+	public void setTxHash (String txHash)
+	{
+		this.txHash = txHash;
+	}
+
+	public long getIx ()
+	{
+		return ix;
+	}
+
+	public void setIx (long ix)
+	{
+		this.ix = ix;
+	}
 
 	public long getValue ()
 	{
@@ -112,6 +134,8 @@ public class TransactionOutput implements Serializable, Cloneable
 		{
 			o.color = color;
 		}
+		o.ix = ix;
+		o.txHash = txHash;
 		return o;
 
 	}
