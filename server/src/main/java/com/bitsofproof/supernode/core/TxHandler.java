@@ -361,6 +361,7 @@ public class TxHandler implements TrunkListener
 				{
 					for ( Tx tx : blk.getTransactions () )
 					{
+						tx.setBlockHash (blk.getHash ());
 						if ( unconfirmed.containsKey (tx.getHash ()) )
 						{
 							unconfirmed.remove (tx.getHash ());
@@ -369,6 +370,7 @@ public class TxHandler implements TrunkListener
 								own.remove (tx.getHash ());
 							}
 							dependencyOrderedSet.remove (tx);
+							notifyListener (tx, false);
 						}
 						else
 						{
