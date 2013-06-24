@@ -16,19 +16,14 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.bouncycastle.util.Arrays;
 
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
-import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 
@@ -46,9 +41,6 @@ public class Transaction implements Serializable, Cloneable
 
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
-
-	private static final long MINIMUM_FEE = 10000;
-	private static final long MAXIMUM_FEE = 1000000;
 
 	public static Transaction createCoinbase (Key receiver, long value, int blockHeight)
 	{
@@ -80,219 +72,6 @@ public class Transaction implements Serializable, Cloneable
 
 		cb.computeHash ();
 		return cb;
-	}
-
-	public static class TransactionSink
-	{
-		private final byte[] address;
-		private final long value;
-
-		public TransactionSink (byte[] address, long value)
-		{
-			super ();
-			this.address = Arrays.clone (address);
-			this.value = value;
-		}
-
-		public byte[] getAddress ()
-		{
-			return Arrays.clone (address);
-		}
-
-		public long getValue ()
-		{
-			return value;
-		}
-	}
-
-	public static long estimateFee (Transaction t)
-	{
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		t.toWire (writer);
-		return Math.min (MAXIMUM_FEE, Math.max (MINIMUM_FEE, writer.toByteArray ().length / 1000 * MINIMUM_FEE));
-	}
-
-	public static Transaction createSpend (AddressToKeyMap am, List<TransactionOutput> sources, List<TransactionSink> sinks) throws ValidationException
-	{
-		long fee = MINIMUM_FEE;
-		long prevfee = MINIMUM_FEE;
-		Transaction t = createSpend (am, sources, sinks, fee);
-		while ( (fee = estimateFee (t)) > prevfee )
-		{
-			t = createSpend (am, sources, sinks, fee);
-			prevfee = fee;
-		}
-		return t;
-	}
-
-	public static Transaction createSpend (AddressToKeyMap am, List<TransactionOutput> sources, List<TransactionSink> sinks, long fee)
-			throws ValidationException
-	{
-		if ( fee < 0 || fee > MAXIMUM_FEE )
-		{
-			throw new ValidationException ("You unlikely want to do that");
-		}
-		Transaction transaction = new Transaction ();
-		transaction.setInputs (new ArrayList<TransactionInput> ());
-		transaction.setOutputs (new ArrayList<TransactionOutput> ());
-
-		long sumOut = 0;
-		for ( TransactionSink s : sinks )
-		{
-			TransactionOutput o = new TransactionOutput ();
-			o.setValue (s.getValue ());
-			sumOut += s.getValue ();
-
-			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-			if ( s.getAddress ().length != 20 )
-			{
-				throw new ValidationException ("Sink is not an address");
-			}
-			writer.writeData (s.getAddress ());
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
-			o.setScript (writer.toByteArray ());
-
-			transaction.getOutputs ().add (o);
-		}
-
-		long sumInput = 0;
-		for ( TransactionOutput o : sources )
-		{
-			TransactionInput i = new TransactionInput ();
-			i.setSourceHash (o.getTxHash ());
-			i.setIx (o.getIx ());
-			sumInput += o.getValue ();
-
-			transaction.getInputs ().add (i);
-		}
-		if ( sumInput != (sumOut + fee) )
-		{
-			throw new ValidationException ("Sum of sinks (+fee) does not match sum of sources");
-		}
-
-		int j = 0;
-		for ( TransactionOutput o : sources )
-		{
-			TransactionInput i = transaction.getInputs ().get (j);
-			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
-			byte[] address = o.getOutputAddress ();
-			if ( address == null )
-			{
-				throw new ValidationException ("Can only spend pay to address outputs");
-			}
-			Key key = am.getKeyForAddress (address);
-			if ( key == null )
-			{
-				throw new ValidationException ("Have no key to spend this output");
-			}
-			byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
-			byte[] sigPlusType = new byte[sig.length + 1];
-			System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
-			sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
-			sw.writeData (sigPlusType);
-			sw.writeData (key.getPublic ());
-			i.setScript (sw.toByteArray ());
-			++j;
-		}
-
-		transaction.computeHash ();
-		return transaction;
-	}
-
-	private static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
-	{
-		Transaction copy = null;
-		try
-		{
-			copy = transaction.clone ();
-		}
-		catch ( CloneNotSupportedException e1 )
-		{
-			return null;
-		}
-
-		// implicit SIGHASH_ALL
-		int i = 0;
-		for ( TransactionInput in : copy.getInputs () )
-		{
-			if ( i == inr )
-			{
-				in.setScript (script);
-			}
-			else
-			{
-				in.setScript (new byte[0]);
-			}
-			++i;
-		}
-
-		if ( (hashType & 0x1f) == ScriptFormat.SIGHASH_NONE )
-		{
-			copy.getOutputs ().clear ();
-			i = 0;
-			for ( TransactionInput in : copy.getInputs () )
-			{
-				if ( i != inr )
-				{
-					in.setSequence (0);
-				}
-				++i;
-			}
-		}
-		else if ( (hashType & 0x1f) == ScriptFormat.SIGHASH_SINGLE )
-		{
-			int onr = inr;
-			if ( onr >= copy.getOutputs ().size () )
-			{
-				// this is a Satoshi client bug.
-				// This case should throw an error but it instead retuns 1 that is not checked and interpreted as below
-				return ByteUtils.fromHex ("0100000000000000000000000000000000000000000000000000000000000000");
-			}
-			for ( i = copy.getOutputs ().size () - 1; i > onr; --i )
-			{
-				copy.getOutputs ().remove (i);
-			}
-			for ( i = 0; i < onr; ++i )
-			{
-				copy.getOutputs ().get (i).setScript (new byte[0]);
-				copy.getOutputs ().get (i).setValue (-1L);
-			}
-			i = 0;
-			for ( TransactionInput in : copy.getInputs () )
-			{
-				if ( i != inr )
-				{
-					in.setSequence (0);
-				}
-				++i;
-			}
-		}
-		if ( (hashType & ScriptFormat.SIGHASH_ANYONECANPAY) != 0 )
-		{
-			List<TransactionInput> oneIn = new ArrayList<TransactionInput> ();
-			oneIn.add (copy.getInputs ().get (inr));
-			copy.setInputs (oneIn);
-		}
-
-		WireFormat.Writer writer = new WireFormat.Writer ();
-		copy.toWire (writer);
-
-		byte[] txwire = writer.toByteArray ();
-		byte[] hash = null;
-		try
-		{
-			MessageDigest a = MessageDigest.getInstance ("SHA-256");
-			a.update (txwire);
-			a.update (new byte[] { (byte) (hashType & 0xff), 0, 0, 0 });
-			hash = a.digest (a.digest ());
-		}
-		catch ( NoSuchAlgorithmException e )
-		{
-		}
-		return hash;
 	}
 
 	public long getVersion ()
