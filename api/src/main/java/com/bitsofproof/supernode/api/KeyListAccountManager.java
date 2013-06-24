@@ -77,14 +77,4 @@ public class KeyListAccountManager extends BaseAccountManager
 		});
 		log.trace ("Sync " + getName () + " finished nkeys: " + keys.size ());
 	}
-
-	@Override
-	public void storeTransaction (Transaction t)
-	{
-	}
-
-	@Override
-	public void removeTransaction (Transaction t)
-	{
-	}
 }

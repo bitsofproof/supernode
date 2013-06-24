@@ -60,7 +60,7 @@ public class InMemoryUTXO
 
 	public Collection<TransactionOutput> getUTXO ()
 	{
-		return utxo.values ();
+		return Collections.unmodifiableCollection (utxo.values ());
 	}
 
 	public TransactionOutput get (String tx, long ix)

@@ -172,14 +172,4 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		setNextSequence (Math.min (lastUsedKey.get (), getNumberOfKeys ()));
 		log.trace ("Sync " + getName () + " finished with nkeys: " + getNumberOfKeys ());
 	}
-
-	@Override
-	public void storeTransaction (Transaction t)
-	{
-	}
-
-	@Override
-	public void removeTransaction (Transaction t)
-	{
-	}
 }

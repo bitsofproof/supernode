@@ -16,6 +16,7 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
@@ -45,6 +46,16 @@ public interface AccountManager extends TransactionListener
 	public long getReceiving ();
 
 	public long getChange ();
+
+	public Collection<TransactionOutput> getConfirmedOutputs ();
+
+	public Collection<TransactionOutput> getSendingOutputs ();
+
+	public Collection<TransactionOutput> getReceivingOutputs ();
+
+	public Collection<TransactionOutput> getChangeOutputs ();
+
+	public List<Transaction> getTransactions ();
 
 	public void addAccountListener (AccountListener listener);
 

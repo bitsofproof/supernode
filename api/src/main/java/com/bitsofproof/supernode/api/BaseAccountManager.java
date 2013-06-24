@@ -5,9 +5,13 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.bouncycastle.util.Arrays;
@@ -39,10 +43,7 @@ public abstract class BaseAccountManager implements AccountManager
 	private final String name;
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
-
-	public abstract void storeTransaction (Transaction t);
-
-	public abstract void removeTransaction (Transaction t);
+	private final Map<String, Transaction> transactions = new HashMap<String, Transaction> ();
 
 	public abstract Key getKeyForAddress (byte[] address);
 
@@ -53,6 +54,11 @@ public abstract class BaseAccountManager implements AccountManager
 	{
 		this.name = name;
 		this.created = created;
+	}
+
+	public boolean isOwnAddress (byte[] address)
+	{
+		return getKeyForAddress (address) != null;
 	}
 
 	@Override
@@ -410,7 +416,7 @@ public abstract class BaseAccountManager implements AccountManager
 					receiving.remove (o.getTxHash (), o.getIx ());
 					sending.remove (o.getTxHash (), o.getIx ());
 
-					if ( getKeyForAddress (o.getOutputAddress ()) != null )
+					if ( isOwnAddress (o.getOutputAddress ()) )
 					{
 						modified = true;
 						if ( t.getBlockHash () != null )
@@ -446,7 +452,7 @@ public abstract class BaseAccountManager implements AccountManager
 				}
 				if ( modified )
 				{
-					storeTransaction (t);
+					transactions.put (t.getHash (), t);
 				}
 			}
 			else
@@ -474,7 +480,7 @@ public abstract class BaseAccountManager implements AccountManager
 					}
 					modified |= out != null;
 				}
-				removeTransaction (t);
+				transactions.remove (t.getHash ());
 			}
 			return modified;
 		}
@@ -526,6 +532,30 @@ public abstract class BaseAccountManager implements AccountManager
 	}
 
 	@Override
+	public Collection<TransactionOutput> getConfirmedOutputs ()
+	{
+		return confirmed.getUTXO ();
+	}
+
+	@Override
+	public Collection<TransactionOutput> getSendingOutputs ()
+	{
+		return sending.getUTXO ();
+	}
+
+	@Override
+	public Collection<TransactionOutput> getReceivingOutputs ()
+	{
+		return receiving.getUTXO ();
+	}
+
+	@Override
+	public Collection<TransactionOutput> getChangeOutputs ()
+	{
+		return change.getUTXO ();
+	}
+
+	@Override
 	public void addAccountListener (AccountListener listener)
 	{
 		accountListener.add (listener);
@@ -561,6 +591,37 @@ public abstract class BaseAccountManager implements AccountManager
 		{
 			notifyListener (t);
 		}
+	}
+
+	@Override
+	public List<Transaction> getTransactions ()
+	{
+		List<Transaction> tl = new ArrayList<Transaction> ();
+		tl.addAll (transactions.values ());
+		Collections.sort (tl, new Comparator<Transaction> ()
+		{
+			@Override
+			public int compare (Transaction a, Transaction b)
+			{
+				for ( TransactionInput i : b.getInputs () )
+				{
+					if ( i.getSourceHash ().equals (a.getHash ()) )
+					{
+						return -1;
+					}
+				}
+				for ( TransactionInput i : a.getInputs () )
+				{
+					if ( i.getSourceHash ().equals (b.getHash ()) )
+					{
+						return 1;
+					}
+				}
+				return 0;
+			}
+		});
+
+		return tl;
 	}
 
 	public void dumpOutputs (PrintStream print)
