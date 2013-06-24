@@ -9,21 +9,18 @@ import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.google.protobuf.ByteString;
 
 public class FileWallet implements Wallet
 {
-	private BCSAPI api;
-
 	private static final SecureRandom random = new SecureRandom ();
 	private transient ExtendedKey master;
 	private byte[] encryptedSeed;
 	private byte[] signature;
 	private String fileName;
 
-	private final Map<String, AccountManager> accounts = new HashMap<String, AccountManager> ();
+	private final Map<String, InMemoryAccountManager> accounts = new HashMap<String, InMemoryAccountManager> ();
 
 	public FileWallet (String fileName)
 	{
@@ -33,12 +30,6 @@ public class FileWallet implements Wallet
 	public boolean exists ()
 	{
 		return new File (fileName).exists ();
-	}
-
-	@Override
-	public void setApi (BCSAPI api)
-	{
-		this.api = api;
 	}
 
 	@Override
@@ -64,12 +55,21 @@ public class FileWallet implements Wallet
 		{
 			throw new ValidationException ("incorrect passphrase");
 		}
+		int i = 0;
+		for ( InMemoryAccountManager account : accounts.values () )
+		{
+			account.setMaster (master.getChild (i++ | 0x80000000));
+		}
 	}
 
 	@Override
 	public void lock ()
 	{
 		master = null;
+		for ( InMemoryAccountManager account : accounts.values () )
+		{
+			account.setMaster (account.getMaster ().getReadOnly ());
+		}
 	}
 
 	public void setFileName (String fileName)
@@ -77,30 +77,35 @@ public class FileWallet implements Wallet
 		this.fileName = fileName;
 	}
 
-	@Override
-	public void read (String fileName, int lookAhead) throws IOException, ValidationException, BCSAPIException
+	public static FileWallet read (String fileName) throws IOException, ValidationException
 	{
-		this.fileName = fileName;
-		master = null;
+		FileWallet wallet = new FileWallet (fileName);
 		File f = new File (fileName);
 		InputStream in = new FileInputStream (f);
 		try
 		{
 			BCSAPIMessage.Wallet walletMessage = BCSAPIMessage.Wallet.parseFrom (in);
-			encryptedSeed = walletMessage.getEncryptedSeed ().toByteArray ();
-			signature = walletMessage.getSignature ().toByteArray ();
+			wallet.encryptedSeed = walletMessage.getEncryptedSeed ().toByteArray ();
+			wallet.signature = walletMessage.getSignature ().toByteArray ();
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
-				InMemoryAccountManager am =
-						new InMemoryAccountManager (this, account.getName (), ExtendedKey.parse (account.getPublicKey ()), account.getCreated ());
-				am.setApi (api);
-				accounts.put (account.getName (), am);
-				am.sync (lookAhead, account.getCreated ());
+				InMemoryAccountManager am = new InMemoryAccountManager (account.getName (), account.getCreated ());
+				wallet.accounts.put (account.getName (), am);
+				am.setMaster (ExtendedKey.parse (account.getPublicKey ()));
 			}
 		}
 		finally
 		{
 			in.close ();
+		}
+		return wallet;
+	}
+
+	public void sync (BCSAPI api, int lookAhead) throws BCSAPIException, ValidationException
+	{
+		for ( InMemoryAccountManager account : accounts.values () )
+		{
+			account.sync (api, lookAhead, account.getCreated ());
 		}
 	}
 
@@ -111,7 +116,7 @@ public class FileWallet implements Wallet
 	}
 
 	@Override
-	public synchronized AccountManager createAccountManager (String name) throws ValidationException, IOException, BCSAPIException
+	public synchronized AccountManager createAccountManager (String name) throws ValidationException
 	{
 		if ( accounts.containsKey (name) )
 		{
@@ -123,31 +128,14 @@ public class FileWallet implements Wallet
 			{
 				throw new ValidationException ("The wallet is locked");
 			}
-			InMemoryAccountManager account =
-					new InMemoryAccountManager (this, name, master.getChild (accounts.size () | 0x80000000), System.currentTimeMillis () / 1000);
-			account.setApi (api);
-			api.registerTransactionListener (account);
+			InMemoryAccountManager account = new InMemoryAccountManager (name, System.currentTimeMillis () / 1000);
+			account.setMaster (master.getChild (accounts.size () | 0x80000000));
 			accounts.put (name, account);
-			persist ();
 			return account;
 		}
 	}
 
-	@Override
-	public Key getKey (AccountManager am, int sequence) throws ValidationException
-	{
-		if ( master == null )
-		{
-			return am.getMasterKey ().getKey (sequence);
-		}
-		else
-		{
-			return master.getChild (am.getMasterKey ().getSequence ()).getKey (sequence);
-		}
-	}
-
-	@Override
-	public void persist () throws IOException, BCSAPIException
+	public void persist () throws IOException
 	{
 		FileOutputStream out = new FileOutputStream (fileName);
 		try
@@ -156,12 +144,12 @@ public class FileWallet implements Wallet
 			builder.setBcsapiversion (1);
 			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
 			builder.setSignature (ByteString.copyFrom (signature));
-			for ( AccountManager am : accounts.values () )
+			for ( InMemoryAccountManager am : accounts.values () )
 			{
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());
 				ab.setCreated (am.getCreated ());
-				ab.setPublicKey (am.getMasterKey ().getReadOnly ().serialize (true));
+				ab.setPublicKey (am.getMaster ().getReadOnly ().serialize (true));
 				builder.addAccounts (ab.build ());
 			}
 			builder.build ().writeTo (out);
