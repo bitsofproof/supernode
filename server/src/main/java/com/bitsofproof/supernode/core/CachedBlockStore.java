@@ -1242,9 +1242,10 @@ public abstract class CachedBlockStore implements BlockStore
 			addedBlocks.add (b);
 			currentHead = usingHead;
 		}
-		updateBlockChainCache ();
 
 		usingHead.setLast (m);
+
+		updateBlockChainCache ();
 
 		log.debug ("stored block " + b.getHeight () + " " + b.getHash ());
 		if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
