@@ -974,7 +974,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			}
 			for ( Blk blk : extended )
 			{
-				r.add (toBCSAPIBlock (blk));
+				a.add (toBCSAPIBlock (blk));
 			}
 			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
 			BytesMessage m = session.createBytesMessage ();
