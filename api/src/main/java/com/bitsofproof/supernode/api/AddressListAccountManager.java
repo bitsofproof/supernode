@@ -51,7 +51,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	@Override
 	public boolean isOwnAddress (byte[] address)
 	{
-		return addresses.contains (address);
+		return addresses.contains (new ByteVector (address));
 	}
 
 	@Override
