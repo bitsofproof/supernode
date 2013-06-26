@@ -5,7 +5,7 @@ This software enables your application to send/receive Bitcoin payments or to da
 
 You may run it stand-alone utilizing its own validation engine or as a slave behind the Satoshi client so it accepts exactly what the 'reference client' does. In either case it builds a fully indexed block chain of transactions stored in LevelDB or in a relational database.
 
-The server process handles peer-to-peer communication with the network and serves clients connected to it through a message bus. Wallet(s) are implemented by the client library and transactions are also signed at the client side. It is safe to operate a Server in a remote, untrusted environment as it does not store or receive private keys.
+The server process handles peer-to-peer communication with the network and serves clients connected to it through a message bus. Wallet(s) are implemented by the client library and transactions are also signed at the client side, therefore it is safe to operate the Server in a remote environment as it does not store or receive private keys.
 
 Bits of Proof offers professionally hosted server instances for commercial use, that share and build on this code base:
 
