@@ -39,11 +39,9 @@ The final two parameters of the above example command line identify configuratio
    * derby - For embedded relational database Derby
    * progresql - To connect to a ProgreSQL server
 
-Review the context file of the SQL databases before attempting to use them, since connection parameters will likely not apply to your installation. In addition you might add the BCSAPI context to let the server listen to a message broker. The complete command line for a production environment is likely:
+Review the context file of the SQL databases before attempting to use them, since connection parameters will likely not apply to your installation. To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there. The complete command line for a production environment might be:
 
 java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar production leveldb BCSAPI apollo
-
-To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there.
 
 License
 -------
