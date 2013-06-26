@@ -10,10 +10,10 @@ The server process handles peer-to-peer communication with the network and serve
 Bits of Proof offers professionally hosted server instances for commercial use, that share and build on this code base:
 
 * BOP Enterprise Bitcoin Server -  for very high volume multiple and hierarchical wallet support. Don't despair with the 'reference client's geeky RPC calls design and poor performance. Use our intuitive, business friendly, high performance API and spend rather to develop your own business case.
-* BOP Mobile Bitcoin Server -  to back mobile wallets or any mobile application sending or receiving Bitcoin. The highest performance mobile Bitcoin service with the smallest memory and traffic footprint on the device.
+* BOP Mobile Bitcoin Server -  back mobile wallets or any mobile application sending or receiving Bitcoin. We give you the highest performance mobile Bitcoin service with the smallest memory and traffic footprint on the device.
 * BOP Merchant Bitcoin Server - pay or issue payment requests, get notification on payments. Deal with your own Bitcoin, save commissions.
-* BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system. The next generation of service - stay tuned.
 * BOP Audit Bitcoin Server - data mine the Bitcoin transaction history and get real-time feed of network events. Best for forensic research, no hassle to get high quality data.
+* BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system. The next generation of service - stay tuned.
 
 Please review our product sheets at http://bitsofproof.com and contact sales@bitsofproof.com for further info.
 
