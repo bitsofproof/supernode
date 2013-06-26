@@ -19,10 +19,10 @@ Bits of Proof offers professionally hosted server instances for commercial use, 
 
 * BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system. The next generation of service - stay tuned.
 
-Please review our product sheets at http://bitsofproof.com and contact sales@bitsofproof.com for further info.
+_Use our ready to go hosted BOP Server instance! Get an evaluation access, attractive pricing based on resources used or transactions processed from sales@bitsofproof.com_
 
-Build
------
+Build the Community Server
+--------------------------
 Make sure you have Maven3, JDK 1.6 or 7 and Google protobuf compiler 2.4.1 installed.
 
    git clone https://github.com/bitsofproof/supernode
