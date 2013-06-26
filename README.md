@@ -1,9 +1,9 @@
 BOP Community Bitcoin Server
 ============================
 
-This software enables your application or website to send or receive Bitcoin payments or to data mine the network's transaction history.
+This software enables your application to send/receive Bitcoin payments or to data mine the network's transaction history, with ease.
 
-You may run it stand-alone utilizing its own validation engine or as a slave process behind the Satosi implementation so definitely accepts exactly what Satoshi does. In either case it builds a fully indexed block chain of transactions stored in LevelDB or in a relational database.
+You may run it stand-alone utilizing its own validation engine or as a slave behind the Satoshi client so it accepts exactly what the 'reference client' does. In either case it builds a fully indexed block chain of transactions stored in LevelDB or in a relational database.
 
 The server process handles peer-to-peer communication with the network and serves clients connected to it through a message bus. Wallet(s) are implemented by the client library and transactions are also signed at the client side. It is safe to operate a Server in a remote, untrusted environment as it does not store or receive private keys.
 
