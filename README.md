@@ -1,6 +1,5 @@
-INTRODUCTION
-
-Welcome to the BOP Community Bitcoin Server.
+BOP Community Bitcoin Server
+============================
 
 This software enables your application or website to send or receive Bitcoin payments or to data mine the network's transaction history.
 
@@ -10,15 +9,16 @@ The server process handles peer-to-peer communication with the network and serve
 
 Bits of Proof offers professionally hosted server instances for commercial use, that share and build on this code base:
 
-BOP Enterprise Bitcoin Server -  for very high volume multiple and hierarchical wallet support.
-BOP Mobile Bitcoin Server -  to back mobile Wallets or any Mobile application sending or receiving Bitcoin.
-BOP Merchant Bitcoin Server - issue payment requests, get notification on payments. Accept Bitcoin on your own.
-BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system.
-BOP Audit Bitcoin Server - data mine the Bitcoin transaction history and get real-time feed of network events.
+* BOP Enterprise Bitcoin Server -  for very high volume multiple and hierarchical wallet support.
+* BOP Mobile Bitcoin Server -  to back mobile Wallets or any Mobile application sending or receiving Bitcoin.
+* BOP Merchant Bitcoin Server - issue payment requests, get notification on payments. Accept Bitcoin on your own.
+* BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system.
+* BOP Audit Bitcoin Server - data mine the Bitcoin transaction history and get real-time feed of network events.
 
 Please review our product sheets at http://bitsofproof.com and contact sales@bitsofproof.com for further info.
 
-BUILD THE COMMUNITY SERVER
+Build
+-----
 Make sure you have Maven3, JDK 1.6 or 7 and protobuf compiler 2.4.1 installed.
 
    git clone https://github.com/bitsofproof/supernode
@@ -26,7 +26,8 @@ Make sure you have Maven3, JDK 1.6 or 7 and protobuf compiler 2.4.1 installed.
    cd supernode
    mvn package
 
-RUN
+Run
+---
    java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar testnet3 memdb
 
 The final two parameters of the above example command line identify configuration contexts stored under server/src/main/resources/context. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
@@ -42,10 +43,12 @@ java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar product
 
 To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there.
 
-LICENCE
+License
+-------
 Apache License, Version 2.0. See LICENSE file.
 
-DONATIONS
+Donations
+---------
 In case you do not require professional services of Bits of Proof, but would like to honor its contribution to the Bitcoin community, please donate to:
 
 1EuamejAs2Lcz1ZPNrEhLsFTLnEY29BYKU
