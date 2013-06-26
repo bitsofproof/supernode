@@ -43,6 +43,7 @@ Review the context file of the SQL databases before attempting to use them, sinc
 
 java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar production leveldb BCSAPI apollo
 
+
 License
 -------
 Apache License, Version 2.0. See LICENSE file.
