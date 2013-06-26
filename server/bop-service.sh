@@ -95,9 +95,9 @@ start() {
   fi
  
   if [ -z "$BOP_USER" -o `id -un` = "$BOP_USER" ] ; then
-    nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
+    nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.3.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
   else
-    sudo -n -u ${BOP_USER} nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
+    sudo -n -u ${BOP_USER} nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.3.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
   fi
 
   echo $! > "${PID_FILE}"

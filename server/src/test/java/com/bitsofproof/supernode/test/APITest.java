@@ -177,11 +177,12 @@ public class APITest
 		store.cache (chain, 0);
 		wallet = new FileWallet ("test.wallet");
 		wallet.init ("passphrase");
-		wallet.setApi (api);
 		wallet.unlock ("passphrase");
 
 		alice = wallet.createAccountManager ("Alice");
 		bob = wallet.createAccountManager ("Bob");
+		api.registerTransactionListener (alice);
+		api.registerTransactionListener (bob);
 
 		alice.addAccountListener (aliceMonitor);
 		bob.addAccountListener (bobMonitor);
