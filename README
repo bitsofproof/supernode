@@ -1,37 +1,52 @@
 INTRODUCTION
 
-Welcome to the Bits of Proof implementation of the Bitcoin protocol.
+Welcome to the BOP Community Bitcoin Server.
 
-This is a modern, modular, enterprise implementation of the Bitcoin protocol targeted to developer of Bitcoin applications and system integrators.
+This software enables your application or website to send or receive Bitcoin payments or to data mine the network's transaction history.
 
-The server process handles peer-to-peer communication, protocol validation and block chain store. The data store can be configured to use a relational database or LevelDB.
+You may run it stand-alone utilizing its own validation engine or as a slave process behind the Satosi implementation. In either case it builds a fully indexed block chain of transactions stored in LevelDB or in a relational database.
 
-The validation engine passes most important unit tests of the Satoshi implementation and the block chain integration test cases of BitcoinJ that are also used in pull testing of the Satoshi implementation.
+The server process handles peer-to-peer communication with the network and serves clients connected to it through a message bus. Wallet(s) are implemented by the client library and transactions are also signed at the client side. It is safe to operate a Server in a remote, untrusted environment as it does not store or receive private keys.
 
-Clients or extensions communicate with the server process through an asynchrounous message bus. The bus is provided by a separate broker process. The messages are in protobuf format hence interoperable with modules in other languages e.g. python. 
+Bits of Proof offers professionally hosted server instances for commercial use, that share and build on this code base:
 
-STATUS
+BOP Enterprise Bitcoin Server -  for very high volume multiple and hierarchical wallet support.
+BOP Mobile Bitcoin Server -  to back mobile Wallets or any Mobile application sending or receiving Bitcoin.
+BOP Merchant Bitcoin Server - issue payment requests, get notification on payments. Accept Bitcoin on your own.
+BOP ERP Bitcoin Server - initiate and monitor Bitcoin transactions with your ERP system.
+BOP Audit Bitcoin Server - data mine the Bitcoin transaction history and get real-time feed of network events.
 
-The implementation passed lots of testing and runs since January 2013 in parallel with the network. It is community reviewed, see: https://bitcointalk.org/index.php?topic=122013.0
+Please review our product sheets at http://bitsofproof.com and contact sales@bitsofproof.com for further info.
 
-BUILD THE SERVER
-See build instructions at: http://bitsofproof.com:8082/display/BPD/Build+and+run+the+Server
+BUILD THE COMMUNITY SERVER
+Make sure you have Maven3, JDK 1.6 or 7 and protobuf compiler 2.4.1 installed.
 
-CLIENTS
-Applications can use the Bitcoin network by embedding a very low footprint client library. The Bitcoin private keys, that are able to command Bitcoins, are generated and stored at the client side and never transmitted to the server. See the primary client API documentation here: http://bitsofproof.com:8082/display/BPD/Build+an+Application+using+BOP+Servers
+   git clone https://github.com/bitsofproof/supernode
 
-Further layers of API are available to support Mobile and Web applications. See more details here: http://bitsofproof.com:8082/display/BPD/Bits+of+Proof+Documentation+Home 
+   cd supernode
+   mvn package
 
-SUPPORT AND HOSTING
+RUN
+   java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar testnet3 memdb
 
-Bits of Proof offers commercial support and hosts BOP Enterprise Bitcoin Server instances that run this open source code. BOP servers offer the fastest time to market for your Bitcoin application development. Visit http://bitsofproof.com for more details.
+The final two parameters of the above example command line identify configuration contexts stored under server/src/main/resources/context. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
+   
+   memdb - in memory database for tests
+   leveldb - LevelDB
+   derby - For embedded relational database Derby
+   progresql - To connect to a ProgreSQL server
+
+Review the context file of the SQL databases before attempting to use them, since connection parameters will likely not apply to your installation. In addition you might add the BCSAPI context to let the server listen to a message broker. The complete command line for a production environment is likely:
+
+java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar production leveldb BCSAPI
+
+To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there.
 
 LICENCE
-
 Apache License, Version 2.0. See LICENSE file.
 
 DONATIONS
-In case you do not require professional services of Bits of Proof, but would like to honor its contribution to the community, please donate to:
+In case you do not require professional services of Bits of Proof, but would like to honor its contribution to the Bitcoin community, please donate to:
 
 1EuamejAs2Lcz1ZPNrEhLsFTLnEY29BYKU
 
