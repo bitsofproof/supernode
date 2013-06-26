@@ -11,7 +11,7 @@ Bits of Proof offers professionally hosted server instances for commercial use, 
 
 * BOP Enterprise Bitcoin Server -  for very high volume multiple and hierarchical wallet support. Don't despair with the 'reference client's geeky RPC calls design and poor performance. Use our intuitive, business friendly, high performance API and spend rather to develop your own business case.
 
-* BOP Mobile Bitcoin Server -  back mobile wallets or any mobile application sending or receiving Bitcoin. We give you the highest performance mobile Bitcoin service with the smallest memory and traffic footprint on the device.
+* BOP Mobile Bitcoin Server -  back mobile wallets or any mobile application sending or receiving Bitcoin. We give you the highest performance mobile Bitcoin service with the smallest memory and traffic footprint on the device. See the example port of the popular Android Bitcoin wallet BitcoinSpinner at https://github.com/bitsofproof/bop-bitcoinspinner
 
 * BOP Merchant Bitcoin Server - pay or issue payment requests, get notification on payments. Deal with your own Bitcoin, save commissions.
 
