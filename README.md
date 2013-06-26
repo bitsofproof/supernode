@@ -30,7 +30,7 @@ Make sure you have Maven3, JDK 1.6 or 7 and Google protobuf compiler 2.4.1 insta
 Run
 ---
 
-java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar testnet3 memdb
+java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar testnet3 memdb
 
 The final two parameters of the above example command line identify configuration contexts stored under server/src/main/resources/context. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
    
@@ -41,7 +41,7 @@ The final two parameters of the above example command line identify configuratio
 
 Review the context file of the SQL databases before attempting to use them, since connection parameters will likely not apply to your installation. In addition you might add the BCSAPI context to let the server listen to a message broker. The complete command line for a production environment is likely:
 
-java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.0.jar production leveldb BCSAPI
+java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar production leveldb BCSAPI
 
 To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there.
 
