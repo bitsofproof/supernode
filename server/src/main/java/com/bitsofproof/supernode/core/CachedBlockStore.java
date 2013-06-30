@@ -989,7 +989,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 		}
 
-		if ( !chain.isSlave () && !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.checkBeforeCheckpoint () )
+		if ( !chain.isSlave () && (!chain.isProduction () || b.getHeight () > lastCheckPoint || chain.checkBeforeCheckpoint ()) )
 		{
 			log.trace ("validating block " + b.getHash ());
 
