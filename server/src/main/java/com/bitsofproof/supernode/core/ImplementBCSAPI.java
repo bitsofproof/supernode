@@ -779,11 +779,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	public Block getBlock (final String hash)
 	{
 		log.trace ("get block " + hash);
-		final WireFormat.Writer writer = new WireFormat.Writer ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		Block block = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Block> ()
 		{
 			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			public Block doInTransaction (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
 				String h = hash;
@@ -797,32 +796,26 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					b = store.getBlock (h);
 					if ( b != null )
 					{
-						b.toWire (writer);
+						return toBCSAPIBlock (b);
 					}
 				}
 				catch ( ValidationException e )
 				{
 				}
+				return null;
 			}
 		});
-		byte[] blockdump = writer.toByteArray ();
-		if ( blockdump != null && blockdump.length > 0 )
-		{
-			log.trace ("get block returned " + hash);
-			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		}
-		log.trace ("get block failed ");
-		return null;
+		log.trace ("get block returned " + block != null ? hash : "null");
+		return block;
 	}
 
 	public Block getBlockHeader (final String hash)
 	{
 		log.trace ("get block header " + hash);
-		final WireFormat.Writer writer = new WireFormat.Writer ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+		Block block = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Block> ()
 		{
 			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
+			public Block doInTransaction (TransactionStatus status)
 			{
 				status.setRollbackOnly ();
 				String h = hash;
@@ -836,22 +829,17 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					b = store.getBlockHeader (h);
 					if ( b != null )
 					{
-						b.toWire (writer);
+						return toBCSAPIBlock (b);
 					}
 				}
 				catch ( ValidationException e )
 				{
 				}
+				return null;
 			}
 		});
-		byte[] blockdump = writer.toByteArray ();
-		if ( blockdump != null && blockdump.length > 0 )
-		{
-			log.trace ("get block header returned " + hash);
-			return Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
-		}
-		log.trace ("get block header failed ");
-		return null;
+		log.trace ("get block header returned " + block != null ? hash : "null");
+		return block;
 	}
 
 	private Color getColor (final String hash)
@@ -964,6 +952,15 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		return transaction;
 	}
 
+	private Block toBCSAPIBlock (Blk b)
+	{
+		WireFormat.Writer writer = new WireFormat.Writer ();
+		b.toWire (writer);
+		Block block = Block.fromWire (new WireFormat.Reader (writer.toByteArray ()));
+		block.setHeight (b.getHeight ());
+		return block;
+	}
+
 	@Override
 	public void trunkUpdate (final List<Blk> removed, final List<Blk> extended)
 	{
@@ -973,15 +970,11 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			List<Block> a = new ArrayList<Block> ();
 			for ( Blk blk : removed )
 			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				blk.toWire (writer);
-				r.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+				r.add (toBCSAPIBlock (blk));
 			}
 			for ( Blk blk : extended )
 			{
-				WireFormat.Writer writer = new WireFormat.Writer ();
-				blk.toWire (writer);
-				a.add (Block.fromWire (new WireFormat.Reader (writer.toByteArray ())));
+				a.add (toBCSAPIBlock (blk));
 			}
 			TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
 			BytesMessage m = session.createBytesMessage ();

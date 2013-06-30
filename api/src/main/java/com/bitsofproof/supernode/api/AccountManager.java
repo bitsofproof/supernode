@@ -21,39 +21,41 @@ import java.util.List;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
-public interface AccountManager extends AddressToKeyMap
+public interface AccountManager extends TransactionListener
 {
-	public void setApi (BCSAPI api);
-
 	public String getName ();
 
 	public long getCreated ();
 
-	public boolean updateWithTransaction (Transaction t);
-
-	public List<Transaction> getTransactions ();
-
-	public Collection<byte[]> getAddresses ();
-
-	public ExtendedKey getMasterKey ();
+	public int getNumberOfKeys ();
 
 	public Key getNextKey () throws ValidationException;
 
-	public int getNextSequence ();
+	public Collection<byte[]> getAddresses ();
 
-	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException, BCSAPIException;
+	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException;
 
-	public Transaction split (long[] amounts, long fee) throws ValidationException, BCSAPIException;
+	public Transaction split (long[] amounts, long fee) throws ValidationException;
 
 	public long getBalance ();
 
-	public long getSettled ();
+	public long getConfirmed ();
 
 	public long getSending ();
 
 	public long getReceiving ();
 
 	public long getChange ();
+
+	public Collection<TransactionOutput> getConfirmedOutputs ();
+
+	public Collection<TransactionOutput> getSendingOutputs ();
+
+	public Collection<TransactionOutput> getReceivingOutputs ();
+
+	public Collection<TransactionOutput> getChangeOutputs ();
+
+	public List<Transaction> getTransactions ();
 
 	public void addAccountListener (AccountListener listener);
 

@@ -82,9 +82,14 @@ public class JMSServerConnector implements BCSAPI
 		this.timeout = timeout;
 	}
 
+	private interface ByteArrayMessageListener
+	{
+		public void onMessage (byte[] array);
+	}
+
 	private class MessageDispatcher
 	{
-		private final Map<Object, MessageListener> wrapperMap = new HashMap<Object, MessageListener> ();
+		private final Map<Object, ByteArrayMessageListener> wrapperMap = new HashMap<Object, ByteArrayMessageListener> ();
 
 		private final MessageConsumer consumer;
 		private TemporaryQueue temporaryQueue;
@@ -99,14 +104,35 @@ public class JMSServerConnector implements BCSAPI
 					@Override
 					public void onMessage (Message message)
 					{
-						List<MessageListener> listenerList = new ArrayList<MessageListener> ();
+						List<ByteArrayMessageListener> listenerList = new ArrayList<ByteArrayMessageListener> ();
 						synchronized ( wrapperMap )
 						{
 							listenerList.addAll (wrapperMap.values ());
 						}
-						for ( MessageListener listener : listenerList )
+						BytesMessage m = (BytesMessage) message;
+						byte[] body;
+						try
 						{
-							listener.onMessage (message);
+							if ( m.getBodyLength () > 0 )
+							{
+								body = new byte[(int) m.getBodyLength ()];
+								m.readBytes (body);
+								for ( ByteArrayMessageListener listener : listenerList )
+								{
+									listener.onMessage (body);
+								}
+							}
+							else
+							{
+								for ( ByteArrayMessageListener listener : listenerList )
+								{
+									listener.onMessage (null);
+								}
+							}
+						}
+						catch ( JMSException e )
+						{
+							log.error ("JMS Error ", e);
 						}
 					}
 				});
@@ -117,7 +143,7 @@ public class JMSServerConnector implements BCSAPI
 			}
 		}
 
-		public void addListener (Object inner, MessageListener listener)
+		public void addListener (Object inner, ByteArrayMessageListener listener)
 		{
 			synchronized ( wrapperMap )
 			{
@@ -168,7 +194,7 @@ public class JMSServerConnector implements BCSAPI
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addTopicListener (String topic, Object inner, MessageListener listener) throws JMSException
+	private void addTopicListener (String topic, Object inner, ByteArrayMessageListener listener) throws JMSException
 	{
 		synchronized ( messageDispatcher )
 		{
@@ -283,24 +309,21 @@ public class JMSServerConnector implements BCSAPI
 	{
 		try
 		{
-			addTopicListener ("alert", alertListener, new MessageListener ()
+			addTopicListener ("alert", alertListener, new ByteArrayMessageListener ()
 			{
 				@Override
-				public void onMessage (Message arg0)
+				public void onMessage (byte[] body)
 				{
-					BytesMessage o = (BytesMessage) arg0;
+					BCSAPIMessage.Alert alert;
 					try
 					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
-						BCSAPIMessage.Alert alert = BCSAPIMessage.Alert.parseFrom (body);
+						alert = BCSAPIMessage.Alert.parseFrom (body);
 						alertListener.alert (alert.getAlert (), alert.getSeverity ());
 					}
-					catch ( Exception e )
+					catch ( InvalidProtocolBufferException e )
 					{
-						log.error ("Alert message error", e);
+						log.error ("Message format error", e);
 					}
-
 				}
 			});
 		}
@@ -569,19 +592,15 @@ public class JMSServerConnector implements BCSAPI
 					dispatcher = new MessageDispatcher (consumer);
 					dispatcher.setTemporaryQueue (answerQueue);
 					messageDispatcher.put (filter.toString (), dispatcher);
-					dispatcher.addListener (listener, new MessageListener ()
+					dispatcher.addListener (listener, new ByteArrayMessageListener ()
 					{
 						@Override
-						public void onMessage (Message message)
+						public void onMessage (byte[] body)
 						{
-							BytesMessage m = (BytesMessage) message;
-							byte[] body;
 							try
 							{
-								if ( m.getBodyLength () > 0 )
+								if ( body != null )
 								{
-									body = new byte[(int) m.getBodyLength ()];
-									m.readBytes (body);
 									Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 									t.computeHash ();
 									listener.process (t);
@@ -590,10 +609,6 @@ public class JMSServerConnector implements BCSAPI
 								{
 									listener.process (null);
 								}
-							}
-							catch ( JMSException e )
-							{
-								log.error ("Malformed message received for filter", e);
 							}
 							catch ( InvalidProtocolBufferException e )
 							{
@@ -644,16 +659,13 @@ public class JMSServerConnector implements BCSAPI
 	{
 		try
 		{
-			addTopicListener ("transaction", listener, new MessageListener ()
+			addTopicListener ("transaction", listener, new ByteArrayMessageListener ()
 			{
 				@Override
-				public void onMessage (Message arg0)
+				public void onMessage (byte[] body)
 				{
-					BytesMessage o = (BytesMessage) arg0;
 					try
 					{
-						byte[] body = new byte[(int) o.getBodyLength ()];
-						o.readBytes (body);
 						Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 						t.computeHash ();
 						listener.process (t);
@@ -662,7 +674,6 @@ public class JMSServerConnector implements BCSAPI
 					{
 						log.debug ("Transaction message error", e);
 					}
-
 				}
 			});
 		}
@@ -683,16 +694,13 @@ public class JMSServerConnector implements BCSAPI
 	{
 		try
 		{
-			addTopicListener ("trunk", listener, new MessageListener ()
+			addTopicListener ("trunk", listener, new ByteArrayMessageListener ()
 			{
 				@Override
-				public void onMessage (Message message)
+				public void onMessage (byte[] body)
 				{
 					try
 					{
-						BytesMessage m = (BytesMessage) message;
-						byte[] body = new byte[(int) m.getBodyLength ()];
-						m.readBytes (body);
 						TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (body));
 						if ( tu.getRemoved () != null )
 						{

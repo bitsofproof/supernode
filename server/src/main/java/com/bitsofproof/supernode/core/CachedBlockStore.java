@@ -989,7 +989,7 @@ public abstract class CachedBlockStore implements BlockStore
 			}
 		}
 
-		if ( !chain.isSlave () && !chain.isProduction () || b.getHeight () > lastCheckPoint || chain.checkBeforeCheckpoint () )
+		if ( !chain.isSlave () && (!chain.isProduction () || b.getHeight () > lastCheckPoint || chain.checkBeforeCheckpoint ()) )
 		{
 			log.trace ("validating block " + b.getHash ());
 
@@ -1242,9 +1242,10 @@ public abstract class CachedBlockStore implements BlockStore
 			addedBlocks.add (b);
 			currentHead = usingHead;
 		}
-		updateBlockChainCache ();
 
 		usingHead.setLast (m);
+
+		updateBlockChainCache ();
 
 		log.debug ("stored block " + b.getHeight () + " " + b.getHash ());
 		if ( !removedBlocks.isEmpty () || !addedBlocks.isEmpty () )
