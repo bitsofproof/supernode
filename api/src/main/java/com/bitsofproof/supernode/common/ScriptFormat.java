@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-
 public class ScriptFormat
 {
 	// unfortunatelly unused: https://bitcointalk.org/index.php?topic=120836.0
@@ -281,7 +280,7 @@ public class ScriptFormat
 			else if ( data.length <= 0x7fffffff )
 			{
 				writeByte (Opcode.OP_PUSHDATA4.o);
-				writeInt16 (data.length);
+				writeInt32 (data.length);
 				writeBytes (data);
 			}
 		}
@@ -293,6 +292,18 @@ public class ScriptFormat
 			{
 				try
 				{
+					if ( token.op.o == Opcode.OP_PUSHDATA1.o )
+					{
+						writeByte (token.data.length);
+					}
+					if ( token.op.o == Opcode.OP_PUSHDATA2.o )
+					{
+						writeInt16 (token.data.length);
+					}
+					if ( token.op.o == Opcode.OP_PUSHDATA4.o )
+					{
+						writeInt32 (token.data.length);
+					}
 					s.write (token.data);
 				}
 				catch ( IOException e )
