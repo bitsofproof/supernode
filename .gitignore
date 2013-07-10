@@ -4,6 +4,8 @@ target
 .classpath
 .project
 .settings
+*.iml
+*.idea
 .factorypath
 data
 /logs
