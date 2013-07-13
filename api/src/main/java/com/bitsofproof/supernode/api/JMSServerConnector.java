@@ -64,8 +64,6 @@ public class JMSServerConnector implements BCSAPI
 	private MessageProducer blockRequestProducer;
 	private MessageProducer blockHeaderRequestProducer;
 	private MessageProducer transactionRequestProducer;
-	private MessageProducer colorProducer;
-	private MessageProducer colorRequestProducer;
 	private MessageProducer scanRequestProducer;
 	private MessageProducer scanAccountProducer;
 	private MessageProducer exactMatchProducer;
@@ -907,63 +905,6 @@ public class JMSServerConnector implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
-	}
-
-	public void issueColor (Color color) throws BCSAPIException
-	{
-		try
-		{
-			log.trace ("issue color " + color.getTerms ());
-			BytesMessage m = session.createBytesMessage ();
-			m.writeBytes (color.toProtobuf ().toByteArray ());
-			byte[] reply = synchronousRequest (colorProducer, m);
-			if ( reply != null )
-			{
-				try
-				{
-					BCSAPIMessage.ExceptionMessage em = BCSAPIMessage.ExceptionMessage.parseFrom (reply);
-					throw new BCSAPIException (em.getMessage (0));
-				}
-				catch ( InvalidProtocolBufferException e )
-				{
-					throw new BCSAPIException ("Invalid response", e);
-				}
-			}
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-	}
-
-	public Color getColor (String digest) throws BCSAPIException
-	{
-		log.trace ("get color " + digest);
-		BytesMessage m;
-		try
-		{
-			m = session.createBytesMessage ();
-			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
-			builder.setBcsapiversion (1);
-			builder.addHash (ByteString.copyFrom (new Hash (digest).toByteArray ()));
-			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (colorRequestProducer, m);
-			if ( response != null )
-			{
-				Color c;
-				c = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (response));
-				return c;
-			}
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		catch ( InvalidProtocolBufferException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		return null;
 	}
 
 }
