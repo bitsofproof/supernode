@@ -392,7 +392,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					final long after = request.getAfter ();
 					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					final UpdateMode mode = UpdateMode.all;
-					final Destination destination = msg.getJMSDestination ();
+					final Destination destination = msg.getJMSReplyTo ();
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
