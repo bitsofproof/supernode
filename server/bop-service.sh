@@ -19,7 +19,7 @@
 
 #BOP_USER="test"
 service=`basename "$0"`
-export JVM_FLAGS="-server -Xmx2g"
+export JVM_FLAGS="-server -Xmx4g"
 export BOP_CONTEXTS="leveldb production"
 
 #
@@ -95,9 +95,9 @@ start() {
   fi
  
   if [ -z "$BOP_USER" -o `id -un` = "$BOP_USER" ] ; then
-    nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.3.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
+    nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.4.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
   else
-    sudo -n -u ${BOP_USER} nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.3.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
+    sudo -n -u ${BOP_USER} nohup java ${JVM_FLAGS} -jar ${BOP_BASE}/server/target/bitsofproof-server-1.1.4.jar ${BOP_CONTEXTS} > /dev/null 2> /dev/null &
   fi
 
   echo $! > "${PID_FILE}"
