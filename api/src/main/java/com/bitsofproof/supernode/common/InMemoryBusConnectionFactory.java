@@ -54,8 +54,6 @@ import javax.jms.TopicSubscriber;
 
 public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
-	private final MockSession singleSession = new MockSession ();
-
 	private static class MockBytesMessage implements BytesMessage
 	{
 		Destination destination;
@@ -528,8 +526,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	}
 
 	private static final Map<String, ArrayList<MockConsumer>> consumer = new HashMap<String, ArrayList<MockConsumer>> ();
-	private static Executor consumerExecutor = Executors.newFixedThreadPool (4);
-	private static final Map<String, MockProducer> producer = new HashMap<String, MockProducer> ();
 
 	private static class MockProducer implements MessageProducer
 	{
@@ -609,64 +605,49 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void send (Message message) throws JMSException
 		{
-			List<MockConsumer> cl = consumer.get (name);
-			if ( cl != null )
-			{
-				for ( MockConsumer c : cl )
-				{
-					c.getQueue ().add (message);
-					consumerExecutor.execute (c);
-				}
-			}
+			sendToConsumer (message);
 		}
 
 		@Override
 		public void send (Message message, int deliveryMode, int priority, long timeToLive) throws JMSException
 		{
-			List<MockConsumer> cl = consumer.get (name);
-			if ( cl != null )
-			{
-				for ( MockConsumer c : cl )
-				{
-					c.getQueue ().add (message);
-					consumerExecutor.execute (c);
-				}
-			}
+			sendToConsumer (message);
 		}
 
 		@Override
 		public void send (Destination destination, Message message) throws JMSException
 		{
-			List<MockConsumer> cl = consumer.get (name);
-			if ( cl != null )
-			{
-				for ( MockConsumer c : cl )
-				{
-					c.getQueue ().add (message);
-					consumerExecutor.execute (c);
-				}
-			}
+			sendToConsumer (message);
 		}
 
 		@Override
 		public void send (Destination destination, Message message, int deliveryMode, int priority, long timeToLive) throws JMSException
 		{
-			List<MockConsumer> cl = consumer.get (name);
-			if ( cl != null )
+			sendToConsumer (message);
+		}
+
+		private void sendToConsumer (Message message)
+		{
+			synchronized ( consumer )
 			{
-				for ( MockConsumer c : cl )
+				List<MockConsumer> cl = consumer.get (name);
+				if ( cl != null )
 				{
-					c.getQueue ().add (message);
-					consumerExecutor.execute (c);
+					for ( MockConsumer c : cl )
+					{
+						c.getQueue ().add (message);
+					}
 				}
 			}
 		}
 	}
 
+	private static Executor consumerExecutor = Executors.newCachedThreadPool ();
+
 	private static class MockConsumer implements MessageConsumer, Runnable
 	{
 		private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<Message> ();
-		private MessageListener listener = null;
+		private boolean open = true;
 
 		public LinkedBlockingQueue<Message> getQueue ()
 		{
@@ -686,9 +667,26 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public void setMessageListener (MessageListener listener) throws JMSException
+		public void setMessageListener (final MessageListener listener) throws JMSException
 		{
-			this.listener = listener;
+			consumerExecutor.execute (new Runnable ()
+			{
+				@Override
+				public void run ()
+				{
+					while ( open )
+					{
+						try
+						{
+							Message m = receive ();
+							listener.onMessage (m);
+						}
+						catch ( JMSException e )
+						{
+						}
+					}
+				}
+			});
 		}
 
 		@Override
@@ -726,24 +724,20 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void close () throws JMSException
 		{
+			open = false;
 		}
 
 		@Override
 		public void run ()
 		{
-			try
-			{
-				Message m = receive ();
-				listener.onMessage (m);
-			}
-			catch ( JMSException e )
-			{
-			}
+
 		}
 	}
 
 	private static class MockSession implements Session
 	{
+		private final List<MessageConsumer> sessionConsumer = new ArrayList<MessageConsumer> ();
+
 		@Override
 		public BytesMessage createBytesMessage () throws JMSException
 		{
@@ -817,6 +811,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void close () throws JMSException
 		{
+			for ( MessageConsumer consumer : sessionConsumer )
+			{
+				consumer.close ();
+			}
 		}
 
 		@Override
@@ -857,14 +855,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
 
-			if ( producer.containsKey (name) )
-			{
-				return producer.get (name);
-			}
-
-			MockProducer p = new MockProducer (name);
-			producer.put (name, p);
-			return p;
+			return new MockProducer (name);
 		}
 
 		@Override
@@ -883,14 +874,18 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
-			MockConsumer c = new MockConsumer ();
-			ArrayList<MockConsumer> cl = consumer.get (name);
-			if ( cl == null )
+			final MockConsumer c = new MockConsumer ();
+			sessionConsumer.add (c);
+			synchronized ( consumer )
 			{
-				cl = new ArrayList<MockConsumer> ();
-				consumer.put (name, cl);
+				ArrayList<MockConsumer> cl = consumer.get (name);
+				if ( cl == null )
+				{
+					cl = new ArrayList<MockConsumer> ();
+					consumer.put (name, cl);
+				}
+				cl.add (c);
 			}
-			cl.add (c);
 			return c;
 		}
 
@@ -962,10 +957,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private class MockConnection implements Connection
 	{
+		private final List<Session> sessions = new ArrayList<Session> ();
+
 		@Override
 		public Session createSession (boolean transacted, int acknowledgeMode) throws JMSException
 		{
-			return singleSession;
+			Session session = new MockSession ();
+			sessions.add (session);
+			return session;
 		}
 
 		@Override
@@ -1009,6 +1008,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void close () throws JMSException
 		{
+			for ( Session session : sessions )
+			{
+				session.close ();
+			}
 		}
 
 		@Override

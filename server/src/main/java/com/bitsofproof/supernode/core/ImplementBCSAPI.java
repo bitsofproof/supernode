@@ -41,12 +41,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.Color;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
@@ -59,7 +57,6 @@ import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.core.BlockStore.TransactionProcessor;
 import com.bitsofproof.supernode.messages.BlockMessage;
 import com.bitsofproof.supernode.model.Blk;
-import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -77,10 +74,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	private ConnectionFactory connectionFactory;
 
 	private Connection connection;
-	private Session session;
 
-	private MessageProducer transactionProducer;
-	private MessageProducer trunkProducer;
 	private final Map<String, MessageProducer> correlationProducer = new HashMap<String, MessageProducer> ();
 	private final Map<String, BloomFilter> correlationBloomFilter = Collections.synchronizedMap (new HashMap<String, BloomFilter> ());
 
@@ -106,15 +100,58 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		this.connectionFactory = connectionFactory;
 	}
 
-	private void addTopicListener (String topic, MessageListener listener) throws JMSException
+	private abstract static class SessionMessageListener implements MessageListener
 	{
+		private Session session;
+
+		protected void reply (Destination destination, byte[] msg)
+		{
+			MessageProducer replier = null;
+			try
+			{
+				replier = session.createProducer (destination);
+				BytesMessage m = session.createBytesMessage ();
+				if ( msg != null )
+				{
+					m.writeBytes (msg);
+				}
+				replier.send (m);
+			}
+			catch ( JMSException e )
+			{
+				log.trace ("can not reply", e);
+			}
+			finally
+			{
+				try
+				{
+					replier.close ();
+				}
+				catch ( JMSException e )
+				{
+				}
+			}
+		}
+
+		public void setSession (Session session)
+		{
+			this.session = session;
+		}
+	}
+
+	private void addTopicListener (String topic, SessionMessageListener listener) throws JMSException
+	{
+		Session session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+		listener.setSession (session);
 		Destination destination = session.createTopic (topic);
 		MessageConsumer consumer = session.createConsumer (destination);
 		consumer.setMessageListener (listener);
 	}
 
-	private void addQueueListener (String queue, MessageListener listener) throws JMSException
+	private void addQueueListener (String queue, SessionMessageListener listener) throws JMSException
 	{
+		Session session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+		listener.setSession (session);
 		Destination destination = session.createQueue (queue);
 		MessageConsumer consumer = session.createConsumer (destination);
 		consumer.setMessageListener (listener);
@@ -127,15 +164,11 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			connection = connectionFactory.createConnection ();
 			connection.setClientID ("bitsofproof supernode");
 			connection.start ();
-			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-			transactionProducer = session.createProducer (session.createTopic ("transaction"));
-			trunkProducer = session.createProducer (session.createTopic ("trunk"));
 			addNewTransactionListener ();
 			addNewBlockListener ();
 			addBlockrequestListener ();
 			addBlockHeaderRequestListener ();
 			addTransactionRequestListener ();
-			addBloomFilterListener ();
 			addBloomScanListener ();
 			addMatchScanListener ();
 			addPingListener ();
@@ -147,56 +180,30 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 	}
 
-	private void addBloomFilterListener () throws JMSException
+	private void closeSession (Session session)
 	{
-		addQueueListener ("filterRequest", new MessageListener ()
+		if ( session != null )
 		{
-			@Override
-			public void onMessage (Message msg)
+			try
 			{
-				BytesMessage o = (BytesMessage) msg;
-				byte[] body;
-				try
-				{
-					body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					BCSAPIMessage.FilterRequest request = BCSAPIMessage.FilterRequest.parseFrom (body);
-					byte[] data = request.getFilter ().toByteArray ();
-					long hashFunctions = request.getHashFunctions ();
-					long tweak = request.getTweak ();
-					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
-					BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
-					synchronized ( correlationBloomFilter )
-					{
-						if ( !correlationProducer.containsKey (o.getJMSCorrelationID ()) )
-						{
-							MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
-							correlationProducer.put (o.getJMSCorrelationID (), producer);
-						}
-						correlationBloomFilter.put (o.getJMSCorrelationID (), filter);
-					}
-				}
-				catch ( JMSException e )
-				{
-					log.error ("invalid filter request", e);
-				}
-				catch ( InvalidProtocolBufferException e )
-				{
-					log.error ("invalid filter request", e);
-				}
+				session.close ();
 			}
-		});
+			catch ( JMSException e )
+			{
+			}
+		}
 	}
 
 	private void addBloomScanListener () throws JMSException
 	{
-		addQueueListener ("scanRequest", new MessageListener ()
+		addQueueListener ("scanRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
+				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
@@ -207,6 +214,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					long tweak = request.getTweak ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
+					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
 					requestProcessor.execute (new Runnable ()
 					{
@@ -220,31 +228,32 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									@Override
 									public void process (Tx tx)
 									{
-										if ( tx != null )
+										Session session = null;
+										try
 										{
-											Transaction transaction = toBCSAPITransaction (tx, false);
-											BytesMessage m;
-											try
+											session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+
+											if ( tx != null )
 											{
+												Transaction transaction = toBCSAPITransaction (tx, false);
+												BytesMessage m;
 												m = session.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
 											}
-											catch ( JMSException e )
-											{
-											}
-										}
-										else
-										{
-											try
+											else
 											{
 												BytesMessage m = session.createBytesMessage ();
 												producer.send (m); // indicate EOF
 												producer.close ();
 											}
-											catch ( JMSException e )
-											{
-											}
+										}
+										catch ( JMSException e )
+										{
+										}
+										finally
+										{
+											closeSession (session);
 										}
 									}
 								});
@@ -264,19 +273,24 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				{
 					log.error ("invalid filter request", e);
 				}
+				finally
+				{
+					closeSession (session);
+				}
 			}
 		});
 	}
 
 	private void addMatchScanListener () throws JMSException
 	{
-		addQueueListener ("matchRequest", new MessageListener ()
+		addQueueListener ("matchRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
+				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
@@ -288,6 +302,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						match.add (new ByteVector (bs.toByteArray ()));
 					}
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
+					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
 					final long after = request.hasAfter () ? request.getAfter () : 0;
 					requestProcessor.execute (new Runnable ()
@@ -306,8 +321,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										{
 											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
+											Session session = null;
 											try
 											{
+												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 												m = session.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
@@ -315,20 +332,30 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 											catch ( JMSException e )
 											{
 											}
+											finally
+											{
+												closeSession (session);
+											}
 										}
 									}
 								};
 
 								store.filterTransactions (match, mode, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
+								Session session = null;
 								try
 								{
+									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 									BytesMessage m = session.createBytesMessage ();
 									producer.send (m); // indicate EOF
 									producer.close ();
 								}
 								catch ( JMSException e )
 								{
+								}
+								finally
+								{
+									closeSession (session);
 								}
 							}
 							catch ( ValidationException e )
@@ -346,23 +373,29 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				{
 					log.error ("invalid filter request", e);
 				}
+				finally
+				{
+					closeSession (session);
+				}
 			}
 		});
 	}
 
 	private void addAccountScanListener () throws JMSException
 	{
-		addQueueListener ("accountRequest", new MessageListener ()
+		addQueueListener ("accountRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
+				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
+					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 					BCSAPIMessage.AccountRequest request = BCSAPIMessage.AccountRequest.parseFrom (body);
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
 					final int lookAhead = request.getLookAhead ();
@@ -386,8 +419,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										{
 											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
+											Session session = null;
 											try
 											{
+												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 												m = session.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
@@ -395,20 +430,30 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 											catch ( JMSException e )
 											{
 											}
+											finally
+											{
+												closeSession (session);
+											}
 										}
 									}
 								};
 
 								store.filterTransactions (match, ek, lookAhead, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
+								Session session = null;
 								try
 								{
+									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 									BytesMessage m = session.createBytesMessage ();
 									producer.send (m); // indicate EOF
 									producer.close ();
 								}
 								catch ( JMSException e )
 								{
+								}
+								finally
+								{
+									closeSession (session);
 								}
 							}
 							catch ( ValidationException e )
@@ -430,78 +475,9 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				{
 					log.error ("Invalid scan account request", e);
 				}
-			}
-		});
-	}
-
-	private void addNewColorListener () throws JMSException
-	{
-		addTopicListener ("newColor", new MessageListener ()
-		{
-			@Override
-			public void onMessage (Message arg0)
-			{
-				BytesMessage o = (BytesMessage) arg0;
-				try
+				finally
 				{
-					byte[] body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					Color color = Color.fromProtobuf (BCSAPIMessage.Color.parseFrom (body));
-					StoredColor sc = new StoredColor ();
-					sc.setFungibleName (color.getFungibleName ());
-					sc.setExpiryHeight (color.getExpiryHeight ());
-					sc.setPubkey (color.getPubkey ());
-					sc.setSignature (color.getSignature ());
-					sc.setTerms (color.getTerms ());
-					sc.setUnit (color.getUnit ());
-					sc.setTxHash (color.getTransaction ());
-					store.issueColor (sc);
-					reply (o.getJMSReplyTo (), null);
-				}
-				catch ( Exception e )
-				{
-					BCSAPIMessage.ExceptionMessage.Builder builder = BCSAPIMessage.ExceptionMessage.newBuilder ();
-					builder.setBcsapiversion (1);
-					builder.addMessage (e.getMessage ());
-					try
-					{
-						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
-					}
-					catch ( JMSException e1 )
-					{
-						log.error ("Can not send reply ", e1);
-					}
-				}
-			}
-		});
-	}
-
-	private void addColorRequestListener () throws JMSException
-	{
-		addTopicListener ("colorRequest", new MessageListener ()
-		{
-			@Override
-			public void onMessage (Message message)
-			{
-				BytesMessage o = (BytesMessage) message;
-				try
-				{
-					byte[] body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
-					Color c = getColor (hash);
-					if ( c != null )
-					{
-						reply (o.getJMSReplyTo (), c.toProtobuf ().toByteArray ());
-					}
-					else
-					{
-						reply (o.getJMSReplyTo (), null);
-					}
-				}
-				catch ( Exception e )
-				{
-					log.trace ("Rejected invalid color request ", e);
+					closeSession (session);
 				}
 			}
 		});
@@ -509,7 +485,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addTransactionRequestListener () throws JMSException
 	{
-		addQueueListener ("transactionRequest", new MessageListener ()
+		addQueueListener ("transactionRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -540,7 +516,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBlockrequestListener () throws JMSException
 	{
-		addQueueListener ("blockRequest", new MessageListener ()
+		addQueueListener ("blockRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -572,7 +548,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addBlockHeaderRequestListener () throws JMSException
 	{
-		addQueueListener ("headerRequest", new MessageListener ()
+		addQueueListener ("headerRequest", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -604,7 +580,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addNewBlockListener () throws JMSException
 	{
-		addTopicListener ("newBlock", new MessageListener ()
+		addTopicListener ("newBlock", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -639,7 +615,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addPingListener () throws JMSException
 	{
-		addQueueListener ("ping", new MessageListener ()
+		addQueueListener ("ping", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -661,7 +637,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addNewTransactionListener () throws JMSException
 	{
-		addTopicListener ("newTransaction", new MessageListener ()
+		addTopicListener ("newTransaction", new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message arg0)
@@ -694,40 +670,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		});
 	}
 
-	private void reply (Destination destination, byte[] msg)
-	{
-		MessageProducer replier = null;
-		try
-		{
-			replier = session.createProducer (destination);
-			BytesMessage m = session.createBytesMessage ();
-			if ( msg != null )
-			{
-				m.writeBytes (msg);
-			}
-			replier.send (m);
-		}
-		catch ( JMSException e )
-		{
-			log.trace ("can not reply", e);
-		}
-		finally
-		{
-			try
-			{
-				replier.close ();
-			}
-			catch ( JMSException e )
-			{
-			}
-		}
-	}
-
 	public void destroy ()
 	{
 		try
 		{
-			session.close ();
 			connection.close ();
 		}
 		catch ( JMSException e )
@@ -842,46 +788,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		return block;
 	}
 
-	private Color getColor (final String hash)
-	{
-		log.trace ("get color " + hash);
-		final Color color = new Color ();
-		new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
-		{
-			@Override
-			protected void doInTransactionWithoutResult (TransactionStatus status)
-			{
-				status.setRollbackOnly ();
-				StoredColor c;
-				try
-				{
-					c = ((ColorStore) store).findColor (hash);
-					if ( c != null )
-					{
-						color.setExpiryHeight (c.getExpiryHeight ());
-						color.setSignature (c.getSignature ());
-						color.setTerms (c.getTerms ());
-						color.setUnit (c.getUnit ());
-						color.setPubkey (c.getPubkey ());
-						color.setTransaction (c.getTxHash ());
-					}
-				}
-				catch ( ValidationException e )
-				{
-					log.error ("can not get color " + hash, e);
-				}
-
-			}
-		});
-		if ( color.getTerms () != null )
-		{
-			log.trace ("get color returned " + hash);
-			return color;
-		}
-		log.trace ("get color failed ");
-		return null;
-	}
-
 	private void sendTransaction (Transaction transaction) throws ValidationException
 	{
 		log.trace ("send transaction " + transaction.getHash ());
@@ -911,11 +817,14 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	@Override
 	public void process (Tx tx, boolean doubleSpend)
 	{
+		Session session = null;
 		try
 		{
 			Transaction transaction = toBCSAPITransaction (tx, doubleSpend);
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
+			MessageProducer transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			transactionProducer.send (m);
 
 			synchronized ( correlationBloomFilter )
@@ -932,6 +841,16 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		catch ( Exception e )
 		{
 			log.error ("Can not send JMS message ", e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 
@@ -964,8 +883,12 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	@Override
 	public void trunkUpdate (final List<Blk> removed, final List<Blk> extended)
 	{
+		Session session = null;
 		try
 		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer trunkProducer = session.createProducer (session.createTopic ("trunk"));
+
 			List<Block> r = new ArrayList<Block> ();
 			List<Block> a = new ArrayList<Block> ();
 			for ( Blk blk : removed )
@@ -984,6 +907,16 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		catch ( Exception e )
 		{
 			log.error ("Can not send JMS message ", e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 

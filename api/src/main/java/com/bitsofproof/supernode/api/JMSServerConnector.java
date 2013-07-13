@@ -21,10 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -35,7 +32,6 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
 import javax.jms.MessageProducer;
-import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TemporaryQueue;
 
@@ -54,19 +50,8 @@ public class JMSServerConnector implements BCSAPI
 
 	private ConnectionFactory connectionFactory;
 	private Connection connection;
-	private Session session;
 
 	private String clientId = UUID.randomUUID ().toString ();
-
-	private MessageProducer pingProducer;
-	private MessageProducer transactionProducer;
-	private MessageProducer blockProducer;
-	private MessageProducer blockRequestProducer;
-	private MessageProducer blockHeaderRequestProducer;
-	private MessageProducer transactionRequestProducer;
-	private MessageProducer scanRequestProducer;
-	private MessageProducer scanAccountProducer;
-	private MessageProducer exactMatchProducer;
 
 	private Boolean production = null;
 
@@ -89,7 +74,6 @@ public class JMSServerConnector implements BCSAPI
 		private final Map<Object, ByteArrayMessageListener> wrapperMap = new HashMap<Object, ByteArrayMessageListener> ();
 
 		private final MessageConsumer consumer;
-		private TemporaryQueue temporaryQueue;
 
 		public MessageDispatcher (MessageConsumer consumer)
 		{
@@ -168,17 +152,6 @@ public class JMSServerConnector implements BCSAPI
 		{
 			return consumer;
 		}
-
-		public TemporaryQueue getTemporaryQueue ()
-		{
-			return temporaryQueue;
-		}
-
-		public void setTemporaryQueue (TemporaryQueue temporaryQueue)
-		{
-			this.temporaryQueue = temporaryQueue;
-		}
-
 	}
 
 	public void setClientId (String clientId)
@@ -198,6 +171,7 @@ public class JMSServerConnector implements BCSAPI
 			MessageDispatcher dispatcher = messageDispatcher.get (topic);
 			if ( dispatcher == null )
 			{
+				Session session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 				Destination destination = session.createTopic (topic);
 				MessageConsumer consumer = session.createConsumer (destination);
 				messageDispatcher.put (topic, dispatcher = new MessageDispatcher (consumer));
@@ -237,17 +211,6 @@ public class JMSServerConnector implements BCSAPI
 			connection = connectionFactory.createConnection ();
 			connection.setClientID (clientId);
 			connection.start ();
-			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-
-			transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
-			blockProducer = session.createProducer (session.createTopic ("newBlock"));
-			pingProducer = session.createProducer (session.createQueue ("ping"));
-			blockRequestProducer = session.createProducer (session.createQueue ("blockRequest"));
-			blockHeaderRequestProducer = session.createProducer (session.createQueue ("headerRequest"));
-			transactionRequestProducer = session.createProducer (session.createQueue ("transactionRequest"));
-			scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
-			exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
-			scanAccountProducer = session.createProducer (session.createQueue ("accountRequest"));
 		}
 		catch ( Exception e )
 		{
@@ -259,7 +222,6 @@ public class JMSServerConnector implements BCSAPI
 	{
 		try
 		{
-			session.close ();
 			connection.close ();
 		}
 		catch ( JMSException e )
@@ -270,15 +232,19 @@ public class JMSServerConnector implements BCSAPI
 	@Override
 	public long ping (long nonce) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
 			log.trace ("ping " + nonce);
+
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.Ping.Builder builder = BCSAPIMessage.Ping.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setNonce (nonce);
 			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (pingProducer, m);
+			MessageProducer pingProducer = session.createProducer (session.createQueue ("ping"));
+			byte[] response = synchronousRequest (session, pingProducer, m);
 			if ( response != null )
 			{
 				BCSAPIMessage.Ping echo = BCSAPIMessage.Ping.parseFrom (response);
@@ -296,6 +262,16 @@ public class JMSServerConnector implements BCSAPI
 		catch ( InvalidProtocolBufferException e )
 		{
 			throw new BCSAPIException (e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 		return 0;
 	}
@@ -348,10 +324,13 @@ public class JMSServerConnector implements BCSAPI
 	@Override
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 
+			MessageProducer exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
 			BCSAPIMessage.ExactMatchRequest.Builder builder = BCSAPIMessage.ExactMatchRequest.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setMode (mode.ordinal ());
@@ -404,26 +383,32 @@ public class JMSServerConnector implements BCSAPI
 			});
 
 			exactMatchProducer.send (m);
-			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
-			{
-				throw new BCSAPIException ("timeout");
-			}
+			ready.acquireUninterruptibly ();
 		}
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
 		}
-		catch ( InterruptedException e )
+		finally
 		{
-			throw new BCSAPIException (e);
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 
 	@Override
 	public void scanTransactions (BloomFilter filter, final TransactionListener listener) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
 			BytesMessage m = session.createBytesMessage ();
 
 			BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
@@ -475,18 +460,21 @@ public class JMSServerConnector implements BCSAPI
 			});
 
 			scanRequestProducer.send (m);
-			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
-			{
-				throw new BCSAPIException ("timeout");
-			}
+			ready.acquireUninterruptibly ();
 		}
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
 		}
-		catch ( InterruptedException e )
+		finally
 		{
-			throw new BCSAPIException (e);
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 
@@ -497,10 +485,13 @@ public class JMSServerConnector implements BCSAPI
 		{
 			master = master.getReadOnly ();
 		}
+		Session session = null;
 		try
 		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 
+			MessageProducer scanAccountProducer = session.createProducer (session.createQueue ("accountRequest"));
 			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setPublicKey (master.serialize (production));
@@ -548,20 +539,22 @@ public class JMSServerConnector implements BCSAPI
 			});
 
 			scanAccountProducer.send (m);
-			if ( ready.tryAcquire (timeout, TimeUnit.MILLISECONDS) == false )
-			{
-				throw new BCSAPIException ("timeout");
-			}
+			ready.acquireUninterruptibly ();
 		}
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
 		}
-		catch ( InterruptedException e )
+		finally
 		{
-			throw new BCSAPIException (e);
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
-
 	}
 
 	@Override
@@ -647,94 +640,26 @@ public class JMSServerConnector implements BCSAPI
 		removeTopicListener ("trunk", listener);
 	}
 
-	private byte[] synchronousRequest (MessageProducer producer, Message m) throws BCSAPIException
+	private byte[] synchronousRequest (Session session, MessageProducer producer, Message m) throws BCSAPIException
 	{
 		TemporaryQueue answerQueue = null;
+		MessageConsumer consumer = null;
 		try
 		{
-			try
-			{
-				answerQueue = session.createTemporaryQueue ();
-			}
-			catch ( JMSException e )
+			answerQueue = session.createTemporaryQueue ();
+			m.setJMSReplyTo (answerQueue);
+			consumer = session.createConsumer (answerQueue);
+			producer.send (m);
+			BytesMessage reply = (BytesMessage) consumer.receive (timeout);
+			if ( reply.getBodyLength () == 0 )
 			{
 				return null;
 			}
-			return synchronousRequest (producer, m, answerQueue);
-		}
-		finally
-		{
-			try
+			else
 			{
-				answerQueue.delete ();
-			}
-			catch ( JMSException e )
-			{
-			}
-		}
-	}
-
-	private byte[] synchronousRequest (MessageProducer producer, Message m, Queue answerQueue) throws BCSAPIException
-	{
-		byte[] result = null;
-		final Exchanger<byte[]> exchanger = new Exchanger<byte[]> ();
-
-		MessageConsumer consumer = null;
-
-		try
-		{
-			m.setJMSReplyTo (answerQueue);
-			consumer = session.createConsumer (answerQueue);
-			consumer.setMessageListener (new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message message)
-				{
-					BytesMessage m = (BytesMessage) message;
-					byte[] body;
-					try
-					{
-						if ( m.getBodyLength () == 0 )
-						{
-							try
-							{
-								exchanger.exchange (null);
-							}
-							catch ( InterruptedException e )
-							{
-							}
-						}
-						else
-						{
-							body = new byte[(int) m.getBodyLength ()];
-							m.readBytes (body);
-							try
-							{
-								exchanger.exchange (body);
-							}
-							catch ( InterruptedException e )
-							{
-							}
-						}
-					}
-					catch ( JMSException e )
-					{
-						log.debug ("Can not parse reply", e);
-					}
-				}
-			});
-			producer.send (m);
-			try
-			{
-				result = exchanger.exchange (null, timeout, TimeUnit.MILLISECONDS);
-				consumer.close ();
-			}
-			catch ( InterruptedException e )
-			{
-			}
-			catch ( TimeoutException e )
-			{
-				throw new BCSAPIException ("timeout");
+				byte[] body = new byte[(int) reply.getBodyLength ()];
+				reply.readBytes (body);
+				return body;
 			}
 		}
 		catch ( JMSException e )
@@ -749,12 +674,12 @@ public class JMSServerConnector implements BCSAPI
 				{
 					consumer.close ();
 				}
+				answerQueue.delete ();
 			}
 			catch ( JMSException e )
 			{
 			}
 		}
-		return result;
 	}
 
 	@Override
@@ -762,14 +687,18 @@ public class JMSServerConnector implements BCSAPI
 	{
 		log.trace ("get transaction " + hash);
 		BytesMessage m;
+		Session session = null;
 		try
 		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer transactionRequestProducer = session.createProducer (session.createQueue ("transactionRequest"));
+
 			m = session.createBytesMessage ();
 			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
 			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (transactionRequestProducer, m);
+			byte[] response = synchronousRequest (session, transactionRequestProducer, m);
 			if ( response != null )
 			{
 				Transaction t;
@@ -786,21 +715,36 @@ public class JMSServerConnector implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
 		return null;
 	}
 
 	@Override
 	public Block getBlock (String hash) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
 			log.trace ("get block " + hash);
+
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer blockRequestProducer = session.createProducer (session.createQueue ("blockRequest"));
+
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
 			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (blockRequestProducer, m);
+			byte[] response = synchronousRequest (session, blockRequestProducer, m);
 			if ( response != null )
 			{
 				Block b = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (response));
@@ -815,6 +759,16 @@ public class JMSServerConnector implements BCSAPI
 		catch ( InvalidProtocolBufferException e )
 		{
 			throw new BCSAPIException (e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 		return null;
 	}
@@ -822,15 +776,20 @@ public class JMSServerConnector implements BCSAPI
 	@Override
 	public Block getBlockHeader (String hash) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
 			log.trace ("get block header" + hash);
+
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer blockHeaderRequestProducer = session.createProducer (session.createQueue ("headerRequest"));
+
 			BytesMessage m = session.createBytesMessage ();
 			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
 			m.writeBytes (builder.build ().toByteArray ());
-			byte[] response = synchronousRequest (blockHeaderRequestProducer, m);
+			byte[] response = synchronousRequest (session, blockHeaderRequestProducer, m);
 			if ( response != null )
 			{
 				Block b = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (response));
@@ -846,19 +805,34 @@ public class JMSServerConnector implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
 		return null;
 	}
 
 	@Override
 	public void sendTransaction (Transaction transaction) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
 			transaction.computeHash ();
 			log.trace ("send transaction " + transaction.getHash ());
+
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer transactionProducer = session.createProducer (session.createTopic ("newTransaction"));
+
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
-			byte[] reply = synchronousRequest (transactionProducer, m);
+			byte[] reply = synchronousRequest (session, transactionProducer, m);
 			if ( reply != null )
 			{
 				try
@@ -875,19 +849,33 @@ public class JMSServerConnector implements BCSAPI
 		catch ( JMSException e )
 		{
 			throw new BCSAPIException (e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
 		}
 	}
 
 	@Override
 	public void sendBlock (Block block) throws BCSAPIException
 	{
+		Session session = null;
 		try
 		{
 			block.computeHash ();
 			log.trace ("send block " + block.getHash ());
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer blockProducer = session.createProducer (session.createTopic ("newBlock"));
+
 			BytesMessage m = session.createBytesMessage ();
 			m.writeBytes (block.toProtobuf ().toByteArray ());
-			byte[] reply = synchronousRequest (blockProducer, m);
+			byte[] reply = synchronousRequest (session, blockProducer, m);
 			if ( reply != null )
 			{
 				try
@@ -905,6 +893,15 @@ public class JMSServerConnector implements BCSAPI
 		{
 			throw new BCSAPIException (e);
 		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
 	}
-
 }
