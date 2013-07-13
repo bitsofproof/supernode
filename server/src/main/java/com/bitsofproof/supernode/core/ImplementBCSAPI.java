@@ -219,30 +219,32 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						@Override
 						public void run ()
 						{
+							Session session = null;
 							try
 							{
+								session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+								final MessageProducer producer = session.createProducer (destination);
+								final Session passInSession = session;
+
 								store.scan (filter, new TransactionProcessor ()
 								{
 									@Override
 									public void process (Tx tx)
 									{
-										Session session = null;
 										try
 										{
-											session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-											MessageProducer producer = session.createProducer (destination);
 
 											if ( tx != null )
 											{
 												Transaction transaction = toBCSAPITransaction (tx, false);
 												BytesMessage m;
-												m = session.createBytesMessage ();
+												m = passInSession.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
 											}
 											else
 											{
-												BytesMessage m = session.createBytesMessage ();
+												BytesMessage m = passInSession.createBytesMessage ();
 												producer.send (m); // indicate EOF
 												producer.close ();
 											}
@@ -250,27 +252,27 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										catch ( JMSException e )
 										{
 										}
-										finally
-										{
-											closeSession (session);
-										}
 									}
 								});
 							}
-							catch ( ValidationException e )
+							catch ( ValidationException | JMSException e )
 							{
 								log.error ("Error while scanning", e);
+							}
+							finally
+							{
+								closeSession (session);
 							}
 						}
 					});
 				}
 				catch ( JMSException e )
 				{
-					log.error ("invalid filter request", e);
+					log.error ("invalid scanRequest request", e);
 				}
 				catch ( InvalidProtocolBufferException e )
 				{
-					log.error ("invalid filter request", e);
+					log.error ("invalid scanRequest request", e);
 				}
 			}
 		});
@@ -303,8 +305,13 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						@Override
 						public void run ()
 						{
+							Session session = null;
 							try
 							{
+								session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+								final MessageProducer producer = session.createProducer (destination);
+								final Session passInSession = session;
+
 								TransactionProcessor processor = new TransactionProcessor ()
 								{
 									@Override
@@ -314,22 +321,15 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										{
 											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
-											Session session = null;
 											try
 											{
-												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-												MessageProducer producer = session.createProducer (destination);
 
-												m = session.createBytesMessage ();
+												m = passInSession.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
 											}
 											catch ( JMSException e )
 											{
-											}
-											finally
-											{
-												closeSession (session);
 											}
 										}
 									}
@@ -337,37 +337,34 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 								store.filterTransactions (match, mode, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
-								Session session = null;
 								try
 								{
-									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 									BytesMessage m = session.createBytesMessage ();
-									MessageProducer producer = session.createProducer (destination);
 									producer.send (m); // indicate EOF
 									producer.close ();
 								}
 								catch ( JMSException e )
 								{
 								}
-								finally
-								{
-									closeSession (session);
-								}
 							}
-							catch ( ValidationException e )
+							catch ( ValidationException | JMSException e )
 							{
 								log.error ("Error while scanning", e);
+							}
+							finally
+							{
+								closeSession (session);
 							}
 						}
 					});
 				}
 				catch ( JMSException e )
 				{
-					log.error ("invalid filter request", e);
+					log.error ("invalid matchRequest request", e);
 				}
 				catch ( InvalidProtocolBufferException e )
 				{
-					log.error ("invalid filter request", e);
+					log.error ("invalid matchRequest request", e);
 				}
 			}
 		});
@@ -398,8 +395,12 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						@Override
 						public void run ()
 						{
+							Session session = null;
 							try
 							{
+								session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+								final MessageProducer producer = session.createProducer (destination);
+								final Session passInSession = session;
 								TransactionProcessor processor = new TransactionProcessor ()
 								{
 									@Override
@@ -409,22 +410,15 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										{
 											Transaction transaction = toBCSAPITransaction (tx, false);
 											BytesMessage m;
-											Session session = null;
+
 											try
 											{
-												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-												MessageProducer producer = session.createProducer (destination);
-
-												m = session.createBytesMessage ();
+												m = passInSession.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
 											}
 											catch ( JMSException e )
 											{
-											}
-											finally
-											{
-												closeSession (session);
 											}
 										}
 									}
@@ -432,12 +426,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 								store.filterTransactions (match, ek, lookAhead, after, processor);
 								txhandler.scanUnconfirmedPool (match, mode, processor);
-								Session session = null;
 								try
 								{
-									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-									MessageProducer producer = session.createProducer (destination);
-
 									BytesMessage m = session.createBytesMessage ();
 									producer.send (m); // indicate EOF
 									producer.close ();
@@ -445,14 +435,14 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								catch ( JMSException e )
 								{
 								}
-								finally
-								{
-									closeSession (session);
-								}
 							}
-							catch ( ValidationException e )
+							catch ( ValidationException | JMSException e )
 							{
 								log.error ("Error while scanning", e);
+							}
+							finally
+							{
+								closeSession (session);
 							}
 						}
 					});
