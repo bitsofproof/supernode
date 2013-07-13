@@ -66,7 +66,6 @@ public class JMSServerConnector implements BCSAPI
 	private MessageProducer transactionRequestProducer;
 	private MessageProducer colorProducer;
 	private MessageProducer colorRequestProducer;
-	private MessageProducer filterRequestProducer;
 	private MessageProducer scanRequestProducer;
 	private MessageProducer scanAccountProducer;
 	private MessageProducer exactMatchProducer;
@@ -248,7 +247,6 @@ public class JMSServerConnector implements BCSAPI
 			blockRequestProducer = session.createProducer (session.createQueue ("blockRequest"));
 			blockHeaderRequestProducer = session.createProducer (session.createQueue ("headerRequest"));
 			transactionRequestProducer = session.createProducer (session.createQueue ("transactionRequest"));
-			filterRequestProducer = session.createProducer (session.createQueue ("filterRequest"));
 			scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
 			exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
 			scanAccountProducer = session.createProducer (session.createQueue ("accountRequest"));
@@ -566,92 +564,6 @@ public class JMSServerConnector implements BCSAPI
 			throw new BCSAPIException (e);
 		}
 
-	}
-
-	@Override
-	public void registerFilteredListener (final BloomFilter filter, final TransactionListener listener) throws BCSAPIException
-	{
-		try
-		{
-			BytesMessage m = session.createBytesMessage ();
-			BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
-			builder.setBcsapiversion (1);
-			builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
-			builder.setHashFunctions ((int) filter.getHashFunctions ());
-			builder.setTweak ((int) filter.getTweak ());
-			builder.setMode (filter.getUpdateMode ().ordinal ());
-
-			m.writeBytes (builder.build ().toByteArray ());
-			synchronized ( messageDispatcher )
-			{
-				MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
-				if ( dispatcher == null )
-				{
-					TemporaryQueue answerQueue = session.createTemporaryQueue ();
-					MessageConsumer consumer = session.createConsumer (answerQueue);
-					dispatcher = new MessageDispatcher (consumer);
-					dispatcher.setTemporaryQueue (answerQueue);
-					messageDispatcher.put (filter.toString (), dispatcher);
-					dispatcher.addListener (listener, new ByteArrayMessageListener ()
-					{
-						@Override
-						public void onMessage (byte[] body)
-						{
-							try
-							{
-								if ( body != null )
-								{
-									Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-									t.computeHash ();
-									listener.process (t);
-								}
-								else
-								{
-									listener.process (null);
-								}
-							}
-							catch ( InvalidProtocolBufferException e )
-							{
-								log.error ("Malformed message received for filter", e);
-							}
-						}
-					});
-				}
-				m.setJMSCorrelationID (listener.toString ());
-				m.setJMSReplyTo (dispatcher.getTemporaryQueue ());
-			}
-
-			filterRequestProducer.send (m);
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-	}
-
-	@Override
-	public void removeFilteredListener (BloomFilter filter, TransactionListener listener)
-	{
-		synchronized ( messageDispatcher )
-		{
-			MessageDispatcher dispatcher = messageDispatcher.get (filter.toString ());
-			if ( dispatcher != null )
-			{
-				dispatcher.removeListener (listener);
-				if ( !dispatcher.isListened () )
-				{
-					messageDispatcher.remove (filter.toString ());
-					try
-					{
-						dispatcher.getConsumer ().close ();
-						dispatcher.getTemporaryQueue ().delete ();
-					}
-					catch ( JMSException e )
-					{
-					}
-				}
-			}
-		}
 	}
 
 	@Override
