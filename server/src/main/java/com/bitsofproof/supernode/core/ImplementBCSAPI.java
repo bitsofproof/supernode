@@ -203,7 +203,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
-				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
@@ -214,8 +213,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					long tweak = request.getTweak ();
 					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
 					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
-					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					final Destination destination = msg.getJMSReplyTo ();
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
@@ -232,6 +230,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 										try
 										{
 											session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+											MessageProducer producer = session.createProducer (destination);
 
 											if ( tx != null )
 											{
@@ -273,10 +272,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				{
 					log.error ("invalid filter request", e);
 				}
-				finally
-				{
-					closeSession (session);
-				}
 			}
 		});
 	}
@@ -290,7 +285,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
-				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
@@ -302,8 +296,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 						match.add (new ByteVector (bs.toByteArray ()));
 					}
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
-					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					final Destination destination = msg.getJMSReplyTo ();
 					final long after = request.hasAfter () ? request.getAfter () : 0;
 					requestProcessor.execute (new Runnable ()
 					{
@@ -325,6 +318,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 											try
 											{
 												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+												MessageProducer producer = session.createProducer (destination);
+
 												m = session.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
@@ -347,6 +342,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								{
 									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 									BytesMessage m = session.createBytesMessage ();
+									MessageProducer producer = session.createProducer (destination);
 									producer.send (m); // indicate EOF
 									producer.close ();
 								}
@@ -373,10 +369,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				{
 					log.error ("invalid filter request", e);
 				}
-				finally
-				{
-					closeSession (session);
-				}
 			}
 		});
 	}
@@ -390,19 +382,17 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			{
 				BytesMessage o = (BytesMessage) msg;
 				byte[] body;
-				Session session = null;
 				try
 				{
 					body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
-					session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 					BCSAPIMessage.AccountRequest request = BCSAPIMessage.AccountRequest.parseFrom (body);
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
 					final int lookAhead = request.getLookAhead ();
 					final long after = request.getAfter ();
 					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					final UpdateMode mode = UpdateMode.all;
-					final MessageProducer producer = session.createProducer (msg.getJMSReplyTo ());
+					final Destination destination = msg.getJMSDestination ();
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
@@ -423,6 +413,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 											try
 											{
 												session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+												MessageProducer producer = session.createProducer (destination);
+
 												m = session.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
@@ -444,6 +436,8 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								try
 								{
 									session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+									MessageProducer producer = session.createProducer (destination);
+
 									BytesMessage m = session.createBytesMessage ();
 									producer.send (m); // indicate EOF
 									producer.close ();
@@ -474,10 +468,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				catch ( ValidationException e )
 				{
 					log.error ("Invalid scan account request", e);
-				}
-				finally
-				{
-					closeSession (session);
 				}
 			}
 		});
