@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
 
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 /**
@@ -135,16 +134,6 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
-
-	/**
-	 * scan transactions matching the filter
-	 * 
-	 * @param filter
-	 * @param after
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void scanTransactions (BloomFilter filter, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * scan transactions for an account

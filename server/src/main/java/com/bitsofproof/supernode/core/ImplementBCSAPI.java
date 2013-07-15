@@ -16,11 +16,8 @@
 package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,7 +45,6 @@ import com.bitsofproof.supernode.api.Block;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TrunkUpdateMessage;
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Hash;
@@ -74,9 +70,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	private ConnectionFactory connectionFactory;
 
 	private Connection connection;
-
-	private final Map<String, MessageProducer> correlationProducer = new HashMap<String, MessageProducer> ();
-	private final Map<String, BloomFilter> correlationBloomFilter = Collections.synchronizedMap (new HashMap<String, BloomFilter> ());
 
 	private final ExecutorService requestProcessor = Executors.newFixedThreadPool (Runtime.getRuntime ().availableProcessors ());
 
@@ -169,7 +162,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addBlockrequestListener ();
 			addBlockHeaderRequestListener ();
 			addTransactionRequestListener ();
-			addBloomScanListener ();
 			addMatchScanListener ();
 			addPingListener ();
 			addAccountScanListener ();
@@ -192,90 +184,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			{
 			}
 		}
-	}
-
-	private void addBloomScanListener () throws JMSException
-	{
-		addQueueListener ("scanRequest", new SessionMessageListener ()
-		{
-			@Override
-			public void onMessage (Message msg)
-			{
-				BytesMessage o = (BytesMessage) msg;
-				byte[] body;
-				try
-				{
-					body = new byte[(int) o.getBodyLength ()];
-					o.readBytes (body);
-					BCSAPIMessage.FilterRequest request = BCSAPIMessage.FilterRequest.parseFrom (body);
-					byte[] data = request.getFilter ().toByteArray ();
-					long hashFunctions = request.getHashFunctions ();
-					long tweak = request.getTweak ();
-					UpdateMode updateMode = UpdateMode.values ()[request.getMode ()];
-					final BloomFilter filter = new BloomFilter (data, hashFunctions, tweak, updateMode);
-					final Destination destination = msg.getJMSReplyTo ();
-					requestProcessor.execute (new Runnable ()
-					{
-						@Override
-						public void run ()
-						{
-							Session session = null;
-							try
-							{
-								session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-								final MessageProducer producer = session.createProducer (destination);
-								final Session passInSession = session;
-
-								store.scan (filter, new TransactionProcessor ()
-								{
-									@Override
-									public void process (Tx tx)
-									{
-										try
-										{
-
-											if ( tx != null )
-											{
-												Transaction transaction = toBCSAPITransaction (tx, false);
-												BytesMessage m;
-												m = passInSession.createBytesMessage ();
-												m.writeBytes (transaction.toProtobuf ().toByteArray ());
-												producer.send (m);
-											}
-											else
-											{
-												BytesMessage m = passInSession.createBytesMessage ();
-												producer.send (m); // indicate EOF
-												producer.close ();
-											}
-										}
-										catch ( JMSException e )
-										{
-										}
-									}
-								});
-							}
-							catch ( ValidationException | JMSException e )
-							{
-								log.error ("Error while scanning", e);
-							}
-							finally
-							{
-								closeSession (session);
-							}
-						}
-					});
-				}
-				catch ( JMSException e )
-				{
-					log.error ("invalid scanRequest request", e);
-				}
-				catch ( InvalidProtocolBufferException e )
-				{
-					log.error ("invalid scanRequest request", e);
-				}
-			}
-		});
 	}
 
 	private void addMatchScanListener () throws JMSException
@@ -806,17 +714,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			m.writeBytes (transaction.toProtobuf ().toByteArray ());
 			MessageProducer transactionProducer = session.createProducer (session.createTopic ("transaction"));
 			transactionProducer.send (m);
-
-			synchronized ( correlationBloomFilter )
-			{
-				for ( Map.Entry<String, BloomFilter> e : correlationBloomFilter.entrySet () )
-				{
-					if ( tx.passesFilter (e.getValue ()) )
-					{
-						correlationProducer.get (e.getKey ()).send (m);
-					}
-				}
-			}
 		}
 		catch ( Exception e )
 		{

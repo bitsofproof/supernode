@@ -38,7 +38,6 @@ import javax.jms.TemporaryQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.Hash;
 import com.google.protobuf.ByteString;
@@ -383,83 +382,6 @@ public class JMSServerConnector implements BCSAPI
 			});
 
 			exactMatchProducer.send (m);
-			ready.acquireUninterruptibly ();
-		}
-		catch ( JMSException e )
-		{
-			throw new BCSAPIException (e);
-		}
-		finally
-		{
-			try
-			{
-				session.close ();
-			}
-			catch ( JMSException e )
-			{
-			}
-		}
-	}
-
-	@Override
-	public void scanTransactions (BloomFilter filter, final TransactionListener listener) throws BCSAPIException
-	{
-		Session session = null;
-		try
-		{
-			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
-			MessageProducer scanRequestProducer = session.createProducer (session.createQueue ("scanRequest"));
-			BytesMessage m = session.createBytesMessage ();
-
-			BCSAPIMessage.FilterRequest.Builder builder = BCSAPIMessage.FilterRequest.newBuilder ();
-			builder.setBcsapiversion (1);
-			builder.setFilter (ByteString.copyFrom (filter.getFilter ()));
-			builder.setHashFunctions ((int) filter.getHashFunctions ());
-			builder.setTweak ((int) filter.getTweak ());
-			builder.setMode (filter.getUpdateMode ().ordinal ());
-
-			m.writeBytes (builder.build ().toByteArray ());
-
-			final TemporaryQueue answerQueue = session.createTemporaryQueue ();
-			final MessageConsumer consumer = session.createConsumer (answerQueue);
-			m.setJMSReplyTo (answerQueue);
-			final Semaphore ready = new Semaphore (0);
-			consumer.setMessageListener (new MessageListener ()
-			{
-				@Override
-				public void onMessage (Message message)
-				{
-					BytesMessage m = (BytesMessage) message;
-					byte[] body;
-					try
-					{
-						if ( m.getBodyLength () > 0 )
-						{
-							body = new byte[(int) m.getBodyLength ()];
-							m.readBytes (body);
-							Transaction t = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
-							t.computeHash ();
-							listener.process (t);
-						}
-						else
-						{
-							consumer.close ();
-							answerQueue.delete ();
-							ready.release ();
-						}
-					}
-					catch ( JMSException e )
-					{
-						log.error ("Malformed message received for filter scan transactions", e);
-					}
-					catch ( InvalidProtocolBufferException e )
-					{
-						log.error ("Malformed message received for filter scan transactions", e);
-					}
-				}
-			});
-
-			scanRequestProducer.send (m);
 			ready.acquireUninterruptibly ();
 		}
 		catch ( JMSException e )
