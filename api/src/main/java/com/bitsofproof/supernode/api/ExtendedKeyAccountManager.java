@@ -85,6 +85,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public Key getKey (int i) throws ValidationException
 	{
+		ensureLookAhead (i);
 		return master.getKey (i);
 	}
 
