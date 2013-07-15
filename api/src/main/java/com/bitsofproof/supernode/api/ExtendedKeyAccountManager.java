@@ -20,15 +20,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
-import com.bitsofproof.supernode.common.ScriptFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.common.ValidationException;
 
 public class ExtendedKeyAccountManager extends BaseAccountManager implements TransactionListener
@@ -38,6 +35,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	private final Map<ByteVector, Integer> keyIDForAddress = new HashMap<ByteVector, Integer> ();
 	private ExtendedKey master;
 	private int nextSequence;
+	private int lookAhead = 100;
 
 	public ExtendedKey getMaster ()
 	{
@@ -52,16 +50,37 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	@Override
 	public int getNumberOfKeys ()
 	{
-		return nextSequence;
+		return keyIDForAddress.size ();
 	}
 
-	public void setNextSequence (int nextSequence) throws ValidationException
+	@Override
+	protected void notifyListener (Transaction t)
 	{
-		while ( this.nextSequence < nextSequence )
+		for ( TransactionOutput o : t.getOutputs () )
 		{
-			getNextKey ();
+			if ( isOwnAddress (o.getOutputAddress ()) )
+			{
+				int keyId = keyIDForAddress.get (new ByteVector (o.getOutputAddress ()));
+				ensureLookAhead (keyId);
+			}
 		}
-		this.nextSequence = nextSequence;
+		super.notifyListener (t);
+	}
+
+	private void ensureLookAhead (int from)
+	{
+		while ( keyIDForAddress.size () < (from + lookAhead) )
+		{
+			Key key = null;
+			try
+			{
+				key = master.getKey (keyIDForAddress.size ());
+			}
+			catch ( ValidationException e )
+			{
+			}
+			keyIDForAddress.put (new ByteVector (key.getAddress ()), keyIDForAddress.size ());
+		}
 	}
 
 	public Key getKey (int i) throws ValidationException
@@ -69,13 +88,16 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return master.getKey (i);
 	}
 
+	public void setNextKey (int i)
+	{
+		nextSequence = i;
+		ensureLookAhead (nextSequence);
+	}
+
 	@Override
 	public Key getNextKey () throws ValidationException
 	{
-		Key key = master.getKey (nextSequence);
-		keyIDForAddress.put (new ByteVector (key.getAddress ()), nextSequence);
-		++nextSequence;
-		return key;
+		return getKey (nextSequence++);
 	}
 
 	public Integer getKeyIDForAddress (byte[] address)
@@ -119,11 +141,8 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
 	{
-		final AtomicInteger lastUsedKey = new AtomicInteger (-1);
-		for ( int i = 0; i < lookAhead; ++i )
-		{
-			getNextKey ();
-		}
+		this.lookAhead = lookAhead;
+		ensureLookAhead (0);
 		log.trace ("Sync " + getName () + " nkeys: " + getNumberOfKeys ());
 		api.scanTransactions (getMaster (), lookAhead, getCreated (), new TransactionListener ()
 		{
@@ -132,40 +151,16 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 			{
 				for ( TransactionOutput o : t.getOutputs () )
 				{
-					try
+					Integer thisKey = getKeyIDForAddress (o.getOutputAddress ());
+					if ( thisKey != null )
 					{
-						for ( Token token : ScriptFormat.parse (o.getScript ()) )
-						{
-							if ( token.data != null )
-							{
-								Integer thisKey = getKeyIDForAddress (token.data);
-								if ( thisKey != null )
-								{
-									lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
-								}
-								else
-								{
-									while ( thisKey == null && (getNumberOfKeys () - lastUsedKey.get ()) < lookAhead )
-									{
-										getNextKey ();
-									}
-									thisKey = getKeyIDForAddress (token.data);
-									if ( thisKey != null )
-									{
-										lastUsedKey.set (Math.max (thisKey, lastUsedKey.get ()));
-									}
-								}
-							}
-						}
-					}
-					catch ( ValidationException e )
-					{
+						ensureLookAhead (thisKey);
+						nextSequence = Math.max (nextSequence, thisKey + 1);
 					}
 				}
 				updateWithTransaction (t);
 			}
 		});
-		setNextSequence (Math.min (lastUsedKey.get () + 1, getNumberOfKeys ()));
 		log.trace ("Sync " + getName () + " finished with nkeys: " + getNumberOfKeys ());
 	}
 }
