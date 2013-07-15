@@ -127,7 +127,7 @@ public interface BCSAPI
 	public void removeTrunkListener (TrunkListener listener);
 
 	/**
-	 * Match transactions using and address or outpoint in match. This returns only exact matches but limited in result set.
+	 * Match transactions using and address or outpoint in match.
 	 * 
 	 * @param match
 	 * @param listener

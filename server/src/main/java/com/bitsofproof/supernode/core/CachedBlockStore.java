@@ -413,15 +413,13 @@ public abstract class CachedBlockStore implements BlockStore
 		blockChain.addAll (appendList);
 	}
 
-	private static final int MAX_MATCH_SET = 1000;
-
 	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
 	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
 			throws ValidationException
 	{
 		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
-		lookAhead = Math.min (Math.max (10, lookAhead), MAX_MATCH_SET);
+		lookAhead = Math.min (Math.max (10, lookAhead), 1000);
 		for ( int i = 0; i < lookAhead; ++i )
 		{
 			ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
@@ -511,10 +509,6 @@ public abstract class CachedBlockStore implements BlockStore
 	@Override
 	public void filterTransactions (Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
 	{
-		if ( matchSet.size () > MAX_MATCH_SET )
-		{
-			throw new ValidationException ("Match set too big for filterTransactions. Use scan instead");
-		}
 		try
 		{
 			Map<ByteVector, List<Integer>> hashes = new HashMap<ByteVector, List<Integer>> ();
