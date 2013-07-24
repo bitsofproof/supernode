@@ -50,7 +50,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	@Override
 	public int getNumberOfKeys ()
 	{
-		return keyIDForAddress.size ();
+		return nextSequence;
 	}
 
 	@Override
