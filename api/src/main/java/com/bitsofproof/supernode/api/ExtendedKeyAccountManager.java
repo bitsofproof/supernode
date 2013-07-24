@@ -18,10 +18,8 @@ package com.bitsofproof.supernode.api;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,12 +140,11 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		super (name, created);
 	}
 
-	public Set<Integer> sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
 	{
 		this.lookAhead = lookAhead;
-		final Set<Integer> usedIndices = new HashSet<Integer> ();
 		ensureLookAhead (0);
-		log.trace ("Sync start " + getName ());
+		log.trace ("Sync " + getName () + " nkeys: " + getNumberOfKeys ());
 		api.scanTransactions (getMaster (), lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
@@ -158,7 +155,6 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 					Integer thisKey = getKeyIDForAddress (o.getOutputAddress ());
 					if ( thisKey != null )
 					{
-						usedIndices.add (thisKey);
 						ensureLookAhead (thisKey);
 						nextSequence = Math.max (nextSequence, thisKey + 1);
 					}
@@ -166,7 +162,6 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 				updateWithTransaction (t);
 			}
 		});
-		log.trace ("Sync finish " + getName () + " used: " + usedIndices.size () + " keys of " + getNumberOfKeys () + " look ahead:" + lookAhead);
-		return usedIndices;
+		log.trace ("Sync " + getName () + " finished with nkeys: " + getNumberOfKeys ());
 	}
 }
