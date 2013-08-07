@@ -23,7 +23,7 @@ _Use our ready to go hosted BOP Server instance! Get an evaluation access, attra
 
 Build the Community Server
 --------------------------
-Make sure you have Maven3, JDK 7 and Google protobuf compiler 2.4.1 installed.
+Make sure you have Maven3, JDK 7 (with JCE Unlimited Strength Policy Jurisdiction) and Google protobuf compiler 2.4.1 installed.
 
    git clone https://github.com/bitsofproof/supernode
 
