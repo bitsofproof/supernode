@@ -41,7 +41,7 @@ import com.bitsofproof.supernode.api.AccountManager;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
-import com.bitsofproof.supernode.api.FileWallet;
+import com.bitsofproof.supernode.api.ExtendedKeySetWallet;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TrunkListener;
@@ -175,9 +175,7 @@ public class APITest
 	{
 		store.resetStore (chain);
 		store.cache (chain, 0);
-		wallet = new FileWallet ("test.wallet");
-		wallet.init ("passphrase");
-		wallet.unlock ("passphrase");
+		wallet = new ExtendedKeySetWallet ();
 
 		alice = wallet.createAccountManager ("Alice");
 		bob = wallet.createAccountManager ("Bob");

@@ -32,7 +32,6 @@ public class FileWallet implements Wallet
 		return new File (fileName).exists ();
 	}
 
-	@Override
 	public void init (String passphrase)
 	{
 		master = null;
@@ -47,7 +46,6 @@ public class FileWallet implements Wallet
 		}
 	}
 
-	@Override
 	public void unlock (String passphrase) throws ValidationException
 	{
 		master = ExtendedKey.createFromPassphrase (passphrase, encryptedSeed);
@@ -62,7 +60,6 @@ public class FileWallet implements Wallet
 		}
 	}
 
-	@Override
 	public void lock ()
 	{
 		master = null;
@@ -89,7 +86,7 @@ public class FileWallet implements Wallet
 			wallet.signature = walletMessage.getSignature ().toByteArray ();
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
-				ExtendedKeyAccountManager am = new ExtendedKeyAccountManager (account.getName (), account.getCreated ());
+				ExtendedKeyAccountManager am = new ExtendedKeyAccountManager (account.getName (), account.getCreated () * 1000);
 				wallet.accounts.put (account.getName (), am);
 				am.setMaster (ExtendedKey.parse (account.getPublicKey ()));
 			}
@@ -128,7 +125,7 @@ public class FileWallet implements Wallet
 			{
 				throw new ValidationException ("The wallet is locked");
 			}
-			ExtendedKeyAccountManager account = new ExtendedKeyAccountManager (name, System.currentTimeMillis () / 1000);
+			ExtendedKeyAccountManager account = new ExtendedKeyAccountManager (name, System.currentTimeMillis ());
 			account.setMaster (master.getChild (accounts.size () | 0x80000000));
 			accounts.put (name, account);
 			return account;
@@ -148,7 +145,7 @@ public class FileWallet implements Wallet
 			{
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());
-				ab.setCreated (am.getCreated ());
+				ab.setCreated (am.getCreated () / 1000);
 				ab.setPublicKey (am.getMaster ().getReadOnly ().serialize (true));
 				builder.addAccounts (ab.build ());
 			}

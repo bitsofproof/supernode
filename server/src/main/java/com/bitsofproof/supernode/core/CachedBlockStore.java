@@ -433,7 +433,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( CachedBlock cb : blockChain )
 			{
-				if ( after > 1231006505 && cb.time <= after || after < 1231006505 && cb.height <= after )
+				if ( after > 1231006505000L && cb.time * 1000 <= after || after < 1231006505000L && cb.height <= after )
 				{
 					continue;
 				}
@@ -517,7 +517,7 @@ public abstract class CachedBlockStore implements BlockStore
 
 			for ( CachedBlock cb : blockChain )
 			{
-				if ( after > 1231006505 && cb.time <= after || after < 1231006505 && cb.height <= after )
+				if ( after > 1231006505000L && cb.time * 1000 <= after || after < 1231006505000L && cb.height <= after )
 				{
 					continue;
 				}
