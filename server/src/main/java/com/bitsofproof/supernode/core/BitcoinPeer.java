@@ -326,12 +326,6 @@ public class BitcoinPeer extends P2P.Peer
 						+ getNetwork ().getNumberOfConnections ());
 				network.addPeer (peer);
 				peer.send (peer.createMessage ("getaddr"));
-				if ( peer.getVersion () > 60001 )
-				{
-					MempoolMessage mp = (MempoolMessage) peer.createMessage ("mempool");
-
-					peer.send (mp);
-				}
 			}
 		});
 	}
