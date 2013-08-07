@@ -16,7 +16,7 @@ public class ExtendedKeySetWallet implements Wallet
 			throw new ValidationException (name + " account manager exsists");
 		}
 		ExtendedKeyAccountManager manager;
-		accountManager.put (name, manager = new ExtendedKeyAccountManager (name, created));
+		accountManager.put (name, manager = new ExtendedKeyAccountManager ());
 		manager.setMaster (key);
 	}
 
@@ -34,7 +34,7 @@ public class ExtendedKeySetWallet implements Wallet
 			throw new ValidationException (name + " account manager exsists");
 		}
 		ExtendedKeyAccountManager manager;
-		accountManager.put (name, manager = new ExtendedKeyAccountManager (name, System.currentTimeMillis ()));
+		accountManager.put (name, manager = new ExtendedKeyAccountManager ());
 		manager.setMaster (ExtendedKey.createNew ());
 		return manager;
 	}

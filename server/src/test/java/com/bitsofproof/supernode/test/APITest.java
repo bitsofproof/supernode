@@ -67,26 +67,21 @@ public class APITest
 
 	private static final long COIN = 100000000L;
 	private static final long FEE = COIN / 1000L;
-	private static Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
-
-	private static Wallet wallet;
-	private static AccountManager alice;
-	private static AccountManager bob;
 
 	private static class AccountMonitor implements AccountListener
 	{
 		private final Semaphore ready = new Semaphore (0);
-		private final String name;
+		private final AccountManager account;
 
-		public AccountMonitor (String name)
+		public AccountMonitor (AccountManager account)
 		{
-			this.name = name;
+			this.account = account;
 		}
 
 		@Override
 		public void accountChanged (AccountManager account, Transaction t)
 		{
-			assertTrue (account.getName ().equals (name));
+			assertTrue (this.account == account);
 			ready.release ();
 		}
 
@@ -159,11 +154,6 @@ public class APITest
 		}
 	}
 
-	private static final AccountMonitor bobMonitor = new AccountMonitor ("Bob");
-	private static final AccountMonitor aliceMonitor = new AccountMonitor ("Alice");
-
-	private static final ValidationMonitor validationMonitor = new ValidationMonitor ();
-
 	@BeforeClass
 	public static void provider ()
 	{
@@ -173,12 +163,19 @@ public class APITest
 	@Test
 	public void test () throws BCSAPIException, ValidationException, IOException
 	{
+		Map<Integer, Block> blocks = new HashMap<Integer, Block> ();
+
+		Wallet wallet = new ExtendedKeySetWallet ();
+		AccountManager alice = wallet.createAccountManager ("Alice");
+		AccountManager bob = wallet.createAccountManager ("Bob");
+
+		AccountMonitor bobMonitor = new AccountMonitor (bob);
+		AccountMonitor aliceMonitor = new AccountMonitor (alice);
+		ValidationMonitor validationMonitor = new ValidationMonitor ();
+
 		store.resetStore (chain);
 		store.cache (chain, 0);
-		wallet = new ExtendedKeySetWallet ();
 
-		alice = wallet.createAccountManager ("Alice");
-		bob = wallet.createAccountManager ("Bob");
 		api.registerTransactionListener (alice);
 		api.registerTransactionListener (bob);
 

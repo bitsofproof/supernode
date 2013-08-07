@@ -23,9 +23,20 @@ import com.bitsofproof.supernode.common.ValidationException;
 
 public interface AccountManager extends TransactionListener
 {
-	public String getName ();
+	public interface UTXO
+	{
 
-	public long getCreated ();
+		public void add (TransactionOutput out);
+
+		public Collection<TransactionOutput> getUTXO ();
+
+		public TransactionOutput get (String tx, long ix);
+
+		public TransactionOutput remove (String tx, long ix);
+
+		public long getTotal ();
+
+	}
 
 	public int getNumberOfKeys ();
 

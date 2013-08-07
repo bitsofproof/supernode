@@ -20,7 +20,30 @@ public class FileWallet implements Wallet
 	private byte[] signature;
 	private String fileName;
 
-	private final Map<String, ExtendedKeyAccountManager> accounts = new HashMap<String, ExtendedKeyAccountManager> ();
+	private static class NCExtendedKeyAccountManager extends ExtendedKeyAccountManager
+	{
+		private final String name;
+		private final long created;
+
+		public NCExtendedKeyAccountManager (String name, long created)
+		{
+			super ();
+			this.name = name;
+			this.created = created;
+		}
+
+		public String getName ()
+		{
+			return name;
+		}
+
+		public long getCreated ()
+		{
+			return created;
+		}
+	}
+
+	private final Map<String, NCExtendedKeyAccountManager> accounts = new HashMap<String, NCExtendedKeyAccountManager> ();
 
 	public FileWallet (String fileName)
 	{
@@ -86,7 +109,7 @@ public class FileWallet implements Wallet
 			wallet.signature = walletMessage.getSignature ().toByteArray ();
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
-				ExtendedKeyAccountManager am = new ExtendedKeyAccountManager (account.getName (), account.getCreated () * 1000);
+				NCExtendedKeyAccountManager am = new NCExtendedKeyAccountManager (account.getName (), account.getCreated () * 1000);
 				wallet.accounts.put (account.getName (), am);
 				am.setMaster (ExtendedKey.parse (account.getPublicKey ()));
 			}
@@ -100,9 +123,9 @@ public class FileWallet implements Wallet
 
 	public void sync (BCSAPI api, int lookAhead) throws BCSAPIException, ValidationException
 	{
-		for ( ExtendedKeyAccountManager account : accounts.values () )
+		for ( NCExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.sync (api, lookAhead);
+			account.sync (api, lookAhead, account.getCreated ());
 		}
 	}
 
@@ -125,7 +148,7 @@ public class FileWallet implements Wallet
 			{
 				throw new ValidationException ("The wallet is locked");
 			}
-			ExtendedKeyAccountManager account = new ExtendedKeyAccountManager (name, System.currentTimeMillis ());
+			NCExtendedKeyAccountManager account = new NCExtendedKeyAccountManager (name, System.currentTimeMillis ());
 			account.setMaster (master.getChild (accounts.size () | 0x80000000));
 			accounts.put (name, account);
 			return account;
@@ -141,7 +164,7 @@ public class FileWallet implements Wallet
 			builder.setBcsapiversion (1);
 			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
 			builder.setSignature (ByteString.copyFrom (signature));
-			for ( ExtendedKeyAccountManager am : accounts.values () )
+			for ( NCExtendedKeyAccountManager am : accounts.values () )
 			{
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());

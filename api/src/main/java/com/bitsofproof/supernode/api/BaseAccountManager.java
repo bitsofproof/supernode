@@ -34,13 +34,10 @@ public abstract class BaseAccountManager implements AccountManager
 	private static final long MINIMUM_FEE = 10000;
 	private static final long MAXIMUM_FEE = 1000000;
 
-	private final InMemoryUTXO confirmed = new InMemoryUTXO ();
-	private final InMemoryUTXO change = new InMemoryUTXO ();
-	private final InMemoryUTXO receiving = new InMemoryUTXO ();
-	private final InMemoryUTXO sending = new InMemoryUTXO ();
-
-	private final long created;
-	private final String name;
+	private final UTXO confirmed = createConfirmedUTXO ();
+	private final UTXO change = createChangeUTXO ();
+	private final UTXO receiving = createReceivingUTXO ();
+	private final UTXO sending = createSendingUTXO ();
 
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> transactions = new HashMap<String, Transaction> ();
@@ -50,27 +47,29 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public abstract Key getNextKey () throws ValidationException;
 
-	public BaseAccountManager (String name, long created)
+	protected UTXO createConfirmedUTXO ()
 	{
-		this.name = name;
-		this.created = created;
+		return new InMemoryUTXO ();
+	}
+
+	protected UTXO createChangeUTXO ()
+	{
+		return new InMemoryUTXO ();
+	}
+
+	protected UTXO createSendingUTXO ()
+	{
+		return new InMemoryUTXO ();
+	}
+
+	protected UTXO createReceivingUTXO ()
+	{
+		return new InMemoryUTXO ();
 	}
 
 	public boolean isOwnAddress (byte[] address)
 	{
 		return getKeyForAddress (address) != null;
-	}
-
-	@Override
-	public String getName ()
-	{
-		return name;
-	}
-
-	@Override
-	public long getCreated ()
-	{
-		return created;
 	}
 
 	protected static class TransactionSink
@@ -96,14 +95,6 @@ public abstract class BaseAccountManager implements AccountManager
 		}
 	}
 
-	public List<TransactionOutput> getSources (long amount, long fee, String color)
-	{
-		synchronized ( confirmed )
-		{
-			return confirmed.getSufficientSources (amount, fee, null);
-		}
-	}
-
 	public static long estimateFee (Transaction t)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
@@ -111,7 +102,7 @@ public abstract class BaseAccountManager implements AccountManager
 		return Math.min (MAXIMUM_FEE, Math.max (MINIMUM_FEE, writer.toByteArray ().length / 1000 * MINIMUM_FEE));
 	}
 
-	public Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks) throws ValidationException
+	protected Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks) throws ValidationException
 	{
 		long fee = MINIMUM_FEE;
 		long prevfee = MINIMUM_FEE;
@@ -124,7 +115,7 @@ public abstract class BaseAccountManager implements AccountManager
 		return t;
 	}
 
-	public Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks, long fee) throws ValidationException
+	protected Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks, long fee) throws ValidationException
 	{
 		if ( fee < 0 || fee > MAXIMUM_FEE )
 		{
@@ -293,13 +284,77 @@ public abstract class BaseAccountManager implements AccountManager
 		return hash;
 	}
 
+	private List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
+	{
+		List<TransactionOutput> candidates = new ArrayList<TransactionOutput> ();
+		candidates.addAll (confirmed.getUTXO ());
+		// prefer confirmed
+		Collections.sort (candidates, new Comparator<TransactionOutput> ()
+		{
+			// prefer aggregation of UTXO
+			@Override
+			public int compare (TransactionOutput o1, TransactionOutput o2)
+			{
+				return (int) (o1.getValue () - o2.getValue ());
+			}
+		});
+		List<TransactionOutput> changelist = new ArrayList<TransactionOutput> ();
+		changelist.addAll (change.getUTXO ());
+		// ... then change
+		Collections.sort (changelist, new Comparator<TransactionOutput> ()
+		{
+			// prefer aggregation of UTXO
+			@Override
+			public int compare (TransactionOutput o1, TransactionOutput o2)
+			{
+				return (int) (o1.getValue () - o2.getValue ());
+			}
+		});
+		candidates.addAll (changelist);
+
+		List<TransactionOutput> result = new ArrayList<TransactionOutput> ();
+		long sum = 0;
+		for ( TransactionOutput o : candidates )
+		{
+			if ( color == null )
+			{
+				if ( o.getColor () == null )
+				{
+					sum += o.getValue ();
+					result.add (o);
+					if ( sum >= (amount + fee) )
+					{
+						return result;
+					}
+				}
+			}
+			else
+			{
+				if ( o.getColor ().equals (color) )
+				{
+					sum += o.getValue ();
+					result.add (o);
+					if ( sum >= amount )
+					{
+						if ( fee > 0 )
+						{
+							result.addAll (getSufficientSources (0, fee, null));
+						}
+						return result;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
 	@Override
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException
 	{
 		synchronized ( confirmed )
 		{
 			log.trace ("pay to " + ByteUtils.toHex (receiver) + " " + amount + " + " + fee);
-			List<TransactionOutput> sources = confirmed.getSufficientSources (amount, fee, null);
+			List<TransactionOutput> sources = getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
@@ -348,7 +403,7 @@ public abstract class BaseAccountManager implements AccountManager
 			{
 				amount += a;
 			}
-			List<TransactionOutput> sources = confirmed.getSufficientSources (amount, fee, null);
+			List<TransactionOutput> sources = getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
@@ -661,7 +716,7 @@ public abstract class BaseAccountManager implements AccountManager
 		}
 	}
 
-	private void dumpUTXO (PrintStream print, InMemoryUTXO set)
+	private void dumpUTXO (PrintStream print, UTXO set)
 	{
 		for ( TransactionOutput o : set.getUTXO () )
 		{

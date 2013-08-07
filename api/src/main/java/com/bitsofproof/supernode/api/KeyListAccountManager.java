@@ -24,11 +24,6 @@ public class KeyListAccountManager extends BaseAccountManager
 	private final List<ECKeyPair> keys = new ArrayList<ECKeyPair> ();
 	private static final SecureRandom rnd = new SecureRandom ();
 
-	public KeyListAccountManager (String name, long created)
-	{
-		super (name, created);
-	}
-
 	@Override
 	public int getNumberOfKeys ()
 	{
@@ -64,10 +59,10 @@ public class KeyListAccountManager extends BaseAccountManager
 		keyByAddress.put (new ByteVector (key.getAddress ()), key);
 	}
 
-	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api, long created) throws BCSAPIException, ValidationException
 	{
-		log.trace ("Sync " + getName () + " nkeys: " + keys.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		log.trace ("Sync nkeys: " + keys.size ());
+		api.scanTransactions (getAddresses (), UpdateMode.all, created, new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
@@ -75,6 +70,6 @@ public class KeyListAccountManager extends BaseAccountManager
 				updateWithTransaction (t);
 			}
 		});
-		log.trace ("Sync " + getName () + " finished nkeys: " + keys.size ());
+		log.trace ("Sync finished nkeys: " + keys.size ());
 	}
 }

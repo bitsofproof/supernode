@@ -20,11 +20,6 @@ public class AddressListAccountManager extends BaseAccountManager
 
 	private final Set<ByteVector> addresses = new HashSet<ByteVector> ();
 
-	public AddressListAccountManager (String name, long created)
-	{
-		super (name, created);
-	}
-
 	@Override
 	public int getNumberOfKeys ()
 	{
@@ -65,10 +60,10 @@ public class AddressListAccountManager extends BaseAccountManager
 		addresses.add (new ByteVector (address));
 	}
 
-	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api, long created) throws BCSAPIException, ValidationException
 	{
-		log.trace ("Sync " + getName () + " naddr: " + addresses.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		log.trace ("Sync naddr: " + addresses.size ());
+		api.scanTransactions (getAddresses (), UpdateMode.all, created, new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
@@ -76,6 +71,6 @@ public class AddressListAccountManager extends BaseAccountManager
 				updateWithTransaction (t);
 			}
 		});
-		log.trace ("Sync " + getName () + " finished naddr: " + addresses.size ());
+		log.trace ("Sync finished naddr: " + addresses.size ());
 	}
 }
