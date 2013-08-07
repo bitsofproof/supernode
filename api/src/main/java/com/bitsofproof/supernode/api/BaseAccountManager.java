@@ -284,7 +284,7 @@ public abstract class BaseAccountManager implements AccountManager
 		return hash;
 	}
 
-	private List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
+	protected List<TransactionOutput> getSufficientSources (long amount, long fee, String color)
 	{
 		List<TransactionOutput> candidates = new ArrayList<TransactionOutput> ();
 		candidates.addAll (confirmed.getUTXO ());
