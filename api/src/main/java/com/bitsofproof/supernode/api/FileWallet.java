@@ -21,27 +21,22 @@ public class FileWallet implements Wallet
 	private byte[] encrypted;
 	private byte[] signature;
 	private String fileName;
+	private long since;
 
 	private static class NCExtendedKeyAccountManager extends ExtendedKeyAccountManager
 	{
 		private final String name;
-		private final long created;
 
 		public NCExtendedKeyAccountManager (String name, long created)
 		{
 			super ();
 			this.name = name;
-			this.created = created;
+			setCreated (created);
 		}
 
 		public String getName ()
 		{
 			return name;
-		}
-
-		public long getCreated ()
-		{
-			return created;
 		}
 	}
 
@@ -71,9 +66,10 @@ public class FileWallet implements Wallet
 		}
 	}
 
-	public void init (String passphrase, ExtendedKey master, boolean production)
+	public void init (String passphrase, ExtendedKey master, boolean production, long since)
 	{
 		this.master = master;
+		this.since = since;
 		try
 		{
 			encrypted = master.encrypt (passphrase, production);
@@ -155,7 +151,7 @@ public class FileWallet implements Wallet
 	{
 		for ( NCExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.sync (api, lookAhead, account.getCreated ());
+			account.sync (api, lookAhead);
 		}
 	}
 
@@ -178,7 +174,7 @@ public class FileWallet implements Wallet
 			{
 				throw new ValidationException ("The wallet is locked");
 			}
-			NCExtendedKeyAccountManager account = new NCExtendedKeyAccountManager (name, System.currentTimeMillis ());
+			NCExtendedKeyAccountManager account = new NCExtendedKeyAccountManager (name, Math.min (System.currentTimeMillis (), since));
 			account.setMaster (master.getChild (accounts.size () | 0x80000000));
 			accounts.put (name, account);
 			return account;

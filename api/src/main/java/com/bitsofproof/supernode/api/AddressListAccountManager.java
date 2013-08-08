@@ -60,10 +60,10 @@ public class AddressListAccountManager extends BaseAccountManager
 		addresses.add (new ByteVector (address));
 	}
 
-	public void sync (BCSAPI api, long created) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
 	{
 		log.trace ("Sync naddr: " + addresses.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, created, new TransactionListener ()
+		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)

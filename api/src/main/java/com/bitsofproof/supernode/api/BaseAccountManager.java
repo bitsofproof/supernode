@@ -39,6 +39,19 @@ public abstract class BaseAccountManager implements AccountManager
 	private final UTXO receiving = createReceivingUTXO ();
 	private final UTXO sending = createSendingUTXO ();
 
+	private long created;
+
+	@Override
+	public long getCreated ()
+	{
+		return created;
+	}
+
+	public void setCreated (long created)
+	{
+		this.created = created;
+	}
+
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> transactions = new HashMap<String, Transaction> ();
 

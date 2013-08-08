@@ -138,12 +138,12 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return addresses;
 	}
 
-	public void sync (BCSAPI api, final int lookAhead, long created) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
 	{
 		this.lookAhead = lookAhead;
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + getNumberOfKeys ());
-		api.scanTransactions (getMaster (), lookAhead, created, new TransactionListener ()
+		api.scanTransactions (getMaster (), lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
