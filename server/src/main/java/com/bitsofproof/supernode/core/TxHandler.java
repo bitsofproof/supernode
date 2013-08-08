@@ -186,8 +186,8 @@ public class TxHandler implements TrunkListener
 								if ( network.getStore ().getTransaction (t.getHash ()) == null )
 								{
 									network.getStore ().validateTransaction (t, availableOutput);
-									sendTransaction (t, peer);
 									cacheTransaction (t);
+									sendTransaction (t, peer);
 									notifyListener (t, false);
 								}
 								return null;

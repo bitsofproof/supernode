@@ -6,7 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.bitsofproof.supernode.common.ValidationException;
@@ -16,7 +18,7 @@ public class FileWallet implements Wallet
 {
 	private static final SecureRandom random = new SecureRandom ();
 	private transient ExtendedKey master;
-	private byte[] encryptedSeed;
+	private byte[] encrypted;
 	private byte[] signature;
 	private String fileName;
 
@@ -58,28 +60,45 @@ public class FileWallet implements Wallet
 	public void init (String passphrase)
 	{
 		master = null;
-		encryptedSeed = new byte[32];
-		random.nextBytes (encryptedSeed);
+		encrypted = new byte[32];
+		random.nextBytes (encrypted);
 		try
 		{
-			signature = ExtendedKey.createFromPassphrase (passphrase, encryptedSeed).getMaster ().sign (encryptedSeed);
+			signature = ExtendedKey.createFromPassphrase (passphrase, encrypted).getMaster ().sign (encrypted);
 		}
 		catch ( ValidationException e )
 		{
 		}
 	}
 
+	public void init (String passphrase, ExtendedKey master, boolean production)
+	{
+		this.master = master;
+		try
+		{
+			encrypted = master.encrypt (passphrase, production);
+			signature = ExtendedKey.createFromPassphrase (passphrase, encrypted).getMaster ().sign (encrypted);
+		}
+		catch ( ValidationException e )
+		{
+		}
+	}
+
+	public ExtendedKey getMaster ()
+	{
+		return master;
+	}
+
 	public void unlock (String passphrase) throws ValidationException
 	{
-		master = ExtendedKey.createFromPassphrase (passphrase, encryptedSeed);
-		if ( !master.getMaster ().verify (encryptedSeed, signature) )
+		master = ExtendedKey.createFromPassphrase (passphrase, encrypted);
+		if ( !master.getMaster ().verify (encrypted, signature) )
 		{
 			throw new ValidationException ("incorrect passphrase");
 		}
-		int i = 0;
-		for ( ExtendedKeyAccountManager account : accounts.values () )
+		for ( NCExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.setMaster (master.getChild (i++ | 0x80000000));
+			account.setMaster (master.getChild (account.getMaster ().getSequence ()));
 		}
 	}
 
@@ -90,6 +109,16 @@ public class FileWallet implements Wallet
 		{
 			account.setMaster (account.getMaster ().getReadOnly ());
 		}
+	}
+
+	public List<String> getAccountNames ()
+	{
+		List<String> names = new ArrayList<String> ();
+		for ( NCExtendedKeyAccountManager account : accounts.values () )
+		{
+			names.add (account.getName ());
+		}
+		return names;
 	}
 
 	public void setFileName (String fileName)
@@ -105,13 +134,14 @@ public class FileWallet implements Wallet
 		try
 		{
 			BCSAPIMessage.Wallet walletMessage = BCSAPIMessage.Wallet.parseFrom (in);
-			wallet.encryptedSeed = walletMessage.getEncryptedSeed ().toByteArray ();
+			wallet.encrypted = walletMessage.getEncryptedSeed ().toByteArray ();
 			wallet.signature = walletMessage.getSignature ().toByteArray ();
 			for ( BCSAPIMessage.Wallet.Account account : walletMessage.getAccountsList () )
 			{
+				ExtendedKey pub = ExtendedKey.parse (account.getPublicKey ());
 				NCExtendedKeyAccountManager am = new NCExtendedKeyAccountManager (account.getName (), account.getCreated () * 1000);
 				wallet.accounts.put (account.getName (), am);
-				am.setMaster (ExtendedKey.parse (account.getPublicKey ()));
+				am.setMaster (pub);
 			}
 		}
 		finally
@@ -162,7 +192,7 @@ public class FileWallet implements Wallet
 		{
 			BCSAPIMessage.Wallet.Builder builder = BCSAPIMessage.Wallet.newBuilder ();
 			builder.setBcsapiversion (1);
-			builder.setEncryptedSeed (ByteString.copyFrom (encryptedSeed));
+			builder.setEncryptedSeed (ByteString.copyFrom (encrypted));
 			builder.setSignature (ByteString.copyFrom (signature));
 			for ( NCExtendedKeyAccountManager am : accounts.values () )
 			{

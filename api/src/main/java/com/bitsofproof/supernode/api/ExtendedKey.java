@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -30,6 +31,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.asn1.sec.SECNamedCurves;
@@ -60,15 +62,28 @@ public class ExtendedKey
 
 	private static final byte[] BITCOIN_SEED = "Bitcoin seed".getBytes ();
 
-	public static ExtendedKey createFromPassphrase (String passphrase, byte[] encryptedSeed) throws ValidationException
+	public static ExtendedKey createFromPassphrase (String passphrase, byte[] encrypted) throws ValidationException
 	{
 		try
 		{
 			byte[] key = SCrypt.generate (passphrase.getBytes ("UTF-8"), BITCOIN_SEED, 16384, 8, 8, 32);
-			Cipher cipher = Cipher.getInstance ("AES/ECB/NoPadding", "BC");
 			SecretKeySpec keyspec = new SecretKeySpec (key, "AES");
-			cipher.init (Cipher.DECRYPT_MODE, keyspec);
-			return create (cipher.doFinal (encryptedSeed));
+			if ( encrypted.length == 32 )
+			{
+				// asssume encrypted is seed
+				Cipher cipher = Cipher.getInstance ("AES/ECB/NoPadding", "BC");
+				cipher.init (Cipher.DECRYPT_MODE, keyspec);
+				return create (cipher.doFinal (encrypted));
+			}
+			else
+			{
+				// assume encrypted serialization of a key
+				Cipher cipher = Cipher.getInstance ("AES/CBC/PKCS5Padding", "BC");
+				byte[] iv = Arrays.copyOfRange (encrypted, 0, 16);
+				byte[] data = Arrays.copyOfRange (encrypted, 16, encrypted.length);
+				cipher.init (Cipher.DECRYPT_MODE, keyspec, new IvParameterSpec (iv));
+				return ExtendedKey.parse (new String (cipher.doFinal (data)));
+			}
 		}
 		catch ( UnsupportedEncodingException e )
 		{
@@ -95,6 +110,32 @@ public class ExtendedKey
 			throw new ValidationException (e);
 		}
 		catch ( NoSuchPaddingException e )
+		{
+			throw new ValidationException (e);
+		}
+		catch ( InvalidAlgorithmParameterException e )
+		{
+			throw new ValidationException (e);
+		}
+	}
+
+	public byte[] encrypt (String passphrase, boolean production) throws ValidationException
+	{
+		try
+		{
+			byte[] key = SCrypt.generate (passphrase.getBytes ("UTF-8"), BITCOIN_SEED, 16384, 8, 8, 32);
+			SecretKeySpec keyspec = new SecretKeySpec (key, "AES");
+			Cipher cipher = Cipher.getInstance ("AES/CBC/PKCS5Padding", "BC");
+			cipher.init (Cipher.ENCRYPT_MODE, keyspec);
+			byte[] iv = cipher.getIV ();
+			byte[] c = cipher.doFinal (serialize (production).getBytes ());
+			byte[] result = new byte[iv.length + c.length];
+			System.arraycopy (iv, 0, result, 0, iv.length);
+			System.arraycopy (c, 0, result, iv.length, c.length);
+			return result;
+		}
+		catch ( UnsupportedEncodingException | NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException
+				| IllegalBlockSizeException | BadPaddingException e )
 		{
 			throw new ValidationException (e);
 		}

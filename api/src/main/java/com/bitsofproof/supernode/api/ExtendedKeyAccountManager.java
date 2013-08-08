@@ -130,7 +130,10 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		List<byte[]> addresses = new ArrayList<byte[]> ();
 		for ( ByteVector v : keyIDForAddress.keySet () )
 		{
-			addresses.add (v.toByteArray ());
+			if ( keyIDForAddress.get (v).intValue () < nextSequence )
+			{
+				addresses.add (v.toByteArray ());
+			}
 		}
 		return addresses;
 	}
