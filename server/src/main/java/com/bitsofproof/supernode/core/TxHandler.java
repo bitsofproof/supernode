@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,50 +166,61 @@ public class TxHandler implements TrunkListener
 
 	}
 
+	private final Semaphore serializedValidation = new Semaphore (1);
+
 	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer) throws ValidationException
 	{
-		ValidationException exception = network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
+		try
 		{
-			@Override
-			public void run (TxOutCache cache) throws ValidationException
-			{
-				if ( !unconfirmed.containsKey (t.getHash ()) )
-				{
-					ValidationException exception = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
-					{
-						@Override
-						public ValidationException doInTransaction (TransactionStatus status)
-						{
-							status.setRollbackOnly ();
+			serializedValidation.acquireUninterruptibly ();
 
-							try
-							{
-								if ( network.getStore ().getTransaction (t.getHash ()) == null )
-								{
-									network.getStore ().validateTransaction (t, availableOutput);
-									cacheTransaction (t);
-									sendTransaction (t, peer);
-									notifyListener (t, false);
-								}
-								return null;
-							}
-							catch ( ValidationException e )
-							{
-								return e;
-							}
-						}
-					});
-					if ( exception != null )
+			ValidationException exception = network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
+			{
+				@Override
+				public void run (TxOutCache cache) throws ValidationException
+				{
+					if ( !unconfirmed.containsKey (t.getHash ()) )
 					{
-						throw exception;
+						ValidationException exception = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
+						{
+							@Override
+							public ValidationException doInTransaction (TransactionStatus status)
+							{
+								status.setRollbackOnly ();
+
+								try
+								{
+									if ( network.getStore ().getTransaction (t.getHash ()) == null )
+									{
+										network.getStore ().validateTransaction (t, availableOutput);
+										cacheTransaction (t);
+										sendTransaction (t, peer);
+										notifyListener (t, false);
+									}
+									return null;
+								}
+								catch ( ValidationException e )
+								{
+									return e;
+								}
+							}
+						});
+						if ( exception != null )
+						{
+							throw exception;
+						}
 					}
 				}
+			});
+			if ( exception != null )
+			{
+				log.debug ("REJECTING transaction " + t.getHash ());
+				throw exception;
 			}
-		});
-		if ( exception != null )
+		}
+		finally
 		{
-			log.debug ("REJECTING transaction " + t.getHash ());
-			throw exception;
+			serializedValidation.release ();
 		}
 	}
 
