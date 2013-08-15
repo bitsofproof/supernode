@@ -45,6 +45,7 @@ public class FileWallet implements Wallet
 	public FileWallet (String fileName)
 	{
 		this.fileName = fileName;
+		this.since = System.currentTimeMillis ();
 	}
 
 	public boolean exists ()
