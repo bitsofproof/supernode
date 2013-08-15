@@ -63,7 +63,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
 	{
 		log.trace ("Sync naddr: " + addresses.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)

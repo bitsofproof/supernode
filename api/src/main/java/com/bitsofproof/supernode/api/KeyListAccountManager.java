@@ -62,7 +62,7 @@ public class KeyListAccountManager extends BaseAccountManager
 	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
 	{
 		log.trace ("Sync nkeys: " + keys.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)

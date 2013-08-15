@@ -143,7 +143,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		this.lookAhead = lookAhead;
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + getNumberOfKeys ());
-		api.scanTransactions (getMaster (), lookAhead, getCreated (), new TransactionListener ()
+		api.scanUTXO (getMaster (), lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
