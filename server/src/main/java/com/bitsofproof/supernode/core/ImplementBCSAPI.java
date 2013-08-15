@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.jms.BytesMessage;
 import javax.jms.Connection;
@@ -197,6 +198,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
 					final Destination destination = msg.getJMSReplyTo ();
 					final long after = request.hasAfter () ? request.getAfter () : 0;
+					log.debug ("matchRequest for ", match.size () + " patterns after " + after);
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
@@ -208,6 +210,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 								final MessageProducer producer = session.createProducer (destination);
 								final Session passInSession = session;
+								final AtomicInteger counter = new AtomicInteger (0);
 
 								TransactionProcessor processor = new TransactionProcessor ()
 								{
@@ -224,6 +227,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 												m = passInSession.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
+												counter.incrementAndGet ();
 											}
 											catch ( JMSException e )
 											{
@@ -233,7 +237,12 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								};
 
 								store.filterTransactions (match, mode, after, processor);
+								int c = counter.get ();
+								log.debug ("matchRequest returns " + counter.get () + " transactions from blockchain");
+
 								txhandler.scanUnconfirmedPool (match, mode, processor);
+								log.debug ("matchRequest returns " + (counter.get () - c) + " transactions from mempool");
+
 								try
 								{
 									BytesMessage m = session.createBytesMessage ();
@@ -284,9 +293,11 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
 					final int lookAhead = request.getLookAhead ();
 					final long after = request.getAfter ();
+					log.debug ("accountRequest for " + ek.serialize (true) + " after " + after);
 					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					final UpdateMode mode = UpdateMode.all;
 					final Destination destination = msg.getJMSReplyTo ();
+					final AtomicInteger counter = new AtomicInteger (0);
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
@@ -313,6 +324,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 												m = passInSession.createBytesMessage ();
 												m.writeBytes (transaction.toProtobuf ().toByteArray ());
 												producer.send (m);
+												counter.incrementAndGet ();
 											}
 											catch ( JMSException e )
 											{
@@ -322,7 +334,11 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 								};
 
 								store.filterTransactions (match, ek, lookAhead, after, processor);
+								int c = counter.get ();
+								log.debug ("accountRequest returns " + counter.get () + " transactions from blockchain");
+
 								txhandler.scanUnconfirmedPool (match, mode, processor);
+								log.debug ("accountRequest returns " + (counter.get () - c) + " transactions from mempool");
 								try
 								{
 									BytesMessage m = session.createBytesMessage ();
@@ -373,6 +389,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
 					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					log.debug ("transactionRequest for " + hash);
 					Transaction t = getTransaction (hash);
 					if ( t != null )
 					{
@@ -382,6 +399,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						reply (o.getJMSReplyTo (), null);
 					}
+					log.debug ("transactionRequest for " + hash + " replied");
 				}
 				catch ( Exception e )
 				{
@@ -404,6 +422,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
 					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					log.debug ("blockRequest for " + hash);
 					Block b = getBlock (hash);
 					if ( b != null )
 					{
@@ -414,6 +433,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						reply (o.getJMSReplyTo (), null);
 					}
+					log.debug ("blockRequest for " + hash + " replied");
 				}
 				catch ( Exception e )
 				{
@@ -436,6 +456,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					byte[] body = new byte[(int) o.getBodyLength ()];
 					o.readBytes (body);
 					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					log.debug ("headerRequest for " + hash);
 					Block b = getBlockHeader (hash);
 					if ( b != null )
 					{
@@ -446,6 +467,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						reply (o.getJMSReplyTo (), null);
 					}
+					log.debug ("headerRequest for " + hash + " replied");
 				}
 				catch ( Exception e )
 				{
@@ -469,8 +491,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					o.readBytes (body);
 					Block block = Block.fromProtobuf (BCSAPIMessage.Block.parseFrom (body));
 					block.computeHash ();
+					log.debug ("newBlock for " + block.getHash ());
 					sendBlock (block);
 					reply (o.getJMSReplyTo (), null);
+					log.debug ("newBlock " + block.getHash () + " accepted");
 				}
 				catch ( Exception e )
 				{
@@ -480,6 +504,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					try
 					{
 						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+						log.debug ("newBlock rejected");
 					}
 					catch ( JMSException e1 )
 					{
@@ -501,8 +526,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				try
 				{
 					byte[] body = new byte[(int) o.getBodyLength ()];
+					log.debug ("ping received");
 					o.readBytes (body);
 					reply (o.getJMSReplyTo (), body);
+					log.debug ("ping replied");
 				}
 				catch ( Exception e )
 				{
@@ -526,8 +553,10 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					o.readBytes (body);
 					Transaction transaction = Transaction.fromProtobuf (BCSAPIMessage.Transaction.parseFrom (body));
 					transaction.computeHash ();
+					log.debug ("newTransaction " + transaction.getHash ());
 					sendTransaction (transaction);
 					reply (o.getJMSReplyTo (), null);
+					log.debug ("newTransaction " + transaction.getHash () + " accepted");
 				}
 				catch ( Exception e )
 				{
@@ -537,6 +566,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					try
 					{
 						reply (o.getJMSReplyTo (), builder.build ().toByteArray ());
+						log.debug ("newTransaction rejected");
 					}
 					catch ( JMSException e1 )
 					{
