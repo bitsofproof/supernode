@@ -232,7 +232,7 @@ public class TxHandler implements TrunkListener
 				}
 			}
 		}
-		log.debug ("relaying transaction " + tx.getHash ());
+		log.debug ("relaying transaction " + tx.getHash () + " pool size: " + unconfirmed.size ());
 	}
 
 	private void notifyListener (Tx tx, boolean doubleSpend)
@@ -267,7 +267,7 @@ public class TxHandler implements TrunkListener
 			synchronized ( unconfirmed )
 			{
 				List<Tx> firstSeenInBlock = new ArrayList<Tx> ();
-
+				log.debug ("Removing " + removedBlocks.size () + " blocks");
 				for ( Blk blk : removedBlocks )
 				{
 					boolean coinbase = true;
@@ -282,6 +282,8 @@ public class TxHandler implements TrunkListener
 						dependencyOrderedSet.add (tx);
 					}
 				}
+				log.debug ("Pool size: " + unconfirmed.size ());
+				log.debug ("Adding " + addedBlocks.size () + " blocks");
 				for ( Blk blk : addedBlocks )
 				{
 					for ( Tx tx : blk.getTransactions () )
@@ -296,9 +298,11 @@ public class TxHandler implements TrunkListener
 						else
 						{
 							firstSeenInBlock.add (tx);
+							log.debug ("First seen in block: " + tx.getHash ());
 						}
 					}
 				}
+				log.debug ("Pool size: " + unconfirmed.size ());
 
 				availableOutput.reset ();
 
@@ -321,6 +325,7 @@ public class TxHandler implements TrunkListener
 					}
 					catch ( ValidationException e )
 					{
+						log.debug ("Double spend: " + tx.getHash ());
 						unconfirmed.remove (tx.getHash ());
 						txi.remove ();
 						notifyListener (tx, true);
@@ -331,6 +336,7 @@ public class TxHandler implements TrunkListener
 				{
 					notifyListener (tx, false);
 				}
+
 			}
 		}
 		catch ( Exception e )
