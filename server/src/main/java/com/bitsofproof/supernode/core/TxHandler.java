@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,14 +155,10 @@ public class TxHandler implements TrunkListener
 
 	}
 
-	private final Semaphore serializedValidation = new Semaphore (1);
-
 	public void validateCacheAndSend (final Tx t, final BitcoinPeer peer) throws ValidationException
 	{
-		try
+		synchronized ( unconfirmed )
 		{
-			serializedValidation.acquireUninterruptibly ();
-
 			ValidationException exception = network.getStore ().runInCacheContext (new BlockStore.CacheContextRunnable ()
 			{
 				@Override
@@ -186,10 +181,6 @@ public class TxHandler implements TrunkListener
 				log.debug ("REJECTING transaction " + t.getHash ());
 				throw exception;
 			}
-		}
-		finally
-		{
-			serializedValidation.release ();
 		}
 	}
 
