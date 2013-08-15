@@ -3,7 +3,7 @@ BOP Community Bitcoin Server
 
 This software enables your application to send/receive Bitcoin payments or to data mine the network's transaction history, with ease.
 
-You may run it stand-alone utilizing its own validation engine or as a slave behind the Satoshi client so it accepts exactly what the 'reference client' does. In either case it builds a fully indexed block chain of transactions stored in LevelDB or in a relational database.
+You may run it stand-alone utilizing its own validation engine or as a slave behind the Satoshi client so it accepts exactly what the 'reference client' does. In either case it builds a fully indexed block chain of transactions stored in LevelDB.
 
 The server process handles peer-to-peer communication with the network and serves clients connected to it through a message bus. Wallet(s) are implemented by the client library and transactions are also signed at the client side, therefore it is safe to operate the Server in a remote environment as it does not store or receive private keys.
 
@@ -34,18 +34,16 @@ Make sure you have Maven3, JDK 7 (with JCE Unlimited Strength Policy Jurisdictio
 Run
 ---
 
-java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar testnet3 memdb
+java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.2.0.jar testnet3 memdb
 
 The final two parameters of the above example command line identify configuration contexts stored under server/src/main/resources/context. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
    
    * memdb - in memory database for tests
    * leveldb - LevelDB
-   * derby - For embedded relational database Derby
-   * progresql - To connect to a ProgreSQL server
 
-Review the context file of the SQL databases before attempting to use them, since connection parameters will likely not apply to your installation. To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there. The complete command line for a production environment might be:
+To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in server/src/main/resources/context/BCSAPI-profile.xml. You find example configurations for the message broker Apollo and Active MQ there. The complete command line for a production environment might be:
 
-java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.1.3.jar production leveldb BCSAPI apollo
+java -server -Xmx2g -jar target/server/target/bitsofproof-server-1.2.0.jar production leveldb BCSAPI apollo
 
 
 License
