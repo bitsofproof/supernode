@@ -23,11 +23,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.messages.BitcoinMessageListener;
 import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
-import com.bitsofproof.supernode.model.KnownPeer;
 
 public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Runnable, BitcoinPeerListener
 {
@@ -60,22 +58,6 @@ public class HeartbeatHandler implements BitcoinMessageListener<PongMessage>, Ru
 		if ( n != null && n.nonce == m.getNonce () )
 		{
 			sentNonces.remove (peer);
-			if ( network.getPeerStore () != null )
-			{
-				KnownPeer p;
-				try
-				{
-					p = network.getPeerStore ().findPeer (peer.getAddress ().getAddress ());
-					if ( p != null )
-					{
-						p.setResponseTime (System.currentTimeMillis () - n.sent);
-						network.getPeerStore ().store (p);
-					}
-				}
-				catch ( ValidationException e )
-				{
-				}
-			}
 		}
 	}
 

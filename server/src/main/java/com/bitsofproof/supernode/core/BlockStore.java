@@ -26,7 +26,7 @@ import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;
 
-public interface BlockStore extends ColorStore
+public interface BlockStore
 {
 	public interface CacheContextRunnable
 	{

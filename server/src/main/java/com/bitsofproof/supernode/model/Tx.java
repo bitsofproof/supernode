@@ -20,34 +20,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-
-import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.bitsofproof.supernode.common.BloomFilter;
+import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
-import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.common.ScriptFormat.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-@Entity
-@Table (name = "tx")
 public class Tx implements Serializable
 {
 	private static final long serialVersionUID = 1L;
@@ -56,8 +43,6 @@ public class Tx implements Serializable
 	public static final long MAX_MONEY = 21000000L * COIN;
 	// it should actually be 2099999997690000L, but above is in bitcoind
 
-	@Id
-	@GeneratedValue
 	private Long id;
 
 	private long version = 1;
@@ -67,17 +52,12 @@ public class Tx implements Serializable
 	private long ix = 0;
 
 	// this is not unique since a transaction copy might be on different branches.
-	@Column (length = 64, nullable = false)
-	@Index (name = "txhash")
 	private String hash;
 
-	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<TxIn> inputs;
 
-	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<TxOut> outputs;
 
-	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Blk block;
 
 	private transient String blockHash;

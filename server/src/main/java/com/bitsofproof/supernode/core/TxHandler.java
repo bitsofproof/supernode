@@ -28,10 +28,6 @@ import java.util.concurrent.Semaphore;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
@@ -56,7 +52,6 @@ public class TxHandler implements TrunkListener
 
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private ImplementTxOutCacheDelta availableOutput = null;
-	private PlatformTransactionManager transactionManager;
 
 	private final Set<Tx> dependencyOrderedSet = new TreeSet<Tx> (new Comparator<Tx> ()
 	{
@@ -86,11 +81,6 @@ public class TxHandler implements TrunkListener
 	public void addTransactionListener (TxListener listener)
 	{
 		transactionListener.add (listener);
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
 	}
 
 	public TxHandler (final BitcoinNetwork network)
@@ -181,33 +171,12 @@ public class TxHandler implements TrunkListener
 				{
 					if ( !unconfirmed.containsKey (t.getHash ()) )
 					{
-						ValidationException exception = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
+						if ( network.getStore ().getTransaction (t.getHash ()) == null )
 						{
-							@Override
-							public ValidationException doInTransaction (TransactionStatus status)
-							{
-								status.setRollbackOnly ();
-
-								try
-								{
-									if ( network.getStore ().getTransaction (t.getHash ()) == null )
-									{
-										network.getStore ().validateTransaction (t, availableOutput);
-										cacheTransaction (t);
-										sendTransaction (t, peer);
-										notifyListener (t, false);
-									}
-									return null;
-								}
-								catch ( ValidationException e )
-								{
-									return e;
-								}
-							}
-						});
-						if ( exception != null )
-						{
-							throw exception;
+							network.getStore ().validateTransaction (t, availableOutput);
+							cacheTransaction (t);
+							sendTransaction (t, peer);
+							notifyListener (t, false);
 						}
 					}
 				}

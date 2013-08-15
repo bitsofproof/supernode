@@ -17,10 +17,6 @@ package com.bitsofproof.supernode.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallbackWithoutResult;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
@@ -39,12 +35,6 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 	private final BlockStore store;
 	private TxHandler txHandler;
-	private PlatformTransactionManager transactionManager;
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
-	}
 
 	public GetDataHandler (BitcoinNetwork network)
 	{
@@ -76,87 +66,70 @@ public class GetDataHandler implements BitcoinMessageListener<GetDataMessage>
 
 		if ( m.getBlocks ().size () > 0 )
 		{
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			for ( final byte[] h : m.getBlocks () )
 			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
+				Blk b;
+				try
 				{
-					status.setRollbackOnly ();
-
-					for ( final byte[] h : m.getBlocks () )
+					b = store.getBlock (new Hash (h).toString ());
+					if ( b != null )
 					{
-						Blk b;
-						try
-						{
-							b = store.getBlock (new Hash (h).toString ());
-							if ( b != null )
-							{
-								final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
+						final BlockMessage bm = (BlockMessage) peer.createMessage ("block");
 
-								bm.setBlock (b);
-								peer.send (bm);
-								log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
-							}
-						}
-						catch ( ValidationException e )
-						{
-						}
-
+						bm.setBlock (b);
+						peer.send (bm);
+						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 					}
-					if ( m.getBlocks ().size () > 1 )
-					{
-						log.debug ("sent " + m.getBlocks ().size () + " blocks to " + peer.getAddress ());
-					}
-					else
-					{
-						peer.send (peer.createMessage ("notfound"));
-					}
-					InvMessage inv = (InvMessage) peer.createMessage ("inv");
-					inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
-					peer.send (inv);
 				}
-			});
+				catch ( ValidationException e )
+				{
+				}
+
+			}
+			if ( m.getBlocks ().size () > 1 )
+			{
+				log.debug ("sent " + m.getBlocks ().size () + " blocks to " + peer.getAddress ());
+			}
+			else
+			{
+				peer.send (peer.createMessage ("notfound"));
+			}
+			InvMessage inv = (InvMessage) peer.createMessage ("inv");
+			inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
+			peer.send (inv);
 		}
 		if ( m.getFilteredBlocks ().size () > 0 && peer.getFilter () != null )
 		{
-			new TransactionTemplate (transactionManager).execute (new TransactionCallbackWithoutResult ()
+			for ( final byte[] h : m.getBlocks () )
 			{
-				@Override
-				protected void doInTransactionWithoutResult (TransactionStatus status)
+				Blk b;
+				try
 				{
-					status.setRollbackOnly ();
-					for ( final byte[] h : m.getBlocks () )
+					b = store.getBlock (new Hash (h).toString ());
+					if ( b != null )
 					{
-						Blk b;
-						try
-						{
-							b = store.getBlock (new Hash (h).toString ());
-							if ( b != null )
-							{
-								final MerkleBlockMessage bm = (MerkleBlockMessage) peer.createMessage ("merkleblock");
-								bm.setBlock (b);
-								bm.filter (peer.getFilter ());
-								peer.send (bm);
-								log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
-							}
-						}
-						catch ( ValidationException e )
-						{
-						}
+						final MerkleBlockMessage bm = (MerkleBlockMessage) peer.createMessage ("merkleblock");
+						bm.setBlock (b);
+						bm.filter (peer.getFilter ());
+						peer.send (bm);
+						log.trace ("sent block " + b.getHash () + " to " + peer.getAddress ());
 					}
-					if ( m.getBlocks ().size () > 1 )
-					{
-						log.debug ("sent " + m.getBlocks ().size () + " merkleblocks to " + peer.getAddress ());
-					}
-					else
-					{
-						peer.send (peer.createMessage ("notfound"));
-					}
-					InvMessage inv = (InvMessage) peer.createMessage ("inv");
-					inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
-					peer.send (inv);
 				}
-			});
+				catch ( ValidationException e )
+				{
+				}
+			}
+			if ( m.getBlocks ().size () > 1 )
+			{
+				log.debug ("sent " + m.getBlocks ().size () + " merkleblocks to " + peer.getAddress ());
+			}
+			else
+			{
+				peer.send (peer.createMessage ("notfound"));
+			}
+			InvMessage inv = (InvMessage) peer.createMessage ("inv");
+			inv.getBlockHashes ().add (new Hash (store.getHeadHash ()).toByteArray ());
+			peer.send (inv);
 		}
 	}
 

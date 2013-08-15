@@ -15,10 +15,7 @@
  */
 package com.bitsofproof.supernode.model;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -35,16 +32,11 @@ import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.core.CachedBlockStore;
-import com.bitsofproof.supernode.core.ColorStore;
-import com.bitsofproof.supernode.core.Discovery;
-import com.bitsofproof.supernode.core.PeerStore;
 import com.bitsofproof.supernode.core.TxOutCache;
 import com.bitsofproof.supernode.model.OrderedMapStore.DataProcessor;
 import com.bitsofproof.supernode.model.OrderedMapStoreKey.KeyType;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 
-public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, ColorStore
+public class LvlStore extends CachedBlockStore
 {
 	private static final Logger log = LoggerFactory.getLogger (LvlStore.class);
 
@@ -267,23 +259,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 	@Override
 	protected void cacheColors ()
 	{
-		store.forAll (KeyType.COLOR, new DataProcessor ()
-		{
-			@Override
-			public boolean process (byte[] key, byte[] data)
-			{
-				WireFormat.Reader reader = new WireFormat.Reader (data);
-				StoredColor sc = new StoredColor ();
-				sc.setTxHash (reader.readHash ().toString ());
-				sc.setTerms (reader.readString ());
-				sc.setUnit (reader.readUint64 ());
-				sc.setExpiryHeight ((int) reader.readUint32 ());
-				sc.setSignature (reader.readVarBytes ());
-				sc.setPubkey (reader.readVarBytes ());
-				cachedColors.put (sc.getTxHash (), sc);
-				return true;
-			}
-		});
 	}
 
 	@Override
@@ -486,134 +461,6 @@ public class LvlStore extends CachedBlockStore implements Discovery, PeerStore, 
 			}
 		});
 		processor.process (null);
-	}
-
-	@Override
-	public Collection<KnownPeer> getConnectablePeers ()
-	{
-		final List<KnownPeer> peers = new ArrayList<KnownPeer> ();
-		store.forAll (KeyType.PEER, new DataProcessor ()
-		{
-			@Override
-			public boolean process (byte[] key, byte[] data)
-			{
-				KnownPeer p;
-				try
-				{
-					p = KnownPeer.fromLevelDB (data);
-					if ( p.getBanned () < System.currentTimeMillis () / 1000 )
-					{
-						peers.add (p);
-					}
-				}
-				catch ( ValidationException e )
-				{
-					log.error ("Can not read peer ", e);
-					return false;
-				}
-				return true;
-			}
-		});
-		Collections.sort (peers, new Comparator<KnownPeer> ()
-		{
-
-			@Override
-			public int compare (KnownPeer o1, KnownPeer o2)
-			{
-				if ( o1.getPreference () != o2.getPreference () )
-				{
-					return (int) (o1.getPreference () - o2.getPreference ());
-				}
-				if ( o1.getResponseTime () != o2.getResponseTime () )
-				{
-					return (int) (o1.getResponseTime () - o2.getResponseTime ());
-				}
-				return 0;
-			}
-		});
-
-		return peers;
-	}
-
-	@Override
-	public void store (KnownPeer peer)
-	{
-		writePeer (peer);
-	}
-
-	@Override
-	public KnownPeer findPeer (InetAddress address) throws ValidationException
-	{
-		return readPeer (address.getHostName ());
-	}
-
-	@Override
-	public List<InetSocketAddress> discover ()
-	{
-		log.trace ("Discovering stored peers");
-		List<InetSocketAddress> peers = new ArrayList<InetSocketAddress> ();
-		for ( KnownPeer kp : getConnectablePeers () )
-		{
-			try
-			{
-				String[] split = kp.getAddress ().split (":");
-				if ( split.length == 2 )
-				{
-					peers.add (InetSocketAddress.createUnresolved (split[0], Integer.valueOf (split[1])));
-				}
-				else
-				{
-					peers.add (InetSocketAddress.createUnresolved (split[0], chain.getPort ()));
-				}
-			}
-			catch ( Exception e )
-			{
-			}
-		}
-		return peers;
-	}
-
-	@Override
-	public void storeColor (StoredColor color)
-	{
-		LevelDBStore.COLOR.Builder builder = LevelDBStore.COLOR.newBuilder ();
-		builder.setStoreVersion (1);
-		builder.setTxHash (ByteString.copyFrom (new Hash (color.getTxHash ()).toByteArray ()));
-		builder.setFungibleName (color.getFungibleName ());
-		builder.setTerms (color.getTerms ());
-		builder.setUnit (color.getUnit ());
-		builder.setExpiryHeight (color.getExpiryHeight ());
-		builder.setSignature (ByteString.copyFrom (color.getSignature ()));
-		builder.setPubkey (ByteString.copyFrom (color.getPubkey ()));
-		store.put (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (color.getFungibleName ()).toByteArray ()), builder.build ().toByteArray ());
-	}
-
-	@Override
-	public StoredColor findColor (String hash) throws ValidationException
-	{
-		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.COLOR, new Hash (hash).toByteArray ()));
-		if ( data == null )
-		{
-			return null;
-		}
-		LevelDBStore.COLOR p;
-		try
-		{
-			p = LevelDBStore.COLOR.parseFrom (data);
-			StoredColor sc = new StoredColor ();
-			sc.setTxHash (new Hash (p.getTxHash ().toByteArray ()).toString ());
-			sc.setFungibleName (p.getFungibleName ());
-			sc.setTerms (p.getTerms ());
-			sc.setUnit (p.getUnit ());
-			sc.setExpiryHeight (p.getExpiryHeight ());
-			sc.setSignature (p.getSignature ().toByteArray ());
-			sc.setPubkey (p.getPubkey ().toByteArray ());
-			return sc;
-		}
-		catch ( InvalidProtocolBufferException e )
-		{
-			throw new ValidationException (e);
-		}
 	}
 
 	@Override

@@ -17,7 +17,6 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	
 	<bean id="discovery" class="com.bitsofproof.supernode.core.FixedAddressDiscovery">
@@ -42,7 +41,6 @@
 		<constructor-arg>
 			<ref bean="tx" />
 		</constructor-arg>
-		<property name="transactionManager" ref="transactionManager" />
 		<property name="connectionFactory" ref="embeddedBus" />
 	</bean>
 	

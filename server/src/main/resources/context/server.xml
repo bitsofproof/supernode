@@ -31,14 +31,12 @@
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	<bean id="getdata" class="com.bitsofproof.supernode.core.GetDataHandler">
 		<constructor-arg>
 			<ref bean="bitcoinNetwork" />
 		</constructor-arg>
 		<property name="txHandler" ref="tx" />
-		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 	<beans profile="!slave">
 
@@ -51,7 +49,6 @@
 			<constructor-arg>
 				<ref bean="bitcoinNetwork" />
 			</constructor-arg>
-			<property name="transactionManager" ref="transactionManager" />
 		</bean>
 		<bean id="bloom" class="com.bitsofproof.supernode.core.BloomFilterHandler">
 			<constructor-arg>

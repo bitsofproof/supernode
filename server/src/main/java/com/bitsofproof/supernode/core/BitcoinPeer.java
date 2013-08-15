@@ -55,7 +55,6 @@ import com.bitsofproof.supernode.messages.PingMessage;
 import com.bitsofproof.supernode.messages.PongMessage;
 import com.bitsofproof.supernode.messages.TxMessage;
 import com.bitsofproof.supernode.messages.VersionMessage;
-import com.bitsofproof.supernode.model.KnownPeer;
 
 public class BitcoinPeer extends P2P.Peer
 {
@@ -271,42 +270,6 @@ public class BitcoinPeer extends P2P.Peer
 					peerVersion = Math.min (peerVersion, v.getVersion ());
 					peerServices = v.getServices ();
 					relay = v.isRelay ();
-					if ( network.getPeerStore () != null )
-					{
-						KnownPeer p;
-						try
-						{
-							p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-							if ( p == null )
-							{
-								p = new KnownPeer ();
-							}
-							trafficIn = p.getTrafficIn ();
-							trafficOut = p.getTrafficOut ();
-							if ( p.getBanned () > System.currentTimeMillis () / 1000 )
-							{
-								log.trace ("Disconnecting banned peer " + address);
-								peer.disconnect ();
-							}
-							else
-							{
-								p.setAddress (address.getAddress ().getHostAddress ());
-								p.setName (address.toString ());
-								p.setVersion (peerVersion);
-								p.setHeight (height);
-								p.setAgent (agent);
-								p.setServices (peerServices);
-								p.setResponseTime (Integer.MAX_VALUE);
-								p.setConnected (System.currentTimeMillis () / 1000);
-								network.getPeerStore ().store (p);
-							}
-						}
-						catch ( ValidationException e )
-						{
-							log.error ("Can not read peer", e);
-						}
-
-					}
 					if ( !outgoing )
 					{
 						onConnect ();
@@ -374,35 +337,6 @@ public class BitcoinPeer extends P2P.Peer
 	{
 		network.notifyPeerRemoved (this);
 		log.info ("Disconnected '" + getAgent () + "' at " + getAddress ());
-		if ( network.getPeerStore () != null )
-		{
-			KnownPeer p;
-			try
-			{
-				p = network.getPeerStore ().findPeer (getAddress ().getAddress ());
-				if ( p != null )
-				{
-					p.setTrafficIn (trafficIn);
-					p.setTrafficOut (trafficOut);
-					p.setDisconnected (System.currentTimeMillis () / 1000);
-					if ( timeout > 0 )
-					{
-						p.setResponseTime (timeout * 1000 + 1);
-					}
-					if ( bannedForSeconds > 0 )
-					{
-						p.setBanned (System.currentTimeMillis () / 1000 + bannedForSeconds);
-						p.setBanReason (reason);
-					}
-					network.getPeerStore ().store (p);
-				}
-			}
-			catch ( ValidationException e )
-			{
-				log.error ("Can not read peer", e);
-			}
-
-		}
 	}
 
 	private static final int MAX_BLOCK_SIZE = 1000000 + 80;

@@ -35,10 +35,6 @@ import javax.jms.Session;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.BCSAPIMessage;
 import com.bitsofproof.supernode.api.Block;
@@ -65,8 +61,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	private final BlockStore store;
 	private final TxHandler txhandler;
 
-	private PlatformTransactionManager transactionManager;
-
 	private ConnectionFactory connectionFactory;
 
 	private Connection connection;
@@ -81,11 +75,6 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 		store.addTrunkListener (this);
 		txHandler.addTransactionListener (this);
-	}
-
-	public void setTransactionManager (PlatformTransactionManager transactionManager)
-	{
-		this.transactionManager = transactionManager;
 	}
 
 	public void setConnectionFactory (ConnectionFactory connectionFactory)
@@ -577,27 +566,19 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			Tx tx = txhandler.getTransaction (hash);
 			if ( tx == null )
 			{
-				return new TransactionTemplate (transactionManager).execute (new TransactionCallback<Transaction> ()
+				Tx t;
+				try
 				{
-					@Override
-					public Transaction doInTransaction (TransactionStatus status)
+					t = store.getTransaction (hash);
+					if ( t != null )
 					{
-						status.setRollbackOnly ();
-						Tx t;
-						try
-						{
-							t = store.getTransaction (hash);
-							if ( t != null )
-							{
-								return toBCSAPITransaction (t, false);
-							}
-						}
-						catch ( ValidationException e )
-						{
-						}
-						return null;
+						return toBCSAPITransaction (t, false);
 					}
-				});
+				}
+				catch ( ValidationException e )
+				{
+				}
+				return null;
 			}
 			else
 			{
@@ -613,32 +594,25 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	public Block getBlock (final String hash)
 	{
 		log.trace ("get block " + hash);
-		Block block = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Block> ()
+		Block block = null;
+		String h = hash;
+		if ( h.equals (Hash.ZERO_HASH_STRING) )
 		{
-			@Override
-			public Block doInTransaction (TransactionStatus status)
+			h = store.getHeadHash ();
+		}
+		Blk b;
+		try
+		{
+			b = store.getBlock (h);
+			if ( b != null )
 			{
-				status.setRollbackOnly ();
-				String h = hash;
-				if ( h.equals (Hash.ZERO_HASH_STRING) )
-				{
-					h = store.getHeadHash ();
-				}
-				Blk b;
-				try
-				{
-					b = store.getBlock (h);
-					if ( b != null )
-					{
-						return toBCSAPIBlock (b);
-					}
-				}
-				catch ( ValidationException e )
-				{
-				}
-				return null;
+				block = toBCSAPIBlock (b);
 			}
-		});
+		}
+		catch ( ValidationException e )
+		{
+		}
+
 		log.trace ("get block returned " + block != null ? hash : "null");
 		return block;
 	}
@@ -646,32 +620,25 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 	public Block getBlockHeader (final String hash)
 	{
 		log.trace ("get block header " + hash);
-		Block block = new TransactionTemplate (transactionManager).execute (new TransactionCallback<Block> ()
+		Block block = null;
+		String h = hash;
+		if ( h.equals (Hash.ZERO_HASH_STRING) )
 		{
-			@Override
-			public Block doInTransaction (TransactionStatus status)
+			h = store.getHeadHash ();
+		}
+		Blk b;
+		try
+		{
+			b = store.getBlockHeader (h);
+			if ( b != null )
 			{
-				status.setRollbackOnly ();
-				String h = hash;
-				if ( h.equals (Hash.ZERO_HASH_STRING) )
-				{
-					h = store.getHeadHash ();
-				}
-				Blk b;
-				try
-				{
-					b = store.getBlockHeader (h);
-					if ( b != null )
-					{
-						return toBCSAPIBlock (b);
-					}
-				}
-				catch ( ValidationException e )
-				{
-				}
-				return null;
+				block = toBCSAPIBlock (b);
 			}
-		});
+		}
+		catch ( ValidationException e )
+		{
+		}
+
 		log.trace ("get block header returned " + block != null ? hash : "null");
 		return block;
 	}

@@ -17,26 +17,15 @@ package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
 import com.bitsofproof.supernode.common.ValidationException;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-@Entity
-@Table (name = "peer")
 public class KnownPeer implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
-	@Id
-	@GeneratedValue
 	private Long id;
 
-	@Column (length = 40, nullable = false, unique = true)
 	private String address;
 
 	private long version;
@@ -45,10 +34,8 @@ public class KnownPeer implements Serializable
 
 	private long height;
 
-	@Column (length = 256, nullable = true)
 	private String name;
 
-	@Column (length = 64, nullable = true)
 	private String agent;
 
 	private long responseTime;
@@ -61,7 +48,6 @@ public class KnownPeer implements Serializable
 
 	private long banned;
 
-	@Column (length = 256, nullable = true)
 	private String banReason;
 
 	public byte[] toLevelDB ()

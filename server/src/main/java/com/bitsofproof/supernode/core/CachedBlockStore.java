@@ -17,7 +17,6 @@ package com.bitsofproof.supernode.core;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,13 +34,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bitsofproof.supernode.api.ColorRules;
 import com.bitsofproof.supernode.api.ColorRules.ColoredCoin;
@@ -57,7 +49,6 @@ import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Head;
-import com.bitsofproof.supernode.model.StoredColor;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -95,9 +86,6 @@ public abstract class CachedBlockStore implements BlockStore
 
 	protected Chain chain;
 
-	@Autowired
-	PlatformTransactionManager transactionManager;
-
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock ();
 
 	private boolean enforceV2Block = false;
@@ -105,7 +93,6 @@ public abstract class CachedBlockStore implements BlockStore
 	protected CachedHead currentHead = null;
 	protected final Map<String, CachedBlock> cachedBlocks = new HashMap<String, CachedBlock> ();
 	protected final Map<Long, CachedHead> cachedHeads = new HashMap<Long, CachedHead> ();
-	protected final Map<String, StoredColor> cachedColors = new HashMap<String, StoredColor> ();
 
 	private final LinkedList<CachedBlock> blockChain = new LinkedList<CachedBlock> ();
 
@@ -351,7 +338,6 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	@Transactional (propagation = Propagation.REQUIRED, readOnly = true)
 	public void cache (Chain chain, int size) throws ValidationException
 	{
 		this.chain = chain;
@@ -413,7 +399,6 @@ public abstract class CachedBlockStore implements BlockStore
 		blockChain.addAll (appendList);
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
 	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
 			throws ValidationException
@@ -505,7 +490,6 @@ public abstract class CachedBlockStore implements BlockStore
 		log.trace ("Done with Match request");
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class }, readOnly = true)
 	@Override
 	public void filterTransactions (Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
 	{
@@ -762,41 +746,23 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		try
 		{
-			// have to lock before transaction starts and unlock after finished.
-			// otherwise updates to transient vs. persistent structures are out of sync for a
-			// concurrent tx. This does not apply to methods using MANDATORY transaction annotation
-			// context since they must have been invoked within a transaction.
 			lock.writeLock ().lock ();
 
-			ValidationException e = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
+			try
 			{
-				@Override
-				public ValidationException doInTransaction (TransactionStatus status)
-				{
-					try
-					{
-						startBatch ();
-						lockedStoreBlock (b);
-						endBatch ();
-					}
-					catch ( ValidationException e )
-					{
-						cancelBatch ();
-						status.setRollbackOnly ();
-						return e;
-					}
-					catch ( Exception e )
-					{
-						cancelBatch ();
-						status.setRollbackOnly ();
-						return new ValidationException (e);
-					}
-					return null;
-				}
-			});
-			if ( e != null )
+				startBatch ();
+				lockedStoreBlock (b);
+				endBatch ();
+			}
+			catch ( ValidationException e )
 			{
+				cancelBatch ();
 				throw e;
+			}
+			catch ( Exception e )
+			{
+				cancelBatch ();
+				throw new ValidationException (e);
 			}
 		}
 		finally
@@ -1598,7 +1564,6 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
 	@Override
 	public void resetStore (Chain chain) throws ValidationException
 	{
@@ -1617,7 +1582,6 @@ public abstract class CachedBlockStore implements BlockStore
 		insertBlock (genesis);
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public Blk getBlock (String hash) throws ValidationException
 	{
@@ -1639,7 +1603,6 @@ public abstract class CachedBlockStore implements BlockStore
 		return retrieveBlock (cached);
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public Blk getBlockHeader (String hash) throws ValidationException
 	{
@@ -1661,7 +1624,6 @@ public abstract class CachedBlockStore implements BlockStore
 		return retrieveBlockHeader (cached);
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public void resolveTransactionInputs (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
@@ -1677,7 +1639,6 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
-	@Transactional (propagation = Propagation.MANDATORY, readOnly = true)
 	@Override
 	public boolean validateTransaction (Tx t, TxOutCache resolvedInputs) throws ValidationException
 	{
@@ -1707,84 +1668,6 @@ public abstract class CachedBlockStore implements BlockStore
 		finally
 		{
 			lock.readLock ().unlock ();
-		}
-	}
-
-	@Override
-	public void issueColor (final StoredColor color) throws ValidationException
-	{
-		try
-		{
-			// have to lock before transaction starts and unlock after finished.
-			// otherwise updates to transient vs. persistent structures are out of sync for a
-			// concurrent tx. This does not apply to methods using MANDATORY transaction annotation
-			// context since they must have been invoked within a transaction.
-			lock.writeLock ().lock ();
-
-			ValidationException e = new TransactionTemplate (transactionManager).execute (new TransactionCallback<ValidationException> ()
-			{
-				@Override
-				public ValidationException doInTransaction (TransactionStatus status)
-				{
-					try
-					{
-						startBatch ();
-
-						Tx tx = getTransaction (color.getTxHash ());
-						if ( tx == null )
-						{
-							throw new ValidationException ("Unknown transaction for new color");
-						}
-						TxOut out = tx.getOutputs ().get (0);
-						if ( !out.isAvailable () )
-						{
-							throw new ValidationException ("The color genesis was already spent.");
-						}
-						if ( !ScriptFormat.isPayToAddress (out.getScript ()) )
-						{
-							throw new ValidationException ("Color output should pay to address");
-						}
-						List<Token> tokens = ScriptFormat.parse (out.getScript ());
-						if ( !Arrays.equals (tokens.get (2).data, Hash.keyHash (color.getPubkey ())) )
-						{
-							throw new ValidationException ("Color key does not match output address");
-						}
-						if ( !color.verify () )
-						{
-							storeColor (color);
-						}
-						else
-						{
-							throw new ValidationException ("Color is not valid");
-						}
-
-						updateColor (out, color.getFungibleName ());
-
-						endBatch ();
-					}
-					catch ( ValidationException e )
-					{
-						cancelBatch ();
-						status.setRollbackOnly ();
-						return e;
-					}
-					catch ( Exception e )
-					{
-						cancelBatch ();
-						status.setRollbackOnly ();
-						return new ValidationException (e);
-					}
-					return null;
-				}
-			});
-			if ( e != null )
-			{
-				throw e;
-			}
-		}
-		finally
-		{
-			lock.writeLock ().unlock ();
 		}
 	}
 }

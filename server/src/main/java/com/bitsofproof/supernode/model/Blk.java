@@ -21,17 +21,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.persistence.Basic;
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,27 +32,20 @@ import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-@Entity
-@Table (name = "blk")
 public class Blk implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
-	@Id
-	@GeneratedValue
 	private Long id;
 
-	@Column (length = 64, nullable = false, unique = true)
 	private String hash;
 
 	long version;
 
-	@Column (length = 64, nullable = false)
 	private String previousHash;
 
 	transient private byte[] wireTransactions;
 
-	@Column (length = 64, nullable = false)
 	private String merkleRoot;
 
 	private long createTime;
@@ -72,14 +54,11 @@ public class Blk implements Serializable
 	private int height;
 	private long nonce;
 
-	@OneToMany (fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	private List<Tx> transactions;
 
 	private transient ArrayList<String> txHashes;
 	private Long headId;
 
-	@Lob
-	@Basic (fetch = FetchType.EAGER)
 	private byte[] filterMap;
 
 	private int filterFunctions;

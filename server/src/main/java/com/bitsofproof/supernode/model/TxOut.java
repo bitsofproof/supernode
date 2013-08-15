@@ -17,17 +17,6 @@ package com.bitsofproof.supernode.model;
 
 import java.io.Serializable;
 
-import javax.persistence.Basic;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.Lob;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-
-import org.hibernate.annotations.Index;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -36,27 +25,19 @@ import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 
-@Entity
-@Table (name = "txout")
 public class TxOut implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
-	@Id
-	@GeneratedValue
 	private Long id;
 
 	private long value;
 
-	@Lob
-	@Basic (fetch = FetchType.EAGER)
 	// scriptPubKey
 	private byte[] script;
 
-	@ManyToOne (fetch = FetchType.LAZY, optional = false)
 	private Tx transaction;
 
-	@Column (nullable = false)
 	private Long ix = new Long (0L);
 
 	private boolean coinbase = false;
@@ -67,8 +48,6 @@ public class TxOut implements Serializable
 	private String color;
 
 	// this is redundant but saves a join at finding UTXO that is critical for speed
-	@Column (length = 64, nullable = false)
-	@Index (name = "outthash")
 	private String txHash;
 
 	// this is redundant for a check
