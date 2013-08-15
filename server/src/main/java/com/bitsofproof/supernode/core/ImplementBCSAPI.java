@@ -204,7 +204,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					final UpdateMode mode = UpdateMode.values ()[request.getMode ()];
 					final Destination destination = msg.getJMSReplyTo ();
 					final long after = request.hasAfter () ? request.getAfter () : 0;
-					log.debug ("matchRequest for ", match.size () + " patterns after " + after);
+					log.debug ("matchRequest " + (utxo ? "UTXO" : "") + " for ", match.size () + " patterns after " + after);
 					requestProcessor.execute (new Runnable ()
 					{
 						@Override
@@ -305,7 +305,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
 					final int lookAhead = request.getLookAhead ();
 					final long after = request.getAfter ();
-					log.debug ("accountRequest for " + ek.serialize (true) + " after " + after);
+					log.debug ("accountRequest " + (utxo ? "UTXO" : "") + " for " + ek.serialize (true) + " after " + after);
 					final Set<ByteVector> match = new HashSet<ByteVector> ();
 					final UpdateMode mode = UpdateMode.all;
 					final Destination destination = msg.getJMSReplyTo ();
