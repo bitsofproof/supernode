@@ -140,21 +140,6 @@ public class LvlStore extends CachedBlockStore
 		return t;
 	}
 
-	private void writePeer (KnownPeer p)
-	{
-		store.put (OrderedMapStoreKey.createKey (KeyType.PEER, p.getAddress ().getBytes ()), p.toLevelDB ());
-	}
-
-	private KnownPeer readPeer (String address) throws ValidationException
-	{
-		byte[] data = store.get (OrderedMapStoreKey.createKey (KeyType.PEER, address.getBytes ()));
-		if ( data != null )
-		{
-			return KnownPeer.fromLevelDB (data);
-		}
-		return null;
-	}
-
 	@Override
 	protected void cacheChain ()
 	{

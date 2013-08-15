@@ -400,7 +400,7 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	public void filterTransactions (Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
+	public void filterTransactions (boolean utxo, Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
 			throws ValidationException
 	{
 		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
@@ -449,7 +449,7 @@ public abstract class CachedBlockStore implements BlockStore
 					Blk b = retrieveBlock (cb);
 					for ( Tx t : b.getTransactions () )
 					{
-						if ( t.matches (matchSet, UpdateMode.all) )
+						if ( t.matches (utxo, matchSet, UpdateMode.all) )
 						{
 							processor.process (t);
 
@@ -491,7 +491,8 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	public void filterTransactions (Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException
+	public void filterTransactions (boolean utxo, Set<ByteVector> matchSet, UpdateMode update, long after, TransactionProcessor processor)
+			throws ValidationException
 	{
 		try
 		{
@@ -532,7 +533,7 @@ public abstract class CachedBlockStore implements BlockStore
 					Blk b = retrieveBlock (cb);
 					for ( Tx t : b.getTransactions () )
 					{
-						if ( t.matches (matchSet, update) )
+						if ( t.matches (utxo, matchSet, update) )
 						{
 							processor.process (t);
 							++n;

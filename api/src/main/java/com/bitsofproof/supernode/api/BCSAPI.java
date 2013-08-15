@@ -127,7 +127,7 @@ public interface BCSAPI
 	public void removeTrunkListener (TrunkListener listener);
 
 	/**
-	 * Match transactions using and address or outpoint in match.
+	 * Scan transactions using and address or outpoint in match.
 	 * 
 	 * @param match
 	 * @param listener
@@ -136,7 +136,7 @@ public interface BCSAPI
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
-	 * scan transactions for an account
+	 * Scan transactions for an account
 	 * 
 	 * @param master
 	 *            - public master key
@@ -144,4 +144,23 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void scanTransactions (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
+
+	/**
+	 * Scan unspent transactions using and address or outpoint in match.
+	 * 
+	 * @param match
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void scanUTXO (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
+
+	/**
+	 * Scan unspent transactions for an account
+	 * 
+	 * @param master
+	 *            - public master key
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void scanUTXO (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
 }

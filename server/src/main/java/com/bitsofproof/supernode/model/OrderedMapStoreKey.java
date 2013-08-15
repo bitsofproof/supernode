@@ -19,7 +19,7 @@ public class OrderedMapStoreKey
 {
 	public static enum KeyType
 	{
-		TX, BLOCK, HEAD, PEER, COLOR;
+		TX, BLOCK, HEAD;
 	}
 
 	public static byte[] createKey (KeyType kt, byte[] key)

@@ -330,12 +330,16 @@ public class Tx implements Serializable
 		return false;
 	}
 
-	public boolean matches (Set<ByteVector> matchSet, UpdateMode update)
+	public boolean matches (boolean utxo, Set<ByteVector> matchSet, UpdateMode update)
 	{
 		boolean found;
 		found = false;
 		for ( TxOut o : outputs )
 		{
+			if ( utxo && !o.isAvailable () )
+			{
+				continue;
+			}
 			try
 			{
 				for ( Token token : ScriptFormat.parse (o.getScript ()) )
@@ -363,7 +367,7 @@ public class Tx implements Serializable
 				// best effort
 			}
 		}
-		if ( !found )
+		if ( !utxo && !found )
 		{
 			for ( TxIn i : inputs )
 			{

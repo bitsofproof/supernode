@@ -321,7 +321,31 @@ public class JMSServerConnector implements BCSAPI
 	}
 
 	@Override
+	public void scanUTXO (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException
+	{
+		scanRequest (match, mode, after, listener, "utxoMatchRequest");
+	}
+
+	@Override
+	public void scanUTXO (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException
+	{
+		scanRequest (master, lookAhead, after, listener, "utxoAccountRequest");
+	}
+
+	@Override
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener) throws BCSAPIException
+	{
+		scanRequest (match, mode, after, listener, "matchRequest");
+	}
+
+	@Override
+	public void scanTransactions (ExtendedKey master, int lookAhead, long after, final TransactionListener listener) throws BCSAPIException
+	{
+		scanRequest (master, lookAhead, after, listener, "accountRequest");
+	}
+
+	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue)
+			throws BCSAPIException
 	{
 		Session session = null;
 		try
@@ -329,7 +353,7 @@ public class JMSServerConnector implements BCSAPI
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 
-			MessageProducer exactMatchProducer = session.createProducer (session.createQueue ("matchRequest"));
+			MessageProducer exactMatchProducer = session.createProducer (session.createQueue (requestQueue));
 			BCSAPIMessage.ExactMatchRequest.Builder builder = BCSAPIMessage.ExactMatchRequest.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setMode (mode.ordinal ());
@@ -400,8 +424,7 @@ public class JMSServerConnector implements BCSAPI
 		}
 	}
 
-	@Override
-	public void scanTransactions (ExtendedKey master, int lookAhead, long after, final TransactionListener listener) throws BCSAPIException
+	private void scanRequest (ExtendedKey master, int lookAhead, long after, final TransactionListener listener, String request) throws BCSAPIException
 	{
 		if ( !master.isReadOnly () )
 		{
@@ -413,7 +436,7 @@ public class JMSServerConnector implements BCSAPI
 			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
 			BytesMessage m = session.createBytesMessage ();
 
-			MessageProducer scanAccountProducer = session.createProducer (session.createQueue ("accountRequest"));
+			MessageProducer scanAccountProducer = session.createProducer (session.createQueue (request));
 			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
 			builder.setBcsapiversion (1);
 			builder.setPublicKey (master.serialize (production));

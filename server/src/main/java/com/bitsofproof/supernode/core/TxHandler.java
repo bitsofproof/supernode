@@ -241,7 +241,7 @@ public class TxHandler implements TrunkListener
 		{
 			for ( Tx t : unconfirmed.values () )
 			{
-				if ( t.matches (matchSet, update) )
+				if ( t.matches (false, matchSet, update) )
 				{
 					processor.process (t);
 				}

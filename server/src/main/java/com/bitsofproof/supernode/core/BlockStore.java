@@ -76,8 +76,9 @@ public interface BlockStore
 
 	public void scan (BloomFilter filter, TransactionProcessor processor) throws ValidationException;
 
-	public void filterTransactions (Set<ByteVector> match, UpdateMode update, long after, TransactionProcessor processor) throws ValidationException;
+	public void filterTransactions (boolean utxo, Set<ByteVector> match, UpdateMode update, long after, TransactionProcessor processor)
+			throws ValidationException;
 
-	public void filterTransactions (Set<ByteVector> match, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
+	public void filterTransactions (boolean utxo, Set<ByteVector> match, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
 			throws ValidationException;
 }

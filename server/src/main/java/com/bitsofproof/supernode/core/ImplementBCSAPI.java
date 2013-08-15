@@ -178,7 +178,13 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addMatchScanListener () throws JMSException
 	{
-		addQueueListener ("matchRequest", new SessionMessageListener ()
+		addMatchScanListener (false, "matchRequest");
+		addMatchScanListener (true, "utxoMatchRequest");
+	}
+
+	private void addMatchScanListener (final boolean utxo, String topic) throws JMSException
+	{
+		addQueueListener (topic, new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
@@ -236,7 +242,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									}
 								};
 
-								store.filterTransactions (match, mode, after, processor);
+								store.filterTransactions (utxo, match, mode, after, processor);
 								int c = counter.get ();
 								log.debug ("matchRequest returns " + counter.get () + " transactions from blockchain");
 
@@ -278,7 +284,13 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 
 	private void addAccountScanListener () throws JMSException
 	{
-		addQueueListener ("accountRequest", new SessionMessageListener ()
+		addAccountScanListener (false, "accountRequest");
+		addAccountScanListener (true, "utxoAccountRequest");
+	}
+
+	private void addAccountScanListener (final boolean utxo, String topic) throws JMSException
+	{
+		addQueueListener (topic, new SessionMessageListener ()
 		{
 			@Override
 			public void onMessage (Message msg)
@@ -333,7 +345,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									}
 								};
 
-								store.filterTransactions (match, ek, lookAhead, after, processor);
+								store.filterTransactions (utxo, match, ek, lookAhead, after, processor);
 								int c = counter.get ();
 								log.debug ("accountRequest returns " + counter.get () + " transactions from blockchain");
 
