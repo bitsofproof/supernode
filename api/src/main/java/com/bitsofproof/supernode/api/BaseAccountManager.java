@@ -115,19 +115,6 @@ public abstract class BaseAccountManager implements AccountManager
 		return Math.min (MAXIMUM_FEE, Math.max (MINIMUM_FEE, writer.toByteArray ().length / 1000 * MINIMUM_FEE));
 	}
 
-	protected Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks) throws ValidationException
-	{
-		long fee = MINIMUM_FEE;
-		long prevfee = MINIMUM_FEE;
-		Transaction t = createSpend (sources, sinks, fee);
-		while ( (fee = estimateFee (t)) > prevfee )
-		{
-			t = createSpend (sources, sinks, fee);
-			prevfee = fee;
-		}
-		return t;
-	}
-
 	protected Transaction createSpend (List<TransactionOutput> sources, List<TransactionSink> sinks, long fee) throws ValidationException
 	{
 		if ( fee < 0 || fee > MAXIMUM_FEE )
@@ -402,6 +389,27 @@ public abstract class BaseAccountManager implements AccountManager
 			}
 			return createSpend (sources, sinks, fee);
 		}
+	}
+
+	@Override
+	public Transaction pay (byte[] receiver, long amount) throws ValidationException
+	{
+		long fee = MINIMUM_FEE;
+		long estimate = 0;
+		Transaction t = null;
+
+		do
+		{
+			fee = Math.max (fee, estimate);
+			t = pay (receiver, amount, fee);
+			estimate = estimateFee (t);
+			if ( fee < estimate )
+			{
+				log.trace ("The transaction requires more network fees. Reassembling.");
+			}
+		} while ( fee < estimate );
+
+		return t;
 	}
 
 	@Override

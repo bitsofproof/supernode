@@ -48,6 +48,8 @@ public interface AccountManager extends TransactionListener
 
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException;
 
+	public Transaction pay (byte[] receiver, long amount) throws ValidationException;
+
 	public Transaction split (long[] amounts, long fee) throws ValidationException;
 
 	public long getBalance ();
