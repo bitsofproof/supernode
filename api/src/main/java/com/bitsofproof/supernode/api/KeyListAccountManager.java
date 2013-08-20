@@ -25,12 +25,6 @@ public class KeyListAccountManager extends BaseAccountManager
 	private static final SecureRandom rnd = new SecureRandom ();
 
 	@Override
-	public int getNumberOfKeys ()
-	{
-		return keys.size ();
-	}
-
-	@Override
 	public Collection<byte[]> getAddresses ()
 	{
 		List<byte[]> a = new ArrayList<byte[]> ();

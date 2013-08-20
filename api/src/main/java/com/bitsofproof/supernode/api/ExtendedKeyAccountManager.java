@@ -48,12 +48,6 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		this.master = master;
 	}
 
-	@Override
-	public int getNumberOfKeys ()
-	{
-		return nextSequence;
-	}
-
 	public int getFirstIndex ()
 	{
 		return firstIndex;
@@ -163,7 +157,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	public void sync (BCSAPI api) throws BCSAPIException
 	{
 		ensureLookAhead (0);
-		log.trace ("Sync nkeys: " + getNumberOfKeys ());
+		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
 		api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
@@ -181,6 +175,6 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 				updateWithTransaction (t);
 			}
 		});
-		log.trace ("Sync finished with nkeys: " + getNumberOfKeys ());
+		log.trace ("Sync finished with nkeys: " + (nextSequence - firstIndex));
 	}
 }

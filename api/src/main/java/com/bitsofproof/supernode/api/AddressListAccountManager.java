@@ -21,12 +21,6 @@ public class AddressListAccountManager extends BaseAccountManager
 	private final Set<ByteVector> addresses = new HashSet<ByteVector> ();
 
 	@Override
-	public int getNumberOfKeys ()
-	{
-		return addresses.size ();
-	}
-
-	@Override
 	public Collection<byte[]> getAddresses ()
 	{
 		List<byte[]> al = new ArrayList<byte[]> ();
