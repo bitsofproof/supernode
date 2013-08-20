@@ -45,7 +45,6 @@
 	</bean>
 	
 	<bean id="BCSAPI" class="com.bitsofproof.supernode.api.JMSServerConnector" init-method="init">
-	    <property name="clientId" value="APITest" />
 		<property name="connectionFactory" ref="embeddedBus" />
 	</bean>
 </beans>
