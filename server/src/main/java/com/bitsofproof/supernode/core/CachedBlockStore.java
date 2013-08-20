@@ -402,7 +402,7 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
 		lookAhead = Math.min (Math.max (10, lookAhead), 1000);
-		for ( int i = firstIndex; i < lookAhead; ++i )
+		for ( int i = firstIndex; i < firstIndex + lookAhead; ++i )
 		{
 			ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
 			matchSet.add (address);
@@ -462,7 +462,7 @@ public abstract class CachedBlockStore implements BlockStore
 									}
 								}
 							}
-							for ( int i = addressSet.size (); i < lastUsedAddress + lookAhead; ++i )
+							for ( int i = addressSet.size (); i < lastUsedAddress + lookAhead - firstIndex; ++i )
 							{
 								ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
 								matchSet.add (address);
