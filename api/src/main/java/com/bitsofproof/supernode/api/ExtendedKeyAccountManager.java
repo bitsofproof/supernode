@@ -36,6 +36,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	private ExtendedKey master;
 	private int nextSequence;
 	private int lookAhead = 100;
+	private int firstIndex;
 
 	public ExtendedKey getMaster ()
 	{
@@ -51,6 +52,26 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	public int getNumberOfKeys ()
 	{
 		return nextSequence;
+	}
+
+	public int getFirstIndex ()
+	{
+		return firstIndex;
+	}
+
+	public void setLookAhead (int lookAhead)
+	{
+		this.lookAhead = lookAhead;
+	}
+
+	public void setFirstIndex (int firstIndex)
+	{
+		this.firstIndex = firstIndex;
+	}
+
+	public int getLookAhead ()
+	{
+		return lookAhead;
 	}
 
 	@Override
@@ -69,17 +90,17 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	private void ensureLookAhead (int from)
 	{
-		while ( keyIDForAddress.size () < (from + lookAhead) )
+		while ( keyIDForAddress.size () < (from + lookAhead - firstIndex) )
 		{
 			Key key = null;
 			try
 			{
-				key = master.getKey (keyIDForAddress.size ());
+				key = master.getKey (keyIDForAddress.size () + firstIndex);
 			}
 			catch ( ValidationException e )
 			{
 			}
-			keyIDForAddress.put (new ByteVector (key.getAddress ()), keyIDForAddress.size ());
+			keyIDForAddress.put (new ByteVector (key.getAddress ()), keyIDForAddress.size () + firstIndex);
 		}
 	}
 
@@ -138,12 +159,12 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return addresses;
 	}
 
-	public void sync (BCSAPI api, final int lookAhead) throws BCSAPIException, ValidationException
+	@Override
+	public void sync (BCSAPI api) throws BCSAPIException
 	{
-		this.lookAhead = lookAhead;
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + getNumberOfKeys ());
-		api.scanUTXO (getMaster (), lookAhead, getCreated (), new TransactionListener ()
+		api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)

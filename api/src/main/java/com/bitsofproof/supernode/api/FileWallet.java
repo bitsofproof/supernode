@@ -137,6 +137,7 @@ public class FileWallet implements Wallet
 			{
 				ExtendedKey pub = ExtendedKey.parse (account.getPublicKey ());
 				NCExtendedKeyAccountManager am = new NCExtendedKeyAccountManager (account.getName (), account.getCreated () * 1000);
+				am.setFirstIndex (account.getFirstIndex ());
 				wallet.accounts.put (account.getName (), am);
 				am.setMaster (pub);
 			}
@@ -148,11 +149,11 @@ public class FileWallet implements Wallet
 		return wallet;
 	}
 
-	public void sync (BCSAPI api, int lookAhead) throws BCSAPIException, ValidationException
+	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
 	{
 		for ( NCExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.sync (api, lookAhead);
+			account.sync (api);
 		}
 	}
 
@@ -196,6 +197,7 @@ public class FileWallet implements Wallet
 				BCSAPIMessage.Wallet.Account.Builder ab = BCSAPIMessage.Wallet.Account.newBuilder ();
 				ab.setName (am.getName ());
 				ab.setCreated (am.getCreated () / 1000);
+				ab.setFirstIndex (am.getFirstIndex ());
 				ab.setPublicKey (am.getMaster ().getReadOnly ().serialize (true));
 				builder.addAccounts (ab.build ());
 			}

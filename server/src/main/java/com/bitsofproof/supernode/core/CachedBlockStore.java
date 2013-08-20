@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +34,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.api.ColorRules;
-import com.bitsofproof.supernode.api.ColorRules.ColoredCoin;
 import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
@@ -400,12 +397,12 @@ public abstract class CachedBlockStore implements BlockStore
 	}
 
 	@Override
-	public void filterTransactions (boolean utxo, Set<ByteVector> matchSet, ExtendedKey ek, int lookAhead, long after, TransactionProcessor processor)
-			throws ValidationException
+	public void filterTransactions (boolean utxo, Set<ByteVector> matchSet, ExtendedKey ek, int firstIndex, int lookAhead, long after,
+			TransactionProcessor processor) throws ValidationException
 	{
 		Map<ByteVector, Integer> addressSet = new HashMap<ByteVector, Integer> ();
 		lookAhead = Math.min (Math.max (10, lookAhead), 1000);
-		for ( int i = 0; i < lookAhead; ++i )
+		for ( int i = firstIndex; i < lookAhead; ++i )
 		{
 			ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
 			matchSet.add (address);
@@ -1065,7 +1062,6 @@ public abstract class CachedBlockStore implements BlockStore
 		for ( Tx t : b.getTransactions () )
 		{
 			t.setBlock (b);
-			List<ColoredCoin> inputCoins = new ArrayList<ColoredCoin> ();
 			for ( TxIn i : t.getInputs () )
 			{
 				if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
@@ -1095,27 +1091,11 @@ public abstract class CachedBlockStore implements BlockStore
 						i.setSource (getSourceReference (source));
 					}
 
-					ColoredCoin c = new ColoredCoin ();
-					c.color = source.getColor ();
-					c.value = source.getValue ();
-					inputCoins.add (c);
 				}
 			}
 
-			List<ColoredCoin> outputCoins = new ArrayList<ColoredCoin> ();
 			for ( TxOut o : t.getOutputs () )
 			{
-				ColoredCoin c = new ColoredCoin ();
-				c.color = null;
-				c.value = o.getValue ();
-				outputCoins.add (c);
-			}
-			ColorRules.colorOutput (inputCoins, outputCoins);
-			Iterator<ColoredCoin> i = outputCoins.iterator ();
-
-			for ( TxOut o : t.getOutputs () )
-			{
-				o.setColor (i.next ().color);
 				try
 				{
 					for ( Token token : ScriptFormat.parse (o.getScript ()) )

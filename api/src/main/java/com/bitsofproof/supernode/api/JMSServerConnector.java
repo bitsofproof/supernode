@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.Semaphore;
 
 import javax.jms.BytesMessage;
@@ -49,8 +48,6 @@ public class JMSServerConnector implements BCSAPI
 
 	private ConnectionFactory connectionFactory;
 	private Connection connection;
-
-	private String clientId = UUID.randomUUID ().toString ();
 
 	private Boolean production = null;
 
@@ -153,11 +150,6 @@ public class JMSServerConnector implements BCSAPI
 		}
 	}
 
-	public void setClientId (String clientId)
-	{
-		this.clientId = clientId;
-	}
-
 	public void setConnectionFactory (ConnectionFactory connectionFactory)
 	{
 		this.connectionFactory = connectionFactory;
@@ -208,7 +200,6 @@ public class JMSServerConnector implements BCSAPI
 		{
 			log.debug ("Initialize BCSAPI Bus adaptor");
 			connection = connectionFactory.createConnection ();
-			connection.setClientID (clientId);
 			connection.start ();
 		}
 		catch ( Exception e )
@@ -327,9 +318,9 @@ public class JMSServerConnector implements BCSAPI
 	}
 
 	@Override
-	public void scanUTXO (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException
+	public void scanUTXO (ExtendedKey master, int firstIndex, int lookAhead, long after, TransactionListener listener) throws BCSAPIException
 	{
-		scanRequest (master, lookAhead, after, listener, "utxoAccountRequest");
+		scanRequest (master, firstIndex, lookAhead, after, listener, "utxoAccountRequest");
 	}
 
 	@Override
@@ -339,9 +330,9 @@ public class JMSServerConnector implements BCSAPI
 	}
 
 	@Override
-	public void scanTransactions (ExtendedKey master, int lookAhead, long after, final TransactionListener listener) throws BCSAPIException
+	public void scanTransactions (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener) throws BCSAPIException
 	{
-		scanRequest (master, lookAhead, after, listener, "accountRequest");
+		scanRequest (master, firstIndex, lookAhead, after, listener, "accountRequest");
 	}
 
 	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue)
@@ -424,7 +415,8 @@ public class JMSServerConnector implements BCSAPI
 		}
 	}
 
-	private void scanRequest (ExtendedKey master, int lookAhead, long after, final TransactionListener listener, String request) throws BCSAPIException
+	private void scanRequest (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener, String request)
+			throws BCSAPIException
 	{
 		if ( !master.isReadOnly () )
 		{

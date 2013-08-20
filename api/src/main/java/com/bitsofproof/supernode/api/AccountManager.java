@@ -38,11 +38,15 @@ public interface AccountManager extends TransactionListener
 
 	}
 
+	public void sync (BCSAPI api) throws BCSAPIException;
+
 	public long getCreated ();
 
 	public int getNumberOfKeys ();
 
 	public Key getNextKey () throws ValidationException;
+
+	public Key getKeyForAddress (byte[] address);
 
 	public Collection<byte[]> getAddresses ();
 

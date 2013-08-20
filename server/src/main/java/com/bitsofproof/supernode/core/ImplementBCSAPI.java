@@ -303,6 +303,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					o.readBytes (body);
 					BCSAPIMessage.AccountRequest request = BCSAPIMessage.AccountRequest.parseFrom (body);
 					final ExtendedKey ek = ExtendedKey.parse (request.getPublicKey ());
+					final int firstIndex = request.getFirstIndex ();
 					final int lookAhead = request.getLookAhead ();
 					final long after = request.getAfter ();
 					log.debug ("accountRequest " + (utxo ? "UTXO" : "") + " for " + ek.serialize (true) + " after " + after);
@@ -345,7 +346,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 									}
 								};
 
-								store.filterTransactions (utxo, match, ek, lookAhead, after, processor);
+								store.filterTransactions (utxo, match, ek, firstIndex, lookAhead, after, processor);
 								int c = counter.get ();
 								log.debug ("accountRequest returns " + counter.get () + " transactions from blockchain");
 

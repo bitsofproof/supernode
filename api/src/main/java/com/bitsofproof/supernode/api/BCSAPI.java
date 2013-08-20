@@ -143,7 +143,7 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanTransactions (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
+	public void scanTransactions (ExtendedKey master, int firstIndex, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * Scan unspent transactions using and address or outpoint in match.
@@ -162,5 +162,5 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
-	public void scanUTXO (ExtendedKey master, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
+	public void scanUTXO (ExtendedKey master, int firstIndex, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
 }

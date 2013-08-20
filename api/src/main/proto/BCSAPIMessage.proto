@@ -86,23 +86,6 @@ message ExceptionMessage {
 	repeated string message = 2;
 }
 
-message Color {
-	required bytes transaction = 1;
-	required string terms = 2;
-	required uint64 unit = 3;
-	required uint32 expiryHeight = 4;
-	required bytes pubkey = 5;
-	required bytes signature = 6;
-}
-
-message FilterRequest {
-	required uint32 bcsapiversion = 1;
-	required bytes filter = 2;
-	required uint32 hashFunctions = 3;
-	required uint32 tweak = 4;
-	required uint32 mode = 5;
-}
-
 message ExactMatchRequest
 {
 	required uint32 bcsapiversion = 1;
@@ -117,6 +100,7 @@ message AccountRequest
 	required string publicKey = 2;
 	required uint32 lookAhead = 3;
 	optional uint64 after = 4;
+	optional uint32 firstIndex = 5;
 }
 
 message Wallet {
@@ -128,6 +112,7 @@ message Wallet {
 		required string publicKey = 1;
 		required uint64 created = 2;
 		required string name = 3;
+		optional uint32 firstIndex = 4;
 	}
 	repeated Account accounts = 4;
 }

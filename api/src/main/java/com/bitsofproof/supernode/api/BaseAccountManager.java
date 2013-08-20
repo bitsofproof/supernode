@@ -55,11 +55,6 @@ public abstract class BaseAccountManager implements AccountManager
 	private final List<AccountListener> accountListener = Collections.synchronizedList (new ArrayList<AccountListener> ());
 	private final Map<String, Transaction> transactions = new HashMap<String, Transaction> ();
 
-	public abstract Key getKeyForAddress (byte[] address);
-
-	@Override
-	public abstract Key getNextKey () throws ValidationException;
-
 	protected UTXO createConfirmedUTXO ()
 	{
 		return new InMemoryUTXO ();

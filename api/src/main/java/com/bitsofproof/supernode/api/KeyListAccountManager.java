@@ -59,7 +59,8 @@ public class KeyListAccountManager extends BaseAccountManager
 		keyByAddress.put (new ByteVector (key.getAddress ()), key);
 	}
 
-	public void sync (BCSAPI api) throws BCSAPIException, ValidationException
+	@Override
+	public void sync (BCSAPI api) throws BCSAPIException
 	{
 		log.trace ("Sync nkeys: " + keys.size ());
 		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
