@@ -54,17 +54,31 @@ public class KeyListAccountManager extends BaseAccountManager
 	}
 
 	@Override
-	public void sync (BCSAPI api) throws BCSAPIException
+	public void sync (BCSAPI api, boolean utxo) throws BCSAPIException
 	{
 		log.trace ("Sync nkeys: " + keys.size ());
-		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		if ( utxo )
 		{
-			@Override
-			public void process (Transaction t)
+			api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 			{
-				updateWithTransaction (t);
-			}
-		});
+				@Override
+				public void process (Transaction t)
+				{
+					updateWithTransaction (t);
+				}
+			});
+		}
+		else
+		{
+			api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+			{
+				@Override
+				public void process (Transaction t)
+				{
+					updateWithTransaction (t);
+				}
+			});
+		}
 		log.trace ("Sync finished nkeys: " + keys.size ());
 	}
 }

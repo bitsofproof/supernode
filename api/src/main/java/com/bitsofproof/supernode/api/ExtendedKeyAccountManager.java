@@ -18,8 +18,10 @@ package com.bitsofproof.supernode.api;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 {
 	private static final Logger log = LoggerFactory.getLogger (ExtendedKeyAccountManager.class);
 
+	private final Set<Integer> usedKeys = new HashSet<Integer> ();
 	private final Map<ByteVector, Integer> keyIDForAddress = new HashMap<ByteVector, Integer> ();
 	private ExtendedKey master;
 	private int nextSequence;
@@ -116,9 +119,19 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return getKey (nextSequence++);
 	}
 
+	public Set<Integer> getUsedKeys ()
+	{
+		return usedKeys;
+	}
+
 	public Integer getKeyIDForAddress (byte[] address)
 	{
-		return keyIDForAddress.get (new ByteVector (address));
+		Integer id = getKeyIDForAddress (address);
+		if ( id != null )
+		{
+			usedKeys.add (id);
+		}
+		return id;
 	}
 
 	@Override
@@ -154,11 +167,11 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	}
 
 	@Override
-	public void sync (BCSAPI api) throws BCSAPIException
+	public void sync (BCSAPI api, boolean utxo) throws BCSAPIException
 	{
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
-		api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), new TransactionListener ()
+		final TransactionListener processor = new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
@@ -174,7 +187,20 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 				}
 				updateWithTransaction (t);
 			}
-		});
+		};
+		if ( utxo )
+		{
+			api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), processor);
+		}
+		else
+		{
+			api.scanTransactions (getMaster (), firstIndex, lookAhead, getCreated (), processor);
+		}
+		firstIndex = nextSequence;
+		for ( Integer id : usedKeys )
+		{
+			firstIndex = Math.min (id, firstIndex);
+		}
 		log.trace ("Sync finished with nkeys: " + (nextSequence - firstIndex));
 	}
 }
