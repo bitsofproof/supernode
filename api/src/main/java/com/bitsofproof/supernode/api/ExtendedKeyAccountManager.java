@@ -126,7 +126,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 
 	public Integer getKeyIDForAddress (byte[] address)
 	{
-		Integer id = getKeyIDForAddress (address);
+		Integer id = keyIDForAddress.get (address);
 		if ( id != null )
 		{
 			usedKeys.add (id);
