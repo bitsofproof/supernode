@@ -38,7 +38,9 @@ public interface AccountManager extends TransactionListener
 
 	}
 
-	public void sync (BCSAPI api, boolean utxo) throws BCSAPIException;
+	public void sync (BCSAPI api) throws BCSAPIException;
+
+	public void syncHistory (BCSAPI api) throws BCSAPIException;
 
 	public long getCreated ();
 

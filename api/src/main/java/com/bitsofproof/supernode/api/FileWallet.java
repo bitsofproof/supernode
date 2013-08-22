@@ -153,7 +153,7 @@ public class FileWallet implements Wallet
 	{
 		for ( NCExtendedKeyAccountManager account : accounts.values () )
 		{
-			account.sync (api, false);
+			account.syncHistory (api);
 		}
 	}
 

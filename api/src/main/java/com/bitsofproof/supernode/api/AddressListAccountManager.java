@@ -55,31 +55,32 @@ public class AddressListAccountManager extends BaseAccountManager
 	}
 
 	@Override
-	public void sync (BCSAPI api, boolean utxo) throws BCSAPIException
+	public void syncHistory (BCSAPI api) throws BCSAPIException
 	{
 		log.trace ("Sync naddr: " + addresses.size ());
-		if ( utxo )
+		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
-			api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+			@Override
+			public void process (Transaction t)
 			{
-				@Override
-				public void process (Transaction t)
-				{
-					updateWithTransaction (t);
-				}
-			});
-		}
-		else
+				updateWithTransaction (t);
+			}
+		});
+		log.trace ("Sync finished naddr: " + addresses.size ());
+	}
+
+	@Override
+	public void sync (BCSAPI api) throws BCSAPIException
+	{
+		log.trace ("Sync naddr: " + addresses.size ());
+		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
-			api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+			@Override
+			public void process (Transaction t)
 			{
-				@Override
-				public void process (Transaction t)
-				{
-					updateWithTransaction (t);
-				}
-			});
-		}
+				updateWithTransaction (t);
+			}
+		});
 		log.trace ("Sync finished naddr: " + addresses.size ());
 	}
 }

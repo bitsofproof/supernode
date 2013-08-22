@@ -166,36 +166,44 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return addresses;
 	}
 
+	private final TransactionListener processor = new TransactionListener ()
+	{
+		@Override
+		public void process (Transaction t)
+		{
+			for ( TransactionOutput o : t.getOutputs () )
+			{
+				Integer thisKey = getKeyIDForAddress (o.getOutputAddress ());
+				if ( thisKey != null )
+				{
+					ensureLookAhead (thisKey);
+					nextSequence = Math.max (nextSequence, thisKey + 1);
+				}
+			}
+			updateWithTransaction (t);
+		}
+	};
+
 	@Override
-	public void sync (BCSAPI api, boolean utxo) throws BCSAPIException
+	public void syncHistory (BCSAPI api) throws BCSAPIException
 	{
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
-		final TransactionListener processor = new TransactionListener ()
+		api.scanTransactions (getMaster (), firstIndex, lookAhead, getCreated (), processor);
+		firstIndex = nextSequence;
+		for ( Integer id : usedKeys )
 		{
-			@Override
-			public void process (Transaction t)
-			{
-				for ( TransactionOutput o : t.getOutputs () )
-				{
-					Integer thisKey = getKeyIDForAddress (o.getOutputAddress ());
-					if ( thisKey != null )
-					{
-						ensureLookAhead (thisKey);
-						nextSequence = Math.max (nextSequence, thisKey + 1);
-					}
-				}
-				updateWithTransaction (t);
-			}
-		};
-		if ( utxo )
-		{
-			api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), processor);
+			firstIndex = Math.min (id, firstIndex);
 		}
-		else
-		{
-			api.scanTransactions (getMaster (), firstIndex, lookAhead, getCreated (), processor);
-		}
+		log.trace ("Sync finished with nkeys: " + (nextSequence - firstIndex));
+	}
+
+	@Override
+	public void sync (BCSAPI api) throws BCSAPIException
+	{
+		ensureLookAhead (0);
+		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
+		api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), processor);
 		firstIndex = nextSequence;
 		for ( Integer id : usedKeys )
 		{
