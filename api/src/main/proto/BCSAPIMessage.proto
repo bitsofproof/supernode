@@ -102,17 +102,3 @@ message AccountRequest
 	optional uint64 after = 4;
 	optional uint32 firstIndex = 5;
 }
-
-message Wallet {
-	required uint32 bcsapiversion = 1;
-	required bytes encryptedSeed = 2;
-	required bytes signature = 3;
-	message Account
-	{
-		required string publicKey = 1;
-		required uint64 created = 2;
-		required string name = 3;
-		optional uint32 firstIndex = 4;
-	}
-	repeated Account accounts = 4;
-}
