@@ -163,4 +163,13 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void scanUTXO (ExtendedKey master, int firstIndex, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
+
+	/**
+	 * Generate a trunk update to cach up from a last seen block
+	 * 
+	 * @param hash
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void catchUp (String hash, TrunkListener listener) throws BCSAPIException;
 }

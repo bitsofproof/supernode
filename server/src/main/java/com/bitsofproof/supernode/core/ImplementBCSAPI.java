@@ -155,6 +155,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 			addMatchScanListener ();
 			addPingListener ();
 			addAccountScanListener ();
+			addCatchUpListener ();
 		}
 		catch ( JMSException e )
 		{
@@ -384,6 +385,52 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				catch ( ValidationException e )
 				{
 					log.error ("Invalid scan account request", e);
+				}
+			}
+		});
+	}
+
+	private void addCatchUpListener () throws JMSException
+	{
+		addQueueListener ("catchUpRequest", new SessionMessageListener ()
+		{
+			@Override
+			public void onMessage (Message arg0)
+			{
+				BytesMessage o = (BytesMessage) arg0;
+				try
+				{
+					byte[] body = new byte[(int) o.getBodyLength ()];
+					o.readBytes (body);
+					String hash = new Hash (BCSAPIMessage.Hash.parseFrom (body).getHash (0).toByteArray ()).toString ();
+					log.debug ("catchUpRequest for " + hash);
+					List<Blk> added = new ArrayList<Blk> ();
+					List<Blk> removed = new ArrayList<Blk> ();
+					store.catchUp (hash, added, removed);
+					if ( !added.isEmpty () || !removed.isEmpty () )
+					{
+						List<Block> r = new ArrayList<Block> ();
+						List<Block> a = new ArrayList<Block> ();
+						for ( Blk blk : removed )
+						{
+							r.add (toBCSAPIBlock (blk));
+						}
+						for ( Blk blk : added )
+						{
+							a.add (toBCSAPIBlock (blk));
+						}
+						TrunkUpdateMessage tu = new TrunkUpdateMessage (a, r);
+						reply (o.getJMSReplyTo (), tu.toProtobuf ().toByteArray ());
+					}
+					else
+					{
+						reply (o.getJMSReplyTo (), null);
+					}
+					log.debug ("blockRequest for " + hash + " replied");
+				}
+				catch ( Exception e )
+				{
+					log.trace ("Rejected invalid block request ", e);
 				}
 			}
 		});

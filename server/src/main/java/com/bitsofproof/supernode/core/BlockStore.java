@@ -81,4 +81,6 @@ public interface BlockStore
 
 	public void filterTransactions (boolean utxo, Set<ByteVector> match, ExtendedKey ek, int firstIndex, int lookAhead, long after,
 			TransactionProcessor processor) throws ValidationException;
+
+	public void catchUp (String hash, List<Blk> added, List<Blk> removed) throws ValidationException;
 }

@@ -368,6 +368,39 @@ public abstract class CachedBlockStore implements BlockStore
 		}
 	}
 
+	@Override
+	public void catchUp (String hash, List<Blk> added, List<Blk> removed) throws ValidationException
+	{
+		try
+		{
+			String trunk = hash;
+			while ( !isOnTrunk (trunk) )
+			{
+				CachedBlock b = cachedBlocks.get (trunk);
+				removed.add (retrieveBlock (b));
+				b = b.previous;
+				trunk = b.hash;
+			}
+			CachedBlock q = currentHead.getLast ();
+			CachedBlock p = q.previous;
+			while ( p != null )
+			{
+				if ( q.hash.equals (trunk) )
+				{
+					break;
+				}
+				added.add (retrieveBlock (q));
+				p = q.previous;
+			}
+			Collections.reverse (added);
+		}
+		finally
+		{
+			lock.readLock ().unlock ();
+		}
+
+	}
+
 	private void updateBlockChainCache ()
 	{
 		List<CachedBlock> appendList = new ArrayList<CachedBlock> ();

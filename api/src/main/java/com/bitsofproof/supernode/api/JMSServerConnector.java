@@ -495,6 +495,63 @@ public class JMSServerConnector implements BCSAPI
 	}
 
 	@Override
+	public void catchUp (String hash, final TrunkListener listener) throws BCSAPIException
+	{
+		log.trace ("catchUp from " + hash);
+		BytesMessage m;
+		Session session = null;
+		try
+		{
+			session = connection.createSession (false, Session.AUTO_ACKNOWLEDGE);
+			MessageProducer transactionRequestProducer = session.createProducer (session.createQueue ("catchUpRequest"));
+
+			m = session.createBytesMessage ();
+			BCSAPIMessage.Hash.Builder builder = BCSAPIMessage.Hash.newBuilder ();
+			builder.setBcsapiversion (1);
+			builder.addHash (ByteString.copyFrom (new Hash (hash).toByteArray ()));
+			m.writeBytes (builder.build ().toByteArray ());
+			byte[] response = synchronousRequest (session, transactionRequestProducer, m);
+			if ( response != null )
+			{
+				TrunkUpdateMessage tu = TrunkUpdateMessage.fromProtobuf (BCSAPIMessage.TrunkUpdate.parseFrom (response));
+				if ( tu.getRemoved () != null )
+				{
+					for ( Block b : tu.getRemoved () )
+					{
+						b.computeHash ();
+					}
+				}
+				if ( tu.getAdded () != null )
+				{
+					for ( Block b : tu.getAdded () )
+					{
+						b.computeHash ();
+					}
+				}
+				listener.trunkUpdate (tu.getRemoved (), tu.getAdded ());
+			}
+		}
+		catch ( JMSException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		catch ( InvalidProtocolBufferException e )
+		{
+			throw new BCSAPIException (e);
+		}
+		finally
+		{
+			try
+			{
+				session.close ();
+			}
+			catch ( JMSException e )
+			{
+			}
+		}
+	}
+
+	@Override
 	public void registerTransactionListener (final TransactionListener listener) throws BCSAPIException
 	{
 		try
