@@ -645,6 +645,10 @@ public class JMSServerConnector implements BCSAPI
 			consumer = session.createConsumer (answerQueue);
 			producer.send (m);
 			BytesMessage reply = (BytesMessage) consumer.receive (timeout);
+			if ( reply == null )
+			{
+				throw new BCSAPIException ("timeout");
+			}
 			if ( reply.getBodyLength () == 0 )
 			{
 				return null;
