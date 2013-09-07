@@ -18,10 +18,10 @@ package com.bitsofproof.supernode.core;
 import java.util.List;
 import java.util.Set;
 
-import com.bitsofproof.supernode.api.ExtendedKey;
 import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
+import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.model.Blk;
 import com.bitsofproof.supernode.model.Tx;

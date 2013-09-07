@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.api.AddressConverter;
+import com.bitsofproof.supernode.wallet.AddressConverter;
 
 public class BloomFilter
 {

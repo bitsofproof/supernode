@@ -32,6 +32,8 @@ import org.junit.Test;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.wallet.AddressConverter;
+import com.bitsofproof.supernode.wallet.KeyFormatter;
 
 public class KeySerializerTest
 {

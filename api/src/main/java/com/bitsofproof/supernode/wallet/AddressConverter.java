@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.wallet;
 
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.Hash;

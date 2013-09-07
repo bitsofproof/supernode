@@ -17,6 +17,7 @@ package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
 
+import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 
 /**

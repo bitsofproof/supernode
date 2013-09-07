@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.Hash;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;

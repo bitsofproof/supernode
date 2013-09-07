@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.bitsofproof.supernode.api;
+package com.bitsofproof.supernode.common;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,12 +39,6 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
-
-import com.bitsofproof.supernode.common.ByteUtils;
-import com.bitsofproof.supernode.common.ECKeyPair;
-import com.bitsofproof.supernode.common.ECPublicKey;
-import com.bitsofproof.supernode.common.Key;
-import com.bitsofproof.supernode.common.ValidationException;
 
 /**
  * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032

@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.ECPublicKey;
+import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 

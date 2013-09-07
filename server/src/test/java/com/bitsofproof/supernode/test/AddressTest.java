@@ -24,9 +24,9 @@ import java.util.Arrays;
 
 import org.junit.Test;
 
-import com.bitsofproof.supernode.api.AddressConverter;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ValidationException;
+import com.bitsofproof.supernode.wallet.AddressConverter;
 
 public class AddressTest
 {
