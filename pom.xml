@@ -58,7 +58,7 @@
 		<hibernate.version>3.6.9.Final</hibernate.version>
 		<postgresql.version>9.1-901.jdbc4</postgresql.version>
 		<leveldbjni.version>1.6.1</leveldbjni.version>
-		<protobuf.version>2.4.1</protobuf.version>
+		<protobuf.version>2.5.0</protobuf.version>
 		<hibernate-validator.version>4.3.0.Final</hibernate-validator.version>
 		<json.version>20090211</json.version>
 		<commons-cli.version>1.2</commons-cli.version>
@@ -84,6 +84,10 @@
         <pluginRepository>
             <id>dtrott</id>
             <url>http://maven.davidtrott.com/repository</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>protoc-plugin</id>
+            <url>http://sergei-ivanov.github.com/maven-protoc-plugin/repo/releases/</url>
         </pluginRepository>
     </pluginRepositories>
 
