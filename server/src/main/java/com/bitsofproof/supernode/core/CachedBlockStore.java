@@ -1348,7 +1348,15 @@ public abstract class CachedBlockStore implements BlockStore
 		{
 			if ( !i.getSourceHash ().equals (Hash.ZERO_HASH_STRING) )
 			{
-				TxOut out = resolvedInputs.use (i.getSourceHash (), i.getIx ());
+				TxOut out = null;
+				if ( height != 0 )
+				{
+					out = resolvedInputs.use (i.getSourceHash (), i.getIx ());
+				}
+				else
+				{
+					out = resolvedInputs.get (i.getSourceHash (), i.getIx ());
+				}
 				if ( out == null )
 				{
 					throw new ValidationException ("Transaction refers to unknown or spent output " + i.getSourceHash () + " [" + i.getIx () + "] "

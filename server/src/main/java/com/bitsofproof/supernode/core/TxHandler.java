@@ -322,7 +322,6 @@ public class TxHandler implements TrunkListener
 						notifyListener (tx, true);
 					}
 				}
-				availableOutput.resetUse ();
 				for ( Tx tx : firstSeenInBlock )
 				{
 					notifyListener (tx, false);
