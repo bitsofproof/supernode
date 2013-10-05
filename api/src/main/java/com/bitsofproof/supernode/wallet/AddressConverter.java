@@ -21,6 +21,9 @@ import com.bitsofproof.supernode.common.ValidationException;
 
 public class AddressConverter
 {
+	private static final int PRODUCTION_FLAG = 0;
+	private static final int TESTNET_FLAG = 111;
+
 	public static byte[] fromSatoshiStyle (String s, int addressFlag) throws ValidationException
 	{
 		try
@@ -47,7 +50,12 @@ public class AddressConverter
 			throw new ValidationException (e);
 		}
 	}
-
+	
+	public static byte[] fromSatoshiStyle(String s, boolean production) throws ValidationException
+	{
+		return fromSatoshiStyle(s, production ? PRODUCTION_FLAG : TESTNET_FLAG);
+	}
+	
 	public static String toSatoshiStyle (byte[] keyDigest, int addressFlag)
 	{
 		byte[] addressBytes = new byte[1 + keyDigest.length + 4];
@@ -57,4 +65,9 @@ public class AddressConverter
 		System.arraycopy (check, 0, addressBytes, keyDigest.length + 1, 4);
 		return ByteUtils.toBase58 (addressBytes);
 	}
+	
+	public static String toSatoshiStyle (byte[] keyDigest, boolean production)
+	{
+		return toSatoshiStyle(keyDigest, production ? PRODUCTION_FLAG : TESTNET_FLAG);
+	}	
 }
