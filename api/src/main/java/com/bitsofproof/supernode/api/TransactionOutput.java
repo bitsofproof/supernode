@@ -117,6 +117,18 @@ public class TransactionOutput implements Serializable, Cloneable
 			{
 			}
 		}
+		else if ( ScriptFormat.isPayToScriptHash (script) )
+		{
+			List<Token> tokens;
+			try
+			{
+				tokens = ScriptFormat.parse (script);
+				return tokens.get (1).data;
+			}
+			catch ( ValidationException e )
+			{
+			}
+		}
 		return null;
 	}
 

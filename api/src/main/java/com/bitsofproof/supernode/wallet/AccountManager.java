@@ -51,12 +51,20 @@ public interface AccountManager extends TransactionListener
 
 	public Key getNextKey () throws ValidationException;
 
+	public Address getNextAddress () throws ValidationException;
+
 	public Key getKeyForAddress (byte[] address);
 
 	public Collection<byte[]> getAddresses ();
 
+	public Transaction pay (Address receiver, long amount, long fee) throws ValidationException;
+
+	public Transaction pay (Address receiver, long amount) throws ValidationException;
+
+	@Deprecated
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException;
 
+	@Deprecated
 	public Transaction pay (byte[] receiver, long amount) throws ValidationException;
 
 	public Transaction split (long[] amounts, long fee) throws ValidationException;

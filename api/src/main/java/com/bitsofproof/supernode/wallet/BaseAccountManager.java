@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.bouncycastle.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,19 +84,19 @@ public abstract class BaseAccountManager implements AccountManager
 
 	protected static class TransactionSink
 	{
-		private final byte[] address;
+		private final Address address;
 		private final long value;
 
-		public TransactionSink (byte[] address, long value)
+		public TransactionSink (Address address, long value)
 		{
 			super ();
-			this.address = Arrays.clone (address);
+			this.address = address;
 			this.value = value;
 		}
 
-		public byte[] getAddress ()
+		public Address getAddress ()
 		{
-			return Arrays.clone (address);
+			return address;
 		}
 
 		public long getValue ()
@@ -131,15 +130,24 @@ public abstract class BaseAccountManager implements AccountManager
 			sumOut += s.getValue ();
 
 			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-			if ( s.getAddress ().length != 20 )
+			if ( s.getAddress ().getType () == Address.Type.COMMON )
 			{
-				throw new ValidationException ("Sink is not an address");
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+				writer.writeData (s.getAddress ().getAddress ());
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
 			}
-			writer.writeData (s.getAddress ());
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
-			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
+			else if ( s.getAddress ().getType () == Address.Type.P2SH )
+			{
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+				writer.writeData (s.getAddress ().getAddress ());
+				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
+			}
+			else
+			{
+				throw new ValidationException ("unknown sink address type");
+			}
 			o.setScript (writer.toByteArray ());
 
 			transaction.getOutputs ().add (o);
@@ -165,22 +173,25 @@ public abstract class BaseAccountManager implements AccountManager
 		{
 			TransactionInput i = transaction.getInputs ().get (j);
 			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
-			byte[] address = o.getOutputAddress ();
-			if ( address == null )
+			if ( ScriptFormat.isPayToAddress (o.getScript ()) )
 			{
-				throw new ValidationException ("Can only spend pay to address outputs");
+				byte[] address = o.getOutputAddress ();
+				Key key = getKeyForAddress (address);
+				if ( key == null )
+				{
+					throw new ValidationException ("Have no key to spend this output");
+				}
+				byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
+				byte[] sigPlusType = new byte[sig.length + 1];
+				System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
+				sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
+				sw.writeData (sigPlusType);
+				sw.writeData (key.getPublic ());
 			}
-			Key key = getKeyForAddress (address);
-			if ( key == null )
+			else
 			{
-				throw new ValidationException ("Have no key to spend this output");
+				spendNonAddressOutput (o, sw, hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
 			}
-			byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
-			byte[] sigPlusType = new byte[sig.length + 1];
-			System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
-			sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
-			sw.writeData (sigPlusType);
-			sw.writeData (key.getPublic ());
 			i.setScript (sw.toByteArray ());
 			++j;
 		}
@@ -189,7 +200,12 @@ public abstract class BaseAccountManager implements AccountManager
 		return transaction;
 	}
 
-	private static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
+	protected void spendNonAddressOutput (TransactionOutput o, ScriptFormat.Writer writer, byte[] digest) throws ValidationException
+	{
+		throw new ValidationException ("Can not spend this output type");
+	}
+
+	protected static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
 	{
 		Transaction copy = null;
 		try
@@ -347,11 +363,17 @@ public abstract class BaseAccountManager implements AccountManager
 	}
 
 	@Override
-	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException
+	public Address getNextAddress () throws ValidationException
+	{
+		return new Address (Address.Network.PRODUCTION, Address.Type.COMMON, getNextKey ().getAddress ());
+	}
+
+	@Override
+	public Transaction pay (Address receiver, long amount, long fee) throws ValidationException
 	{
 		synchronized ( confirmed )
 		{
-			log.trace ("pay to " + ByteUtils.toHex (receiver) + " " + amount + " + " + fee);
+			log.trace ("pay to " + receiver.getAddress () + " " + amount + " + " + fee);
 			List<TransactionOutput> sources = getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
@@ -368,8 +390,8 @@ public abstract class BaseAccountManager implements AccountManager
 			TransactionSink target = new TransactionSink (receiver, amount);
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - amount - fee);
-				log.trace ("change to " + ByteUtils.toHex (change.getAddress ()) + " " + change.getValue ());
+				TransactionSink change = new TransactionSink (getNextAddress (), in - amount - fee);
+				log.trace ("change to " + change.getAddress () + " " + change.getValue ());
 				if ( new SecureRandom ().nextBoolean () )
 				{
 					sinks.add (target);
@@ -390,7 +412,13 @@ public abstract class BaseAccountManager implements AccountManager
 	}
 
 	@Override
-	public Transaction pay (byte[] receiver, long amount) throws ValidationException
+	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException
+	{
+		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, fee);
+	}
+
+	@Override
+	public Transaction pay (Address receiver, long amount) throws ValidationException
 	{
 		long fee = MINIMUM_FEE;
 		long estimate = 0;
@@ -408,6 +436,12 @@ public abstract class BaseAccountManager implements AccountManager
 		} while ( fee < estimate );
 
 		return t;
+	}
+
+	@Override
+	public Transaction pay (byte[] receiver, long amount) throws ValidationException
+	{
+		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount);
 	}
 
 	@Override
@@ -434,12 +468,12 @@ public abstract class BaseAccountManager implements AccountManager
 			}
 			for ( long a : amounts )
 			{
-				TransactionSink target = new TransactionSink (getNextKey ().getAddress (), a);
+				TransactionSink target = new TransactionSink (getNextAddress (), a);
 				sinks.add (target);
 			}
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (getNextKey ().getAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (getNextAddress (), in - amount - fee);
 				sinks.add (change);
 			}
 			Collections.shuffle (sinks);
@@ -503,14 +537,12 @@ public abstract class BaseAccountManager implements AccountManager
 							if ( spend != null )
 							{
 								change.add (o);
-								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
-										+ o.getValue ());
+								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
 							}
 							else
 							{
 								receiving.add (o);
-								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
-										+ o.getValue ());
+								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
 							}
 						}
 					}
@@ -549,8 +581,7 @@ public abstract class BaseAccountManager implements AccountManager
 					}
 					if ( out != null )
 					{
-						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")"
-								+ out.getValue ());
+						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")" + out.getValue ());
 					}
 					modified |= out != null;
 				}
