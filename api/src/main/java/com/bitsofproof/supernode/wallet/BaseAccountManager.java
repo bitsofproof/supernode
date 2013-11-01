@@ -205,7 +205,7 @@ public abstract class BaseAccountManager implements AccountManager
 		throw new ValidationException ("Can not spend this output type");
 	}
 
-	protected static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
+	public static byte[] hashTransaction (Transaction transaction, int inr, int hashType, byte[] script) throws ValidationException
 	{
 		Transaction copy = null;
 		try
