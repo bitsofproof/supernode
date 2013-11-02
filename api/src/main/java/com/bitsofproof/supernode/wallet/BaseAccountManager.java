@@ -3,13 +3,13 @@ package com.bitsofproof.supernode.wallet;
 import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -371,42 +371,48 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (Address receiver, long amount, long fee) throws ValidationException
 	{
+		List<Address> a = new ArrayList<Address> ();
+		a.add (receiver);
+		List<Long> v = new ArrayList<Long> ();
+		v.add (amount);
+		return pay (a, v, fee);
+	}
+
+	@Override
+	public Transaction pay (List<Address> receiver, List<Long> amounts, long fee) throws ValidationException
+	{
 		synchronized ( confirmed )
 		{
-			log.trace ("pay to " + receiver.getAddress () + " " + amount + " + " + fee);
+			long amount = 0;
+			for ( Long a : amounts )
+			{
+				amount += a;
+			}
+			log.trace ("pay " + amount + " + " + fee);
 			List<TransactionOutput> sources = getSufficientSources (amount, fee, null);
 			if ( sources == null )
 			{
 				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
 			}
-			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
-
 			long in = 0;
 			for ( TransactionOutput o : sources )
 			{
 				log.trace ("using input " + o.getTxHash () + "[" + o.getIx () + "] " + o.getValue ());
 				in += o.getValue ();
 			}
-			TransactionSink target = new TransactionSink (receiver, amount);
+			List<TransactionSink> sinks = new ArrayList<TransactionSink> ();
+			Iterator<Long> ai = amounts.iterator ();
+			for ( Address r : receiver )
+			{
+				sinks.add (new TransactionSink (r, ai.next ()));
+			}
 			if ( (in - amount - fee) > 0 )
 			{
 				TransactionSink change = new TransactionSink (getNextAddress (), in - amount - fee);
 				log.trace ("change to " + change.getAddress () + " " + change.getValue ());
-				if ( new SecureRandom ().nextBoolean () )
-				{
-					sinks.add (target);
-					sinks.add (change);
-				}
-				else
-				{
-					sinks.add (change);
-					sinks.add (target);
-				}
+				sinks.add (change);
 			}
-			else
-			{
-				sinks.add (target);
-			}
+			Collections.shuffle (sinks);
 			return createSpend (sources, sinks, fee);
 		}
 	}
@@ -420,6 +426,16 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (Address receiver, long amount) throws ValidationException
 	{
+		List<Address> a = new ArrayList<Address> ();
+		a.add (receiver);
+		List<Long> v = new ArrayList<Long> ();
+		v.add (amount);
+		return pay (a, v);
+	}
+
+	@Override
+	public Transaction pay (List<Address> receiver, List<Long> amounts) throws ValidationException
+	{
 		long fee = MINIMUM_FEE;
 		long estimate = 0;
 		Transaction t = null;
@@ -427,7 +443,7 @@ public abstract class BaseAccountManager implements AccountManager
 		do
 		{
 			fee = Math.max (fee, estimate);
-			t = pay (receiver, amount, fee);
+			t = pay (receiver, amounts, fee);
 			estimate = estimateFee (t);
 			if ( fee < estimate )
 			{
