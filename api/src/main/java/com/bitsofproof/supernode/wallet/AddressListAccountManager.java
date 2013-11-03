@@ -61,6 +61,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	@Override
 	public void syncHistory (BCSAPI api) throws BCSAPIException
 	{
+		reset ();
 		log.trace ("Sync naddr: " + addresses.size ());
 		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
@@ -76,6 +77,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	@Override
 	public void sync (BCSAPI api) throws BCSAPIException
 	{
+		reset ();
 		log.trace ("Sync naddr: " + addresses.size ());
 		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{

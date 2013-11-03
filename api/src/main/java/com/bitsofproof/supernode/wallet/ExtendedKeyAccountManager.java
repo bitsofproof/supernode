@@ -193,6 +193,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	@Override
 	public void syncHistory (BCSAPI api) throws BCSAPIException
 	{
+		reset ();
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
 		api.scanTransactions (getMaster (), firstIndex, lookAhead, getCreated (), processor);
@@ -207,6 +208,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	@Override
 	public void sync (BCSAPI api) throws BCSAPIException
 	{
+		reset ();
 		ensureLookAhead (0);
 		log.trace ("Sync nkeys: " + (nextSequence - firstIndex));
 		api.scanUTXO (getMaster (), firstIndex, lookAhead, getCreated (), processor);

@@ -36,10 +36,10 @@ public abstract class BaseAccountManager implements AccountManager
 	private static final long MINIMUM_FEE = 10000;
 	private static final long MAXIMUM_FEE = 1000000;
 
-	private final UTXO confirmed = createConfirmedUTXO ();
-	private final UTXO change = createChangeUTXO ();
-	private final UTXO receiving = createReceivingUTXO ();
-	private final UTXO sending = createSendingUTXO ();
+	private UTXO confirmed = createConfirmedUTXO ();
+	private UTXO change = createChangeUTXO ();
+	private UTXO receiving = createReceivingUTXO ();
+	private UTXO sending = createSendingUTXO ();
 
 	private long created;
 
@@ -75,6 +75,14 @@ public abstract class BaseAccountManager implements AccountManager
 	protected UTXO createReceivingUTXO ()
 	{
 		return new InMemoryUTXO ();
+	}
+
+	protected void reset ()
+	{
+		confirmed = createConfirmedUTXO ();
+		change = createChangeUTXO ();
+		receiving = createReceivingUTXO ();
+		sending = createSendingUTXO ();
 	}
 
 	public boolean isOwnAddress (byte[] address)
