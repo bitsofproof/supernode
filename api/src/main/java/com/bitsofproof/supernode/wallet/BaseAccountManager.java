@@ -375,11 +375,11 @@ public abstract class BaseAccountManager implements AccountManager
 		a.add (receiver);
 		List<Long> v = new ArrayList<Long> ();
 		v.add (amount);
-		return pay (a, v, fee);
+		return pay (a, v, fee, true);
 	}
 
 	@Override
-	public Transaction pay (List<Address> receiver, List<Long> amounts, long fee) throws ValidationException
+	public Transaction pay (List<Address> receiver, List<Long> amounts, long fee, boolean senderPaysfee) throws ValidationException
 	{
 		synchronized ( confirmed )
 		{
@@ -388,11 +388,19 @@ public abstract class BaseAccountManager implements AccountManager
 			{
 				amount += a;
 			}
-			log.trace ("pay " + amount + " + " + fee);
-			List<TransactionOutput> sources = getSufficientSources (amount, fee, null);
+			log.trace ("pay " + amount + (senderPaysfee ? " " + fee : ""));
+			List<TransactionOutput> sources;
+			if ( senderPaysfee )
+			{
+				sources = getSufficientSources (amount, fee, null);
+			}
+			else
+			{
+				sources = getSufficientSources (amount, 0, null);
+			}
 			if ( sources == null )
 			{
-				throw new ValidationException ("Insufficient funds to pay " + (amount + fee));
+				throw new ValidationException ("Insufficient funds to pay " + (amount + (senderPaysfee ? fee : 0)));
 			}
 			long in = 0;
 			for ( TransactionOutput o : sources )
@@ -404,11 +412,11 @@ public abstract class BaseAccountManager implements AccountManager
 			Iterator<Long> ai = amounts.iterator ();
 			for ( Address r : receiver )
 			{
-				sinks.add (new TransactionSink (r, ai.next ()));
+				sinks.add (new TransactionSink (r, ai.next () - (!senderPaysfee ? (fee + receiver.size () - 1) / receiver.size () : 0)));
 			}
 			if ( (in - amount - fee) > 0 )
 			{
-				TransactionSink change = new TransactionSink (getNextAddress (), in - amount - fee);
+				TransactionSink change = new TransactionSink (getNextAddress (), in - amount - (senderPaysfee ? fee : 0));
 				log.trace ("change to " + change.getAddress () + " " + change.getValue ());
 				sinks.add (change);
 			}
@@ -424,17 +432,17 @@ public abstract class BaseAccountManager implements AccountManager
 	}
 
 	@Override
-	public Transaction pay (Address receiver, long amount) throws ValidationException
+	public Transaction pay (Address receiver, long amount, boolean senderPaysFee) throws ValidationException
 	{
 		List<Address> a = new ArrayList<Address> ();
 		a.add (receiver);
 		List<Long> v = new ArrayList<Long> ();
 		v.add (amount);
-		return pay (a, v);
+		return pay (a, v, senderPaysFee);
 	}
 
 	@Override
-	public Transaction pay (List<Address> receiver, List<Long> amounts) throws ValidationException
+	public Transaction pay (List<Address> receiver, List<Long> amounts, boolean senderPaysfee) throws ValidationException
 	{
 		long fee = MINIMUM_FEE;
 		long estimate = 0;
@@ -443,7 +451,7 @@ public abstract class BaseAccountManager implements AccountManager
 		do
 		{
 			fee = Math.max (fee, estimate);
-			t = pay (receiver, amounts, fee);
+			t = pay (receiver, amounts, fee, senderPaysfee);
 			estimate = estimateFee (t);
 			if ( fee < estimate )
 			{
@@ -457,7 +465,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (byte[] receiver, long amount) throws ValidationException
 	{
-		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount);
+		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, true);
 	}
 
 	@Override

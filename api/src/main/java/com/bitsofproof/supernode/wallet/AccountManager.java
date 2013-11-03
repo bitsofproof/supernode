@@ -59,11 +59,11 @@ public interface AccountManager extends TransactionListener
 
 	public Transaction pay (Address receiver, long amount, long fee) throws ValidationException;
 
-	public Transaction pay (Address receiver, long amount) throws ValidationException;
+	public Transaction pay (Address receiver, long amount, boolean senderPaysFee) throws ValidationException;
 
-	public Transaction pay (List<Address> receiver, List<Long> amount, long fee) throws ValidationException;
+	public Transaction pay (List<Address> receiver, List<Long> amount, long fee, boolean senderPaysFee) throws ValidationException;
 
-	public Transaction pay (List<Address> receiver, List<Long> amounts) throws ValidationException;
+	public Transaction pay (List<Address> receiver, List<Long> amounts, boolean senderPaysFee) throws ValidationException;
 
 	@Deprecated
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException;
