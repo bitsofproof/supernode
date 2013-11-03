@@ -177,19 +177,19 @@ public abstract class BaseAccountManager implements AccountManager
 		}
 
 		int j = 0;
-		for ( TransactionOutput o : sources )
+		for ( TransactionOutput s : sources )
 		{
 			TransactionInput i = transaction.getInputs ().get (j);
 			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
-			if ( ScriptFormat.isPayToAddress (o.getScript ()) )
+			if ( ScriptFormat.isPayToAddress (s.getScript ()) )
 			{
-				byte[] address = o.getOutputAddress ();
+				byte[] address = s.getOutputAddress ();
 				Key key = getKeyForAddress (address);
 				if ( key == null )
 				{
 					throw new ValidationException ("Have no key to spend this output");
 				}
-				byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
+				byte[] sig = key.sign (hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, s.getScript ()));
 				byte[] sigPlusType = new byte[sig.length + 1];
 				System.arraycopy (sig, 0, sigPlusType, 0, sig.length);
 				sigPlusType[sigPlusType.length - 1] = (byte) (ScriptFormat.SIGHASH_ALL & 0xff);
@@ -198,7 +198,7 @@ public abstract class BaseAccountManager implements AccountManager
 			}
 			else
 			{
-				spendNonAddressOutput (o, sw, hashTransaction (transaction, j, ScriptFormat.SIGHASH_ALL, o.getScript ()));
+				spendNonAddressOutput (j, s, sw, transaction);
 			}
 			i.setScript (sw.toByteArray ());
 			++j;
@@ -208,7 +208,7 @@ public abstract class BaseAccountManager implements AccountManager
 		return transaction;
 	}
 
-	protected void spendNonAddressOutput (TransactionOutput o, ScriptFormat.Writer writer, byte[] digest) throws ValidationException
+	protected void spendNonAddressOutput (int ix, TransactionOutput source, ScriptFormat.Writer writer, Transaction transaction) throws ValidationException
 	{
 		throw new ValidationException ("Can not spend this output type");
 	}
