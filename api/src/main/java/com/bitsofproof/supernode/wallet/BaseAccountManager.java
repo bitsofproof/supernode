@@ -317,7 +317,7 @@ public abstract class BaseAccountManager implements AccountManager
 			@Override
 			public int compare (TransactionOutput o1, TransactionOutput o2)
 			{
-				return (int) (o1.getValue () - o2.getValue ());
+				return o1.getValue () < o2.getValue () ? -1 : o1.getValue () > o2.getValue () ? 1 : 0;
 			}
 		});
 		List<TransactionOutput> changelist = new ArrayList<TransactionOutput> ();
@@ -329,7 +329,7 @@ public abstract class BaseAccountManager implements AccountManager
 			@Override
 			public int compare (TransactionOutput o1, TransactionOutput o2)
 			{
-				return (int) (o1.getValue () - o2.getValue ());
+				return o1.getValue () < o2.getValue () ? -1 : o1.getValue () > o2.getValue () ? 1 : 0;
 			}
 		});
 		candidates.addAll (changelist);
