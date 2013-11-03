@@ -336,8 +336,7 @@ public class JMSServerConnector implements BCSAPI
 		scanRequest (master, firstIndex, lookAhead, after, listener, "accountRequest");
 	}
 
-	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue)
-			throws BCSAPIException
+	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue) throws BCSAPIException
 	{
 		Session session = null;
 		try
@@ -416,8 +415,7 @@ public class JMSServerConnector implements BCSAPI
 		}
 	}
 
-	private void scanRequest (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener, String request)
-			throws BCSAPIException
+	private void scanRequest (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener, String request) throws BCSAPIException
 	{
 		if ( !master.isReadOnly () )
 		{
@@ -432,7 +430,7 @@ public class JMSServerConnector implements BCSAPI
 			MessageProducer scanAccountProducer = session.createProducer (session.createQueue (request));
 			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
 			builder.setBcsapiversion (1);
-			builder.setPublicKey (master.serialize (production));
+			builder.setPublicKey (master.serialize (isProduction ()));
 			builder.setLookAhead (lookAhead);
 			builder.setAfter (after);
 			m.writeBytes (builder.build ().toByteArray ());
