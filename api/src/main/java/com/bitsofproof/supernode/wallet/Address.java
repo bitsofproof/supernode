@@ -2,6 +2,8 @@ package com.bitsofproof.supernode.wallet;
 
 import org.bouncycastle.util.Arrays;
 
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
 
 public class Address
@@ -44,6 +46,30 @@ public class Address
 	public byte[] getAddress ()
 	{
 		return Arrays.clone (address);
+	}
+
+	public byte[] getAddressScript () throws ValidationException
+	{
+		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
+		if ( type == Address.Type.COMMON )
+		{
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			writer.writeData (address);
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
+		}
+		else if ( type == Address.Type.P2SH )
+		{
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			writer.writeData (address);
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
+		}
+		else
+		{
+			throw new ValidationException ("unknown sink address type");
+		}
+		return writer.toByteArray ();
 	}
 
 	@Override

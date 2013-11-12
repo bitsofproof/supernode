@@ -25,7 +25,6 @@ import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 
@@ -136,27 +135,7 @@ public abstract class BaseAccountManager implements AccountManager
 			TransactionOutput o = new TransactionOutput ();
 			o.setValue (s.getValue ());
 			sumOut += s.getValue ();
-
-			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-			if ( s.getAddress ().getType () == Address.Type.COMMON )
-			{
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-				writer.writeData (s.getAddress ().getAddress ());
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
-			}
-			else if ( s.getAddress ().getType () == Address.Type.P2SH )
-			{
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-				writer.writeData (s.getAddress ().getAddress ());
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
-			}
-			else
-			{
-				throw new ValidationException ("unknown sink address type");
-			}
-			o.setScript (writer.toByteArray ());
+			o.setScript (s.getAddress ().getAddressScript ());
 
 			transaction.getOutputs ().add (o);
 		}
