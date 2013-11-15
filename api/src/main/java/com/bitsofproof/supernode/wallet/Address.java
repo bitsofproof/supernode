@@ -2,6 +2,8 @@ package com.bitsofproof.supernode.wallet;
 
 import org.bouncycastle.util.Arrays;
 
+import com.bitsofproof.supernode.api.Network;
+import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
@@ -13,29 +15,47 @@ public class Address
 		UNKNOWN, COMMON, P2SH
 	};
 
-	public enum Network
+	private final Type type;
+	private final byte[] bytes;
+
+	private Network network = Network.UNKNOWN;;
+
+	public Network getNetwork ()
 	{
-		UNKNOWN, PRODUCTION, TEST
+		return network;
 	}
 
-	private final Network network;
-	private final Type type;
-	private final byte[] address;
+	public void setNetwork (Network network)
+	{
+		this.network = network;
+	}
 
 	public Address (Network network, Type type, byte[] address) throws ValidationException
+	{
+		this.network = network;
+		this.type = type;
+		if ( address.length != 20 )
+		{
+			throw new ValidationException ("invalid digest length for an address");
+		}
+		this.bytes = Arrays.clone (address);
+	}
+
+	public Address (Type type, byte[] address) throws ValidationException
 	{
 		this.type = type;
 		if ( address.length != 20 )
 		{
 			throw new ValidationException ("invalid digest length for an address");
 		}
-		this.address = Arrays.clone (address);
-		this.network = network;
+		this.bytes = Arrays.clone (address);
 	}
 
-	public Network getNetwork ()
+	public Address (Network network, Address address) throws ValidationException
 	{
-		return network;
+		this.network = network;
+		this.type = address.type;
+		this.bytes = Arrays.clone (address.bytes);
 	}
 
 	public Type getType ()
@@ -43,9 +63,9 @@ public class Address
 		return type;
 	}
 
-	public byte[] getAddress ()
+	public byte[] toByteArray ()
 	{
-		return Arrays.clone (address);
+		return Arrays.clone (bytes);
 	}
 
 	public byte[] getAddressScript () throws ValidationException
@@ -55,14 +75,14 @@ public class Address
 		{
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-			writer.writeData (address);
+			writer.writeData (bytes);
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
 		}
 		else if ( type == Address.Type.P2SH )
 		{
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-			writer.writeData (address);
+			writer.writeData (bytes);
 			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
 		}
 		else
@@ -70,6 +90,26 @@ public class Address
 			throw new ValidationException ("unknown sink address type");
 		}
 		return writer.toByteArray ();
+	}
+
+	@Override
+	public int hashCode ()
+	{
+		return Arrays.hashCode (bytes) + type.ordinal ();
+	}
+
+	@Override
+	public boolean equals (Object obj)
+	{
+		if ( this == obj )
+		{
+			return true;
+		}
+		if ( obj == null || getClass () != obj.getClass () )
+		{
+			return false;
+		}
+		return Arrays.areEqual (bytes, ((Address) obj).bytes) && type == ((Address) obj).type;
 	}
 
 	@Override
@@ -81,7 +121,7 @@ public class Address
 		}
 		catch ( ValidationException e )
 		{
-			return e.getMessage ();
+			return network.name () + ":" + type.name () + ":" + ByteUtils.toHex (bytes);
 		}
 	}
 }

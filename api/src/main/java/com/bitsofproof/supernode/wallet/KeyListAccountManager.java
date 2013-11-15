@@ -54,7 +54,7 @@ public class KeyListAccountManager extends BaseAccountManager
 	public void addKey (ECKeyPair key)
 	{
 		keys.add (key);
-		keyByAddress.put (new ByteVector (key.getAddress ()), key);
+		keyByAddress.put (new ByteVector (key.getAddress ().toByteArray ()), key);
 	}
 
 	@Override

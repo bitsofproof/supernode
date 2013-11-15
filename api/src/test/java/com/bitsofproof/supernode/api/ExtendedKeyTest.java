@@ -66,7 +66,7 @@ public class ExtendedKeyTest
 			Key readOnly = ekpublic.getKey (i);
 
 			assertTrue (Arrays.equals (fullControl.getPublic (), readOnly.getPublic ()));
-			assertTrue (Arrays.equals (fullControl.getAddress (), readOnly.getAddress ()));
+			assertTrue (fullControl.getAddress ().equals (readOnly.getAddress ()));
 
 			byte[] toSign = new byte[100];
 			random.nextBytes (toSign);

@@ -21,10 +21,10 @@ import java.util.List;
 
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.Hash;
-import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
+import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
+import com.bitsofproof.supernode.wallet.Address;
 import com.google.protobuf.ByteString;
 
 public class Transaction implements Serializable, Cloneable
@@ -42,7 +42,7 @@ public class Transaction implements Serializable, Cloneable
 	private List<TransactionInput> inputs;
 	private List<TransactionOutput> outputs;
 
-	public static Transaction createCoinbase (Key receiver, long value, int blockHeight)
+	public static Transaction createCoinbase (Address address, long value, int blockHeight) throws ValidationException
 	{
 		Transaction cb = new Transaction ();
 
@@ -53,20 +53,14 @@ public class Transaction implements Serializable, Cloneable
 		out.setValue (value);
 		cb.getOutputs ().add (out);
 
-		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-		writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
-		writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-		writer.writeData (receiver.getAddress ());
-		writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
-		writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
-		out.setScript (writer.toByteArray ());
+		out.setScript (address.getAddressScript ());
 
 		TransactionInput in = new TransactionInput ();
 		in.setSourceHash (Hash.ZERO_HASH_STRING);
 		in.setIx (0);
 		cb.getInputs ().add (in);
 
-		writer = new ScriptFormat.Writer ();
+		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
 		writer.writeInt32 (blockHeight);
 		in.setScript (writer.toByteArray ());
 

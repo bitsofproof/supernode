@@ -103,7 +103,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 			catch ( ValidationException e )
 			{
 			}
-			keyIDForAddress.put (new ByteVector (key.getAddress ()), keyIDForAddress.size () + firstIndex);
+			keyIDForAddress.put (new ByteVector (key.getAddress ().toByteArray ()), keyIDForAddress.size () + firstIndex);
 		}
 	}
 

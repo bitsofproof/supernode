@@ -36,6 +36,7 @@ import org.bouncycastle.crypto.signers.ECDSASigner;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
+import com.bitsofproof.supernode.wallet.Address;
 
 public class ECKeyPair implements Key
 {
@@ -117,9 +118,16 @@ public class ECKeyPair implements Key
 	}
 
 	@Override
-	public byte[] getAddress ()
+	public Address getAddress ()
 	{
-		return Hash.keyHash (pub);
+		try
+		{
+			return new Address (Address.Type.COMMON, Hash.keyHash (pub));
+		}
+		catch ( ValidationException e )
+		{
+			return null;
+		}
 	}
 
 	public ECKeyPair (byte[] p, boolean compressed) throws ValidationException

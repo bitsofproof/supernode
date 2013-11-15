@@ -46,6 +46,21 @@ public class APIServerInABox
 		bcsapi.init ();
 	}
 
+	public BitcoinNetwork getNetwork ()
+	{
+		return network;
+	}
+
+	public InMemoryBusConnectionFactory getConnectionFactory ()
+	{
+		return connectionFactory;
+	}
+
+	public Chain getChain ()
+	{
+		return chain;
+	}
+
 	public BCSAPI getAPI ()
 	{
 		JMSServerConnector api = new JMSServerConnector ();

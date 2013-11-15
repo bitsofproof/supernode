@@ -437,7 +437,7 @@ public abstract class CachedBlockStore implements BlockStore
 		lookAhead = Math.min (Math.max (10, lookAhead), 1000);
 		for ( int i = firstIndex; i < firstIndex + lookAhead; ++i )
 		{
-			ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
+			ByteVector address = new ByteVector (ek.getKey (i).getAddress ().toByteArray ());
 			matchSet.add (address);
 			addressSet.put (address, i);
 		}
@@ -497,7 +497,7 @@ public abstract class CachedBlockStore implements BlockStore
 							}
 							for ( int i = addressSet.size (); i < lastUsedAddress + lookAhead - firstIndex; ++i )
 							{
-								ByteVector address = new ByteVector (ek.getKey (i).getAddress ());
+								ByteVector address = new ByteVector (ek.getKey (i).getAddress ().toByteArray ());
 								matchSet.add (address);
 								addressSet.put (address, i);
 							}

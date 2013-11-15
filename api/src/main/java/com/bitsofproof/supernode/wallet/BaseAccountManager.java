@@ -352,7 +352,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Address getNextAddress () throws ValidationException
 	{
-		return new Address (Address.Network.PRODUCTION, Address.Type.COMMON, getNextKey ().getAddress ());
+		return getNextKey ().getAddress ();
 	}
 
 	@Override
@@ -415,7 +415,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException
 	{
-		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, fee);
+		return pay (new Address (Address.Type.COMMON, receiver), amount, fee);
 	}
 
 	@Override
@@ -452,7 +452,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (byte[] receiver, long amount) throws ValidationException
 	{
-		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, true);
+		return pay (new Address (Address.Type.COMMON, receiver), amount, true);
 	}
 
 	@Override
@@ -548,12 +548,14 @@ public abstract class BaseAccountManager implements AccountManager
 							if ( spend != null )
 							{
 								change.add (o);
-								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+										+ o.getValue ());
 							}
 							else
 							{
 								receiving.add (o);
-								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+										+ o.getValue ());
 							}
 						}
 					}
@@ -592,7 +594,8 @@ public abstract class BaseAccountManager implements AccountManager
 					}
 					if ( out != null )
 					{
-						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")" + out.getValue ());
+						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")"
+								+ out.getValue ());
 					}
 					modified |= out != null;
 				}

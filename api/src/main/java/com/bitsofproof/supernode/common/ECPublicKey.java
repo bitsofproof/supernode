@@ -17,6 +17,8 @@ package com.bitsofproof.supernode.common;
 
 import org.bouncycastle.util.Arrays;
 
+import com.bitsofproof.supernode.wallet.Address;
+
 public class ECPublicKey implements Key
 {
 	private byte[] pub;
@@ -40,9 +42,16 @@ public class ECPublicKey implements Key
 	}
 
 	@Override
-	public byte[] getAddress ()
+	public Address getAddress ()
 	{
-		return Hash.keyHash (pub);
+		try
+		{
+			return new Address (Address.Type.COMMON, Hash.keyHash (pub));
+		}
+		catch ( ValidationException e )
+		{
+			return null;
+		}
 	}
 
 	@Override

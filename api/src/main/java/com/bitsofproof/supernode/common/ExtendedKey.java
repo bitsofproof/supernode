@@ -212,7 +212,7 @@ public class ExtendedKey
 	public int getFingerPrint ()
 	{
 		int fingerprint = 0;
-		byte[] address = master.getAddress ();
+		byte[] address = master.getAddress ().toByteArray ();
 		for ( int i = 0; i < 4; ++i )
 		{
 			fingerprint <<= 8;
