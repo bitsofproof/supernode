@@ -86,4 +86,9 @@ public class ECPublicKey implements Key
 		return ECKeyPair.verify (hash, signature, pub);
 	}
 
+	@Override
+	public Key getReadOnly ()
+	{
+		return this;
+	}
 }

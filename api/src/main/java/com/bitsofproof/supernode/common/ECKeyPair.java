@@ -118,6 +118,12 @@ public class ECKeyPair implements Key
 	}
 
 	@Override
+	public Key getReadOnly ()
+	{
+		return new ECPublicKey (pub, compressed);
+	}
+
+	@Override
 	public Address getAddress ()
 	{
 		try
