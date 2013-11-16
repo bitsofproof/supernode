@@ -190,7 +190,7 @@ public class APITest
 		assertTrue (api.getBlock (genesisHash).getHash ().equals (genesisHash));
 
 		// send 1 block
-		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (alice.getNextKey (), 50 * COIN, 1));
+		Block block = createBlock (chain.getGenesis ().getHash (), Transaction.createCoinbase (alice.getNextKey ().getAddress (), 50 * COIN, 1));
 		mineBlock (block);
 		blocks.put (1, block);
 
@@ -205,7 +205,7 @@ public class APITest
 		String hash = blocks.get (1).getHash ();
 		for ( int i = 0; i < 10; ++i )
 		{
-			block = createBlock (hash, Transaction.createCoinbase (alice.getNextKey (), 5000000000L, i + 2));
+			block = createBlock (hash, Transaction.createCoinbase (alice.getNextKey ().getAddress (), 5000000000L, i + 2));
 			block.setCreateTime (block.getCreateTime () + (i + 1) * 1000); // avoid clash of timestamp with median
 			mineBlock (block);
 			blocks.put (i + 2, block);

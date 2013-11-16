@@ -182,7 +182,7 @@ public class JMSServerConnector implements BCSAPI
 				dispatcher.removeListener (inner);
 				if ( !dispatcher.isListened () )
 				{
-					messageDispatcher.remove (dispatcher);
+					messageDispatcher.remove (topic);
 					try
 					{
 						dispatcher.getConsumer ().close ();
@@ -432,7 +432,7 @@ public class JMSServerConnector implements BCSAPI
 			MessageProducer scanAccountProducer = session.createProducer (session.createQueue (request));
 			BCSAPIMessage.AccountRequest.Builder builder = BCSAPIMessage.AccountRequest.newBuilder ();
 			builder.setBcsapiversion (1);
-			builder.setPublicKey (master.serialize (production));
+			builder.setPublicKey (master.serialize (isProduction ()));
 			builder.setLookAhead (lookAhead);
 			builder.setAfter (after);
 			m.writeBytes (builder.build ().toByteArray ());

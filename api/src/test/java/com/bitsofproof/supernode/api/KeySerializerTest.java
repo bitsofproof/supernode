@@ -65,7 +65,7 @@ public class KeySerializerTest
 	@Test
 	public void wifTest () throws IOException, JSONException, ValidationException
 	{
-		KeyFormatter formatter = new KeyFormatter (null, 0x0);
+		KeyFormatter formatter = new KeyFormatter (null, Network.PRODUCTION);
 		JSONArray testData = readObjectArray (WIF);
 		for ( int i = 0; i < testData.length (); ++i )
 		{
@@ -86,7 +86,7 @@ public class KeySerializerTest
 		{
 			final JSONArray test = testData.getJSONArray (i);
 
-			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), Network.PRODUCTION);
 
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String decrypted = ECKeyPair.serializeWIF (kp);
@@ -104,7 +104,7 @@ public class KeySerializerTest
 		{
 			final JSONArray test = testData.getJSONArray (i);
 
-			KeyFormatter formatter = new KeyFormatter (test.getString (2), 0x0);
+			KeyFormatter formatter = new KeyFormatter (test.getString (2), Network.PRODUCTION);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (0));
 			String decrypted = ECKeyPair.serializeWIF (kp);
 			assertTrue (test.getString (1).equals (decrypted));
@@ -125,7 +125,7 @@ public class KeySerializerTest
 			}
 			String passphrase = p.toString ();
 
-			KeyFormatter formatter = new KeyFormatter (passphrase, 0x0);
+			KeyFormatter formatter = new KeyFormatter (passphrase, Network.PRODUCTION);
 			ECKeyPair kp = ECKeyPair.createNew (i % 2 == 0);
 			String serialized = formatter.serializeKey (kp);
 			ECKeyPair kp2 = formatter.parseSerializedKey (serialized);

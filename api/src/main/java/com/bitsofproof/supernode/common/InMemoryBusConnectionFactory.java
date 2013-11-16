@@ -22,7 +22,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -525,15 +525,37 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 	}
 
-	private static final Map<String, ArrayList<MockConsumer>> consumer = new HashMap<String, ArrayList<MockConsumer>> ();
+	private static class MessageWithDestination
+	{
+		private final String destination;
+		private final Message message;
+
+		public String getDestination ()
+		{
+			return destination;
+		}
+
+		public Message getMessage ()
+		{
+			return message;
+		}
+
+		public MessageWithDestination (String destination, Message message)
+		{
+			this.destination = destination;
+			this.message = message;
+		}
+	}
 
 	private static class MockProducer implements MessageProducer
 	{
 		private final String name;
+		private final LinkedBlockingQueue<MessageWithDestination> queue;
 
-		public MockProducer (String name)
+		public MockProducer (String name, LinkedBlockingQueue<MessageWithDestination> queue)
 		{
 			this.name = name;
+			this.queue = queue;
 		}
 
 		@Override
@@ -628,26 +650,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 		private void sendToConsumer (Message message)
 		{
-			synchronized ( consumer )
-			{
-				List<MockConsumer> cl = consumer.get (name);
-				if ( cl != null )
-				{
-					for ( MockConsumer c : cl )
-					{
-						c.getQueue ().add (message);
-					}
-				}
-			}
+			queue.add (new MessageWithDestination (name, message));
 		}
 	}
 
-	private static Executor consumerExecutor = Executors.newCachedThreadPool ();
-
-	private static class MockConsumer implements MessageConsumer, Runnable
+	private static class MockConsumer implements MessageConsumer
 	{
-		private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<Message> ();
-		private boolean open = true;
+		private LinkedBlockingQueue<Message> queue;
+		private MessageListener listener;
 
 		public LinkedBlockingQueue<Message> getQueue ()
 		{
@@ -667,31 +677,34 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public void setMessageListener (final MessageListener listener) throws JMSException
+		public synchronized void setMessageListener (final MessageListener listener) throws JMSException
 		{
-			consumerExecutor.execute (new Runnable ()
+			if ( queue != null )
 			{
-				@Override
-				public void run ()
-				{
-					while ( open )
-					{
-						try
-						{
-							Message m = receive ();
-							listener.onMessage (m);
-						}
-						catch ( JMSException e )
-						{
-						}
-					}
-				}
-			});
+				throw new JMSException ("Use either setListener or receive");
+			}
+			this.listener = listener;
+		}
+
+		private MessageListener getListener ()
+		{
+			return listener;
 		}
 
 		@Override
 		public Message receive () throws JMSException
 		{
+			synchronized ( this )
+			{
+				if ( listener != null )
+				{
+					throw new JMSException ("Use either setListener or receive");
+				}
+				if ( queue == null )
+				{
+					queue = new LinkedBlockingQueue<Message> ();
+				}
+			}
 			try
 			{
 				return queue.take ();
@@ -705,6 +718,21 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public Message receive (long timeout) throws JMSException
 		{
+			synchronized ( this )
+			{
+				if ( listener != null )
+				{
+					throw new JMSException ("Use either setListener or receive");
+				}
+				if ( queue == null )
+				{
+					queue = new LinkedBlockingQueue<Message> ();
+				}
+			}
+			if ( queue == null )
+			{
+				queue = new LinkedBlockingQueue<Message> ();
+			}
 			try
 			{
 				return queue.poll (timeout, TimeUnit.MILLISECONDS);
@@ -718,25 +746,78 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public Message receiveNoWait () throws JMSException
 		{
+			synchronized ( this )
+			{
+				if ( listener != null )
+				{
+					throw new JMSException ("Use either setListener or receive");
+				}
+				if ( queue == null )
+				{
+					queue = new LinkedBlockingQueue<Message> ();
+				}
+			}
 			return queue.poll ();
 		}
 
 		@Override
 		public void close () throws JMSException
 		{
-			open = false;
+			listener = null;
+			queue = null;
+		}
+	}
+
+	private static class MockSession implements Session, Runnable
+	{
+		private final LinkedBlockingQueue<MessageWithDestination> queue;
+		private volatile boolean run = true;
+		private final Map<String, List<MockConsumer>> consumer;
+
+		public MockSession (LinkedBlockingQueue<MessageWithDestination> queue, Map<String, List<MockConsumer>> consumer)
+		{
+			this.consumer = consumer;
+			this.queue = queue;
 		}
 
 		@Override
 		public void run ()
 		{
+			MessageWithDestination md = null;
+			do
+			{
+				try
+				{
+					md = queue.poll (10, TimeUnit.MILLISECONDS);
+					if ( md != null )
+					{
+						synchronized ( consumer )
+						{
+							List<MockConsumer> cl = consumer.get (md.getDestination ());
+							if ( cl != null )
+							{
+								for ( MockConsumer c : cl )
+								{
+									if ( c.getListener () != null )
+									{
+										c.getListener ().onMessage (md.getMessage ());
+									}
+									else if ( c.getQueue () != null )
+									{
+										c.getQueue ().put (md.getMessage ());
+									}
+								}
+							}
+						}
+					}
+
+				}
+				catch ( InterruptedException e )
+				{
+				}
+			} while ( md != null || run );
 
 		}
-	}
-
-	private static class MockSession implements Session
-	{
-		private final List<MessageConsumer> sessionConsumer = new ArrayList<MessageConsumer> ();
 
 		@Override
 		public BytesMessage createBytesMessage () throws JMSException
@@ -811,10 +892,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public void close () throws JMSException
 		{
-			for ( MessageConsumer consumer : sessionConsumer )
-			{
-				consumer.close ();
-			}
+			run = false;
 		}
 
 		@Override
@@ -834,11 +912,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public void run ()
-		{
-		}
-
-		@Override
 		public MessageProducer createProducer (Destination destination) throws JMSException
 		{
 			String name = null;
@@ -854,8 +927,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
-
-			return new MockProducer (name);
+			return new MockProducer (name, queue);
 		}
 
 		@Override
@@ -874,11 +946,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
-			final MockConsumer c = new MockConsumer ();
-			sessionConsumer.add (c);
+			MockConsumer c = new MockConsumer ();
 			synchronized ( consumer )
 			{
-				ArrayList<MockConsumer> cl = consumer.get (name);
+				List<MockConsumer> cl = consumer.get (name);
 				if ( cl == null )
 				{
 					cl = new ArrayList<MockConsumer> ();
@@ -958,12 +1029,16 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	private class MockConnection implements Connection
 	{
 		private final List<Session> sessions = new ArrayList<Session> ();
+		private final ExecutorService consumerExecutor = Executors.newCachedThreadPool ();
+		private final Map<String, List<MockConsumer>> consumer = new HashMap<> ();
+		private final LinkedBlockingQueue<MessageWithDestination> queue = new LinkedBlockingQueue<> ();
 
 		@Override
 		public Session createSession (boolean transacted, int acknowledgeMode) throws JMSException
 		{
-			Session session = new MockSession ();
+			Session session = new MockSession (queue, consumer);
 			sessions.add (session);
+			consumerExecutor.execute (session);
 			return session;
 		}
 
@@ -1030,15 +1105,25 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	}
 
+	private static Connection connection;
+
 	@Override
 	public Connection createConnection () throws JMSException
 	{
-		return new MockConnection ();
+		if ( connection == null )
+		{
+			connection = new MockConnection ();
+		}
+		return connection;
 	}
 
 	@Override
 	public Connection createConnection (String userName, String password) throws JMSException
 	{
-		return new MockConnection ();
+		if ( connection == null )
+		{
+			connection = new MockConnection ();
+		}
+		return connection;
 	}
 }

@@ -32,6 +32,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.crypto.generators.SCrypt;
 
+import com.bitsofproof.supernode.api.Network;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Hash;
@@ -43,13 +44,13 @@ import com.bitsofproof.supernode.common.ValidationException;
  */
 public class KeyFormatter
 {
-	private final int addressFlag;
+	private final Network network;
 	private final String passphrase;
 
-	public KeyFormatter (String passphrase, int addressFlag)
+	public KeyFormatter (String passphrase, Network network)
 	{
 		this.passphrase = passphrase;
-		this.addressFlag = addressFlag;
+		this.network = network;
 	}
 
 	public boolean hasPassPhrase ()
@@ -57,9 +58,9 @@ public class KeyFormatter
 		return passphrase != null;
 	}
 
-	public int getAddressFlag ()
+	public Network getNetwork ()
 	{
-		return addressFlag;
+		return network;
 	}
 
 	public String serializeKey (Key key) throws ValidationException
@@ -243,7 +244,7 @@ public class KeyFormatter
 			}
 			ECKeyPair kp = new ECKeyPair (decrypted, compressed);
 
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, kp.getAddress ())).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -341,7 +342,7 @@ public class KeyFormatter
 					new BigInteger (1, passfactor).multiply (new BigInteger (1, Hash.hash (seed))).remainder (SECNamedCurves.getByName ("secp256k1").getN ());
 
 			kp = new ECKeyPair (priv, compressed);
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (kp.getAddress (), addressFlag).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, kp.getAddress ())).getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -395,7 +396,7 @@ public class KeyFormatter
 		byte[] xor = new byte[32];
 		try
 		{
-			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (key.getAddress (), addressFlag).getBytes ("US-ASCII"));
+			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, key.getAddress ())).getBytes ("US-ASCII"));
 			System.arraycopy (ac, 0, addressHash, 0, 4);
 			System.arraycopy (ac, 0, store, 3, 4);
 			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);

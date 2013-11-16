@@ -25,14 +25,15 @@ public class APIServerInABox
 	private final BitcoinNetwork network;
 	private final InMemoryBusConnectionFactory connectionFactory = new InMemoryBusConnectionFactory ();
 	private final Chain chain;
+	private final TxHandler txhandler;
+	private final ImplementBCSAPI bcsapi;
+	private final JMSServerConnector api;
 
 	public APIServerInABox (Chain chain) throws IOException, ValidationException
 	{
 		this.chain = chain;
 		LvlStore store = new LvlStore ();
 		store.setStore (new LvlMemoryStore ());
-		store.resetStore (chain);
-		store.cache (chain, 0);
 		FixedAddressDiscovery discovery = new FixedAddressDiscovery ();
 		discovery.setConnectTo ("localhost");
 		network = new BitcoinNetwork (0);
@@ -40,17 +41,41 @@ public class APIServerInABox
 		network.setStore (store);
 		network.setListen (false);
 		network.setDiscovery (discovery);
-		TxHandler txhandler = new TxHandler (network);
-		ImplementBCSAPI bcsapi = new ImplementBCSAPI (network, txhandler);
+		txhandler = new TxHandler (network);
+		api = new JMSServerConnector ();
+		api.setConnectionFactory (connectionFactory);
+		bcsapi = new ImplementBCSAPI (network, txhandler);
 		bcsapi.setConnectionFactory (connectionFactory);
+		reset ();
 		bcsapi.init ();
+		api.init ();
+	}
+
+	public void reset () throws ValidationException
+	{
+		network.getStore ().resetStore (chain);
+		network.getStore ().cache (chain, 0);
+		txhandler.clear ();
+	}
+
+	public BitcoinNetwork getNetwork ()
+	{
+		return network;
+	}
+
+	public InMemoryBusConnectionFactory getConnectionFactory ()
+	{
+		return connectionFactory;
+	}
+
+	public Chain getChain ()
+	{
+		return chain;
 	}
 
 	public BCSAPI getAPI ()
 	{
-		JMSServerConnector api = new JMSServerConnector ();
-		api.setConnectionFactory (connectionFactory);
-		api.init ();
+
 		return api;
 	}
 

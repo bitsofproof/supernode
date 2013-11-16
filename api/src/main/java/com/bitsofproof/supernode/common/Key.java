@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.common;
 
+import com.bitsofproof.supernode.wallet.Address;
 
 public interface Key extends Cloneable
 {
@@ -22,9 +23,11 @@ public interface Key extends Cloneable
 
 	public byte[] getPublic ();
 
-	public byte[] getAddress ();
+	public Address getAddress ();
 
 	public boolean isCompressed ();
+
+	public Key getReadOnly ();
 
 	public Key clone () throws CloneNotSupportedException;
 

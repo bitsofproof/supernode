@@ -25,7 +25,6 @@ import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 
@@ -136,27 +135,7 @@ public abstract class BaseAccountManager implements AccountManager
 			TransactionOutput o = new TransactionOutput ();
 			o.setValue (s.getValue ());
 			sumOut += s.getValue ();
-
-			ScriptFormat.Writer writer = new ScriptFormat.Writer ();
-			if ( s.getAddress ().getType () == Address.Type.COMMON )
-			{
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-				writer.writeData (s.getAddress ().getAddress ());
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
-			}
-			else if ( s.getAddress ().getType () == Address.Type.P2SH )
-			{
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
-				writer.writeData (s.getAddress ().getAddress ());
-				writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
-			}
-			else
-			{
-				throw new ValidationException ("unknown sink address type");
-			}
-			o.setScript (writer.toByteArray ());
+			o.setScript (s.getAddress ().getAddressScript ());
 
 			transaction.getOutputs ().add (o);
 		}
@@ -317,7 +296,7 @@ public abstract class BaseAccountManager implements AccountManager
 			@Override
 			public int compare (TransactionOutput o1, TransactionOutput o2)
 			{
-				return (int) (o1.getValue () - o2.getValue ());
+				return o1.getValue () < o2.getValue () ? -1 : o1.getValue () > o2.getValue () ? 1 : 0;
 			}
 		});
 		List<TransactionOutput> changelist = new ArrayList<TransactionOutput> ();
@@ -329,7 +308,7 @@ public abstract class BaseAccountManager implements AccountManager
 			@Override
 			public int compare (TransactionOutput o1, TransactionOutput o2)
 			{
-				return (int) (o1.getValue () - o2.getValue ());
+				return o1.getValue () < o2.getValue () ? -1 : o1.getValue () > o2.getValue () ? 1 : 0;
 			}
 		});
 		candidates.addAll (changelist);
@@ -373,7 +352,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Address getNextAddress () throws ValidationException
 	{
-		return new Address (Address.Network.PRODUCTION, Address.Type.COMMON, getNextKey ().getAddress ());
+		return getNextKey ().getAddress ();
 	}
 
 	@Override
@@ -436,7 +415,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (byte[] receiver, long amount, long fee) throws ValidationException
 	{
-		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, fee);
+		return pay (new Address (Address.Type.COMMON, receiver), amount, fee);
 	}
 
 	@Override
@@ -473,7 +452,7 @@ public abstract class BaseAccountManager implements AccountManager
 	@Override
 	public Transaction pay (byte[] receiver, long amount) throws ValidationException
 	{
-		return pay (new Address (Address.Network.PRODUCTION, Address.Type.COMMON, receiver), amount, true);
+		return pay (new Address (Address.Type.COMMON, receiver), amount, true);
 	}
 
 	@Override
@@ -569,12 +548,14 @@ public abstract class BaseAccountManager implements AccountManager
 							if ( spend != null )
 							{
 								change.add (o);
-								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+										+ o.getValue ());
 							}
 							else
 							{
 								receiving.add (o);
-								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+										+ o.getValue ());
 							}
 						}
 					}
@@ -613,7 +594,8 @@ public abstract class BaseAccountManager implements AccountManager
 					}
 					if ( out != null )
 					{
-						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")" + out.getValue ());
+						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")"
+								+ out.getValue ());
 					}
 					modified |= out != null;
 				}

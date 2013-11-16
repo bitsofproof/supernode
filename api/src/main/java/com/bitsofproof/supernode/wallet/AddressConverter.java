@@ -15,10 +15,10 @@
  */
 package com.bitsofproof.supernode.wallet;
 
+import com.bitsofproof.supernode.api.Network;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.wallet.Address.Network;
 import com.bitsofproof.supernode.wallet.Address.Type;
 
 public class AddressConverter
@@ -27,27 +27,27 @@ public class AddressConverter
 	{
 		try
 		{
-			Address.Network network = Network.UNKNOWN;
+			Network network = Network.UNKNOWN;
 			Address.Type type = Type.UNKNOWN;
 			byte[] raw = ByteUtils.fromBase58 (s);
 			if ( (raw[0] & 0xff) == 0x0 )
 			{
-				network = Address.Network.PRODUCTION;
+				network = Network.PRODUCTION;
 				type = Address.Type.COMMON;
 			}
 			if ( (raw[0] & 0xff) == 5 )
 			{
-				network = Address.Network.PRODUCTION;
+				network = Network.PRODUCTION;
 				type = Address.Type.P2SH;
 			}
 			if ( (raw[0] & 0xff) == 0x6f )
 			{
-				network = Address.Network.TEST;
+				network = Network.TEST;
 				type = Address.Type.COMMON;
 			}
 			if ( (raw[0] & 0xff) == 196 )
 			{
-				network = Address.Network.TEST;
+				network = Network.TEST;
 				type = Address.Type.P2SH;
 			}
 			byte[] check = Hash.hash (raw, 0, raw.length - 4);
@@ -107,9 +107,9 @@ public class AddressConverter
 
 	public static String toSatoshiStyle (Address address) throws ValidationException
 	{
-		byte[] keyDigest = address.getAddress ();
+		byte[] keyDigest = address.toByteArray ();
 		int addressFlag;
-		if ( address.getNetwork () == Address.Network.PRODUCTION )
+		if ( address.getNetwork () == Network.PRODUCTION )
 		{
 			if ( address.getType () == Address.Type.COMMON )
 			{
@@ -124,7 +124,7 @@ public class AddressConverter
 				throw new ValidationException ("unknown address type");
 			}
 		}
-		else if ( address.getNetwork () == Address.Network.TEST )
+		else if ( address.getNetwork () == Network.TEST )
 		{
 			if ( address.getType () == Address.Type.COMMON )
 			{
