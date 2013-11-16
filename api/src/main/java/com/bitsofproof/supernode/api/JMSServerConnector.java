@@ -182,7 +182,7 @@ public class JMSServerConnector implements BCSAPI
 				dispatcher.removeListener (inner);
 				if ( !dispatcher.isListened () )
 				{
-					messageDispatcher.remove (dispatcher);
+					messageDispatcher.remove (topic);
 					try
 					{
 						dispatcher.getConsumer ().close ();
@@ -336,7 +336,8 @@ public class JMSServerConnector implements BCSAPI
 		scanRequest (master, firstIndex, lookAhead, after, listener, "accountRequest");
 	}
 
-	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue) throws BCSAPIException
+	private void scanRequest (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener, String requestQueue)
+			throws BCSAPIException
 	{
 		Session session = null;
 		try
@@ -415,7 +416,8 @@ public class JMSServerConnector implements BCSAPI
 		}
 	}
 
-	private void scanRequest (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener, String request) throws BCSAPIException
+	private void scanRequest (ExtendedKey master, int firstIndex, int lookAhead, long after, final TransactionListener listener, String request)
+			throws BCSAPIException
 	{
 		if ( !master.isReadOnly () )
 		{
