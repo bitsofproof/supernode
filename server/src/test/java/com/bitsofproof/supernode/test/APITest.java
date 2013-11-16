@@ -89,7 +89,7 @@ public class APITest
 		{
 			try
 			{
-				assertTrue (ready.tryAcquire (n, 5, TimeUnit.SECONDS));
+				assertTrue (ready.tryAcquire (n, 1, TimeUnit.SECONDS));
 				assertFalse (ready.tryAcquire ());
 			}
 			catch ( InterruptedException e )
@@ -127,7 +127,7 @@ public class APITest
 		{
 			try
 			{
-				assertTrue (blockValidated.tryAcquire (n, 5, TimeUnit.SECONDS));
+				assertTrue (blockValidated.tryAcquire (n, 1, TimeUnit.SECONDS));
 				assertFalse (blockValidated.tryAcquire ());
 			}
 			catch ( InterruptedException e )
@@ -139,7 +139,7 @@ public class APITest
 		{
 			try
 			{
-				assertTrue (transactionValidated.tryAcquire (n, 5, TimeUnit.SECONDS));
+				assertTrue (transactionValidated.tryAcquire (n, 1, TimeUnit.SECONDS));
 				assertFalse (transactionValidated.tryAcquire ());
 			}
 			catch ( InterruptedException e )

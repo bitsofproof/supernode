@@ -770,13 +770,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private static class MockSession implements Session, Runnable
 	{
-		private final LinkedBlockingQueue<MessageWithDestination> queue = new LinkedBlockingQueue<> ();
+		private final LinkedBlockingQueue<MessageWithDestination> queue;
 		private volatile boolean run = true;
 		private final Map<String, List<MockConsumer>> consumer;
 
-		public MockSession (Map<String, List<MockConsumer>> consumer)
+		public MockSession (LinkedBlockingQueue<MessageWithDestination> queue, Map<String, List<MockConsumer>> consumer)
 		{
 			this.consumer = consumer;
+			this.queue = queue;
 		}
 
 		@Override
@@ -1030,11 +1031,12 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		private final List<Session> sessions = new ArrayList<Session> ();
 		private final ExecutorService consumerExecutor = Executors.newCachedThreadPool ();
 		private final Map<String, List<MockConsumer>> consumer = new HashMap<> ();
+		private final LinkedBlockingQueue<MessageWithDestination> queue = new LinkedBlockingQueue<> ();
 
 		@Override
 		public Session createSession (boolean transacted, int acknowledgeMode) throws JMSException
 		{
-			Session session = new MockSession (consumer);
+			Session session = new MockSession (queue, consumer);
 			sessions.add (session);
 			consumerExecutor.execute (session);
 			return session;
