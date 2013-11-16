@@ -34,6 +34,13 @@ public class ImplementTxOutCacheDelta implements TxOutCache
 		delegate = cache;
 	}
 
+	@Override
+	public void clear ()
+	{
+		reset ();
+		delegate.clear ();
+	}
+
 	public void reset ()
 	{
 		used.clear ();

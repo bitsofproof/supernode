@@ -342,6 +342,10 @@ public abstract class CachedBlockStore implements BlockStore
 		try
 		{
 			lock.writeLock ().lock ();
+			cachedBlocks.clear ();
+			cachedHeads.clear ();
+			blockChain.clear ();
+			cachedUTXO.clear ();
 
 			log.trace ("Cache heads...");
 			cacheHeads ();

@@ -29,4 +29,5 @@ public interface TxOutCache
 
 	public void remove (String hash, Long ix);
 
+	public void clear ();
 }

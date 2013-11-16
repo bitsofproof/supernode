@@ -82,6 +82,13 @@ public class TxHandler implements TrunkListener
 		transactionListener.add (listener);
 	}
 
+	public void clear ()
+	{
+		unconfirmed.clear ();
+		availableOutput.clear ();
+		dependencyOrderedSet.clear ();
+	}
+
 	public TxHandler (final BitcoinNetwork network)
 	{
 		this.network = network;
