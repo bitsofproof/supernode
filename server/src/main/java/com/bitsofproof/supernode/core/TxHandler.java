@@ -358,6 +358,10 @@ public class TxHandler implements TrunkListener
 					catch ( ValidationException e )
 					{
 						log.debug ("Double spend: " + tx.getHash ());
+						for ( TxIn in : tx.getInputs () )
+						{
+							log.debug (tx.getHash () + " referred to:" + in.getSourceHash ());
+						}
 						unconfirmed.remove (tx.getHash ());
 						txi.remove ();
 						notifyListener (tx, true);
