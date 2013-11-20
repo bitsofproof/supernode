@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,7 @@ public class TxHandler implements TrunkListener
 
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private ImplementTxOutCacheDelta availableOutput = null;
+	private final Set<String> recheck = new HashSet<String> ();
 
 	private final Set<Tx> dependencyOrderedSet = new TreeSet<Tx> (new Comparator<Tx> ()
 	{
@@ -186,17 +188,22 @@ public class TxHandler implements TrunkListener
 									cacheTransaction (t);
 									sendTransaction (t, peer);
 									notifyListener (t, false);
+									recheck.remove (t.getHash ());
 								}
 								catch ( ValidationException e )
 								{
-									log.trace ("asking for inputs of " + t.getHash ());
-									GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
-									for ( TxIn in : t.getInputs () )
+									if ( !recheck.contains (t.getHash ()) )
 									{
-										get.getTransactions ().add (new Hash (in.getSourceHash ()).toByteArray ());
+										log.trace ("asking for inputs of " + t.getHash ());
+										GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
+										for ( TxIn in : t.getInputs () )
+										{
+											get.getTransactions ().add (new Hash (in.getSourceHash ()).toByteArray ());
+										}
+										get.getTransactions ().add (new Hash (t.getHash ()).toByteArray ());
+										peer.send (get);
+										recheck.add (t.getHash ());
 									}
-									get.getTransactions ().add (new Hash (t.getHash ()).toByteArray ());
-									peer.send (get);
 								}
 							}
 							else
