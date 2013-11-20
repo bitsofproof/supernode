@@ -52,8 +52,13 @@ import javax.jms.TextMessage;
 import javax.jms.Topic;
 import javax.jms.TopicSubscriber;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class InMemoryBusConnectionFactory implements ConnectionFactory
 {
+	private static final Logger log = LoggerFactory.getLogger (InMemoryBusConnectionFactory.class);
+
 	private static class MockBytesMessage implements BytesMessage
 	{
 		Destination destination;
@@ -658,8 +663,14 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	{
 		private LinkedBlockingQueue<Message> queue;
 		private MessageListener listener;
+		private final List<MockConsumer> peers;
 
-		public LinkedBlockingQueue<Message> getQueue ()
+		public MockConsumer (List<MockConsumer> peers)
+		{
+			this.peers = peers;
+		}
+
+		public synchronized LinkedBlockingQueue<Message> getQueue ()
 		{
 			return queue;
 		}
@@ -671,9 +682,9 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public MessageListener getMessageListener () throws JMSException
+		public synchronized MessageListener getMessageListener () throws JMSException
 		{
-			return null;
+			return listener;
 		}
 
 		@Override
@@ -686,7 +697,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			this.listener = listener;
 		}
 
-		private MessageListener getListener ()
+		private synchronized MessageListener getListener ()
 		{
 			return listener;
 		}
@@ -729,10 +740,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					queue = new LinkedBlockingQueue<Message> ();
 				}
 			}
-			if ( queue == null )
-			{
-				queue = new LinkedBlockingQueue<Message> ();
-			}
 			try
 			{
 				return queue.poll (timeout, TimeUnit.MILLISECONDS);
@@ -761,8 +768,12 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public void close () throws JMSException
+		public synchronized void close () throws JMSException
 		{
+			synchronized ( peers )
+			{
+				peers.remove (this);
+			}
 			listener = null;
 			queue = null;
 		}
@@ -788,19 +799,30 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				try
 				{
-					md = queue.poll (10, TimeUnit.MILLISECONDS);
+					md = queue.poll (1, TimeUnit.SECONDS);
 					if ( md != null )
 					{
+						List<MockConsumer> cl;
 						synchronized ( consumer )
 						{
-							List<MockConsumer> cl = consumer.get (md.getDestination ());
-							if ( cl != null )
+							cl = consumer.get (md.getDestination ());
+						}
+						if ( cl != null )
+						{
+							synchronized ( cl )
 							{
 								for ( MockConsumer c : cl )
 								{
 									if ( c.getListener () != null )
 									{
-										c.getListener ().onMessage (md.getMessage ());
+										try
+										{
+											c.getListener ().onMessage (md.getMessage ());
+										}
+										catch ( Exception e )
+										{
+											log.error ("Uncaught exception in message listener", e);
+										}
 									}
 									else if ( c.getQueue () != null )
 									{
@@ -946,15 +968,20 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 			{
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
-			MockConsumer c = new MockConsumer ();
+
+			List<MockConsumer> cl;
 			synchronized ( consumer )
 			{
-				List<MockConsumer> cl = consumer.get (name);
+				cl = consumer.get (name);
 				if ( cl == null )
 				{
 					cl = new ArrayList<MockConsumer> ();
 					consumer.put (name, cl);
 				}
+			}
+			MockConsumer c = new MockConsumer (cl);
+			synchronized ( cl )
+			{
 				cl.add (c);
 			}
 			return c;
