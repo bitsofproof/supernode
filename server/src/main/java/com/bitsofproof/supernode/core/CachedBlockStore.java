@@ -77,8 +77,9 @@ public abstract class CachedBlockStore implements BlockStore
 		checkPoints.put (210000, "000000000000048b95347e83192f69cf0366076336c639f9b7228e9ba171342e");
 		checkPoints.put (222222, "00000000000000b8b49d0b61b14994b5c0a511c4b48a1e251ff2b479b2e6f678");
 		checkPoints.put (232000, "000000000000018f47636e1c3a946db77624880ae484ffb0233f5aac6316b3bb");
+		checkPoints.put (270000, "0000000000000002a775aec59dc6a9e4bb1c025cf1b8c2195dd9dc3998c827c5");
 
-		lastCheckPoint = 232000;
+		lastCheckPoint = 270000;
 	}
 
 	protected Chain chain;

@@ -71,7 +71,7 @@ public class TxHandler implements TrunkListener
 					return 1;
 				}
 			}
-			return 0;
+			return a.getHash ().compareTo (b.getHash ());
 		}
 	});
 
