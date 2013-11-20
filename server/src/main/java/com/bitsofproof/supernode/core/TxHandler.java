@@ -178,10 +178,34 @@ public class TxHandler implements TrunkListener
 					{
 						if ( network.getStore ().getTransaction (t.getHash ()) == null )
 						{
-							network.getStore ().validateTransaction (t, availableOutput);
-							cacheTransaction (t);
-							sendTransaction (t, peer);
-							notifyListener (t, false);
+							if ( network.getChain ().isSlave () && peer != null )
+							{
+								try
+								{
+									network.getStore ().resolveTransactionInputs (t, availableOutput);
+									cacheTransaction (t);
+									sendTransaction (t, peer);
+									notifyListener (t, false);
+								}
+								catch ( ValidationException e )
+								{
+									log.trace ("asking for inputs of " + t.getHash ());
+									GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
+									for ( TxIn in : t.getInputs () )
+									{
+										get.getTransactions ().add (new Hash (in.getSourceHash ()).toByteArray ());
+									}
+									get.getTransactions ().add (new Hash (t.getHash ()).toByteArray ());
+									peer.send (get);
+								}
+							}
+							else
+							{
+								network.getStore ().validateTransaction (t, availableOutput);
+								cacheTransaction (t);
+								sendTransaction (t, peer);
+								notifyListener (t, false);
+							}
 						}
 					}
 				}
