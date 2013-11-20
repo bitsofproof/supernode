@@ -17,14 +17,13 @@ package com.bitsofproof.supernode.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,28 +53,7 @@ public class TxHandler implements TrunkListener
 	private ImplementTxOutCacheDelta availableOutput = null;
 	private final Set<String> recheck = new HashSet<String> ();
 
-	private final Set<Tx> dependencyOrderedSet = new TreeSet<Tx> (new Comparator<Tx> ()
-	{
-		@Override
-		public int compare (Tx a, Tx b)
-		{
-			for ( TxIn in : b.getInputs () )
-			{
-				if ( in.getSourceHash ().equals (a.getHash ()) )
-				{
-					return -1;
-				}
-			}
-			for ( TxIn in : a.getInputs () )
-			{
-				if ( in.getSourceHash ().equals (b.getHash ()) )
-				{
-					return 1;
-				}
-			}
-			return a.getHash ().compareTo (b.getHash ());
-		}
-	});
+	private final List<Tx> incomingOrder = new LinkedList<Tx> ();
 
 	private final List<TxListener> transactionListener = new ArrayList<TxListener> ();
 
@@ -90,7 +68,7 @@ public class TxHandler implements TrunkListener
 		{
 			unconfirmed.clear ();
 			availableOutput.clear ();
-			dependencyOrderedSet.clear ();
+			incomingOrder.clear ();
 		}
 	}
 
@@ -155,7 +133,7 @@ public class TxHandler implements TrunkListener
 				InvMessage tm = (InvMessage) peer.createMessage ("inv");
 				synchronized ( unconfirmed )
 				{
-					for ( Tx tx : dependencyOrderedSet )
+					for ( Tx tx : incomingOrder )
 					{
 						tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
 					}
@@ -246,7 +224,7 @@ public class TxHandler implements TrunkListener
 				availableOutput.remove (in.getSourceHash (), in.getIx ());
 			}
 
-			dependencyOrderedSet.add (tx);
+			incomingOrder.add (tx);
 		}
 	}
 
@@ -311,7 +289,7 @@ public class TxHandler implements TrunkListener
 							continue;
 						}
 						unconfirmed.put (tx.getHash (), tx);
-						dependencyOrderedSet.add (tx);
+						incomingOrder.add (tx);
 					}
 				}
 				log.debug ("Pool size: " + unconfirmed.size ());
@@ -324,7 +302,16 @@ public class TxHandler implements TrunkListener
 						if ( unconfirmed.containsKey (tx.getHash ()) )
 						{
 							unconfirmed.remove (tx.getHash ());
-							dependencyOrderedSet.remove (tx);
+							Iterator<Tx> txi = incomingOrder.iterator ();
+							while ( txi.hasNext () )
+							{
+								Tx t = txi.next ();
+								if ( t.getHash ().equals (tx.getHash ()) )
+								{
+									txi.remove ();
+									break;
+								}
+							}
 							notifyListener (tx, false);
 						}
 						else
@@ -338,7 +325,7 @@ public class TxHandler implements TrunkListener
 
 				availableOutput.reset ();
 
-				Iterator<Tx> txi = dependencyOrderedSet.iterator ();
+				Iterator<Tx> txi = incomingOrder.iterator ();
 				while ( txi.hasNext () )
 				{
 					Tx tx = txi.next ();
@@ -358,10 +345,6 @@ public class TxHandler implements TrunkListener
 					catch ( ValidationException e )
 					{
 						log.debug ("Double spend: " + tx.getHash ());
-						for ( TxIn in : tx.getInputs () )
-						{
-							log.debug (tx.getHash () + " referred to:" + in.getSourceHash ());
-						}
 						unconfirmed.remove (tx.getHash ());
 						txi.remove ();
 						notifyListener (tx, true);
