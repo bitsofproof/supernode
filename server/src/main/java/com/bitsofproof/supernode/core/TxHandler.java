@@ -84,9 +84,12 @@ public class TxHandler implements TrunkListener
 
 	public void clear ()
 	{
-		unconfirmed.clear ();
-		availableOutput.clear ();
-		dependencyOrderedSet.clear ();
+		synchronized ( unconfirmed )
+		{
+			unconfirmed.clear ();
+			availableOutput.clear ();
+			dependencyOrderedSet.clear ();
+		}
 	}
 
 	public TxHandler (final BitcoinNetwork network)
@@ -150,7 +153,7 @@ public class TxHandler implements TrunkListener
 				InvMessage tm = (InvMessage) peer.createMessage ("inv");
 				synchronized ( unconfirmed )
 				{
-					for ( Tx tx : unconfirmed.values () )
+					for ( Tx tx : dependencyOrderedSet )
 					{
 						tm.getTransactionHashes ().add (new Hash (tx.getHash ()).toByteArray ());
 					}
