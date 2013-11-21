@@ -378,6 +378,8 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		try
 		{
+			lock.readLock ().lock ();
+
 			String trunk = hash;
 			while ( !isOnTrunk (trunk) )
 			{
