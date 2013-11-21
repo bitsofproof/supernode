@@ -430,7 +430,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 				}
 				catch ( Exception e )
 				{
-					log.trace ("Rejected invalid block request ", e);
+					log.debug ("Rejected invalid block request ", e);
 				}
 			}
 		});

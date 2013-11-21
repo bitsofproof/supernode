@@ -396,7 +396,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					break;
 				}
-				log.debug ("need to add: " + trunk);
+				log.debug ("need to add: " + q.hash);
 				added.add (retrieveBlock (q));
 				q = q.previous;
 			}
