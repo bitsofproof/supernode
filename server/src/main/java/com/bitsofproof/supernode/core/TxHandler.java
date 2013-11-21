@@ -301,17 +301,7 @@ public class TxHandler implements TrunkListener
 						tx.setBlockHash (blk.getHash ());
 						if ( unconfirmed.containsKey (tx.getHash ()) )
 						{
-							unconfirmed.remove (tx.getHash ());
-							Iterator<Tx> txi = incomingOrder.iterator ();
-							while ( txi.hasNext () )
-							{
-								Tx t = txi.next ();
-								if ( t.getHash ().equals (tx.getHash ()) )
-								{
-									txi.remove ();
-									break;
-								}
-							}
+							incomingOrder.remove (unconfirmed.remove (tx.getHash ()));
 							notifyListener (tx, false);
 						}
 						else
