@@ -390,8 +390,7 @@ public abstract class CachedBlockStore implements BlockStore
 				trunk = b.hash;
 			}
 			CachedBlock q = currentHead.getLast ();
-			CachedBlock p = q.previous;
-			while ( p != null )
+			while ( q != null )
 			{
 				if ( q.hash.equals (trunk) )
 				{
@@ -399,7 +398,7 @@ public abstract class CachedBlockStore implements BlockStore
 				}
 				log.debug ("need to add: " + trunk);
 				added.add (retrieveBlock (q));
-				p = q.previous;
+				q = q.previous;
 			}
 			Collections.reverse (added);
 		}
