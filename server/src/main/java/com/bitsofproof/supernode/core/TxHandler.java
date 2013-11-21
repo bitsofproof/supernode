@@ -52,6 +52,7 @@ public class TxHandler implements TrunkListener
 	private final Map<String, Tx> unconfirmed = Collections.synchronizedMap (new HashMap<String, Tx> ());
 	private ImplementTxOutCacheDelta availableOutput = null;
 	private final Set<String> recheck = new HashSet<String> ();
+	private final Set<String> processing = Collections.synchronizedSet (new HashSet<String> ());
 
 	private final List<Tx> incomingOrder = new LinkedList<Tx> ();
 
@@ -154,44 +155,52 @@ public class TxHandler implements TrunkListener
 				@Override
 				public void run (TxOutCache cache) throws ValidationException
 				{
-					if ( !unconfirmed.containsKey (t.getHash ()) )
+					try
 					{
-						if ( network.getStore ().getTransaction (t.getHash ()) == null )
+						if ( !processing.contains (t.getHash ()) && !unconfirmed.containsKey (t.getHash ()) )
 						{
-							if ( network.getChain ().isSlave () && peer != null )
+							processing.add (t.getHash ());
+							if ( network.getStore ().getTransaction (t.getHash ()) == null )
 							{
-								try
+								if ( network.getChain ().isSlave () && peer != null )
 								{
-									network.getStore ().resolveTransactionInputs (t, availableOutput);
+									try
+									{
+										network.getStore ().resolveTransactionInputs (t, availableOutput);
+										cacheTransaction (t);
+										sendTransaction (t, peer);
+										notifyListener (t, false);
+										recheck.remove (t.getHash ());
+									}
+									catch ( ValidationException e )
+									{
+										if ( !recheck.contains (t.getHash ()) )
+										{
+											log.trace ("asking for inputs of " + t.getHash ());
+											GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
+											for ( TxIn in : t.getInputs () )
+											{
+												get.getTransactions ().add (new Hash (in.getSourceHash ()).toByteArray ());
+											}
+											get.getTransactions ().add (new Hash (t.getHash ()).toByteArray ());
+											peer.send (get);
+											recheck.add (t.getHash ());
+										}
+									}
+								}
+								else
+								{
+									network.getStore ().validateTransaction (t, availableOutput);
 									cacheTransaction (t);
 									sendTransaction (t, peer);
 									notifyListener (t, false);
-									recheck.remove (t.getHash ());
 								}
-								catch ( ValidationException e )
-								{
-									if ( !recheck.contains (t.getHash ()) )
-									{
-										log.trace ("asking for inputs of " + t.getHash ());
-										GetDataMessage get = (GetDataMessage) peer.createMessage ("getdata");
-										for ( TxIn in : t.getInputs () )
-										{
-											get.getTransactions ().add (new Hash (in.getSourceHash ()).toByteArray ());
-										}
-										get.getTransactions ().add (new Hash (t.getHash ()).toByteArray ());
-										peer.send (get);
-										recheck.add (t.getHash ());
-									}
-								}
-							}
-							else
-							{
-								network.getStore ().validateTransaction (t, availableOutput);
-								cacheTransaction (t);
-								sendTransaction (t, peer);
-								notifyListener (t, false);
 							}
 						}
+					}
+					finally
+					{
+						processing.remove (t.getHash ());
 					}
 				}
 			});

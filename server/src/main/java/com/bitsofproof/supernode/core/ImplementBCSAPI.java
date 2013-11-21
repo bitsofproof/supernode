@@ -426,7 +426,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 					{
 						reply (o.getJMSReplyTo (), null);
 					}
-					log.debug ("blockRequest for " + hash + " replied");
+					log.debug ("catchUpRequest for " + hash + " replied");
 				}
 				catch ( Exception e )
 				{
