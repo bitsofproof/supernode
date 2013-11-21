@@ -383,6 +383,7 @@ public abstract class CachedBlockStore implements BlockStore
 			String trunk = hash;
 			while ( !isOnTrunk (trunk) )
 			{
+				log.debug ("need to remove: " + trunk);
 				CachedBlock b = cachedBlocks.get (trunk);
 				removed.add (retrieveBlock (b));
 				b = b.previous;
@@ -396,6 +397,7 @@ public abstract class CachedBlockStore implements BlockStore
 				{
 					break;
 				}
+				log.debug ("need to add: " + trunk);
 				added.add (retrieveBlock (q));
 				p = q.previous;
 			}
