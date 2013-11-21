@@ -378,24 +378,27 @@ public abstract class CachedBlockStore implements BlockStore
 	{
 		try
 		{
+			lock.readLock ().lock ();
+
 			String trunk = hash;
 			while ( !isOnTrunk (trunk) )
 			{
+				log.debug ("need to remove: " + trunk);
 				CachedBlock b = cachedBlocks.get (trunk);
 				removed.add (retrieveBlock (b));
 				b = b.previous;
 				trunk = b.hash;
 			}
 			CachedBlock q = currentHead.getLast ();
-			CachedBlock p = q.previous;
-			while ( p != null )
+			while ( q != null )
 			{
 				if ( q.hash.equals (trunk) )
 				{
 					break;
 				}
+				log.debug ("need to add: " + q.hash);
 				added.add (retrieveBlock (q));
-				p = q.previous;
+				q = q.previous;
 			}
 			Collections.reverse (added);
 		}
