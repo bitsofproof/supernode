@@ -664,13 +664,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	{
 		private LinkedBlockingQueue<Message> queue;
 		private MessageListener listener;
-		private final List<MockConsumer> peers;
 		private final Semaphore initialized = new Semaphore (0);
-
-		public MockConsumer (List<MockConsumer> peers)
-		{
-			this.peers = peers;
-		}
 
 		public synchronized LinkedBlockingQueue<Message> getQueue ()
 		{
@@ -777,10 +771,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public synchronized void close () throws JMSException
 		{
-			synchronized ( peers )
-			{
-				peers.remove (this);
-			}
 			listener = null;
 			queue = null;
 		}
@@ -812,27 +802,26 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 						List<MockConsumer> cl;
 						synchronized ( consumer )
 						{
-							cl = new ArrayList<MockConsumer> ();
-							cl.addAll (consumer.get (md.getDestination ()));
-						}
-						if ( cl != null )
-						{
-							for ( MockConsumer c : cl )
+							cl = consumer.get (md.getDestination ());
+							if ( cl != null )
 							{
-								if ( c.getListener () != null )
+								for ( MockConsumer c : cl )
 								{
-									try
+									if ( c.getListener () != null )
 									{
-										c.getListener ().onMessage (md.getMessage ());
+										try
+										{
+											c.getListener ().onMessage (md.getMessage ());
+										}
+										catch ( Exception e )
+										{
+											log.error ("Uncaught exception in message listener", e);
+										}
 									}
-									catch ( Exception e )
+									else
 									{
-										log.error ("Uncaught exception in message listener", e);
+										c.getQueue ().put (md.getMessage ());
 									}
-								}
-								else
-								{
-									c.getQueue ().put (md.getMessage ());
 								}
 							}
 						}
@@ -982,13 +971,10 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					cl = new ArrayList<MockConsumer> ();
 					consumer.put (name, cl);
 				}
-			}
-			MockConsumer c = new MockConsumer (cl);
-			synchronized ( cl )
-			{
+				MockConsumer c = new MockConsumer ();
 				cl.add (c);
+				return c;
 			}
-			return c;
 		}
 
 		@Override
@@ -1136,7 +1122,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	}
 
-	private static Connection connection;
+	private Connection connection;
 
 	@Override
 	public Connection createConnection () throws JMSException

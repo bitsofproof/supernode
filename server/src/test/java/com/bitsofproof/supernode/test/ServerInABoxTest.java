@@ -102,6 +102,7 @@ public class ServerInABoxTest
 			}
 			catch ( ValidationException | BCSAPIException e )
 			{
+				log.error ("REJECT ", e);
 			}
 		}
 		Transaction t;
@@ -114,6 +115,7 @@ public class ServerInABoxTest
 		}
 		catch ( ValidationException e )
 		{
+			log.error ("REJECT ", e);
 		}
 
 		assertTrue (minerAccount.getBalance () == 10 * 40 * 100000000L);
