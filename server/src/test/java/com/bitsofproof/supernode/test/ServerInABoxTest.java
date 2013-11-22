@@ -8,6 +8,8 @@ import java.util.concurrent.Semaphore;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
@@ -26,6 +28,7 @@ import com.bitsofproof.supernode.wallet.KeyListAccountManager;
 
 public class ServerInABoxTest
 {
+	private static final Logger log = LoggerFactory.getLogger (ServerInABoxTest.class);
 	private static APIServerInABox box;
 	private static BCSAPI api;
 
@@ -37,61 +40,83 @@ public class ServerInABoxTest
 	}
 
 	@Test
-	public void run () throws BCSAPIException
+	public void run () throws BCSAPIException, InterruptedException
 	{
 		final Address target = ECKeyPair.createNew (true).getAddress ();
-		AddressListAccountManager addm = new AddressListAccountManager ();
-		addm.addAddress (target.toByteArray ());
-		api.registerTransactionListener (addm);
+		AddressListAccountManager targetAccount = new AddressListAccountManager ();
+		targetAccount.addAddress (target.toByteArray ());
+		api.registerTransactionListener (targetAccount);
 
 		ECKeyPair miner = ECKeyPair.createNew (true);
 		Address a = miner.getAddress ();
 		box.setNewCoinsAddress (a);
-		final KeyListAccountManager am = new KeyListAccountManager ();
-		am.addKey (miner);
-		api.registerTransactionListener (am);
+		final KeyListAccountManager minerAccount = new KeyListAccountManager ();
+		minerAccount.addKey (miner);
+		api.registerTransactionListener (minerAccount);
 
-		final Semaphore nb = new Semaphore (0);
+		final Semaphore blockMined = new Semaphore (0);
 		api.registerTrunkListener (new TrunkListener ()
 		{
 			@Override
 			public void trunkUpdate (List<Block> removed, List<Block> added)
 			{
-				try
-				{
-					api.sendTransaction (am.pay (target, 10 * 100000000L, 0));
-				}
-				catch ( ValidationException | BCSAPIException e )
-				{
-				}
-				nb.release ();
+				blockMined.release ();
 			}
 		});
 
-		final Semaphore nb2 = new Semaphore (0);
-		am.addAccountListener (new AccountListener ()
+		final Semaphore minerAccountChanged = new Semaphore (0);
+		minerAccount.addAccountListener (new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account, Transaction t)
 			{
-				nb2.release ();
+				minerAccountChanged.release ();
 			}
 		});
-		final Semaphore nb3 = new Semaphore (0);
-		addm.addAccountListener (new AccountListener ()
+		final Semaphore targetAccountChanged = new Semaphore (0);
+		targetAccount.addAccountListener (new AccountListener ()
 		{
 			@Override
 			public void accountChanged (AccountManager account, Transaction t)
 			{
-				nb3.release ();
+				targetAccountChanged.release ();
 			}
 		});
-		box.mine (1000, 10);
-		nb.acquireUninterruptibly (10);
-		nb2.acquireUninterruptibly (20);
-		nb3.acquireUninterruptibly (10);
-		long b = am.getBalance ();
-		assertTrue (am.getBalance () == 10 * 40 * 100000000L);
-		assertTrue (addm.getBalance () == 10 * 10 * 100000000L);
+		box.mine (10, 2, 1000);
+		for ( int i = 0; i < 9; ++i )
+		{
+			try
+			{
+				blockMined.acquireUninterruptibly ();
+				minerAccountChanged.acquireUninterruptibly ();
+				if ( i > 0 )
+				{
+					minerAccountChanged.acquireUninterruptibly ();
+					targetAccountChanged.acquireUninterruptibly ();
+				}
+
+				Transaction t = minerAccount.pay (target, 10 * 100000000L, 0);
+				api.sendTransaction (t);
+				targetAccountChanged.acquireUninterruptibly ();
+				minerAccountChanged.acquireUninterruptibly ();
+			}
+			catch ( ValidationException | BCSAPIException e )
+			{
+			}
+		}
+		Transaction t;
+		try
+		{
+			t = minerAccount.pay (target, 10 * 100000000L, 0);
+			api.sendTransaction (t);
+			targetAccountChanged.acquireUninterruptibly ();
+			minerAccountChanged.acquireUninterruptibly ();
+		}
+		catch ( ValidationException e )
+		{
+		}
+
+		assertTrue (minerAccount.getBalance () == 10 * 40 * 100000000L);
+		assertTrue (targetAccount.getBalance () == 10 * 10 * 100000000L);
 	}
 }

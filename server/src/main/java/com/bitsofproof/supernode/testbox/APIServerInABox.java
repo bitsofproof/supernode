@@ -3,7 +3,9 @@ package com.bitsofproof.supernode.testbox;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,65 +75,62 @@ public class APIServerInABox
 		newCoinsAddress = a;
 	}
 
-	public void mine (long milisBetweenBlocks, int nblocks)
+	public void mine (final int nblocks, final int numberOfTxInBlock, final int timeout)
 	{
-		String previousHash = chain.getGenesis ().getHash ();
-		final List<Block> current = new ArrayList<Block> ();
-		txhandler.addTransactionListener (new TxListener ()
+		final List<Transaction> mempool = new ArrayList<Transaction> ();
+		final Set<String> seen = new HashSet<String> ();
+
+		Thread miner = new Thread (new Runnable ()
 		{
 			@Override
-			public void process (Tx transaction, boolean doubleSpend)
+			public void run ()
 			{
-				Transaction t = Transaction.fromWireDump (transaction.toWireDump ());
-				synchronized ( current )
+
+				txhandler.addTransactionListener (new TxListener ()
 				{
-					while ( current.isEmpty () )
+					@Override
+					public void process (Tx transaction, boolean doubleSpend)
 					{
-						try
+						if ( !transaction.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH_STRING) && !seen.contains (transaction.getHash ()) )
 						{
-							current.wait ();
-						}
-						catch ( InterruptedException e )
-						{
+							Transaction t = Transaction.fromWireDump (transaction.toWireDump ());
+							synchronized ( mempool )
+							{
+								mempool.add (t);
+								seen.add (transaction.getHash ());
+							}
 						}
 					}
-					current.get (0).getTransactions ().add (t);
+				});
+				String previousHash = chain.getGenesis ().getHash ();
+				for ( int blockHeight = 1; blockHeight <= nblocks; ++blockHeight )
+				{
+					Transaction coinbase = null;
+					try
+					{
+						coinbase = Transaction.createCoinbase (newCoinsAddress, 50 * 100000000L, blockHeight);
+						Block block = createBlock (previousHash, coinbase);
+
+						synchronized ( mempool )
+						{
+							block.getTransactions ().addAll (mempool);
+							mempool.clear ();
+						}
+
+						mineBlock (block);
+						previousHash = block.getHash ();
+						api.sendBlock (block);
+					}
+					catch ( ValidationException | BCSAPIException e )
+					{
+						log.error ("Server in a box ", e);
+					}
 				}
 			}
 		});
-		for ( int blockHeight = 1; blockHeight <= nblocks; ++blockHeight )
-		{
-			Transaction coinbase = null;
-			try
-			{
-				coinbase = Transaction.createCoinbase (newCoinsAddress, 50 * 100000000L, blockHeight);
-				Block block = createBlock (previousHash, coinbase);
-				synchronized ( current )
-				{
-					current.clear ();
-					current.add (block);
-					current.notify ();
-
-					try
-					{
-						current.wait (milisBetweenBlocks);
-					}
-					catch ( InterruptedException e )
-					{
-						return;
-					}
-
-					mineBlock (block);
-					previousHash = block.getHash ();
-				}
-				api.sendBlock (block);
-			}
-			catch ( ValidationException | BCSAPIException e )
-			{
-				log.error ("Server in a box ", e);
-			}
-		}
-
+		miner.setName ("Miner in the box");
+		miner.setDaemon (true);
+		miner.start ();
 	}
 
 	public BitcoinNetwork getNetwork ()
