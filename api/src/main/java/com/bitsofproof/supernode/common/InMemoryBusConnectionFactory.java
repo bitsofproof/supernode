@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import javax.jms.BytesMessage;
@@ -664,6 +665,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		private LinkedBlockingQueue<Message> queue;
 		private MessageListener listener;
 		private final List<MockConsumer> peers;
+		private final Semaphore initialized = new Semaphore (0);
 
 		public MockConsumer (List<MockConsumer> peers)
 		{
@@ -672,6 +674,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 		public synchronized LinkedBlockingQueue<Message> getQueue ()
 		{
+			initialized.acquireUninterruptibly ();
 			return queue;
 		}
 
@@ -695,6 +698,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				throw new JMSException ("Use either setListener or receive");
 			}
 			this.listener = listener;
+			initialized.release ();
 		}
 
 		private synchronized MessageListener getListener ()
@@ -714,6 +718,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				if ( queue == null )
 				{
 					queue = new LinkedBlockingQueue<Message> ();
+					initialized.release ();
 				}
 			}
 			try
@@ -738,6 +743,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				if ( queue == null )
 				{
 					queue = new LinkedBlockingQueue<Message> ();
+					initialized.release ();
 				}
 			}
 			try
@@ -762,6 +768,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				if ( queue == null )
 				{
 					queue = new LinkedBlockingQueue<Message> ();
+					initialized.release ();
 				}
 			}
 			return queue.poll ();
@@ -805,34 +812,31 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 						List<MockConsumer> cl;
 						synchronized ( consumer )
 						{
-							cl = consumer.get (md.getDestination ());
+							cl = new ArrayList<MockConsumer> ();
+							cl.addAll (consumer.get (md.getDestination ()));
 						}
 						if ( cl != null )
 						{
-							synchronized ( cl )
+							for ( MockConsumer c : cl )
 							{
-								for ( MockConsumer c : cl )
+								if ( c.getListener () != null )
 								{
-									if ( c.getListener () != null )
+									try
 									{
-										try
-										{
-											c.getListener ().onMessage (md.getMessage ());
-										}
-										catch ( Exception e )
-										{
-											log.error ("Uncaught exception in message listener", e);
-										}
+										c.getListener ().onMessage (md.getMessage ());
 									}
-									else if ( c.getQueue () != null )
+									catch ( Exception e )
 									{
-										c.getQueue ().put (md.getMessage ());
+										log.error ("Uncaught exception in message listener", e);
 									}
+								}
+								else
+								{
+									c.getQueue ().put (md.getMessage ());
 								}
 							}
 						}
 					}
-
 				}
 				catch ( InterruptedException e )
 				{
