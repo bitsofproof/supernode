@@ -771,8 +771,6 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public synchronized void close () throws JMSException
 		{
-			listener = null;
-			queue = null;
 		}
 	}
 
