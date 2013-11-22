@@ -4,8 +4,9 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +78,7 @@ public class APIServerInABox
 
 	public void mine (final int nblocks, final int numberOfTxInBlock, final int timeout)
 	{
-		final List<Transaction> mempool = new ArrayList<Transaction> ();
+		final BlockingQueue<Transaction> mempool = new LinkedBlockingQueue<Transaction> ();
 		final Set<String> seen = new HashSet<String> ();
 
 		Thread miner = new Thread (new Runnable ()
@@ -91,12 +92,12 @@ public class APIServerInABox
 					@Override
 					public void process (Tx transaction, boolean doubleSpend)
 					{
-						if ( !transaction.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH_STRING) && !seen.contains (transaction.getHash ()) )
+						synchronized ( seen )
 						{
-							Transaction t = Transaction.fromWireDump (transaction.toWireDump ());
-							synchronized ( mempool )
+							if ( !transaction.getInputs ().get (0).getSourceHash ().equals (Hash.ZERO_HASH_STRING) && !seen.contains (transaction.getHash ()) )
 							{
-								mempool.add (t);
+								Transaction t = Transaction.fromWireDump (transaction.toWireDump ());
+								mempool.offer (t);
 								seen.add (transaction.getHash ());
 							}
 						}
@@ -111,10 +112,9 @@ public class APIServerInABox
 						coinbase = Transaction.createCoinbase (newCoinsAddress, 50 * 100000000L, blockHeight);
 						Block block = createBlock (previousHash, coinbase);
 
-						synchronized ( mempool )
+						if ( blockHeight > 1 )
 						{
-							block.getTransactions ().addAll (mempool);
-							mempool.clear ();
+							mempool.drainTo (block.getTransactions ());
 						}
 
 						mineBlock (block);
