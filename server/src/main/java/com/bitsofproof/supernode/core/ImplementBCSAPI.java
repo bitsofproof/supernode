@@ -163,7 +163,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 	}
 
-	private void closeSession (Session session)
+	private static void closeSession (Session session)
 	{
 		if ( session != null )
 		{
@@ -778,13 +778,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 		finally
 		{
-			try
-			{
-				session.close ();
-			}
-			catch ( JMSException e )
-			{
-			}
+			closeSession (session);
 		}
 	}
 
@@ -844,13 +838,7 @@ public class ImplementBCSAPI implements TrunkListener, TxListener
 		}
 		finally
 		{
-			try
-			{
-				session.close ();
-			}
-			catch ( JMSException e )
-			{
-			}
+			closeSession (session);
 		}
 	}
 
