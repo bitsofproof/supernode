@@ -88,8 +88,9 @@ public class ServerInABoxTest
 		});
 		box.mine (1000, 10);
 		nb.acquireUninterruptibly (10);
-		nb2.acquireUninterruptibly (10);
+		nb2.acquireUninterruptibly (20);
 		nb3.acquireUninterruptibly (10);
+		long b = am.getBalance ();
 		assertTrue (am.getBalance () == 10 * 40 * 100000000L);
 		assertTrue (addm.getBalance () == 10 * 10 * 100000000L);
 	}
