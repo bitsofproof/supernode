@@ -812,34 +812,31 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 						List<MockConsumer> cl;
 						synchronized ( consumer )
 						{
-							cl = consumer.get (md.getDestination ());
+							cl = new ArrayList<MockConsumer> ();
+							cl.addAll (consumer.get (md.getDestination ()));
 						}
 						if ( cl != null )
 						{
-							synchronized ( cl )
+							for ( MockConsumer c : cl )
 							{
-								for ( MockConsumer c : cl )
+								if ( c.getListener () != null )
 								{
-									if ( c.getListener () != null )
+									try
 									{
-										try
-										{
-											c.getListener ().onMessage (md.getMessage ());
-										}
-										catch ( Exception e )
-										{
-											log.error ("Uncaught exception in message listener", e);
-										}
+										c.getListener ().onMessage (md.getMessage ());
 									}
-									else
+									catch ( Exception e )
 									{
-										c.getQueue ().put (md.getMessage ());
+										log.error ("Uncaught exception in message listener", e);
 									}
+								}
+								else
+								{
+									c.getQueue ().put (md.getMessage ());
 								}
 							}
 						}
 					}
-
 				}
 				catch ( InterruptedException e )
 				{
