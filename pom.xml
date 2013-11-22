@@ -77,7 +77,7 @@
 
 	<scm>
 		<connection>scm:git:git@github.com:bitsofproof/supernode.git</connection>
-	    <developerConnection>scm:git@github.com:bitsofproof/supernode.git</developerConnection>
+	    <developerConnection>scm:git:git@github.com:bitsofproof/supernode.git</developerConnection>
 		<url>https://github.com/bitsofproof/supernode</url>
 		<tag>HEAD</tag>
 	</scm>
