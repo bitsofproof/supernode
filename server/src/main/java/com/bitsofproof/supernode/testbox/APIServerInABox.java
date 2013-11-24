@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,6 +116,21 @@ public class APIServerInABox
 						if ( blockHeight > 1 )
 						{
 							mempool.drainTo (block.getTransactions ());
+							if ( block.getTransactions ().size () < numberOfTxInBlock )
+							{
+								try
+								{
+									Transaction t = mempool.poll (timeout, TimeUnit.MILLISECONDS);
+									if ( t != null )
+									{
+										block.getTransactions ().add (t);
+										mempool.drainTo (block.getTransactions ());
+									}
+								}
+								catch ( InterruptedException e )
+								{
+								}
+							}
 						}
 
 						mineBlock (block);
