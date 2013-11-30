@@ -19,13 +19,12 @@ import java.io.Serializable;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import javax.jms.BytesMessage;
@@ -662,15 +661,8 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 
 	private static class MockConsumer implements MessageConsumer
 	{
-		private LinkedBlockingQueue<Message> queue;
+		private final LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<Message> ();
 		private MessageListener listener;
-		private final Semaphore initialized = new Semaphore (0);
-
-		public synchronized LinkedBlockingQueue<Message> getQueue ()
-		{
-			initialized.acquireUninterruptibly ();
-			return queue;
-		}
 
 		@Override
 		public String getMessageSelector () throws JMSException
@@ -679,41 +671,32 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		}
 
 		@Override
-		public synchronized MessageListener getMessageListener () throws JMSException
+		public MessageListener getMessageListener () throws JMSException
 		{
 			return listener;
 		}
 
 		@Override
-		public synchronized void setMessageListener (final MessageListener listener) throws JMSException
+		public void setMessageListener (final MessageListener listener) throws JMSException
 		{
-			if ( queue != null )
+			this.listener = listener;
+		}
+
+		public void putMessage (Message m) throws JMSException
+		{
+			if ( listener != null )
 			{
 				throw new JMSException ("Use either setListener or receive");
 			}
-			this.listener = listener;
-			initialized.release ();
-		}
-
-		private synchronized MessageListener getListener ()
-		{
-			return listener;
+			queue.offer (m);
 		}
 
 		@Override
 		public Message receive () throws JMSException
 		{
-			synchronized ( this )
+			if ( listener != null )
 			{
-				if ( listener != null )
-				{
-					throw new JMSException ("Use either setListener or receive");
-				}
-				if ( queue == null )
-				{
-					queue = new LinkedBlockingQueue<Message> ();
-					initialized.release ();
-				}
+				throw new JMSException ("Use either setListener or receive");
 			}
 			try
 			{
@@ -728,17 +711,9 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public Message receive (long timeout) throws JMSException
 		{
-			synchronized ( this )
+			if ( listener != null )
 			{
-				if ( listener != null )
-				{
-					throw new JMSException ("Use either setListener or receive");
-				}
-				if ( queue == null )
-				{
-					queue = new LinkedBlockingQueue<Message> ();
-					initialized.release ();
-				}
+				throw new JMSException ("Use either setListener or receive");
 			}
 			try
 			{
@@ -753,17 +728,9 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 		@Override
 		public Message receiveNoWait () throws JMSException
 		{
-			synchronized ( this )
+			if ( listener != null )
 			{
-				if ( listener != null )
-				{
-					throw new JMSException ("Use either setListener or receive");
-				}
-				if ( queue == null )
-				{
-					queue = new LinkedBlockingQueue<Message> ();
-					initialized.release ();
-				}
+				throw new JMSException ("Use either setListener or receive");
 			}
 			return queue.poll ();
 		}
@@ -798,34 +765,31 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					if ( md != null )
 					{
 						List<MockConsumer> cl;
-						synchronized ( consumer )
+						cl = consumer.get (md.getDestination ());
+						if ( cl != null )
 						{
-							cl = consumer.get (md.getDestination ());
-							if ( cl != null )
+							for ( MockConsumer c : cl )
 							{
-								for ( MockConsumer c : cl )
+								if ( c.getMessageListener () != null )
 								{
-									if ( c.getListener () != null )
+									try
 									{
-										try
-										{
-											c.getListener ().onMessage (md.getMessage ());
-										}
-										catch ( Exception e )
-										{
-											log.error ("Uncaught exception in message listener", e);
-										}
+										c.getMessageListener ().onMessage (md.getMessage ());
 									}
-									else
+									catch ( Exception e )
 									{
-										c.getQueue ().put (md.getMessage ());
+										log.error ("Uncaught exception in message listener", e);
 									}
+								}
+								else
+								{
+									c.putMessage (md.getMessage ());
 								}
 							}
 						}
 					}
 				}
-				catch ( InterruptedException e )
+				catch ( InterruptedException | JMSException e )
 				{
 				}
 			} while ( md != null || run );
@@ -960,6 +924,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 				name = ((MockTemporaryQueue) destination).getQueueName ();
 			}
 
+			MockConsumer c = new MockConsumer ();
 			List<MockConsumer> cl;
 			synchronized ( consumer )
 			{
@@ -969,10 +934,9 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 					cl = new ArrayList<MockConsumer> ();
 					consumer.put (name, cl);
 				}
-				MockConsumer c = new MockConsumer ();
 				cl.add (c);
-				return c;
 			}
+			return c;
 		}
 
 		@Override
@@ -1045,7 +1009,7 @@ public class InMemoryBusConnectionFactory implements ConnectionFactory
 	{
 		private final List<Session> sessions = new ArrayList<Session> ();
 		private final ExecutorService consumerExecutor = Executors.newCachedThreadPool ();
-		private final Map<String, List<MockConsumer>> consumer = new HashMap<> ();
+		private final Map<String, List<MockConsumer>> consumer = new ConcurrentHashMap<> ();
 		private final LinkedBlockingQueue<MessageWithDestination> queue = new LinkedBlockingQueue<> ();
 
 		@Override
