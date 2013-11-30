@@ -698,6 +698,7 @@ public abstract class BaseAccountManager implements AccountManager
 				}
 				catch ( Exception e )
 				{
+					log.error ("Uncaught exception in account listener", e);
 				}
 			}
 		}
