@@ -27,8 +27,8 @@ public class AddressConverter
 	{
 		try
 		{
-			Network network = Network.UNKNOWN;
-			Address.Type type = Type.UNKNOWN;
+			Network network = Network.PRODUCTION;
+			Address.Type type = Type.COMMON;
 			byte[] raw = ByteUtils.fromBase58 (s);
 			if ( (raw[0] & 0xff) == 0x0 )
 			{

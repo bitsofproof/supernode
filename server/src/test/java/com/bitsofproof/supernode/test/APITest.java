@@ -219,21 +219,13 @@ public class APITest
 
 		// spend some
 		long aliceStartingBalance = alice.getBalance ();
-		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, FEE);
+		Transaction spend = alice.pay (bob.getNextKey ().getAddress (), 50 * COIN, FEE, true);
 		api.sendTransaction (spend);
 		aliceMonitor.expectUpdates (1);
 		bobMonitor.expectUpdates (1);
 		validationMonitor.expectTransactionValidations (1);
 		assertTrue (bob.getBalance () == 50 * COIN);
 		assertTrue (alice.getBalance () == aliceStartingBalance - bob.getBalance () - FEE);
-
-		// split
-		aliceStartingBalance = alice.getBalance ();
-		spend = alice.split (new long[] { 1 * COIN, 2 * COIN }, FEE);
-		api.sendTransaction (spend);
-		aliceMonitor.expectUpdates (1);
-		validationMonitor.expectTransactionValidations (1);
-		assertTrue (alice.getBalance () == aliceStartingBalance - FEE);
 	}
 
 	private Block createBlock (String previous, Transaction coinbase)

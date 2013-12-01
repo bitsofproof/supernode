@@ -12,13 +12,13 @@ public class Address
 {
 	public enum Type
 	{
-		UNKNOWN, COMMON, P2SH
+		COMMON, P2SH
 	};
 
 	private final Type type;
 	private final byte[] bytes;
 
-	private Network network = Network.UNKNOWN;;
+	private Network network = Network.PRODUCTION;
 
 	public Network getNetwork ()
 	{

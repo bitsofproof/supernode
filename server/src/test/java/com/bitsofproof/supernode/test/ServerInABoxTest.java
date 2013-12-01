@@ -95,7 +95,7 @@ public class ServerInABoxTest
 					targetAccountChanged.acquireUninterruptibly ();
 				}
 
-				Transaction t = minerAccount.pay (target, 10 * 100000000L, 0);
+				Transaction t = minerAccount.pay (target, 10 * 100000000L, 0, true);
 				api.sendTransaction (t);
 				targetAccountChanged.acquireUninterruptibly ();
 				minerAccountChanged.acquireUninterruptibly ();
@@ -108,7 +108,7 @@ public class ServerInABoxTest
 		Transaction t;
 		try
 		{
-			t = minerAccount.pay (target, 10 * 100000000L, 0);
+			t = minerAccount.pay (target, 10 * 100000000L, 0, true);
 			api.sendTransaction (t);
 			targetAccountChanged.acquireUninterruptibly ();
 			minerAccountChanged.acquireUninterruptibly ();
