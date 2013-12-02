@@ -1,20 +1,18 @@
 package com.bitsofproof.supernode.wallet;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
-import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
 
@@ -22,29 +20,24 @@ public class AddressListAccountManager extends BaseAccountManager
 {
 	private static final Logger log = LoggerFactory.getLogger (AddressListAccountManager.class);
 
-	private final Set<ByteVector> addresses = new HashSet<ByteVector> ();
+	private final Set<Address> addresses = new HashSet<> ();
 
 	@Override
-	public Collection<byte[]> getAddresses ()
+	public Set<Address> getAddresses ()
 	{
-		List<byte[]> al = new ArrayList<byte[]> ();
-		for ( ByteVector b : addresses )
-		{
-			al.add (b.toByteArray ());
-		}
-		return al;
+		return Collections.unmodifiableSet (addresses);
 	}
 
 	@Override
-	public Key getKeyForAddress (byte[] address)
+	public Key getKeyForAddress (Address address)
 	{
 		return null;
 	}
 
 	@Override
-	public boolean isOwnAddress (byte[] address)
+	public boolean isOwnAddress (Address address)
 	{
-		return addresses.contains (new ByteVector (address));
+		return addresses.contains (address);
 	}
 
 	@Override
@@ -53,9 +46,9 @@ public class AddressListAccountManager extends BaseAccountManager
 		return null;
 	}
 
-	public void addAddress (byte[] address)
+	public void addAddress (Address address)
 	{
-		addresses.add (new ByteVector (address));
+		addresses.add (address);
 	}
 
 	@Override
@@ -63,7 +56,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	{
 		reset ();
 		log.trace ("Sync naddr: " + addresses.size ());
-		api.scanTransactions (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		api.scanTransactionsForAddresses (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)
@@ -79,7 +72,7 @@ public class AddressListAccountManager extends BaseAccountManager
 	{
 		reset ();
 		log.trace ("Sync naddr: " + addresses.size ());
-		api.scanUTXO (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
+		api.scanTransactionsForAddresses (getAddresses (), UpdateMode.all, getCreated (), new TransactionListener ()
 		{
 			@Override
 			public void process (Transaction t)

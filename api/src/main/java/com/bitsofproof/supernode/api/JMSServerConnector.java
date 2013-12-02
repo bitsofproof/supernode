@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 
 import javax.jms.BytesMessage;
@@ -310,6 +311,28 @@ public class JMSServerConnector implements BCSAPI
 			return production;
 		}
 		return production = getBlockHeader ("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f") != null;
+	}
+
+	@Override
+	public void scanTransactionsForAddresses (Set<Address> addresses, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException
+	{
+		List<byte[]> al = new ArrayList<> (addresses.size ());
+		for ( Address a : addresses )
+		{
+			al.add (a.toByteArray ());
+		}
+		scanTransactions (al, mode, after, listener);
+	}
+
+	@Override
+	public void scanUTXOForAddresses (Set<Address> addresses, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException
+	{
+		List<byte[]> al = new ArrayList<> (addresses.size ());
+		for ( Address a : addresses )
+		{
+			al.add (a.toByteArray ());
+		}
+		scanUTXO (al, mode, after, listener);
 	}
 
 	@Override

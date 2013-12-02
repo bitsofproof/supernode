@@ -15,23 +15,21 @@
  */
 package com.bitsofproof.supernode.wallet;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionListener;
 import com.bitsofproof.supernode.api.TransactionOutput;
-import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ValidationException;
@@ -41,7 +39,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	private static final Logger log = LoggerFactory.getLogger (ExtendedKeyAccountManager.class);
 
 	private final Set<Integer> usedKeys = new HashSet<Integer> ();
-	private final Map<ByteVector, Integer> keyIDForAddress = new HashMap<ByteVector, Integer> ();
+	private final Map<Address, Integer> keyIDForAddress = new HashMap<Address, Integer> ();
 	private ExtendedKey master;
 	private int nextSequence;
 	private int lookAhead = 100;
@@ -84,7 +82,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		{
 			if ( isOwnAddress (o.getOutputAddress ()) )
 			{
-				int keyId = keyIDForAddress.get (new ByteVector (o.getOutputAddress ()));
+				int keyId = keyIDForAddress.get (o.getOutputAddress ());
 				ensureLookAhead (keyId);
 			}
 		}
@@ -103,7 +101,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 			catch ( ValidationException e )
 			{
 			}
-			keyIDForAddress.put (new ByteVector (key.getAddress ().toByteArray ()), keyIDForAddress.size () + firstIndex);
+			keyIDForAddress.put (key.getAddress (), keyIDForAddress.size () + firstIndex);
 		}
 	}
 
@@ -130,9 +128,9 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 		return usedKeys;
 	}
 
-	public Integer getKeyIDForAddress (byte[] address)
+	public Integer getKeyIDForAddress (Address address)
 	{
-		Integer id = keyIDForAddress.get (new ByteVector (address));
+		Integer id = keyIDForAddress.get (address);
 		if ( id != null )
 		{
 			usedKeys.add (id);
@@ -141,7 +139,7 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	}
 
 	@Override
-	public Key getKeyForAddress (byte[] address)
+	public Key getKeyForAddress (Address address)
 	{
 		Integer keyId = getKeyIDForAddress (address);
 		if ( keyId == null )
@@ -159,17 +157,9 @@ public class ExtendedKeyAccountManager extends BaseAccountManager implements Tra
 	}
 
 	@Override
-	public Collection<byte[]> getAddresses ()
+	public Set<Address> getAddresses ()
 	{
-		List<byte[]> addresses = new ArrayList<byte[]> ();
-		for ( ByteVector v : keyIDForAddress.keySet () )
-		{
-			if ( keyIDForAddress.get (v).intValue () < nextSequence )
-			{
-				addresses.add (v.toByteArray ());
-			}
-		}
-		return addresses;
+		return Collections.unmodifiableSet (keyIDForAddress.keySet ());
 	}
 
 	private final TransactionListener processor = new TransactionListener ()

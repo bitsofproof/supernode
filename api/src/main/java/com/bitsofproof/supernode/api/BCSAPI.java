@@ -16,9 +16,10 @@
 package com.bitsofproof.supernode.api;
 
 import java.util.Collection;
+import java.util.Set;
 
-import com.bitsofproof.supernode.common.ExtendedKey;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
+import com.bitsofproof.supernode.common.ExtendedKey;
 
 /**
  * This is the API extensions to the bitsofproof supernode should build on
@@ -134,6 +135,16 @@ public interface BCSAPI
 	 * @param listener
 	 * @throws BCSAPIException
 	 */
+	public void scanTransactionsForAddresses (Set<Address> addresses, UpdateMode mode, long after, TransactionListener listener)
+			throws BCSAPIException;
+
+	/**
+	 * Scan transactions using generic binary match.
+	 * 
+	 * @param match
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
@@ -145,6 +156,15 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void scanTransactions (ExtendedKey master, int firstIndex, int lookAhead, long after, TransactionListener listener) throws BCSAPIException;
+
+	/**
+	 * Scan unspent transactions using generic binary match.
+	 * 
+	 * @param match
+	 * @param listener
+	 * @throws BCSAPIException
+	 */
+	public void scanUTXOForAddresses (Set<Address> addresses, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * Scan unspent transactions using and address or outpoint in match.

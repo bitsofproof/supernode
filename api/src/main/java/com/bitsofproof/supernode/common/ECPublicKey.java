@@ -17,7 +17,7 @@ package com.bitsofproof.supernode.common;
 
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.wallet.Address;
+import com.bitsofproof.supernode.api.Address;
 
 public class ECPublicKey implements Key
 {

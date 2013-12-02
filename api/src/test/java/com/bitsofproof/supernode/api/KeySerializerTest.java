@@ -32,7 +32,6 @@ import org.junit.Test;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.wallet.AddressConverter;
 import com.bitsofproof.supernode.wallet.KeyFormatter;
 
 public class KeySerializerTest
@@ -71,7 +70,7 @@ public class KeySerializerTest
 		{
 			JSONArray test = testData.getJSONArray (i);
 			ECKeyPair kp = formatter.parseSerializedKey (test.getString (1));
-			String address = AddressConverter.toSatoshiStyle (Hash.keyHash (kp.getPublic ()), 0x0);
+			String address = Address.toSatoshiStyle (Hash.keyHash (kp.getPublic ()), 0x0);
 			assertTrue (test.getString (0).equals (address));
 			String serialized = formatter.serializeKey (kp);
 			assertTrue (test.getString (1).equals (serialized));

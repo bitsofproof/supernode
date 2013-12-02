@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.wallet.AddressConverter;
+import com.bitsofproof.supernode.api.Address;
 
 public class BloomFilter
 {
@@ -68,7 +68,7 @@ public class BloomFilter
 
 	public void addAddress (String address, int addressFlag) throws ValidationException
 	{
-		add (AddressConverter.fromSatoshiStyle (address, addressFlag));
+		add (Address.fromSatoshiStyle (address, addressFlag));
 	}
 
 	public static byte[] serializedOutpoint (String hash, long ix)
@@ -91,7 +91,7 @@ public class BloomFilter
 
 	public boolean containsAddress (String address, int addressFlag) throws ValidationException
 	{
-		return contains (AddressConverter.fromSatoshiStyle (address, addressFlag));
+		return contains (Address.fromSatoshiStyle (address, addressFlag));
 	}
 
 	private void setBit (int n)

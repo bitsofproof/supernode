@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
@@ -30,7 +31,6 @@ import com.bitsofproof.supernode.core.TxListener;
 import com.bitsofproof.supernode.model.LvlMemoryStore;
 import com.bitsofproof.supernode.model.LvlStore;
 import com.bitsofproof.supernode.model.Tx;
-import com.bitsofproof.supernode.wallet.Address;
 
 public class APIServerInABox
 {

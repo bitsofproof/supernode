@@ -17,7 +17,9 @@ package com.bitsofproof.supernode.wallet;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Transaction;
@@ -53,9 +55,9 @@ public interface AccountManager extends TransactionListener
 
 	public Address getNextAddress () throws ValidationException;
 
-	public Key getKeyForAddress (byte[] address);
+	public Key getKeyForAddress (Address address);
 
-	public Collection<byte[]> getAddresses ();
+	public Set<Address> getAddresses ();
 
 	public Transaction pay (Address receiver, long amount, long fee, boolean senderPaysFee) throws ValidationException;
 

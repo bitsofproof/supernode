@@ -32,6 +32,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.crypto.generators.SCrypt;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.Network;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ECKeyPair;
@@ -244,7 +245,7 @@ public class KeyFormatter
 			}
 			ECKeyPair kp = new ECKeyPair (decrypted, compressed);
 
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, kp.getAddress ())).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (new Address (network, kp.getAddress ()).toString ().getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -342,7 +343,7 @@ public class KeyFormatter
 					new BigInteger (1, passfactor).multiply (new BigInteger (1, Hash.hash (seed))).remainder (SECNamedCurves.getByName ("secp256k1").getN ());
 
 			kp = new ECKeyPair (priv, compressed);
-			byte[] acs = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, kp.getAddress ())).getBytes ("US-ASCII"));
+			byte[] acs = Hash.hash (new Address (network, kp.getAddress ()).toString ().getBytes ("US-ASCII"));
 			byte[] check = new byte[4];
 			System.arraycopy (acs, 0, check, 0, 4);
 			if ( !Arrays.equals (check, addressHash) )
@@ -396,7 +397,7 @@ public class KeyFormatter
 		byte[] xor = new byte[32];
 		try
 		{
-			byte[] ac = Hash.hash (AddressConverter.toSatoshiStyle (new Address (network, key.getAddress ())).getBytes ("US-ASCII"));
+			byte[] ac = Hash.hash (new Address (network, key.getAddress ()).toString ().getBytes ("US-ASCII"));
 			System.arraycopy (ac, 0, addressHash, 0, 4);
 			System.arraycopy (ac, 0, store, 3, 4);
 			byte[] derived = SCrypt.generate (passphrase.getBytes ("UTF-8"), addressHash, 16384, 8, 8, 64);

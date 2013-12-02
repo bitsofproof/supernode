@@ -17,11 +17,11 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.Transaction;
 import com.bitsofproof.supernode.api.TransactionInput;
 import com.bitsofproof.supernode.api.TransactionOutput;
 import com.bitsofproof.supernode.common.ByteUtils;
-import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Key;
 import com.bitsofproof.supernode.common.ScriptFormat;
@@ -84,7 +84,7 @@ public abstract class BaseAccountManager implements AccountManager
 		sending = createSendingUTXO ();
 	}
 
-	public boolean isOwnAddress (byte[] address)
+	public boolean isOwnAddress (Address address)
 	{
 		return getKeyForAddress (address) != null;
 	}
@@ -162,7 +162,7 @@ public abstract class BaseAccountManager implements AccountManager
 			ScriptFormat.Writer sw = new ScriptFormat.Writer ();
 			if ( ScriptFormat.isPayToAddress (s.getScript ()) )
 			{
-				byte[] address = s.getOutputAddress ();
+				Address address = s.getOutputAddress ();
 				Key key = getKeyForAddress (address);
 				if ( key == null )
 				{
@@ -490,20 +490,20 @@ public abstract class BaseAccountManager implements AccountManager
 						if ( t.getBlockHash () != null )
 						{
 							confirmed.add (o);
-							log.trace ("Settled " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+							log.trace ("Settled " + t.getHash () + " [" + o.getIx () + "] (" + o.getOutputAddress () + ") " + o.getValue ());
 						}
 						else
 						{
 							if ( spend != null )
 							{
 								change.add (o);
-								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+								log.trace ("Change " + t.getHash () + " [" + o.getIx () + "] (" + o.getOutputAddress () + ") "
 										+ o.getValue ());
 							}
 							else
 							{
 								receiving.add (o);
-								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") "
+								log.trace ("Receiving " + t.getHash () + " [" + o.getIx () + "] (" + o.getOutputAddress () + ") "
 										+ o.getValue ());
 							}
 						}
@@ -514,7 +514,7 @@ public abstract class BaseAccountManager implements AccountManager
 						{
 							modified = true;
 							sending.add (o);
-							log.trace ("Sending " + t.getHash () + " [" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+							log.trace ("Sending " + t.getHash () + " [" + o.getIx () + "] (" + o.getOutputAddress () + ") " + o.getValue ());
 						}
 					}
 				}
@@ -543,7 +543,7 @@ public abstract class BaseAccountManager implements AccountManager
 					}
 					if ( out != null )
 					{
-						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + ByteUtils.toHex (out.getOutputAddress ()) + ")"
+						log.trace ("Remove DS " + out.getTxHash () + " [" + out.getIx () + "] (" + out.getOutputAddress () + ")"
 								+ out.getValue ());
 					}
 					modified |= out != null;
@@ -707,25 +707,25 @@ public abstract class BaseAccountManager implements AccountManager
 
 	public void dumpKeys (PrintStream print)
 	{
-		Set<ByteVector> addresses = new HashSet<ByteVector> ();
+		Set<Address> addresses = new HashSet<> ();
 		for ( TransactionOutput o : confirmed.getUTXO () )
 		{
-			addresses.add (new ByteVector (o.getOutputAddress ()));
+			addresses.add (o.getOutputAddress ());
 		}
 		for ( TransactionOutput o : change.getUTXO () )
 		{
-			addresses.add (new ByteVector (o.getOutputAddress ()));
+			addresses.add (o.getOutputAddress ());
 		}
 		for ( TransactionOutput o : receiving.getUTXO () )
 		{
-			addresses.add (new ByteVector (o.getOutputAddress ()));
+			addresses.add (o.getOutputAddress ());
 		}
-		for ( ByteVector b : addresses )
+		for ( Address a : addresses )
 		{
-			Key k = getKeyForAddress (b.toByteArray ());
+			Key k = getKeyForAddress (a);
 			if ( k != null )
 			{
-				print.println (ECKeyPair.serializeWIF (k) + " (" + ByteUtils.toHex (b.toByteArray ()) + ")");
+				print.println (ECKeyPair.serializeWIF (k) + " (" + a + ")");
 			}
 		}
 	}
@@ -734,7 +734,7 @@ public abstract class BaseAccountManager implements AccountManager
 	{
 		for ( TransactionOutput o : set.getUTXO () )
 		{
-			print.println (o.getTxHash () + "[" + o.getIx () + "] (" + ByteUtils.toHex (o.getOutputAddress ()) + ") " + o.getValue ());
+			print.println (o.getTxHash () + "[" + o.getIx () + "] (" + o.getOutputAddress () + ") " + o.getValue ());
 		}
 		print.println ();
 	}

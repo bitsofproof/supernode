@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.api.BCSAPI;
 import com.bitsofproof.supernode.api.BCSAPIException;
 import com.bitsofproof.supernode.api.Block;
@@ -22,7 +23,6 @@ import com.bitsofproof.supernode.core.UnitTestChain;
 import com.bitsofproof.supernode.testbox.APIServerInABox;
 import com.bitsofproof.supernode.wallet.AccountListener;
 import com.bitsofproof.supernode.wallet.AccountManager;
-import com.bitsofproof.supernode.wallet.Address;
 import com.bitsofproof.supernode.wallet.AddressListAccountManager;
 import com.bitsofproof.supernode.wallet.KeyListAccountManager;
 
@@ -44,7 +44,7 @@ public class ServerInABoxTest
 	{
 		final Address target = ECKeyPair.createNew (true).getAddress ();
 		AddressListAccountManager targetAccount = new AddressListAccountManager ();
-		targetAccount.addAddress (target.toByteArray ());
+		targetAccount.addAddress (target);
 		api.registerTransactionListener (targetAccount);
 
 		ECKeyPair miner = ECKeyPair.createNew (true);

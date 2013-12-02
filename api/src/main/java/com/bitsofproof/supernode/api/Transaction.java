@@ -24,7 +24,6 @@ import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ScriptFormat;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
-import com.bitsofproof.supernode.wallet.Address;
 import com.google.protobuf.ByteString;
 
 public class Transaction implements Serializable, Cloneable

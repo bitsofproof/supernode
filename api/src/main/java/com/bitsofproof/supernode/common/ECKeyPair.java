@@ -36,7 +36,7 @@ import org.bouncycastle.crypto.signers.ECDSASigner;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.wallet.Address;
+import com.bitsofproof.supernode.api.Address;
 
 public class ECKeyPair implements Key
 {

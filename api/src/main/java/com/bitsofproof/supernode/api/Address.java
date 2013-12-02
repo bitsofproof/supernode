@@ -1,28 +1,130 @@
-/*
- * Copyright 2013 bits of proof zrt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.bitsofproof.supernode.wallet;
+package com.bitsofproof.supernode.api;
 
-import com.bitsofproof.supernode.api.Network;
+import org.bouncycastle.util.Arrays;
+
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.Hash;
+import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.wallet.Address.Type;
 
-public class AddressConverter
+public class Address
 {
+	public enum Type
+	{
+		COMMON, P2SH
+	};
+
+	private final Type type;
+	private final byte[] bytes;
+
+	private Network network = Network.PRODUCTION;
+
+	public Network getNetwork ()
+	{
+		return network;
+	}
+
+	public void setNetwork (Network network)
+	{
+		this.network = network;
+	}
+
+	public Address (Network network, Type type, byte[] address) throws ValidationException
+	{
+		this.network = network;
+		this.type = type;
+		if ( address.length != 20 )
+		{
+			throw new ValidationException ("invalid digest length for an address");
+		}
+		this.bytes = Arrays.clone (address);
+	}
+
+	public Address (Type type, byte[] address) throws ValidationException
+	{
+		this.type = type;
+		if ( address.length != 20 )
+		{
+			throw new ValidationException ("invalid digest length for an address");
+		}
+		this.bytes = Arrays.clone (address);
+	}
+
+	public Address (Network network, Address address) throws ValidationException
+	{
+		this.network = network;
+		this.type = address.type;
+		this.bytes = Arrays.clone (address.bytes);
+	}
+
+	public Type getType ()
+	{
+		return type;
+	}
+
+	public byte[] toByteArray ()
+	{
+		return Arrays.clone (bytes);
+	}
+
+	public byte[] getAddressScript () throws ValidationException
+	{
+		ScriptFormat.Writer writer = new ScriptFormat.Writer ();
+		if ( type == Address.Type.COMMON )
+		{
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_DUP));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			writer.writeData (bytes);
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUALVERIFY));
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_CHECKSIG));
+		}
+		else if ( type == Address.Type.P2SH )
+		{
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_HASH160));
+			writer.writeData (bytes);
+			writer.writeToken (new ScriptFormat.Token (Opcode.OP_EQUAL));
+		}
+		else
+		{
+			throw new ValidationException ("unknown sink address type");
+		}
+		return writer.toByteArray ();
+	}
+
+	@Override
+	public int hashCode ()
+	{
+		return Arrays.hashCode (bytes) + type.ordinal ();
+	}
+
+	@Override
+	public boolean equals (Object obj)
+	{
+		if ( this == obj )
+		{
+			return true;
+		}
+		if ( obj == null || getClass () != obj.getClass () )
+		{
+			return false;
+		}
+		return Arrays.areEqual (bytes, ((Address) obj).bytes) && type == ((Address) obj).type;
+	}
+
+	@Override
+	public String toString ()
+	{
+		try
+		{
+			return toSatoshiStyle (this);
+		}
+		catch ( ValidationException e )
+		{
+			return network.name () + ":" + type.name () + ":" + ByteUtils.toHex (bytes);
+		}
+	}
+
 	public static Address fromSatoshiStyle (String s) throws ValidationException
 	{
 		try

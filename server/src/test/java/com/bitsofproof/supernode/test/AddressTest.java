@@ -24,9 +24,9 @@ import java.util.Arrays;
 
 import org.junit.Test;
 
+import com.bitsofproof.supernode.api.Address;
 import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ValidationException;
-import com.bitsofproof.supernode.wallet.AddressConverter;
 
 public class AddressTest
 {
@@ -45,9 +45,9 @@ public class AddressTest
 	public void satoshiAddressTest () throws ValidationException, UnsupportedEncodingException
 	{
 		// some real addresses
-		assertTrue (AddressConverter.toSatoshiStyle (ByteUtils.fromHex ("9e969049aefe972e41aaefac385296ce18f30751"), 0x0).equals (
+		assertTrue (Address.toSatoshiStyle (ByteUtils.fromHex ("9e969049aefe972e41aaefac385296ce18f30751"), 0x0).equals (
 				"1FTY8etSpSW3xv6s2XRrYE77rrRfza8aJJ"));
-		assertTrue (AddressConverter.toSatoshiStyle (ByteUtils.fromHex ("623dbe779a29c6bc2615cd7bf5a35453f495e229"), 0x0).equals (
+		assertTrue (Address.toSatoshiStyle (ByteUtils.fromHex ("623dbe779a29c6bc2615cd7bf5a35453f495e229"), 0x0).equals (
 				"19xTBrDcnZiJSMuzirE7SfcsjkG1ghp1RL"));
 
 		// some random
@@ -56,8 +56,8 @@ public class AddressTest
 		{
 			BigInteger n = new BigInteger (160, rnd);
 			byte[] keyDigest = n.toByteArray ();
-			String a = AddressConverter.toSatoshiStyle (keyDigest, 0x0);
-			byte[] check = AddressConverter.fromSatoshiStyle (a, 0x0);
+			String a = Address.toSatoshiStyle (keyDigest, 0x0);
+			byte[] check = Address.fromSatoshiStyle (a, 0x0);
 			assertTrue (Arrays.equals (check, keyDigest));
 		}
 	}
