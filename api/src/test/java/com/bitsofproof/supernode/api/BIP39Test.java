@@ -22,7 +22,9 @@ import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 import java.security.Security;
+import java.util.Arrays;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.json.JSONArray;
@@ -61,7 +63,8 @@ public class BIP39Test
 	}
 
 	@Test
-	public void bip39Test () throws IOException, JSONException, ValidationException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException
+	public void bip39TrezorTest () throws IOException, JSONException, ValidationException, InvalidKeyException, NoSuchAlgorithmException,
+			NoSuchProviderException
 	{
 		JSONObject testData = readObject (TESTS);
 		JSONArray english = testData.getJSONArray ("english");
@@ -71,6 +74,28 @@ public class BIP39Test
 			String m = BIP39.getMnemonic (ByteUtils.fromHex (test.getString (i)));
 			assertTrue (m.equals (test.getString (i + 1)));
 			assertTrue (ByteUtils.toHex (BIP39.getSeed (m, "TREZOR")).equals (test.getString (i + 2)));
+		}
+	}
+
+	@Test
+	public void bip39EncodeDecodeTest () throws ValidationException, IOException, JSONException, InvalidKeyException, NoSuchAlgorithmException,
+			NoSuchProviderException
+	{
+		JSONObject testData = readObject (TESTS);
+		JSONArray english = testData.getJSONArray ("english");
+		for ( int i = 0; i < testData.length (); ++i )
+		{
+			JSONArray test = english.getJSONArray (i);
+			byte[] m = BIP39.decode (test.getString (1), "BOP");
+			assertTrue (test.getString (1).equals (BIP39.encode (m, "BOP")));
+		}
+		SecureRandom random = new SecureRandom ();
+		for ( int i = 0; i < 100; ++i )
+		{
+			byte[] secret = new byte[16];
+			random.nextBytes (secret);
+			String e = BIP39.encode (secret, "BOP");
+			assertTrue (Arrays.equals (BIP39.decode (e, "BOP"), secret));
 		}
 	}
 }

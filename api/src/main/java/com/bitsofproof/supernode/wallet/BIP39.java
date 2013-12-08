@@ -20,10 +20,13 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.StringTokenizer;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.Mac;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -32,6 +35,79 @@ import com.bitsofproof.supernode.common.ValidationException;
 
 public class BIP39
 {
+	public static byte[] decode (String mnemonic, String passphrase) throws ValidationException
+	{
+		StringTokenizer tokenizer = new StringTokenizer (mnemonic);
+		int nt = tokenizer.countTokens ();
+		if ( nt % 6 != 0 )
+		{
+			throw new ValidationException ("invalid mnemonic - word cound not divisible by 6");
+		}
+		boolean[] bits = new boolean[11 * nt];
+		int i = 0;
+		while ( tokenizer.hasMoreElements () )
+		{
+			int c = Arrays.binarySearch (english, tokenizer.nextToken ());
+			for ( int j = 0; j < 11; ++j )
+			{
+				bits[i++] = (c & (1 << (10 - j))) > 0;
+			}
+		}
+		byte[] data = new byte[bits.length / 33 * 4];
+		for ( i = 0; i < bits.length / 33 * 32; ++i )
+		{
+			data[i / 8] |= (bits[i] ? 1 : 0) << (7 - (i % 8));
+		}
+		byte check = Hash.sha256 (data)[0];
+		for ( i = bits.length / 33 * 32; i < bits.length; ++i )
+		{
+			if ( (check & (1 << (7 - (i % 8))) ^ (bits[i] ? 1 : 0) << (7 - (i % 8))) != 0 )
+			{
+				throw new ValidationException ("invalid mnemonic - checksum failed");
+			}
+		}
+		try
+		{
+			SecretKey seedkey = new SecretKeySpec (("mnemonic" + passphrase).getBytes ("UTF-8"), "Blowfish");
+			Cipher cipher = Cipher.getInstance ("BlowFish/ECB/NoPadding", "BC");
+			cipher.init (Cipher.DECRYPT_MODE, seedkey);
+			for ( i = 0; i < 1000; ++i )
+			{
+				data = cipher.doFinal (data);
+			}
+		}
+		catch ( UnsupportedEncodingException | NoSuchAlgorithmException |
+				NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e )
+		{
+			throw new ValidationException ("can not decrypt mnemonic", e);
+		}
+		return data;
+	}
+
+	public static String encode (byte[] data, String passphrase) throws ValidationException
+	{
+		if ( data.length % 8 != 0 )
+		{
+			throw new ValidationException ("can nor encode - data length not divisible with 8");
+		}
+		try
+		{
+			SecretKey seedkey = new SecretKeySpec (("mnemonic" + passphrase).getBytes ("UTF-8"), "Blowfish");
+			Cipher cipher = Cipher.getInstance ("BlowFish/ECB/NoPadding", "BC");
+			cipher.init (Cipher.ENCRYPT_MODE, seedkey);
+			for ( int i = 0; i < 1000; ++i )
+			{
+				data = cipher.doFinal (data);
+			}
+		}
+		catch ( UnsupportedEncodingException | NoSuchAlgorithmException |
+				NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e )
+		{
+			throw new ValidationException ("can not decrypt mnemonic", e);
+		}
+		return getMnemonic (data);
+	}
+
 	public static byte[] getSeed (String mnenonic, String passphrase) throws NoSuchAlgorithmException, NoSuchProviderException,
 			InvalidKeyException, UnsupportedEncodingException
 	{
@@ -48,18 +124,13 @@ public class BIP39
 
 	public static String getMnemonic (byte[] data) throws ValidationException
 	{
-		return getMnemonic (data, english);
-	}
-
-	public static String getMnemonic (byte[] data, List<String> dictionary) throws ValidationException
-	{
 		if ( data.length % 4 != 0 || data.length < 16 || data.length > 32 )
 		{
 			throw new ValidationException ("Invalid data length for mnemonic");
 		}
 		byte check = Hash.sha256 (data)[0];
 
-		boolean[] bits = new boolean[(data.length + 1) * 8];
+		boolean[] bits = new boolean[data.length * 8 + data.length / 4];
 
 		for ( int i = 0; i < data.length; i++ )
 		{
@@ -82,7 +153,7 @@ public class BIP39
 			{
 				idx += (bits[i * 11 + j] ? 1 : 0) << (10 - j);
 			}
-			mnemo.append (dictionary.get (idx));
+			mnemo.append (english[idx]);
 			if ( i < mlen - 1 )
 			{
 				mnemo.append (" ");
@@ -91,7 +162,7 @@ public class BIP39
 		return mnemo.toString ();
 	}
 
-	public final static List<String> english = Collections.unmodifiableList (Arrays.asList (
+	private final static String[] english = {
 			"abandon",
 			"ability",
 			"able",
@@ -2140,5 +2211,5 @@ public class BIP39
 			"zero",
 			"zone",
 			"zoo"
-			));
+	};
 }
