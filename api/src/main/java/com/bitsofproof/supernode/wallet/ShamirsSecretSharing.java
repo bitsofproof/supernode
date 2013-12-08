@@ -67,7 +67,7 @@ public class ShamirsSecretSharing
 			shares[i].x = e[0];
 			shares[i].dl = e[1];
 			shares[i].yl = e[2];
-			shares[i].y = Arrays.copyOfRange (e, 3, shares[i].yl);
+			shares[i].y = Arrays.copyOfRange (e, 3, shares[i].yl + 3);
 			++i;
 		}
 		return reconstruct (shares);

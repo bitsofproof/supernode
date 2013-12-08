@@ -60,10 +60,11 @@ public class SahmirsSecretSharingTest
 		}
 	}
 
+	@Test
 	public void testMnemonic () throws ValidationException
 	{
 		SecureRandom random = new SecureRandom ();
-		for ( int i = 0; i < 1000; ++i )
+		for ( int i = 0; i < 10; ++i )
 		{
 			for ( int s = 3; s < 10; ++s )
 			{

@@ -40,8 +40,6 @@ import org.bouncycastle.crypto.generators.SCrypt;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 
-import com.bitsofproof.supernode.wallet.BIP39;
-
 /**
  * Key Generator following BIP32 https://en.bitcoin.it/wiki/BIP_0032
  */
@@ -57,11 +55,6 @@ public class ExtendedKey
 	private final int sequence;
 
 	private static final byte[] BITCOIN_SEED = "Bitcoin seed".getBytes ();
-
-	public static ExtendedKey createFromMnemonic (String mnemonic, String passphrase) throws ValidationException
-	{
-		return ExtendedKey.create (BIP39.getSeed (mnemonic, passphrase));
-	}
 
 	public static ExtendedKey createFromPassphrase (String passphrase, byte[] encrypted) throws ValidationException
 	{
