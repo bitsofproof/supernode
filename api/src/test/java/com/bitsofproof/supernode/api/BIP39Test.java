@@ -85,9 +85,9 @@ public class BIP39Test
 			assertTrue (test.getString (1).equals (BIP39.encode (m, "BOP")));
 		}
 		SecureRandom random = new SecureRandom ();
-		for ( int i = 0; i < 100; ++i )
+		for ( int i = 0; i < 1000; ++i )
 		{
-			byte[] secret = new byte[16];
+			byte[] secret = new byte[32];
 			random.nextBytes (secret);
 			String e = BIP39.encode (secret, "BOP");
 			assertTrue (Arrays.equals (BIP39.decode (e, "BOP"), secret));

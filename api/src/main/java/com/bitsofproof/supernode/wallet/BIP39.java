@@ -58,10 +58,10 @@ public class BIP39
 		{
 			data[i / 8] |= (bits[i] ? 1 : 0) << (7 - (i % 8));
 		}
-		byte check = Hash.sha256 (data)[0];
+		byte[] check = Hash.sha256 (data);
 		for ( i = bits.length / 33 * 32; i < bits.length; ++i )
 		{
-			if ( (check & (1 << (7 - (i % 8))) ^ (bits[i] ? 1 : 0) << (7 - (i % 8))) != 0 )
+			if ( (check[(i - bits.length / 33 * 32) / 8] & (1 << (7 - (i % 8))) ^ (bits[i] ? 1 : 0) << (7 - (i % 8))) != 0 )
 			{
 				throw new ValidationException ("invalid mnemonic - checksum failed");
 			}
@@ -131,11 +131,11 @@ public class BIP39
 
 	public static String getMnemonic (byte[] data) throws ValidationException
 	{
-		if ( data.length % 4 != 0 || data.length < 16 || data.length > 32 )
+		if ( data.length % 4 != 0 )
 		{
 			throw new ValidationException ("Invalid data length for mnemonic");
 		}
-		byte check = Hash.sha256 (data)[0];
+		byte[] check = Hash.sha256 (data);
 
 		boolean[] bits = new boolean[data.length * 8 + data.length / 4];
 
@@ -148,7 +148,7 @@ public class BIP39
 		}
 		for ( int i = 0; i < data.length / 4; i++ )
 		{
-			bits[8 * data.length + i] = (check & (1 << (7 - i))) > 0;
+			bits[8 * data.length + i] = (check[i / 8] & (1 << (7 - (i % 8)))) > 0;
 		}
 
 		int mlen = data.length * 3 / 4;
