@@ -19,9 +19,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
@@ -63,8 +60,7 @@ public class BIP39Test
 	}
 
 	@Test
-	public void bip39TrezorTest () throws IOException, JSONException, ValidationException, InvalidKeyException, NoSuchAlgorithmException,
-			NoSuchProviderException
+	public void bip39TrezorTest () throws IOException, JSONException, ValidationException
 	{
 		JSONObject testData = readObject (TESTS);
 		JSONArray english = testData.getJSONArray ("english");
@@ -78,8 +74,7 @@ public class BIP39Test
 	}
 
 	@Test
-	public void bip39EncodeDecodeTest () throws ValidationException, IOException, JSONException, InvalidKeyException, NoSuchAlgorithmException,
-			NoSuchProviderException
+	public void bip39EncodeDecodeTest () throws IOException, JSONException, ValidationException
 	{
 		JSONObject testData = readObject (TESTS);
 		JSONArray english = testData.getJSONArray ("english");

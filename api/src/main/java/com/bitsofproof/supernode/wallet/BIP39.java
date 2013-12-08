@@ -108,18 +108,25 @@ public class BIP39
 		return getMnemonic (data);
 	}
 
-	public static byte[] getSeed (String mnenonic, String passphrase) throws NoSuchAlgorithmException, NoSuchProviderException,
-			InvalidKeyException, UnsupportedEncodingException
+	public static byte[] getSeed (String mnenonic, String passphrase) throws ValidationException
 	{
-		Mac mac = Mac.getInstance ("HmacSHA512", "BC");
-		SecretKey seedkey = new SecretKeySpec (("mnemonic" + passphrase).getBytes ("UTF-8"), "HmacSHA512");
-		mac.init (seedkey);
-		byte[] seed = mnenonic.getBytes ();
-		for ( int i = 0; i < 10000; ++i )
+		Mac mac;
+		try
 		{
-			seed = mac.doFinal (seed);
+			mac = Mac.getInstance ("HmacSHA512", "BC");
+			SecretKey seedkey = new SecretKeySpec (("mnemonic" + passphrase).getBytes ("UTF-8"), "HmacSHA512");
+			mac.init (seedkey);
+			byte[] seed = mnenonic.getBytes ();
+			for ( int i = 0; i < 10000; ++i )
+			{
+				seed = mac.doFinal (seed);
+			}
+			return seed;
 		}
-		return seed;
+		catch ( NoSuchAlgorithmException | NoSuchProviderException | UnsupportedEncodingException | InvalidKeyException e )
+		{
+			throw new ValidationException (e);
+		}
 	}
 
 	public static String getMnemonic (byte[] data) throws ValidationException
