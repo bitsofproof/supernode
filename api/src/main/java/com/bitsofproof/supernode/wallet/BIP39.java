@@ -25,7 +25,6 @@ import java.util.StringTokenizer;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -106,27 +105,6 @@ public class BIP39
 			throw new ValidationException ("can not decrypt mnemonic", e);
 		}
 		return getMnemonic (data);
-	}
-
-	public static byte[] getSeed (String mnenonic, String passphrase) throws ValidationException
-	{
-		Mac mac;
-		try
-		{
-			mac = Mac.getInstance ("HmacSHA512", "BC");
-			SecretKey seedkey = new SecretKeySpec (("mnemonic" + passphrase).getBytes ("UTF-8"), "HmacSHA512");
-			mac.init (seedkey);
-			byte[] seed = mnenonic.getBytes ();
-			for ( int i = 0; i < 10000; ++i )
-			{
-				seed = mac.doFinal (seed);
-			}
-			return seed;
-		}
-		catch ( NoSuchAlgorithmException | NoSuchProviderException | UnsupportedEncodingException | InvalidKeyException e )
-		{
-			throw new ValidationException (e);
-		}
 	}
 
 	public static String getMnemonic (byte[] data) throws ValidationException
