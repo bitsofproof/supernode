@@ -31,9 +31,9 @@ import com.bitsofproof.supernode.common.ByteUtils;
 import com.bitsofproof.supernode.common.ECKeyPair;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ScriptFormat;
+import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Opcode;
 import com.bitsofproof.supernode.model.Tx;
 import com.bitsofproof.supernode.model.TxIn;
 import com.bitsofproof.supernode.model.TxOut;
@@ -48,10 +48,21 @@ public class ScriptEvaluation
 	private final Tx tx;
 	private TxOut source;
 	private int inr;
+	private int canonicalChecks = ScriptFormat.SCRIPT_VERIFY_NOCACHE | ScriptFormat.SCRIPT_VERIFY_NONE;
 
 	public int getInr ()
 	{
 		return inr;
+	}
+
+	public int getCanonicalChecks ()
+	{
+		return canonicalChecks;
+	}
+
+	public void setCanonicalChecks (int canonicalChecks)
+	{
+		this.canonicalChecks = canonicalChecks;
 	}
 
 	private void push (byte[] data) throws ValidationException
@@ -804,13 +815,19 @@ public class ScriptEvaluation
 						{
 							return false;
 						}
+						opcodeCount += nkeys;
+						if ( opcodeCount > 201 )
+						{
+							return false;
+						}
+
 						byte[][] keys = new byte[nkeys][];
 						for ( int i = 0; i < nkeys; ++i )
 						{
 							keys[i] = stack.pop ();
 						}
 						int required = (int) popInt ();
-						if ( required <= 0 )
+						if ( required < 0 || required > nkeys )
 						{
 							return false;
 						}
@@ -826,26 +843,35 @@ public class ScriptEvaluation
 							sts = ScriptFormat.deleteSignatureFromScript (sts, sigs[i]);
 						}
 						stack.pop (); // reproduce Satoshi client bug
-						int successCounter = 0;
-						for ( int i = 0; (required - successCounter) <= (nkeys - i) && i < nkeys; ++i )
+
+						boolean fSuccess = true;
+						int isig = 0;
+						int ikey = 0;
+						while ( fSuccess && havesig > 0 )
 						{
-							for ( int j = 0; successCounter < required && j < havesig; ++j )
+							try
 							{
-								try
+								if ( ScriptFormat.isCanonicalSignature (sigs[isig], canonicalChecks) && validateSignature (keys[ikey], sigs[isig], sts) )
 								{
-									if ( validateSignature (keys[i], sigs[j], sts) )
-									{
-										++successCounter;
-									}
-								}
-								catch ( Exception e )
-								{
-									// attempt to validate other no matter if there are
-									// format error in this
+									isig++;
+									havesig--;
 								}
 							}
+							catch ( Exception e )
+							{
+								// attempt to validate other no matter if there are
+								// format error in this
+							}
+							ikey++;
+							nkeys--;
+
+							if ( havesig > nkeys )
+							{
+								fSuccess = false;
+							}
 						}
-						pushInt (successCounter == required ? 1 : 0);
+
+						pushInt (fSuccess ? 1 : 0);
 					}
 						break;
 				}

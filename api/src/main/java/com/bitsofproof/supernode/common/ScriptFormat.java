@@ -29,6 +29,11 @@ public class ScriptFormat
 	public static final int SIGHASH_NONE = 2;
 	public static final int SIGHASH_SINGLE = 3;
 	public static final int SIGHASH_ANYONECANPAY = 0x80;
+	public static final int SCRIPT_VERIFY_NONE = 0;
+	public static final int SCRIPT_VERIFY_P2SH = 1;
+	public static final int SCRIPT_VERIFY_STRICTENC = 2;
+	public static final int SCRIPT_VERIFY_EVEN_S = 4;
+	public static final int SCRIPT_VERIFY_NOCACHE = 8;
 
 	public static enum Opcode
 	{
@@ -783,5 +788,101 @@ public class ScriptFormat
 			}
 		}
 		return writer.toByteArray ();
+	}
+
+	public static boolean isCanonicalSignature (byte[] sig, int flags) throws ValidationException
+	{
+		if ( (flags & SCRIPT_VERIFY_STRICTENC) == 0 )
+		{
+			return true;
+		}
+
+		// See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
+		// A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
+		// Where R and S are not negative (their first byte has its highest bit not set), and not
+		// excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
+		// in which case a single 0 byte is necessary and even required).
+		if ( sig.length < 9 )
+		{
+			throw new ValidationException ("Non-canonical signature: too short");
+		}
+		if ( sig.length > 73 )
+		{
+			throw new ValidationException ("Non-canonical signature: too long");
+		}
+		byte nHashType = (byte) (sig[sig.length - 1] & (~(ScriptFormat.SIGHASH_ANYONECANPAY)));
+		if ( nHashType < ScriptFormat.SIGHASH_ALL || nHashType > ScriptFormat.SIGHASH_SINGLE )
+		{
+			throw new ValidationException ("Non-canonical signature: unknown hashtype byte");
+		}
+		if ( sig[0] != 0x30 )
+		{
+			throw new ValidationException ("Non-canonical signature: wrong type");
+		}
+		if ( sig[1] != sig.length - 3 )
+		{
+			throw new ValidationException ("Non-canonical signature: wrong length marker");
+		}
+		int nLenR = sig[3];
+		if ( 5 + nLenR - sig.length >= 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: S length misplaced");
+		}
+		int nLenS = sig[5 + nLenR];
+		if ( (nLenR + nLenS + 7) - sig.length != 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: R+S length mismatch");
+		}
+		// const unsigned char *R = &vchSig[4];
+		// if (R[-2] != 0x02)
+		if ( sig[2] != 0x02 )
+		{
+			throw new ValidationException ("Non-canonical signature: R value type mismatch");
+		}
+		if ( nLenR == 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: R length is zero");
+		}
+		// if (R[0] & 0x80)
+		if ( (sig[4] & 0x80) != 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: R value negative");
+		}
+		// if (nLenR > 1 && (R[0] == 0x00) && !(R[1] & 0x80))
+		if ( nLenR > 1 && (sig[4] == 0x00) && (sig[5] & 0x80) == 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: R value excessively padded");
+		}
+		// const unsigned char *S = &vchSig[6+nLenR];
+		// if (S[-2] != 0x02)
+		if ( sig[nLenR + 6 - 2] != 0x02 )
+		{
+			throw new ValidationException ("Non-canonical signature: S value type mismatch");
+		}
+		if ( nLenS == 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: S length is zero");
+		}
+		// if (S[0] & 0x80)
+		if ( (sig[6 + nLenR] & 0x80) != 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: S value negative");
+		}
+		// if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80))
+		if ( nLenS > 1 && (sig[6 + nLenR] == 0x00) && (sig[6 + nLenR + 1] & 0x80) == 0 )
+		{
+			throw new ValidationException ("Non-canonical signature: S value excessively padded");
+		}
+
+		if ( (flags & SCRIPT_VERIFY_EVEN_S) != 0 )
+		{
+			// if (S[nLenS-1] & 1)
+			if ( (sig[6 + nLenR + nLenS - 1] & 1) != 0 )
+			{
+				throw new ValidationException ("Non-canonical signature: S value odd");
+			}
+		}
+
+		return true;
 	}
 }
