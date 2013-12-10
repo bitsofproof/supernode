@@ -69,7 +69,6 @@ public class BIP39Test
 			JSONArray test = english.getJSONArray (i);
 			String m = BIP39.getMnemonic (ByteUtils.fromHex (test.getString (i)));
 			assertTrue (m.equals (test.getString (i + 1)));
-			assertTrue (ByteUtils.toHex (BIP39.getSeed (m, "TREZOR")).equals (test.getString (i + 2)));
 		}
 	}
 
