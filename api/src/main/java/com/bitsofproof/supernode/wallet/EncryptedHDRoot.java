@@ -65,7 +65,7 @@ public class EncryptedHDRoot
 	private static final byte[] encrypted64m = { 0x02, 0x38, 0x05 };
 	private static final byte[] encrypted64h = { 0x02, 0x38, 0x06 };
 
-	public Date decodeBirthDate (String ws) throws ValidationException
+	public static Date decodeBirthDate (String ws) throws ValidationException
 	{
 		byte[] raw = ByteUtils.fromBase58WithChecksum (ws);
 		int weeks = raw[3] + raw[4] << 8;

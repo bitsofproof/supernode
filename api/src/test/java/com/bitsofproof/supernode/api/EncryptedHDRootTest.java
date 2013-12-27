@@ -70,16 +70,18 @@ public class EncryptedHDRootTest
 			assertTrue (key.getReadOnly ().serialize (true).equals (test.getString ("public")));
 			assertTrue (EncryptedHDRoot.encode (seed, birth).equals (test.getString ("clear")));
 			assertTrue (EncryptedHDRoot.encrypt (seed, birth, test.getString ("password"), ScryptDifficulty.LOW).equals (test.getString ("encryptedLow")));
-			assertTrue (EncryptedHDRoot.encrypt (seed, birth, test.getString ("password"), ScryptDifficulty.MEDIUM).equals (test.getString
-					("encryptedMedium")));
-			assertTrue (EncryptedHDRoot.encrypt (seed, birth, test.getString ("password"), ScryptDifficulty.HIGH).equals (test.getString ("encryptedHigh")));
+			// Travis can not run these as they need lots of memory. Uncomment if curious
+			// assertTrue (EncryptedHDRoot.encrypt (seed, birth, test.getString ("password"), ScryptDifficulty.MEDIUM).equals (test.getString
+			// ("encryptedMedium")));
+			// assertTrue (EncryptedHDRoot.encrypt (seed, birth, test.getString ("password"), ScryptDifficulty.HIGH).equals (test.getString ("encryptedHigh")));
 			assertTrue (EncryptedHDRoot.decode (test.getString ("clear")).serialize (true).equals (key.serialize (true)));
 			assertTrue (EncryptedHDRoot.decrypt (test.getString ("encryptedLow"), test.getString ("password")).serialize (true).equals (key.serialize
 					(true)));
-			assertTrue (EncryptedHDRoot.decrypt (test.getString ("encryptedMedium"), test.getString ("password")).serialize (true)
-					.equals (key.serialize (true)));
-			assertTrue (EncryptedHDRoot.decrypt (test.getString ("encryptedHigh"), test.getString ("password")).serialize (true)
-					.equals (key.serialize (true)));
+			// Travis can not run these as they need lots of memory. Uncomment if curious
+			// assertTrue (EncryptedHDRoot.decrypt (test.getString ("encryptedMedium"), test.getString ("password")).serialize (true)
+			// .equals (key.serialize (true)));
+			// assertTrue (EncryptedHDRoot.decrypt (test.getString ("encryptedHigh"), test.getString ("password")).serialize (true)
+			// .equals (key.serialize (true)));
 		}
 	}
 }
