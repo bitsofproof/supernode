@@ -1,0 +1,50 @@
+[
+	{
+		"seed": "000102030405060708090a0b0c0d0e0f",
+		"birth": "24-12-2013",
+		"clear": "WS1A3xqGKyHq4XMvq2Qj8xBu135p7AhSVSY4fqN",
+		"password": "Satoshi",
+		"encryptedLow": "ws19GjxzzP3vEBNp9jCcW3a7L8j3GQpdCkxBguL",
+		"encryptedMedium": "ws1H7QHFD9SKtqPEYhwG4Ty1TJrmY9PpeswoDLZ",
+		"encryptedHigh": "ws1Qx4bVRupdZyw9WvAfMAsiGrek42PPTJ3UeVo",
+		"address":"15mKKb2eos1hWa6tisdPwwDC1a5J1y9nma",
+		"private": "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
+		"public": "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+	},
+	{
+		"seed": "7f0ad7d595be13e6fe4cf1fa0fbb6ae9c26c5d9b09920709414982b6363d5844",
+		"birth": "24-12-2013",
+		"clear": "WS13D1hB7v7XUYz9YH1u4UHab52MbmDUQSczJ7xavcJYkYiKvWnWa8CV87v1n",
+		"password": "Nakamoto",
+		"encryptedLow": "ws122WLGmSa7RPS6NSxWbSCbPGRsDigg8KuVNDtwPysozeJPTTQsjc6HV5FDV",
+		"encryptedMedium": "ws16JK3uHmQvTvJPxzTV7RJgXnsevMiyYUa443zi8jTpDDQAmRYRynf1V332F",
+		"encryptedHigh": "ws1Aa7mXp6FjxAxWbLbkvXpzj3ogwxo2veR6qs5jiA2CPt646dbdsedR9gZ3m",
+		"address":"1A54ECavJaJAoLGqqNrPd9Y3cvSvkL2Roz",
+		"private": "xprv9s21ZrQH143K3f9hMVvcbY4EX4CfxsEtc6C5BMkZtgGpTGpxAscoq7SLSAcL6k5dxaZ9s4SChrtfSFoKpijuwAnhuPn76eva6W8bDr118t3",
+		"public": "xpub661MyMwAqRbcG9EATXTcxfzy563ANKxjyK7fykABT1ooL5A6iQw4NukpHShDxYgeso4NHscFmqcVEtdUt61c8RCf7FqXK9z6sgfkQvYBQPP"
+	},
+	{
+		"seed": "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542",
+		"birth": "24-12-2013",
+		"clear": "WS1k2JRUKEaUCkqtiVcHHx5JBRiwCxU7LazRh2hREFsFkSrMqmLbEHuGb4DZXzr8Ro4WcVaJBZHesA5PyZuMnPxW1UCc1VK4gMwVfS7x",
+		"password": "Vires In Numeris",
+		"encryptedLow": "ws2AxUpnu8p8sboukkc1PRJrp1pYNNAnvn4A5ZbySxoJKxWy4L12vPJM8nyF2Jd3f6eanSqEij1mZyLhG9oW5G2DCLseRX5ucAohsz6d",
+		"encryptedMedium": "ws3Sa4zAotc76fFq3fKmaC8ALVDPPghYnhxiRFn8UuYHjCFND96Tp3ipW6ehA4YWQjTdiUVPpLtm62cpUy9EdVjsjmwZGfhbebPCiQvT",
+		"encryptedHigh": "ws4iBf9YieQDJVMSpeNkvnhy9MsVac3obtFyBtPhiUsviFhG29S7UhCLmXo52s7rHPx3W4v9HgT9d6rVYNGQJg1zGroHY1NnFjZ85UMH",
+		"address":"1JEoxevbLLG8cVqeoGKQiAwoWbNYSUyYjg",
+		"private": "xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U",
+		"public": "xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB"
+	},
+	{
+		"seed": "6ca4a27ac660c683340f59353b1375a9",
+		"birth": "24-12-2013",
+		"clear": "WS1A3y1yzdgNW2BgegrtNNV57EsaMdEvYqdyWFs",
+		"password": "聡中本",
+		"encryptedLow": "ws19Gk9if3SS37cqedG3dTSNgRPRSH9cf6qxarB",
+		"encryptedMedium": "ws1H7QTxsopohhHTPE3RXAhWpFUWW9kEKvrhUq3",
+		"encryptedHigh": "ws1Qx4nD6aDA4E29tMF6o8AsZgqmPpSyxskQMFn",
+		"address":"1JVncPbsdB2s4zHim3VdAWNkZ8JANBZ1U9",
+		"private": "xprv9s21ZrQH143K3mJ4upPSDfXdA34yNjem6PSsXT63vm8dq8ikUJv4iiTD3PrSKtdGZXFVD689z5T7knXo55BjcHS2WL3Syp2DbGgnbgxw2QA",
+		"public": "xpub661MyMwAqRbcGFNY1qvSaoUMi4uTnCNcTcNUKqVfV6fchw3u1rEKGWmgtfUMRKLgUHNZ7dfsh8Ys6SLwUojZqScFBQL3dFGF3QywNLJVZ2o"
+	}
+]
