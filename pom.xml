@@ -49,7 +49,7 @@
 		<springframework.version>3.1.2.RELEASE</springframework.version>
 		<slf4j.version>1.6.6</slf4j.version>
 		<java.compiler.version>1.7</java.compiler.version>
-		<bouncycastle.version>1.48</bouncycastle.version>
+		<bouncycastle.version>1.50</bouncycastle.version>
 		<protobuf.version>2.4.1</protobuf.version>
 		<json.version>20090211</json.version>
 		<commons-cli.version>1.2</commons-cli.version>

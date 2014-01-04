@@ -1,0 +1,22 @@
+[
+	{
+		"key": "L24GFtCcK6E8dUNGkRK7iCUcfi3JJmVQq8NPG9LzcXS594YkuFoK", 
+		"message":"Satoshi Nakamoto", 
+		"expectedSignature":"304502202eb53dd34d8c0014371ddf3c57b60cbdde5c525abd6384b6453192fac9ec180a022100fe5b29c65d400d7e48a0f9e3e450069fa87400288e78e1e9932ad44f6c03f23f"
+	},
+	{
+		"key": "L1MuyFhSGEJYXZWHRLt2Ggnou5BzCMy7165eFTB2qPPU93B4fRjV", 
+		"message":"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks", 
+		"expectedSignature":"30460221009d4adeca74eaea3a81f0c55c54478f6d5c652196b4d7c02d69bbf30504d9e95b02210080bc27ba00a4c75919b477b2a61d56de851a521d2ff6782b631c542e76e7d346"
+	},
+	{
+		"key": "KxiYEU4ti9G4pLb832rrjGnkvHpAt8Dqx7ZBq3NA66pQN3hpRFSx",
+		"message":"Satoshi Nakamoto",
+		"expectedSignature":"304402203db5f02f6d96090852a31d16e44077a4ee879402a01bb9019238ec5269b976010220558817ff1534dc47f21b766fc014369158e4a471ae42b986eaaf659f81abe3ee"
+	},
+	{
+		"key": "L3wadShuDYpTR1sHVsbPSE695YX1Fh5wfDvE4ztZtyyYjidSUJmX",
+		"message":"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks",
+		"expectedSignature":"30450220290a41120f7d06d86d4d6914ea718d91111e58700b28072a951e59a2a8b1f983022100dee6880df00d72bc847929219a85d4edad83bd2ac45907371af920f3cac20bd7"
+	}
+]

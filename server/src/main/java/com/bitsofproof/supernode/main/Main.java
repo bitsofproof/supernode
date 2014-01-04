@@ -35,7 +35,7 @@ public class Main
 
 	public static void main (String[] args) throws Exception
 	{
-		log.info ("bitsofproof supernode (c) 2013 bits of proof zrt.");
+		log.info ("bitsofproof supernode (c) 2013-2014 bits of proof zrt.");
 		Security.addProvider (new BouncyCastleProvider ());
 		log.trace ("Spring context setup");
 
