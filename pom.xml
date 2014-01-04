@@ -46,7 +46,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<springframework.version>3.1.2.RELEASE</springframework.version>
+		<springframework.version>4.0.0.RELEASE</springframework.version>
 		<slf4j.version>1.6.6</slf4j.version>
 		<java.compiler.version>1.7</java.compiler.version>
 		<bouncycastle.version>1.50</bouncycastle.version>
