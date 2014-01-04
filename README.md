@@ -24,16 +24,21 @@ Make sure you have Maven3, JDK 7 (with JCE Unlimited Strength Policy Jurisdictio
 Let us assume the directory you would want to run the server is /home/bitsofproof/run. 
 
   cp server/target/bitsofproof-server-version-shaded.jar /home/bitsofproof/run
+  
   cp server/src/main/resources/context/*.xml /home/bitsofproof/run
+  
   cp server/src/main/resources/log4j.properties /home/bitsofproof/run
+  
   mkdir /home/bitsofproof/run/signed-libs
   
 Download http://www.bouncycastle.org/download/bcprov-jdk15on-150.jar
+  
   cp bcprov-jdk15on-150.jar /home/bitsofproof/run/signed-libs/bcprov-jdk15on.jar
 
 Run
 ---
   cd /home/bitsofproof/run
+  
   java -server -Xmx4g -jar target/server/target/bitsofproof-server-version-shaded.jar testnet3 memdb
 
 The final two parameters of the above example command line identify configuration contexts  you copied under *-profile.xml. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
