@@ -13,7 +13,7 @@
 	</parent>
 	<properties>
 		<project.mainclass>com.bitsofproof.supernode.main.Main</project.mainclass>
-		<activemq.version>5.8.0</activemq.version>
+		<activemq.version>5.9.0</activemq.version>
 		<leveldbjni.version>1.8</leveldbjni.version>
 	</properties>
 	
