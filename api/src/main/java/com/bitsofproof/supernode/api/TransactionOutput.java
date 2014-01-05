@@ -16,13 +16,9 @@
 package com.bitsofproof.supernode.api;
 
 import java.io.Serializable;
-import java.util.List;
 
-import com.bitsofproof.supernode.api.Address.Type;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ScriptFormat;
-import com.bitsofproof.supernode.common.ScriptFormat.Token;
-import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
 import com.google.protobuf.ByteString;
 
@@ -106,31 +102,7 @@ public class TransactionOutput implements Serializable, Cloneable
 
 	public Address getOutputAddress ()
 	{
-		if ( ScriptFormat.isPayToAddress (script) )
-		{
-			List<Token> tokens;
-			try
-			{
-				tokens = ScriptFormat.parse (script);
-				return new Address (Type.COMMON, tokens.get (2).data);
-			}
-			catch ( ValidationException e )
-			{
-			}
-		}
-		else if ( ScriptFormat.isPayToScriptHash (script) )
-		{
-			List<Token> tokens;
-			try
-			{
-				tokens = ScriptFormat.parse (script);
-				return new Address (Type.P2SH, tokens.get (1).data);
-			}
-			catch ( ValidationException e )
-			{
-			}
-		}
-		return null;
+		return ScriptFormat.getAddress (script);
 	}
 
 	@Override

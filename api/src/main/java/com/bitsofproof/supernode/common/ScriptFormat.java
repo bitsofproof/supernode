@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import com.bitsofproof.supernode.api.Address;
+import com.bitsofproof.supernode.api.Address.Type;
+
 public class ScriptFormat
 {
 	// unfortunatelly unused: https://bitcointalk.org/index.php?topic=120836.0
@@ -716,6 +719,29 @@ public class ScriptFormat
 		{
 			return false;
 		}
+	}
+
+	public static Address getAddress (byte[] script)
+	{
+		try
+		{
+			List<ScriptFormat.Token> parsed = parse (script);
+			if ( parsed.size () == 5 && parsed.get (0).op == ScriptFormat.Opcode.OP_DUP && parsed.get (1).op == ScriptFormat.Opcode.OP_HASH160
+					&& parsed.get (2).data != null && parsed.get (2).data.length == 20 && parsed.get (3).op == ScriptFormat.Opcode.OP_EQUALVERIFY
+					&& parsed.get (4).op == ScriptFormat.Opcode.OP_CHECKSIG )
+			{
+				return new Address (Type.COMMON, parsed.get (2).data);
+			}
+			if ( parsed.size () == 3 && parsed.get (0).op == ScriptFormat.Opcode.OP_HASH160 && (parsed.get (1).data != null && parsed.get (1).op.o <= 75)
+					&& parsed.get (1).data.length == 20 && parsed.get (2).op == ScriptFormat.Opcode.OP_EQUAL )
+			{
+				return new Address (Type.P2SH, parsed.get (1).data);
+			}
+		}
+		catch ( Exception e )
+		{
+		}
+		return null;
 	}
 
 	public static boolean isMultiSig (byte[] script)

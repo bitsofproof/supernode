@@ -66,11 +66,6 @@ public class BloomFilter
 		this.update = update;
 	}
 
-	public void addAddress (String address, int addressFlag) throws ValidationException
-	{
-		add (Address.fromSatoshiStyle (address, addressFlag));
-	}
-
 	public static byte[] serializedOutpoint (String hash, long ix)
 	{
 		WireFormat.Writer writer = new WireFormat.Writer ();
@@ -79,9 +74,11 @@ public class BloomFilter
 		return writer.toByteArray ();
 	}
 
-	public void addOutpoint (String hash, long ix)
+	public int addOutpoint (String hash, long ix)
 	{
-		add (serializedOutpoint (hash, ix));
+		byte[] point = serializedOutpoint (hash, ix);
+		add (point);
+		return Arrays.hashCode (point);
 	}
 
 	public boolean containsOutpoint (String hash, long ix)
@@ -104,12 +101,13 @@ public class BloomFilter
 		return (filter[n >>> 3] & 1 << (7 & n)) != 0;
 	}
 
-	public void add (byte[] data)
+	public int add (byte[] data)
 	{
 		for ( int i = 0; i < hashFunctions; ++i )
 		{
 			setBit ((int) ((murmurhash3bit (i, data, tweak) & 0xFFFFFFFFL) % (filter.length * 8)));
 		}
+		return Arrays.hashCode (data);
 	}
 
 	public boolean contains (byte[] data)

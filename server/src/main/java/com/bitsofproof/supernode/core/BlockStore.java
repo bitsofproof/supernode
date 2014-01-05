@@ -18,7 +18,6 @@ package com.bitsofproof.supernode.core;
 import java.util.List;
 import java.util.Set;
 
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
 import com.bitsofproof.supernode.common.ByteVector;
 import com.bitsofproof.supernode.common.ExtendedKey;
@@ -73,8 +72,6 @@ public interface BlockStore
 	public boolean isEmpty ();
 
 	public List<String> getInventory (List<String> locator, String last, int limit);
-
-	public void scan (BloomFilter filter, TransactionProcessor processor) throws ValidationException;
 
 	public void filterTransactions (boolean utxo, Set<ByteVector> match, UpdateMode update, long after, TransactionProcessor processor)
 			throws ValidationException;

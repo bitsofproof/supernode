@@ -27,7 +27,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bitsofproof.supernode.common.BloomFilter;
 import com.bitsofproof.supernode.common.Hash;
 import com.bitsofproof.supernode.common.ValidationException;
 import com.bitsofproof.supernode.common.WireFormat;
@@ -418,34 +417,6 @@ public class LvlStore extends CachedBlockStore
 	protected Blk retrieveBlockHeader (CachedBlock cached) throws ValidationException
 	{
 		return readBlk (cached.getHash (), false);
-	}
-
-	@Override
-	public void scan (final BloomFilter filter, final TransactionProcessor processor)
-	{
-		store.forAll (KeyType.TX, new DataProcessor ()
-		{
-			@Override
-			public boolean process (byte[] key, byte[] data)
-			{
-				Tx t;
-				try
-				{
-					t = Tx.fromLevelDB (data);
-					if ( t.passesFilter (filter) && isOnTrunk (t.getBlockHash ()) )
-					{
-						processor.process (t);
-					}
-				}
-				catch ( ValidationException e )
-				{
-					log.error ("Can not read transaction ", e);
-					return false;
-				}
-				return true;
-			}
-		});
-		processor.process (null);
 	}
 
 	@Override

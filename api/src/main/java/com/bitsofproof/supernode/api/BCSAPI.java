@@ -15,7 +15,6 @@
  */
 package com.bitsofproof.supernode.api;
 
-import java.util.Collection;
 import java.util.Set;
 
 import com.bitsofproof.supernode.common.BloomFilter.UpdateMode;
@@ -139,15 +138,6 @@ public interface BCSAPI
 			throws BCSAPIException;
 
 	/**
-	 * Scan transactions using generic binary match.
-	 * 
-	 * @param match
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
-
-	/**
 	 * Scan transactions for an account
 	 * 
 	 * @param master
@@ -165,15 +155,6 @@ public interface BCSAPI
 	 * @throws BCSAPIException
 	 */
 	public void scanUTXOForAddresses (Set<Address> addresses, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
-
-	/**
-	 * Scan unspent transactions using and address or outpoint in match.
-	 * 
-	 * @param match
-	 * @param listener
-	 * @throws BCSAPIException
-	 */
-	public void scanUTXO (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException;
 
 	/**
 	 * Scan unspent transactions for an account

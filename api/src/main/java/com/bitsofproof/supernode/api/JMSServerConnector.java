@@ -335,7 +335,6 @@ public class JMSServerConnector implements BCSAPI
 		scanUTXO (al, mode, after, listener);
 	}
 
-	@Override
 	public void scanUTXO (Collection<byte[]> match, UpdateMode mode, long after, TransactionListener listener) throws BCSAPIException
 	{
 		scanRequest (match, mode, after, listener, "utxoMatchRequest");
@@ -347,7 +346,6 @@ public class JMSServerConnector implements BCSAPI
 		scanRequest (master, firstIndex, lookAhead, after, listener, "utxoAccountRequest");
 	}
 
-	@Override
 	public void scanTransactions (Collection<byte[]> match, UpdateMode mode, long after, final TransactionListener listener) throws BCSAPIException
 	{
 		scanRequest (match, mode, after, listener, "matchRequest");
