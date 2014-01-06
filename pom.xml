@@ -70,7 +70,11 @@
 		<connection>scm:git:git@github.com:bitsofproof/supernode.git</connection>
 	    <developerConnection>scm:git:git@github.com:bitsofproof/supernode.git</developerConnection>
 		<url>https://github.com/bitsofproof/supernode</url>
+<<<<<<< HEAD
 		<tag>2.0.3</tag>
+=======
+		<tag>2.0.1</tag>
+>>>>>>> 820ac10a7d837998443bf0e206e04cf119a988cd
 	</scm>
 
 	<pluginRepositories>
