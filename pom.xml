@@ -103,6 +103,16 @@
 					<tagNameFormat>@{project.version}</tagNameFormat>
 				</configuration>
 			</plugin>
+			<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+  					<descriptors>
+            			<descriptor>assembly/distribution.xml</descriptor>
+          			</descriptors>
+				</configuration>
+            </plugin>
 		</plugins>
 		<extensions>
 			<extension>

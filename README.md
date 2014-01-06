@@ -19,36 +19,25 @@ Make sure you have Maven3, JDK 7 (with JCE Unlimited Strength Policy Jurisdictio
 
    cd supernode
    
-   mvn package
+   mvn assembly:assembly
 
-Let us assume the directory you would want to run the server is /home/bitsofproof/run. 
-
-  cp server/target/bitsofproof-server-version-shaded.jar /home/bitsofproof/run
-  
-  cp server/src/main/resources/context/*.xml /home/bitsofproof/run
-  
-  cp server/src/main/resources/log4j.properties /home/bitsofproof/run
-  
-  mkdir /home/bitsofproof/run/signed-libs
-  
-Download http://www.bouncycastle.org/download/bcprov-jdk15on-150.jar
-  
-  cp bcprov-jdk15on-150.jar /home/bitsofproof/run/signed-libs/bcprov-jdk15on.jar
+The build will create a zip file in the target directory.
 
 Run
 ---
-  cd /home/bitsofproof/run
-  
-  java -server -Xmx4g -jar target/server/target/bitsofproof-server-version-shaded.jar testnet3 memdb
+
+  copy and unzip the distribution zip created in the previous step and cd to it.
+
+  java -Xmx4g -jar bitsofproof-server-version-shaded.jar testnet3 memdb
 
 The final two parameters of the above example command line identify configuration contexts  you copied under *-profile.xml. You have to choose one of the networks by specifying either testnet3 or production or slave, and a database layer, that could be (examples):
    
    * memdb - in memory database for tests
    * leveldb - LevelDB
 
-To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in BCSAPI-profile.xml. You find example configurations for the message Active MQ there. The complete command line for a production environment might be:
+To use the API of your local server you need to run a message broker process providing the infrastructure. Since the message bus offers authentication and a wide selection of transports, your installation will likely be unique and need to be reflected in BCSAPI-profile.xml. You find example configurations for the message Active MQ there. The complete command line for a production environment might be (assuming you run it as a slave behind a satoshi):
 
-  java -server -Xmx4g -jar target/server/target/bitsofproof-server-version-shaded.jar production leveldb BCSAPI activemq
+  java -server -Xmx4g -jar bitsofproof-server-version-shaded.jar slave leveldb BCSAPI activemq
 
 License
 -------

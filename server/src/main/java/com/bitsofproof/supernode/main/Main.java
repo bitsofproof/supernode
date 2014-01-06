@@ -15,6 +15,7 @@
  */
 package com.bitsofproof.supernode.main;
 
+import java.io.FileNotFoundException;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.GenericXmlApplicationContext;
+import org.springframework.util.Log4jConfigurer;
 
 public class Main
 {
@@ -31,22 +33,34 @@ public class Main
 		public void start (String[] args) throws Exception;
 	}
 
+	static
+	{
+		try
+		{
+			Log4jConfigurer.initLogging ("config/log4j.properties");
+		}
+		catch ( FileNotFoundException e )
+		{
+			System.err.println ("Can not find config/log4.properties");
+		}
+	}
+
 	private static final Logger log = LoggerFactory.getLogger (Main.class);
 
 	public static void main (String[] args) throws Exception
 	{
 		log.info ("bitsofproof supernode (c) 2013-2014 bits of proof zrt.");
-		Security.addProvider (new BouncyCastleProvider ());
-		log.trace ("Spring context setup");
-
-		if ( args.length == 0 )
-		{
-			System.err.println ("Usage: java com.bitsofproof.main.Main profile [profile...] -- [args...] [options...]");
-			return;
-		}
-
 		try
 		{
+			Security.addProvider (new BouncyCastleProvider ());
+
+			if ( args.length == 0 )
+			{
+				System.err.println ("Usage: java -Xmx4g -jar this.jar profile [profile...] -- [args...] [options...]");
+				System.err.println ("       where profile A is any of config/A-profile.xml");
+				return;
+			}
+
 			GenericXmlApplicationContext ctx = new GenericXmlApplicationContext ();
 			List<String> a = new ArrayList<String> ();
 			boolean profiles = true;
@@ -69,14 +83,15 @@ public class Main
 					}
 				}
 			}
-			ctx.load ("file:server.xml");
-			ctx.load ("file:*-profile.xml");
+			ctx.load ("file:config/server.xml");
+			ctx.load ("file:config/*-profile.xml");
 			ctx.refresh ();
 			ctx.getBean (App.class).start (a.toArray (new String[0]));
+			ctx.close ();
 		}
 		catch ( Exception e )
 		{
-			log.error ("Error setting up spring context", e);
+			log.error ("Bootstrap error", e);
 		}
 	}
 }
