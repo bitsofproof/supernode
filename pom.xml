@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bitsofproof</groupId>
 	<artifactId>supernode</artifactId>
-	<version>2.0.1-SNAPSHOT</version>
+	<version>2.0.1</version>
 	<name>supernode</name>
 	<description>The bitsofproof supernode implementation of the Bitcoin protocol</description>
 	<packaging>pom</packaging>
@@ -70,7 +70,7 @@
 		<connection>scm:git:git@github.com:bitsofproof/supernode.git</connection>
 	    <developerConnection>scm:git:git@github.com:bitsofproof/supernode.git</developerConnection>
 		<url>https://github.com/bitsofproof/supernode</url>
-		<tag>HEAD</tag>
+		<tag>2.0.1</tag>
 	</scm>
 
 	<pluginRepositories>
