@@ -15,7 +15,7 @@
  */
 package com.bitsofproof.supernode.common;
 
-import java.util.Arrays;
+import org.bouncycastle.util.Arrays;
 
 public class ByteVector
 {
@@ -30,7 +30,7 @@ public class ByteVector
 	public boolean equals (Object obj)
 	{
 		ByteVector other = (ByteVector) obj;
-		return Arrays.equals (bytes, other.bytes);
+		return Arrays.areEqual (bytes, other.bytes);
 	}
 
 	@Override
