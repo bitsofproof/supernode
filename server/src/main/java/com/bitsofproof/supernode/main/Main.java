@@ -87,7 +87,6 @@ public class Main
 			ctx.load ("file:config/*-profile.xml");
 			ctx.refresh ();
 			ctx.getBean (App.class).start (a.toArray (new String[0]));
-			ctx.close ();
 		}
 		catch ( Exception e )
 		{
