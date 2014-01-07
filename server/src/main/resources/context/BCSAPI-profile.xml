@@ -2,7 +2,6 @@
 <beans profile="BCSAPI"
        xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:p="http://www.springframework.org/schema/p"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
 
     <beans profile="apollo">
@@ -14,11 +13,12 @@
     </beans>
 
     <beans profile="activemq" >
-        <bean id="jmsFactory" class="org.apache.activemq.ActiveMQConnectionFactory"
-              p:userName="sa"
-              p:password="manager"
-              p:brokerURL="tcp://localhost:61616"
-              p:clientID="bitsofproof-supernode-testnet3"/>
+        <bean id="jmsFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+              <property name="userName" value="sa"/>
+              <property name="password" value="manager"/>
+              <property name="brokerURL" value="tcp://localhost:61616"/>
+              <property name="clientID" value="bitsofproof-supernode"/>
+        </bean>
     </beans>
 
     <beans>
