@@ -31,14 +31,11 @@ public class DiscoveryChain implements Discovery
 	@Override
 	public List<InetSocketAddress> discover ()
 	{
+		ArrayList<InetSocketAddress> aggregate = new ArrayList<InetSocketAddress> ();
 		for ( Discovery discovery : discoveryChain )
 		{
-			List<InetSocketAddress> addresses = discovery.discover ();
-			if ( !addresses.isEmpty () )
-			{
-				return addresses;
-			}
+			aggregate.addAll (discovery.discover ());
 		}
-		return new ArrayList<InetSocketAddress> ();
+		return aggregate;
 	}
 }
