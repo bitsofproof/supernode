@@ -1,9 +1,9 @@
-BOP Enterprise Server API
+BOP Bitcoin Server API
 =========================
 
-API to Bits of Proof's BOP Enterprise Bitcoin Server.
+API to Bits of Proof's BOP Bitcoin Server.
 
-BOP offers access to latest BOP Enterprise Server source code and support contracts. 
+BOP offers access to latest BOP Bitcoin Server source code and support contracts. 
 Please contact sales@bitsofproof.com for an offer.
 
 License
