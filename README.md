@@ -12,6 +12,9 @@ Our software implements features that go far beyond what is available in the ‘
 
 Bits of Proof built several payment processors, the first externally auditable exchange with multi signature P2SH wallets https://bullionbitcoin.com, and the most secure web wallet where you hold your keys literally in your hands: https://mytrezor.com
 
+CURRENT VERSION
+---------------
+
 A current version of the BOP Bitcoin Server API is available at: 
 
 https://github.com/bitsofproof/bop-bitcoin-client
