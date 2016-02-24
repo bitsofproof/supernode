@@ -64,11 +64,11 @@ public class BIP39Test
 	{
 		JSONObject testData = readObject (TESTS);
 		JSONArray english = testData.getJSONArray ("english");
-		for ( int i = 0; i < testData.length (); ++i )
+		for ( int i = 0; i < english.length (); ++i )
 		{
 			JSONArray test = english.getJSONArray (i);
-			String m = BIP39.getMnemonic (ByteUtils.fromHex (test.getString (i)));
-			assertTrue (m.equals (test.getString (i + 1)));
+			String m = BIP39.getMnemonic(ByteUtils.fromHex(test.getString(0)));
+			assertTrue (m.equals (test.getString (1)));
 		}
 	}
 
